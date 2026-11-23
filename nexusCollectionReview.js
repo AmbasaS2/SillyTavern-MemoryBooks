@@ -30,9 +30,11 @@ export function reviewSlothSceneDrafts(scenes, forms) {
 export function reviewSlothNexusDrafts(edits, forms) {
     requireThat(Array.isArray(edits) && Array.isArray(forms) && edits.length===forms.length,
         'A reviewed Nexus change is missing; no changes saved.');
-    return edits.map((edit,index) => {
+    return edits.flatMap((edit,index) => {
         const form=forms[index];
-        requireThat(record(edit) && record(form) && typeof form.body==='string' &&
+        requireThat(record(edit) && record(form), 'A reviewed Nexus change is missing; no changes saved.');
+        if (form.include === false) return [];
+        requireThat(typeof form.body==='string' &&
             form.body.length<=60000, 'Nexus change '+(index+1)+' has an invalid review body.');
         const updated={...edit};
         if(edit.action==='create') updated.content=form.body;
@@ -45,6 +47,6 @@ export function reviewSlothNexusDrafts(edits, forms) {
                 'Nexus detail keywords must be distinct and no more than 16.');
             updated.keywords=keywords;
         }
-        return updated;
+        return [updated];
     });
 }

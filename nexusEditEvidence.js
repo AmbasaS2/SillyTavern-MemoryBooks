@@ -65,19 +65,26 @@ export function validateSlothEventWindowEvidence(raw, messages) {
         'Event evidence needs a topic, cause, development, result and closure state.');
         assert(Array.isArray(event.sourceRanges) && event.sourceRanges.length && event.sourceRanges.length <= source.size,
             'Event evidence must name its original window ranges.');
-        const eventIds = new Map();
+        const eventIds = new Set();
         for (const pair of event.sourceRanges) {
             assert(Array.isArray(pair) && pair.length === 2 && pair.every(Number.isSafeInteger) &&
                 pair[0] >= 0 && pair[1] >= pair[0] && pair[1] - pair[0] < source.size,
             'Event evidence has an invalid source range.');
             for (let id = pair[0]; id <= pair[1]; id++) {
                 assert(source.has(id) && !eventIds.has(id), 'Event evidence repeats or exceeds its original window.');
-                eventIds.set(id, source.get(id));
+                eventIds.add(id);
             }
         }
-        const evidence = verifyEvidence(event.evidence, eventIds, 'Event window');
+        const evidence = verifyEvidence(event.evidence, source, 'Event window');
+        // A literal quote attached to this event is direct evidence of its
+        // source ID. Keep that point without claiming any intervening IDs.
+        // These are intermediate evidence ranges, never saved Scene ranges.
+        const citedOutsideRanges = new Set(evidence.map(item => item.messageId).filter(id => !eventIds.has(id)));
+        const sourceRanges = citedOutsideRanges.size
+            ? [...event.sourceRanges, ...Array.from(citedOutsideRanges, id => [id, id])].sort((a, b) => a[0] - b[0])
+            : event.sourceRanges;
         return { topic: event.topic, cause: event.cause, development: event.development,
-            result: event.result, closure: event.closure, sourceRanges: event.sourceRanges, evidence };
+            result: event.result, closure: event.closure, sourceRanges, evidence };
     });
 }
 

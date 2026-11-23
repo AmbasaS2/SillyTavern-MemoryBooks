@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "Opciones de recuperación y revisión",
   "STMemoryBooks_SlothAdvancedTitle": "Ajustes avanzados y herramientas originales",
   "STMemoryBooks_SlothRangesLabel": "Rangos de los mensajes originales",
+  "STMemoryBooks_SlothApplyNexusChange": "Aplicar este cambio",
+  "STMemoryBooks_SlothNoApprovedChanges": "Selecciona al menos un cambio de Nexus para guardar o cancela.",
   "STMemoryBooks_SlothEditNexusText": "Editar solo el texto propuesto",
   "STMemoryBooks_NexusRotationHelp": "En la recopilación manual con Nexus y Memory se mantienen activas las tres últimas escenas completadas.",
   "STMemoryBooks_NexusRecallMode": "Recuperación de escenas anteriores",

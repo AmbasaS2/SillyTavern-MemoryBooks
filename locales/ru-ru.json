@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "Параметры поиска и проверки",
   "STMemoryBooks_SlothAdvancedTitle": "Расширенные настройки и исходные инструменты",
   "STMemoryBooks_SlothRangesLabel": "Диапазоны исходных сообщений",
+  "STMemoryBooks_SlothApplyNexusChange": "Применить это изменение",
+  "STMemoryBooks_SlothNoApprovedChanges": "Выберите хотя бы одно изменение Nexus для сохранения или отмените действие.",
   "STMemoryBooks_SlothEditNexusText": "Изменить только предложенный текст",
   "STMemoryBooks_NexusRotationHelp": "Ручной сбор с Nexus и Memory оставляет активными три последние завершённые сцены.",
   "STMemoryBooks_NexusRecallMode": "Вызов старых сцен",

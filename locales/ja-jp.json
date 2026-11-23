@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "呼び出しと確認の設定",
   "STMemoryBooks_SlothAdvancedTitle": "詳細設定と従来のツール",
   "STMemoryBooks_SlothRangesLabel": "元のメッセージ範囲",
+  "STMemoryBooks_SlothApplyNexusChange": "この変更を適用",
+  "STMemoryBooks_SlothNoApprovedChanges": "保存するNexusの変更を1件以上選ぶか、キャンセルしてください。",
   "STMemoryBooks_SlothEditNexusText": "提案された文章のみを編集",
   "STMemoryBooks_NexusRotationHelp": "従来の単一シーン用です。Nexus と Memory を割り当てた手動収集では直近の完結シーン3件が常に有効です。",
   "STMemoryBooks_NexusRecallMode": "過去のシーンの呼び出し方法",

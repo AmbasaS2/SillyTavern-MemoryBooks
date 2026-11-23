@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "回忆与审核选项",
   "STMemoryBooks_SlothAdvancedTitle": "高级设置和原有工具",
   "STMemoryBooks_SlothRangesLabel": "原始消息范围",
+  "STMemoryBooks_SlothApplyNexusChange": "应用此更改",
+  "STMemoryBooks_SlothNoApprovedChanges": "请至少选择一项 Nexus 更改来保存，或取消。",
   "STMemoryBooks_SlothEditNexusText": "仅编辑提议的文本",
   "STMemoryBooks_NexusRotationHelp": "适用于原有的单场景工具。分配 Nexus 和 Memory 角色后，手动收集始终保持最近三个已完成场景为启用状态。",
   "STMemoryBooks_NexusRecallMode": "旧场景召回方式",

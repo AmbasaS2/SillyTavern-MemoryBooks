@@ -58,6 +58,7 @@ test('Nexus direct edits preserve reason, original UID, source citations and oth
     assert.equal(reviewed[0].uid,op.uid);
     assert.equal(reviewed[0].find,op.find);
     assert.deepEqual(reviewed[0].evidence,op.evidence);
+    assert.deepEqual(reviewSlothNexusDrafts([op,op],[{include:false},{body:'The letter was answered today.'}]),reviewed);
     const grounded=validateGroundedNexusEdits(reviewed,messages);
     const result=stageNexusEdits(original,grounded,maker);
     assert.match(result.staged.entries[1].content,/answered today/);
@@ -82,7 +83,7 @@ test('Sloth collection UI has a real editable draft and a scoped advanced Legacy
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
     const template=readFileSync(new URL('./templates.js',import.meta.url),'utf8');
     const source=readFileSync(new URL('./index.js',import.meta.url),'utf8');
-    for(const target of ['data-sloth-scene-title','data-sloth-scene-content','data-sloth-nexus-body',
+    for(const target of ['data-sloth-scene-title','data-sloth-scene-content','data-sloth-nexus-body','data-sloth-nexus-include',
         'reviewSlothSceneDrafts','reviewSlothNexusDrafts','applyReviewedDraft','validateGroundedNexusEdits']){
         assert.ok(runtime.includes(target),'missing review UI bridge '+target);
     }

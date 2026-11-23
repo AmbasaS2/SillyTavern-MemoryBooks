@@ -89,12 +89,14 @@ test('review and backup include evidence, and supported UI translations have eve
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
     assert.match(runtime,/nexusEvidence:reviewedChanges\.map/);
     assert.match(runtime,/change\.evidence\|\|\[\]/);
-    assert.match(runtime,/changes:nexus\.changes\.map/);
+    assert.match(runtime,/result\.changes\.map\(\(change,index\)/);
+    assert.match(runtime,/downloadSafetyBackup\(states, ref, .*approvedChanges, initial\)/);
     for (const lang of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr','ms-my',
         'pt-br','ru-ru','zh-cn','zh-tw']) {
         const data=JSON.parse(readFileSync(new URL('./locales/'+lang+'.json',import.meta.url),'utf8'));
         for(const key of ['SlothEvidenceWhy','SlothEvidenceSource',
-            'SlothNexusOnlyReview','SlothNexusOnlyGuide','SlothNexusOnlySaved']) {
+            'SlothNexusOnlyReview','SlothNexusOnlyGuide','SlothNexusOnlySaved',
+            'SlothApplyNexusChange','SlothNoApprovedChanges']) {
             assert.ok(data['STMemoryBooks_'+key]?.length,lang+':'+key);
         }
     }

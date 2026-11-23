@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "Opsi pemanggilan dan peninjauan",
   "STMemoryBooks_SlothAdvancedTitle": "Pengaturan lanjutan dan alat asli",
   "STMemoryBooks_SlothRangesLabel": "Rentang pesan asli",
+  "STMemoryBooks_SlothApplyNexusChange": "Terapkan perubahan ini",
+  "STMemoryBooks_SlothNoApprovedChanges": "Pilih setidaknya satu perubahan Nexus untuk disimpan atau batalkan.",
   "STMemoryBooks_SlothEditNexusText": "Sunting hanya teks yang diusulkan",
   "STMemoryBooks_NexusRotationHelp": "Pengumpulan manual dengan Nexus dan Memory menjaga tiga adegan tuntas terakhir tetap aktif.",
   "STMemoryBooks_NexusRecallMode": "Cara memanggil Scene lama",

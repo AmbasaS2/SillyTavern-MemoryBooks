@@ -567,6 +567,8 @@ export const localeData_en = {
     'STMemoryBooks_SlothAdvancedTitle': 'Advanced settings and original tools',
     'STMemoryBooks_SlothRangesLabel': 'Original message ranges',
     'STMemoryBooks_SlothEditNexusText': 'Edit only the proposed text',
+    'STMemoryBooks_SlothApplyNexusChange': 'Apply this change',
+    'STMemoryBooks_SlothNoApprovedChanges': 'Select at least one Nexus change to save, or cancel.',
     'STMemoryBooks_SlothBudgetPreview': 'Always-on draft / SillyTavern World Info budget',
     'STMemoryBooks_SlothLocalConflict': 'World Info has a different local version. Finish any open edits, then reload and review again.',
     'STMemoryBooks_SlothSharedBook': 'This book is already assigned to another character. Choose a separate book for these memories.',

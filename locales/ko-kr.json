@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothCollectionOptions": "과거 기억 호출과 검토 설정",
   "STMemoryBooks_SlothAdvancedTitle": "고급 설정 및 기존 도구",
   "STMemoryBooks_SlothRangesLabel": "원본 메시지 번호 범위",
+  "STMemoryBooks_SlothApplyNexusChange": "이 변경 반영",
+  "STMemoryBooks_SlothNoApprovedChanges": "저장할 Nexus 변경을 하나 이상 선택하거나 취소해.",
   "STMemoryBooks_SlothEditNexusText": "제안된 문구만 수정",
   "STMemoryBooks_NexusRotationHelp": "기존 단일 Scene 저장 도구의 설정입니다. Nexus·Memory를 지정한 수동 수집에서는 최근 완료 Scene 세 개가 항상 활성화됩니다.",
   "STMemoryBooks_NexusRecallMode": "이전 Scene 호출 방식",

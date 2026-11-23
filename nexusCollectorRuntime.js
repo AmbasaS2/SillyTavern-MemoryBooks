@@ -224,8 +224,8 @@ export async function runNexusSidePromptFollowup({ profileIndex } = {}) {
         const roles = Object.fromEntries(['nexus', 'memory'].map(role =>
             [role, getNexusRoleResolutionForChatRef(role, ref, settings).name]));
         assertLegacyMigrationOrigin(ref, roles);
-        const isAllowedBook = name => name === roles.nexus ||
-            (name !== roles.memory && !isManagedNexusWorld(settings, name));
+        const isAllowedBook = name => name !== roles.memory &&
+            (name === roles.nexus || !isManagedNexusWorld(settings, name));
         const options = await listReviewedSidePromptOptions(roles.nexus, isAllowedBook);
         assertLegacyMigrationOrigin(ref, roles);
         if (!options.length) {
@@ -509,7 +509,9 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits
             '" value="'+html(key)+'">').join('')+'</fieldset></details>').join('');
     const delta=changes.map((change,index)=>
         '<details class="stmb-sloth-detail"><summary>'+html(change.action)+' · '+
-        html(change.title)+'</summary><p><strong>'+
+        html(change.title)+'</summary><label class="checkbox_label">'+
+        '<input type="checkbox" data-sloth-nexus-include="'+index+'" checked> '+
+        html(t('Apply this change','STMemoryBooks_SlothApplyNexusChange'))+'</label><p><strong>'+
         html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
         ':</strong> '+html(change.reason)+'</p><p><strong>'+
         html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
@@ -550,10 +552,10 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits
             result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
             action:event=>{
                 try {
-                    const field = (name, index) => {
+                    const field = (name, index, property = 'value') => {
                         const matches = popup.dlg.querySelectorAll(`[data-sloth-${name}="${index}"]`);
                         if (matches.length !== 1) throw new Error('A reviewed field is missing or repeated.');
-                        return matches[0].value;
+                        return matches[0][property];
                     };
                     const reviewedScenes = reviewSlothSceneDrafts(scenes, scenes.map((_, index) => ({
                         title: field('scene-title', index), content: field('scene-content', index),
@@ -562,11 +564,16 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits
                     const editableEdits = edits.map((edit, index) => changes[index].keywords ?
                         { ...edit, keywords: changes[index].keywords } : edit);
                     const reviewedEdits = reviewSlothNexusDrafts(editableEdits, editableEdits.map((edit, index) => ({
+                        include: field('nexus-include', index, 'checked'),
                         body: field('nexus-body', index),
                         keywords: changes[index].keywords ? field('nexus-keywords', index).split(/\r?\n/) : edit.keywords,
                     })));
-                    applyReviewedDraft(reviewedScenes, reviewedEdits);
-                    downloadSafetyBackup(states, ref, { ...plan, events: reviewedScenes }, changes, initial);
+                    if (!reviewedScenes.length && !reviewedEdits.length) {
+                        throw new Error(t('Select at least one Nexus change to save, or cancel.',
+                            'STMemoryBooks_SlothNoApprovedChanges'));
+                    }
+                    const approvedChanges = applyReviewedDraft(reviewedScenes, reviewedEdits);
+                    downloadSafetyBackup(states, ref, { ...plan, events: reviewedScenes }, approvedChanges, initial);
                     downloaded=true;
                 } catch(error) {
                     event?.stopImmediatePropagation();
@@ -844,8 +851,14 @@ export async function runNexusCollector({profileIndex}={}) {
         if(!profile)throw new Error('Choose an AI profile before starting Sloth collection.');
         const characterContext=initialCharacterContext(character);
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'};
-        const stageReviewedNexus=edits=>stageNexusEdits(originalBooks.nexus,edits,
-            book=>createWorldInfoEntry(roleNames.nexus,book),nexusOptions);
+        const stageReviewedNexus=edits=>{
+            const result=stageNexusEdits(originalBooks.nexus,edits,
+                book=>createWorldInfoEntry(roleNames.nexus,book),nexusOptions);
+            const changes=result.changes.map((change,index)=>({
+                ...change,reason:edits[index].reason,evidence:edits[index].evidence,
+            }));
+            return {staged:result.staged,changes};
+        };
         const auditReviewed=async(scenes,edits,plan)=>{
             if(settings.moduleSettings?.slothPreciseReviewEnabled!==true)return;
             toastr.info(t('Checking for missed or misattributed details...',
@@ -909,15 +922,14 @@ export async function runNexusCollector({profileIndex}={}) {
             }
             const nexus=stageReviewedNexus(edits);
             const state={name:roleNames.nexus,original:originalBooks.nexus,staged:nexus.staged};
-            const changes=nexus.changes.map((change,index)=>({
-                ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
-            }));
             const accepted=await draftApproval({
-                scenes:[],changes,plan:reviewed,states:[state],ref,edits,
+                scenes:[],changes:nexus.changes,plan:reviewed,states:[state],ref,edits,
                 applyReviewedDraft:(_scenes,corrected)=>{
                     const verified = validateGroundedNexusEdits(corrected, source);
-                    state.staged = stageReviewedNexus(verified).staged;
+                    const restaged = stageReviewedNexus(verified);
+                    state.staged = restaged.staged;
                     edits = verified;
+                    return restaged.changes;
                 },
             });
             if(!accepted)return {saved:false,reason:'nexus-only-cancelled'};
@@ -936,7 +948,7 @@ export async function runNexusCollector({profileIndex}={}) {
             catch(error){console.warn('Sloth Nexus-only editor refresh failed',error);}
             toastr.success(t('Reviewed current-state updates saved to Nexus. Memory and chat messages were not changed.',
                 'STMemoryBooks_SlothNexusOnlySaved'),'🦥 STMemoryBooks');
-            return {saved:true,scenes:0,nexusEdits:nexus.changes.length,result};
+            return {saved:true,scenes:0,nexusEdits:edits.length,result};
         }
         const approved=await planApproval(plan);
         if(!approved)return {saved:false,reason:'plan-cancelled'};
@@ -975,21 +987,20 @@ export async function runNexusCollector({profileIndex}={}) {
             }
         }
         const accepted=await draftApproval({
-            scenes,changes:nexus.changes.map((change,index)=>({
-                ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
-            })),plan:approved,states,ref,initial,edits,
+            scenes,changes:nexus.changes,plan:approved,states,ref,initial,edits,
             applyReviewedDraft:(reviewedScenes,reviewedEdits)=>{
                 const verified = validateGroundedNexusEdits(reviewedEdits, source);
-                const nextNexus = stageReviewedNexus(verified).staged;
+                const nextNexus = stageReviewedNexus(verified);
                 const nextMemory = reviewedScenes.length ? stageReviewedMemory(reviewedScenes).staged : states[0].staged;
                 if (initial) {
-                    nextNexus.extensions = states[1].staged.extensions;
+                    nextNexus.staged.extensions = states[1].staged.extensions;
                     nextMemory.extensions = states[0].staged.extensions;
                 }
                 states[0].staged = nextMemory;
-                states[1].staged = nextNexus;
+                states[1].staged = nextNexus.staged;
                 scenes = reviewedScenes;
                 edits = verified;
+                return nextNexus.changes;
             }});
         if(!accepted)return {saved:false,reason:'draft-cancelled'};
         checkOrigin();
