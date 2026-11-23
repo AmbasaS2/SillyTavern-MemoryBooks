@@ -1,4 +1,5 @@
 {
+  "STMemoryBooks_SlothReceiptUnavailable": "Beide Bücher wurden gespeichert. Prüfe den ursprünglichen Chat, bevor du Nachrichten ausblendest.",
   "STMemoryBooks_SlothBudgetPreview": "Immer aktiver Entwurf / World-Info-Budget von SillyTavern",
   "STMemoryBooks_SlothLocalConflict": "World Info hat eine andere lokale Fassung. Schließe offene Änderungen ab, lade neu und prüfe den Entwurf erneut.",
   "STMemoryBooks_SlothSharedBook": "Dieses Buch ist bereits einer anderen Figur zugeordnet. Wähle ein eigenes Buch für diese Erinnerungen.",

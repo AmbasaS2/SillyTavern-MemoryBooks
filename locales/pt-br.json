@@ -1,4 +1,5 @@
 {
+  "STMemoryBooks_SlothReceiptUnavailable": "Os dois livros foram salvos. Confira o chat original antes de ocultar mensagens.",
   "STMemoryBooks_SlothBudgetPreview": "Rascunho sempre ativo / orçamento de World Info do SillyTavern",
   "STMemoryBooks_SlothLocalConflict": "O World Info tem uma versão local diferente. Conclua as edições abertas, recarregue e revise novamente.",
   "STMemoryBooks_SlothSharedBook": "Este livro já está atribuído a outro personagem. Escolha um livro separado para estas memórias.",

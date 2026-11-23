@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+import {fingerprintSlothChat} from './nexusCollectionPolicy.js';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
 const start=source.indexOf('function activeSource(ref, memoryBook, roleNames = null) {');
@@ -54,4 +55,39 @@ test('collector refuses to reuse a different pair for a chat with saved Scene re
     delete h.metadata.slothCollection.books;
     assert.throws(()=>h.fn(h.current,{entries:{}},oldPair),/reviewed migration/,
         'older unbound receipts must be reviewed rather than assumed to match');
+});
+
+test('the collection receipt is tied to persisted source and is reread after metadata save', async () => {
+    const origin = { avatarUrl: 'A.png', fileName: 'chat-a' };
+    const turns = [{ mes: 'The bell rang.', name: 'Tali', is_user: false }];
+    let stored = {};
+    let metadataWrites = 0;
+    const checks = {
+        stringify: JSON.stringify,
+        fingerprintSlothChat,
+        getRequestHeaders: () => ({}),
+        getStmbChatKey: () => 'character:A.png:chat-a',
+        assertOrigin() {},
+        fetch: async (_url, { body }) => {
+            assert.deepEqual(JSON.parse(body), { avatar_url: origin.avatarUrl, file_name: origin.fileName });
+            return { ok: true, json: async () => [{ chat_metadata: { STMemoryBooks: stored } }, ...turns] };
+        },
+        patchStmbMetadataForChatRef: async (_origin, patch) => {
+            metadataWrites++;
+            stored = patch(stored);
+        },
+    };
+    const first = source.indexOf('async function readReviewedChat(');
+    const last = source.indexOf('\nfunction assertLegacyMigrationOrigin(', first);
+    const write = vm.runInNewContext(source.slice(first, last) + '\nupdateCollectedLedger', checks);
+    const pair = { nexus: 'N', memory: 'M' };
+    const fingerprint = fingerprintSlothChat(turns, [0]);
+    await write({}, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint);
+    assert.equal(metadataWrites, 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(stored.slothCollection)).savedRanges, [[0, 0]]);
+    checks.patchStmbMetadataForChatRef = async () => {};
+    await assert.rejects(write(stored.slothCollection, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /did not persist/);
+    turns[0].mes = 'A different event happened.';
+    await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /saved chat differs/);
+    assert.equal(metadataWrites, 1);
 });

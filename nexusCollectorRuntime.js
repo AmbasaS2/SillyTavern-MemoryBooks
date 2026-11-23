@@ -13,8 +13,8 @@ import { getTokenCountAsync } from '../../../tokenizers.js';
 import { DOMPurify } from '../../../../lib.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
-import { getCurrentStmbChatRef, getStmbChatKey, withStmbWriteLane } from './stmbJobs.js';
-import { getSceneMarkers, saveMetadataForCurrentContext } from './sceneManager.js';
+import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, withStmbWriteLane } from './stmbJobs.js';
+import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
@@ -465,13 +465,36 @@ async function withBothWriteLanes(names,task) {
     return await visit(0);
 }
 
-function updateCollectedLedger(prior,events,ref,roleNames) {
-    const markers=getSceneMarkers();
+async function readReviewedChat(ref, sourceIds, fingerprint) {
+    const response = await fetch('/api/chats/get', {
+        method: 'POST', headers: getRequestHeaders(),
+        body: stringify({ avatar_url: ref.avatarUrl, file_name: ref.fileName }),
+    });
+    if (!response.ok) throw new Error('The original chat could not be read from SillyTavern.');
+    const stored = await response.json();
+    if (!Array.isArray(stored) || !stored[0]?.chat_metadata ||
+        fingerprintSlothChat(stored.slice(1), sourceIds) !== fingerprint) {
+        throw new Error('The saved chat differs from the reviewed messages. Reload it before collecting again.');
+    }
+    return stored[0].chat_metadata.STMemoryBooks?.slothCollection;
+}
+
+async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint) {
     const savedRanges=[...(prior.savedRanges||[])];
     for(const event of events)for(const range of event.segments)savedRanges.push([...range]);
-    markers.slothCollection={chatKey:getStmbChatKey(ref),savedRanges,
+    const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
-    saveMetadataForCurrentContext();
+    const previous = await readReviewedChat(ref, sourceIds, fingerprint);
+    await patchStmbMetadataForChatRef(ref, markers => {
+        assertOrigin(ref, roleNames, sourceIds, fingerprint);
+        if (stringify(markers.slothCollection) !== stringify(previous)) {
+            throw new Error('The saved collection receipt changed during review.');
+        }
+        return { ...markers, slothCollection: receipt };
+    });
+    if (stringify(await readReviewedChat(ref, sourceIds, fingerprint)) !== stringify(receipt)) {
+        throw new Error('The collection receipt did not persist in the original chat.');
+    }
 }
 
 function assertLegacyMigrationOrigin(ref, roles) {
@@ -841,6 +864,7 @@ export async function runNexusCollector({profileIndex}={}) {
         if(!accepted)return {saved:false,reason:'draft-cancelled'};
         checkOrigin();
         await auditReviewed(scenes,edits,approved);
+        if (approved.events.length) await readReviewedChat(ref, sourceIds, fingerprint);
         const outcome=initial?await saveInitialNexusCollection(states,{ref,roleNames,checkOrigin,settings}):
             await commitSlothBooks(states,{
             loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
@@ -850,9 +874,18 @@ export async function runNexusCollector({profileIndex}={}) {
             verifyOrigin:checkOrigin,
         });
         // Metadata must change ONLY after both book writes and read-backs succeeded.
-        if(approved.events.length) {
+        let receiptVerified = false;
+        try {
+            if (approved.events.length) {
+                await updateCollectedLedger(prior, approved.events, ref, roleNames, sourceIds, fingerprint);
+                receiptVerified = true;
+            }
             assertOrigin(ref,roleNames,sourceIds,fingerprint);
-            updateCollectedLedger(prior,approved.events,ref,roleNames);
+        } catch (error) {
+            console.warn('Sloth: books verified but the original chat receipt is unavailable.', error);
+            toastr.warning(t('Both lorebooks were saved. Check the original chat before hiding any messages.',
+                'STMemoryBooks_SlothReceiptUnavailable'), 'STMemoryBooks', { timeOut: 10000 });
+            return { saved:true, receiptVerified, reason:'chat-receipt-unavailable', result:outcome };
         }
         for(const state of states){
             try{await Promise.resolve(reloadEditor(state.name));}
@@ -866,7 +899,7 @@ export async function runNexusCollector({profileIndex}={}) {
                 'STMemoryBooks_SlothNoHideCandidate');
         toastr.success(msg+' '+hideHint,'STMemoryBooks',{timeOut:9000});
         return {saved:true,scenes:scenes.length,nexusEdits:nexus.changes.length,
-            deferred:approved.deferred.length,result:outcome};
+            deferred:approved.deferred.length,receiptVerified,result:outcome};
     }finally{
         collectorBusy=false;
     }

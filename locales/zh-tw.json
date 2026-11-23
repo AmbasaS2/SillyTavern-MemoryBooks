@@ -1,4 +1,5 @@
 {
+  "STMemoryBooks_SlothReceiptUnavailable": "兩個設定集都已儲存。隱藏訊息前，請先檢查原始聊天。",
   "STMemoryBooks_SlothBudgetPreview": "常駐草稿 / SillyTavern 世界資訊預算",
   "STMemoryBooks_SlothLocalConflict": "世界資訊的本機版本不同。請完成編輯，重新整理後再次審查。",
   "STMemoryBooks_SlothSharedBook": "此設定集已分配給另一個角色。請為這些記憶選擇獨立的設定集。",

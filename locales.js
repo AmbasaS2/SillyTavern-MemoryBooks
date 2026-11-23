@@ -564,6 +564,7 @@ export const localeData_en = {
     'STMemoryBooks_SlothLocalConflict': 'World Info has a different local version. Finish any open edits, then reload and review again.',
     'STMemoryBooks_SlothSharedBook': 'This book is already assigned to another character. Choose a separate book for these memories.',
     'STMemoryBooks_SlothNoBooksYet': 'This character has no linked lorebooks yet.',
+    'STMemoryBooks_SlothReceiptUnavailable': 'Both lorebooks were saved. Check the original chat before hiding any messages.',
     'STMemoryBooks_NexusRecallMode': 'Older Scene recall',
     'STMemoryBooks_NexusRecallVector': 'Vector',
     'STMemoryBooks_NexusRecallKeyword': 'Keywords (must already exist)',
