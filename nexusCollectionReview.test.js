@@ -79,7 +79,7 @@ test('Nexus direct edit fails before staging when a single exact span or special
     assert.throws(()=>reviewSlothNexusDrafts([op],[]),/missing/);
 });
 
-test('Sloth collection UI has a real editable draft and a scoped advanced Legacy drawer',()=>{
+test('Sloth collection UI has a real editable draft and a separate original workspace',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
     const template=readFileSync(new URL('./templates.js',import.meta.url),'utf8');
     const source=readFileSync(new URL('./index.js',import.meta.url),'utf8');
@@ -88,8 +88,9 @@ test('Sloth collection UI has a real editable draft and a scoped advanced Legacy
         assert.ok(runtime.includes(target),'missing review UI bridge '+target);
     }
     assert.ok(template.includes('STMemoryBooks_SlothAIModule'));
-    assert.ok(template.includes('stmb-workspace-advanced'));
-    assert.match(template, /\{\{#unless slothWorkspaceActive\}\}open/);
+    assert.match(template, /id="stmb-sloth-tab" role="tab" aria-selected="true"/);
+    assert.match(template, /id="stmb-original-panel"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(source, /getSceneData\(\{[^}]*warnOnHiddenMessages: false/);
     assert.ok(source.includes("querySelector('#stmb-original-actions')"));
-    assert.ok(source.includes("popupElement.querySelector('#stmb-profile-select')"));
+    assert.ok(source.includes("popupElement.querySelector('#stmb-sloth-profile-select')"));
 });

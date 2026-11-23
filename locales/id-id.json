@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "Sistem Sloth",
+  "STMemoryBooks_OriginalTab": "Memory Books asli",
+  "STMemoryBooks_SlothAddConnectionProfile": "Simpan profil koneksi SillyTavern, atau tambahkan profil Memory Books di tab Asli.",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory dan Current Continuity selalu aktif. Pilihan ini berlaku untuk detail baru.",
   "STMemoryBooks_SlothSidePromptAction": "Tinjau prompt samping",
   "STMemoryBooks_SlothSidePromptHelp": "Tulis Side Prompt seperti catatan harian dari pesan asli sebuah Scene tersimpan. Tinjau sebelum menyimpannya di Nexus atau lorebook yang dipilih.",
   "STMemoryBooks_SlothSidePromptEmpty": "Tidak ada Side Prompt setelah memori yang memiliki tujuan tersedia di obrolan ini.",

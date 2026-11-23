@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "Faultier-System",
+  "STMemoryBooks_OriginalTab": "Ursprüngliche Memory Books",
+  "STMemoryBooks_SlothAddConnectionProfile": "Speichern Sie ein SillyTavern-Verbindungsprofil oder fügen Sie im ursprünglichen Tab ein Memory-Books-Profil hinzu.",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory und Current Continuity sind immer aktiv. Diese Auswahl gilt für neue Details.",
   "STMemoryBooks_SlothSidePromptAction": "Side Prompt prüfen",
   "STMemoryBooks_SlothSidePromptHelp": "Schreibe einen Side Prompt, etwa einen Tagebucheintrag, aus den Originalnachrichten einer gespeicherten Scene. Prüfe ihn vor dem Speichern in Nexus oder im gewählten Lorebook.",
   "STMemoryBooks_SlothSidePromptEmpty": "Kein Side Prompt nach der Erinnerung hat in diesem Chat ein verfügbares Ziel.",

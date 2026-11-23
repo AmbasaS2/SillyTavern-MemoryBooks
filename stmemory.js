@@ -367,7 +367,7 @@ async function sendViaChatCompletionService(body, signal, presetName = '', conne
     const normalizedPresetName = typeof presetName === 'string' ? presetName.trim() : '';
     const serviceBody = {
         ...body,
-        stream: !!oai_settings?.stream_openai,
+        stream: connection?.explicit ? false : !!oai_settings?.stream_openai,
     };
     const connectionRequest = prepareConnectionProfileRequest(
         connection, serviceBody, signal,
@@ -467,6 +467,7 @@ export async function sendRawCompletionRequest({
     endpoint = null,
     apiKey = null,
     connectionProfileId = null,
+    stConnectionProfileId = null,
     extra = {},
     reverseProxy = false,
     signal = null,
@@ -476,12 +477,18 @@ export async function sendRawCompletionRequest({
 }) {
     let url = getCurrentCompletionEndpoint();
     let headers = getRequestHeaders();
-    const connection = api !== 'full-manual' && useChatCompletionService
-        ? getSelectedConnectionProfile(getContext(), tr)
+    const connection = (stConnectionProfileId || (api !== 'full-manual' && useChatCompletionService))
+        ? getSelectedConnectionProfile(getContext(), tr, stConnectionProfileId || undefined)
         : null;
     if (connection) {
         api = connection.source;
-        model = model || connection.profile.model;
+        if (stConnectionProfileId) {
+            model = connection.profile['custom-connection']?.settings?.custom_model || connection.profile.model;
+            if (!model) throw new InvalidProfileError(tr('STMemoryBooks_MissingConnectionProfile', 'Missing connection profile or model.'));
+            connection.explicit = true;
+        } else {
+            model ||= connection.profile.model;
+        }
         // The active ST profile owns its URL and secret, including for Custom.
         connectionProfileId = null;
     }
@@ -630,7 +637,7 @@ export async function sendRawCompletionRequest({
     }
 
     let chatCompletionServiceError = null;
-    if (api !== 'full-manual' && useChatCompletionService) {
+    if (api !== 'full-manual' && (useChatCompletionService || stConnectionProfileId)) {
         const routedFallbackBody = applyOpenRouterRoutingSettings(body, oai_settings);
         const serviceAttempt = await sendViaChatCompletionService(body, signal, chatCompletionPreset, connection);
         if (serviceAttempt.result) {
@@ -681,7 +688,7 @@ export async function sendRawCompletionRequest({
 /**
  * Unified request wrapper for side prompts and memory generation.
  * Accepts normalized connection fields and forwards to sendRawCompletionRequest.
- * @param {{ api: string, model: string, prompt: string, temperature?: number, endpoint?: string, apiKey?: string, connectionProfileId?: string, extra?: object, reverseProxy?: boolean, jsonSchema?: object, useChatCompletionService?: boolean, chatCompletionPreset?: string }} opts
+ * @param {{ api: string, model: string, prompt: string, temperature?: number, endpoint?: string, apiKey?: string, connectionProfileId?: string, stConnectionProfileId?: string, extra?: object, reverseProxy?: boolean, jsonSchema?: object, useChatCompletionService?: boolean, chatCompletionPreset?: string }} opts
  * @returns {Promise<{ text: string, full: object }>}
  */
 export async function requestCompletion({
@@ -692,6 +699,7 @@ export async function requestCompletion({
     endpoint = null,
     apiKey = null,
     connectionProfileId = null,
+    stConnectionProfileId = null,
     extra = {},
     reverseProxy = false,
     signal = null,
@@ -709,6 +717,7 @@ export async function requestCompletion({
         endpoint,
         apiKey,
         connectionProfileId,
+        stConnectionProfileId,
         extra,
         reverseProxy,
         signal,

@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "Sistema Pereza",
+  "STMemoryBooks_OriginalTab": "Memory Books original",
+  "STMemoryBooks_SlothAddConnectionProfile": "Guarda un perfil de conexión de SillyTavern o añade un perfil de Memory Books en la pestaña original.",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory y Current Continuity siempre están activos. Esta opción se aplica a los detalles nuevos.",
   "STMemoryBooks_SlothSidePromptAction": "Revisar un prompt lateral",
   "STMemoryBooks_SlothSidePromptHelp": "Escribe un Side Prompt, como un diario, a partir de los mensajes originales de una Scene guardada. Revísalo antes de guardarlo en Nexus o en el libro configurado.",
   "STMemoryBooks_SlothSidePromptEmpty": "No hay ningún Side Prompt posterior a la memoria con un destino disponible en este chat.",

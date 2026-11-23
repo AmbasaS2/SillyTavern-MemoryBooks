@@ -7,36 +7,33 @@ import { Handlebars } from '../../../../lib.js';
  * Main settings template
  */
 export const settingsTemplate = Handlebars.compile(`
-    <div class="stmb-workspace" data-sloth-workspace="{{slothWorkspaceActive}}">
+    <div class="stmb-workspace">
         <header class="stmb-workspace-header">
           <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books</h2>
           {{#if slothCharacterAvailable}}
           <span class="stmb-current-character">{{slothCharacterName}}</span>
           {{/if}}
         </header>
+        <div class="stmb-workspace-tabs" role="tablist" aria-label="Memory Books" data-i18n="[aria-label]STMemoryBooks_Settings">
+          <button type="button" id="stmb-sloth-tab" role="tab" aria-selected="true" aria-controls="stmb-sloth-panel" data-stmb-workspace-tab="sloth" data-i18n="STMemoryBooks_SlothTab">Sloth system</button>
+          <button type="button" id="stmb-original-tab" role="tab" aria-selected="false" aria-controls="stmb-original-panel" tabindex="-1" data-stmb-workspace-tab="original" data-i18n="STMemoryBooks_OriginalTab">Original Memory Books</button>
+        </div>
+        <section id="stmb-sloth-panel" class="stmb-tab-panel" role="tabpanel" aria-labelledby="stmb-sloth-tab">
         {{#unless isGroupChat}}
         <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
-          <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h3>
-          {{#unless slothRoleActive}}
-          <p data-i18n="STMemoryBooks_SlothRolesDescription">Assign a role to each connected lorebook. New chats inherit the roles and keep separate collection progress.</p>
-          {{/unless}}
+          <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">Lorebook setup</h3>
           {{#if slothCharacterAvailable}}
-            {{#if slothChatOverrideAvailable}}
-            <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
-              <input id="stmb-sloth-chat-override" type="checkbox" {{#if slothChatOverrideActive}}checked{{/if}}>
-              <span data-i18n="STMemoryBooks_SlothChatOverride">Use different lorebooks for this chat only</span>
-            </label>
-            <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">While enabled, the Nexus / Memory choices below belong only to this chat. Other chats and new chats keep the character defaults.</small>
-            {{/if}}
-            {{#if slothChatOverrideInvalid}}
-            <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
-            {{/if}}
             {{#if slothLinkedBooksAvailable}}
+              {{#unless slothRoleActive}}
+                {{#unless slothMissingCompanion}}
+                <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the existing books to use for Nexus and Memory.</p>
+                {{/unless}}
+              {{/unless}}
               <div class="stmb-sloth-role-grid">
                 <label for="stmb-sloth-role-nexus">
                   <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · stable knowledge and current state</strong>
                   <select id="stmb-sloth-role-nexus" class="text_pole">
-                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Not assigned</option>
+                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothNexusMissing}}
                     <option selected disabled value="{{slothNexusMissingName}}">⚠ {{slothNexusMissingName}}</option>
                     {{/if}}
@@ -48,7 +45,7 @@ export const settingsTemplate = Handlebars.compile(`
                 <label for="stmb-sloth-role-memory">
                   <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · complete Scenes</strong>
                   <select id="stmb-sloth-role-memory" class="text_pole">
-                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Not assigned</option>
+                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothMemoryMissing}}
                     <option selected disabled value="{{slothMemoryMissingName}}">⚠ {{slothMemoryMissingName}}</option>
                     {{/if}}
@@ -58,9 +55,6 @@ export const settingsTemplate = Handlebars.compile(`
                   </select>
                 </label>
               </div>
-              {{#if slothRoleIncomplete}}
-              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothIncompletePair">Both Nexus and Memory must be assigned to different character-linked lorebooks before collection can begin.</p>
-              {{/if}}
               {{#if slothSharedBook}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothSharedBook">This book is already assigned to another character. Choose a separate book for these memories.</p>
               {{/if}}
@@ -71,37 +65,64 @@ export const settingsTemplate = Handlebars.compile(`
               {{/if}}{{/if}}
             {{else}}
               {{#if slothFirstSetup}}
-              <p data-i18n="STMemoryBooks_SlothNoBooksYet">This character has no linked lorebooks yet.</p>
+              <p data-i18n="STMemoryBooks_SlothNoBooksYet">No lorebooks connected.</p>
               {{else}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
               {{/if}}
+            {{/if}}
+            {{#if slothChatOverrideAvailable}}
+            <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
+              <input id="stmb-sloth-chat-override" type="checkbox" {{#if slothChatOverrideActive}}checked{{/if}}>
+              <span data-i18n="STMemoryBooks_SlothChatOverride">Use different lorebooks in this chat</span>
+            </label>
+              {{#if slothChatOverrideActive}}
+              <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">These choices apply to this chat only.</small>
+              {{/if}}
+            {{/if}}
+            {{#if slothChatOverrideInvalid}}
+            <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
             {{/if}}
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}
         </section>
+        {{else}}
+          <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose an individual character chat to connect lorebooks.</p>
         {{/unless}}
         {{#if slothCanCollect}}
         <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
-          <h3 id="stmb-collection-title" data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</h3>
+          <div class="stmb-collection-action">
+            <h3 id="stmb-collection-title" data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</h3>
+            {{#if slothFirstSetup}}
+              <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothFirstBooksButton">Set up Nexus and Memory</button>
+              <p data-i18n="STMemoryBooks_SlothFirstBooksHelp">Review the first collection before creating both lorebooks.</p>
+            {{else}}
+              <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Analyze completed events</button>
+              <p data-i18n="STMemoryBooks_SlothManualHelp">Review the proposed events and drafts before saving.</p>
+            {{/if}}
+          </div>
         <div class="world_entry_form_control">
-            <label for="stmb-profile-select" data-i18n="STMemoryBooks_SlothAIModule">AI profile used for memory collection</label>
-            <select id="stmb-profile-select" class="text_pole">
+            <label for="stmb-sloth-profile-select" data-i18n="STMemoryBooks_SlothAIModule">Memory collection AI</label>
+            <select id="stmb-sloth-profile-select" class="text_pole">
+                {{#if slothConnectionProfileMissing}}
+                <option value="st:{{slothConnectionProfileId}}" selected disabled data-i18n="STMemoryBooks_MissingConnectionProfile">Missing connection profile</option>
+                {{/if}}
                 {{#each profiles}}
-                <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}</option>
+                <option value="{{@index}}" {{#unless @root.slothConnectionProfileId}}{{#if isDefault}}selected{{/if}}{{/unless}}>{{name}}</option>
                 {{/each}}
+                {{#if slothConnectionProfiles}}
+                <optgroup label="SillyTavern connection profiles" data-i18n="[label]STMemoryBooks_ConnectionProfile">
+                  {{#each slothConnectionProfiles}}
+                  <option value="st:{{id}}" {{#if selected}}selected{{/if}} title="{{model}}">{{name}}</option>
+                  {{/each}}
+                </optgroup>
+                {{/if}}
             </select>
+            {{#if slothHasOnlyCurrentProfile}}
+            <small data-i18n="STMemoryBooks_SlothAddConnectionProfile">Save a SillyTavern connection profile, or add a Memory Books profile on the Original tab.</small>
+            {{/if}}
         </div>
 
-        {{#if slothFirstSetup}}
-        <div>
-          <p data-i18n="STMemoryBooks_SlothFirstBooksHelp">Review the first collection to create Nexus and Memory for this character.</p>
-          <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothFirstBooksButton">Set up Nexus and Memory</button>
-        </div>
-        {{else}}
-          <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect completed events</button>
-          <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
-        {{/if}}
         </section>
         {{/if}}
         {{#if slothMissingCompanion}}
@@ -128,6 +149,7 @@ export const settingsTemplate = Handlebars.compile(`
               <option value="keyword" {{#if nexusDetailKeywordRecall}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallKeyword">Keywords</option>
             </select>
           </label>
+          <small data-i18n="STMemoryBooks_SlothNexusRecallHelp">Core Memory and Current Continuity are created as always-on entries. This choice applies only to new long-term and NPC details.</small>
 
           <label class="checkbox_label">
             <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
@@ -161,9 +183,8 @@ export const settingsTemplate = Handlebars.compile(`
           </details>
         {{/if}}
 
-        <details id="stmb-workspace-advanced" class="stmb-workspace-drawer stmb-advanced" {{#unless slothWorkspaceActive}}open{{/unless}}>
-          <summary data-i18n="STMemoryBooks_SlothAdvancedTitle">Advanced settings and original tools</summary>
-          <div class="stmb-advanced-content">
+        </section>
+        <section id="stmb-original-panel" class="stmb-tab-panel stmb-original-panel" role="tabpanel" aria-labelledby="stmb-original-tab" hidden>
         <details class="stmb-help-drawer info-block hint">
             <summary>
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
@@ -317,7 +338,6 @@ export const settingsTemplate = Handlebars.compile(`
             <small class="opacity50p" data-i18n="STMemoryBooks_TitleFormatDesc">Use [0], [00], [000] for auto-numbering. Available: \{{title}}, \{{scene}}, &#123;&#123;char}}, &#123;&#123;groupname}}, \{{present}}, &#123;&#123;user}}, \{{messages}}, \{{profile}}, &#123;&#123;date}}, &#123;&#123;time}}</small>
         </div>
 
-        {{#unless slothCanCollect}}
         <div class="world_entry_form_control">
             <select id="stmb-profile-select" class="text_pole">
                 {{#each profiles}}
@@ -326,7 +346,6 @@ export const settingsTemplate = Handlebars.compile(`
             </select>
         </div>
 
-        {{/unless}}
         <div id="stmb-profile-summary" class="padding10 marginBot10">
             <div class="marginBot5" data-i18n="STMemoryBooks_ProfileSettings">Profile Settings:</div>
             <div><span data-i18n="STMemoryBooks_Provider">Provider</span>: <span id="stmb-summary-api">{{selectedProfile.connection.api}}</span></div>
@@ -362,8 +381,7 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
 
         <div class="stmb-original-actions" id="stmb-original-actions"></div>
-          </div>
-        </details>
+        </section>
     </div>
 
 `);

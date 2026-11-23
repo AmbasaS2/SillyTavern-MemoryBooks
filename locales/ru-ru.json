@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "Система «Ленивец»",
+  "STMemoryBooks_OriginalTab": "Исходный Memory Books",
+  "STMemoryBooks_SlothAddConnectionProfile": "Сохраните профиль подключения SillyTavern или добавьте профиль Memory Books на исходной вкладке.",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory и Current Continuity всегда активны. Этот выбор применяется к новым подробностям.",
   "STMemoryBooks_SlothSidePromptAction": "Проверить боковой промпт",
   "STMemoryBooks_SlothSidePromptHelp": "Напишите Side Prompt, например дневник, по исходным сообщениям сохранённой Scene. Проверьте его перед сохранением в Nexus или выбранной книге.",
   "STMemoryBooks_SlothSidePromptEmpty": "Для Side Prompt после сохранения памяти в этом чате нет доступного места записи.",

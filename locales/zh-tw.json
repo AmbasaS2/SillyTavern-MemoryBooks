@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "樹懶系統",
+  "STMemoryBooks_OriginalTab": "原版 Memory Books",
+  "STMemoryBooks_SlothAddConnectionProfile": "請儲存 SillyTavern 連線設定，或在原版分頁新增 Memory Books 設定檔。",
+  "STMemoryBooks_SlothNexusRecallHelp": "核心記憶與目前連貫狀態會一律啟用。此選項適用於新增的詳細項目。",
   "STMemoryBooks_SlothSidePromptAction": "審查側邊提示詞",
   "STMemoryBooks_SlothSidePromptHelp": "使用已儲存 Scene 的原始訊息撰寫日記等 Side Prompt。審核後儲存至 Nexus 或已設定的世界書。",
   "STMemoryBooks_SlothSidePromptEmpty": "目前聊天沒有可用儲存目標的記憶後 Side Prompt。",

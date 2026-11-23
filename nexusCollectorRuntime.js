@@ -846,7 +846,12 @@ export async function runNexusLegacyMigration() {
     }
 }
 
-export async function runNexusCollector({profileIndex}={}) {
+function collectionProfile(settings, profileIndex, stConnectionProfileId) {
+    return stConnectionProfileId ? {stConnectionProfileId} :
+        settings.profiles?.[profileIndex ?? settings.defaultProfile] || settings.profiles?.[settings.defaultProfile];
+}
+
+export async function runNexusCollector({profileIndex, stConnectionProfileId}={}) {
     if(collectorBusy)throw new Error('A Sloth collection is already in progress.');
     collectorBusy=true;
     try {
@@ -879,8 +884,7 @@ export async function runNexusCollector({profileIndex}={}) {
         }
         const sourceIds=source.map(s=>s.id);
         const fingerprint=fingerprintSlothChat(chat,sourceIds);
-        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
-            ||settings.profiles?.[settings.defaultProfile];
+        const profile=collectionProfile(settings, profileIndex, stConnectionProfileId);
         if(!profile)throw new Error('Choose an AI profile before starting Sloth collection.');
         const characterContext=initialCharacterContext(character);
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'};
@@ -1231,7 +1235,7 @@ async function approveSlothSceneMerge({name,original,staged,candidate,ref}) {
 }
 
 /** Explicit, three-review operation on one Memory book, never an automatic repair. */
-export async function runNexusSceneMerge({profileIndex}={}) {
+export async function runNexusSceneMerge({profileIndex, stConnectionProfileId}={}) {
     if(collectorBusy)throw new Error('A Sloth collection or migration is already in progress.');
     collectorBusy=true;
     try {
@@ -1251,8 +1255,7 @@ export async function runNexusSceneMerge({profileIndex}={}) {
         const names={nexus:roles.nexus.name,memory:roles.memory.name};
         const original=await loadServerWorld(names.memory);
         assertLegacyMigrationOrigin(ref,names);
-        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
-            ||settings.profiles?.[settings.defaultProfile];
+        const profile=collectionProfile(settings, profileIndex, stConnectionProfileId);
         if(!profile)throw new Error('Choose an AI profile before reviewing Scene merges.');
         toastr.info(t('Looking for previously split causal Scenes...',
             'STMemoryBooks_SlothMergeScanning'),'🦥 STMemoryBooks');
@@ -1312,7 +1315,7 @@ export async function runNexusSceneMerge({profileIndex}={}) {
  * only after confirming replacement facts from the current chat.
  * Original disabled entries and a full snapshot in Nexus metadata survive.
  */
-export async function runNexusLegacyContinuityReview({profileIndex}={}) {
+export async function runNexusLegacyContinuityReview({profileIndex, stConnectionProfileId}={}) {
     if(collectorBusy)throw new Error('A Sloth collection or migration is already in progress.');
     collectorBusy=true;
     try {
@@ -1355,8 +1358,7 @@ export async function runNexusLegacyContinuityReview({profileIndex}={}) {
                 throw new Error('Original chat changed during semantic review. No save performed.');
             }
         };
-        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
-            ||settings.profiles?.[settings.defaultProfile];
+        const profile=collectionProfile(settings, profileIndex, stConnectionProfileId);
         if(!profile)throw new Error('Choose an AI profile before reviewing old Continuity.');
         toastr.info(t('Comparing preserved old states with the visible current chat...',
             'STMemoryBooks_SlothLegacySemanticAnalyzing'),'🦥 STMemoryBooks');
@@ -1479,7 +1481,7 @@ async function chooseSlothSplitSource(sources) {
 }
 
 /** Explicit split, limited to verified visible messages and completion order. */
-export async function runNexusSceneSplit({profileIndex}={}) {
+export async function runNexusSceneSplit({profileIndex, stConnectionProfileId}={}) {
     if(collectorBusy)throw new Error('A Sloth collection or repair is already in progress.');
     collectorBusy=true;
     try{
@@ -1528,8 +1530,7 @@ export async function runNexusSceneSplit({profileIndex}={}) {
                 throw new Error('Original chat changed during Scene split. No data saved.');
             }
         };
-        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
-            ||settings.profiles?.[settings.defaultProfile];
+        const profile=collectionProfile(settings, profileIndex, stConnectionProfileId);
         if(!profile)throw new Error('Choose an AI profile before reviewing a Scene split.');
         toastr.info(t('Checking the selected Scene for independent completed events...',
             'STMemoryBooks_SlothSplitAnalyzing'),'🦥 STMemoryBooks');

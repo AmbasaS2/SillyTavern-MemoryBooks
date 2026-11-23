@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "ナマケモノ方式",
+  "STMemoryBooks_OriginalTab": "従来の Memory Books",
+  "STMemoryBooks_SlothAddConnectionProfile": "SillyTavern の接続プロファイルを保存するか、従来のタブで Memory Books のプロファイルを追加してください。",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory と Current Continuity は常に有効です。この設定は新しい詳細項目に適用されます。",
   "STMemoryBooks_SlothSidePromptAction": "サイドプロンプトを確認",
   "STMemoryBooks_SlothSidePromptHelp": "保存済みSceneの元メッセージから日記などのサイドプロンプトを作成します。確認後にNexusか指定のロアブックへ保存します。",
   "STMemoryBooks_SlothSidePromptEmpty": "このチャットで保存先を利用できる記憶後サイドプロンプトがありません。",

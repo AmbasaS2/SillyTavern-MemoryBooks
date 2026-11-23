@@ -15,15 +15,18 @@ test('Sloth role selectors are character-only and offer Nexus plus Memory', () =
     assert.match(source.slice(start-60,end+400), /stmb-sloth-role-nexus/);
     assert.match(source.slice(start-60,end+400), /stmb-sloth-role-memory/);
     assert.ok(source.lastIndexOf('{{#unless isGroupChat}}',start)>0);
-    assert.match(source, /STMemoryBooks_SlothIncompletePair/);
+    assert.doesNotMatch(source, /stmb-linked-books/);
+    assert.match(source, /STMemoryBooks_SlothRolesDescription/);
 });
 
-test('new UI names follow the full, short and icon-only naming convention', () => {
+test('Korean role setup labels are explicit and hidden-range guidance is formal', () => {
     const ko=JSON.parse(file('./locales/ko-kr.json'));
-    assert.ok(ko.STMemoryBooks_SlothRolesTitle.startsWith('🦥 게으름뱅이 시스템'));
+    assert.equal(ko.STMemoryBooks_SlothRolesTitle, '로어북 연결');
     assert.ok(ko.STMemoryBooks_SlothRoleSaved.startsWith('🦥 게으름뱅이'));
     assert.ok(ko.STMemoryBooks_NexusRotationEnabled.startsWith('🦥 게으름뱅이'));
-    assert.ok(ko.STMemoryBooks_SlothIncompletePair.includes('Nexus'));
+    assert.match(ko.STMemoryBooks_NoVisibleMessages, /있습니다.*선택하세요/);
+    assert.match(ko.STMemoryBooks_SlothAddConnectionProfile, /기존 메모리북.*새 프로필/);
+    assert.match(ko.STMemoryBooks_SlothNexusRecallHelp, /상시로 저장.*새 장기 기억과 NPC/);
 });
 
 test('Sloth visual rules use scoped theme variables, not forced fonts', () => {

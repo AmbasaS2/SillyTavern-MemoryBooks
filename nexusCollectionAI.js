@@ -33,6 +33,7 @@ function parseStrictJSON(raw,phase) {
 }
 
 function resolveConnection(profile) {
+    if (profile?.stConnectionProfileId) return {stConnectionProfileId:profile.stConnectionProfileId,temperature:0.25};
     if(!profile || profile?.connection?.api==='current_st'||profile.useDynamicSTSettings){
         const apiInfo=getCurrentApiInfo(), modelInfo=getUIModelSettings();
         const api=normalizeCompletionSource(apiInfo.completionSource||apiInfo.api||'openai');

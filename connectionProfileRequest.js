@@ -1,9 +1,9 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Resolve the active ST connection before shaping provider-specific fields. */
-export function getSelectedConnectionProfile(context, translate = (_key, fallback) => fallback) {
-    const profileId = context?.extensionSettings?.connectionManager?.selectedProfile;
+/** Resolve a specific ST connection, or the active one if no ID is provided. */
+export function getSelectedConnectionProfile(context, translate = (_key, fallback) => fallback,
+    profileId = context?.extensionSettings?.connectionManager?.selectedProfile) {
     const service = context?.ConnectionManagerRequestService;
     if (!profileId) return null;
     if (typeof service?.sendRequest !== 'function') {
@@ -16,6 +16,20 @@ export function getSelectedConnectionProfile(context, translate = (_key, fallbac
         throw new Error(translate('STMemoryBooks_ConnectionProfileRequiresChatCompletion', 'The selected SillyTavern connection profile must use Chat Completion.'));
     }
     return { service, profileId, profile, source: mapping.source };
+}
+
+export function listChatCompletionProfiles(context) {
+    const service = context?.ConnectionManagerRequestService;
+    if (typeof service?.sendRequest !== 'function') return [];
+    return (context?.extensionSettings?.connectionManager?.profiles ?? []).filter(profile => {
+        try {
+            const mapping = service.validateProfile(profile);
+            const model = profile['custom-connection']?.settings?.custom_model || profile.model;
+            return !!profile.id && !!model && mapping.selected === 'openai' && !!mapping.source;
+        } catch {
+            return false;
+        }
+    });
 }
 
 /** Preserve connection routing and preset while overriding STMB generation fields. */

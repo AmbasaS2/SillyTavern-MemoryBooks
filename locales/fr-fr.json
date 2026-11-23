@@ -1,4 +1,8 @@
 {
+  "STMemoryBooks_SlothTab": "Système Paresseux",
+  "STMemoryBooks_OriginalTab": "Memory Books d’origine",
+  "STMemoryBooks_SlothAddConnectionProfile": "Enregistrez un profil SillyTavern ou ajoutez un profil Memory Books dans l’onglet d’origine.",
+  "STMemoryBooks_SlothNexusRecallHelp": "Core Memory et Current Continuity sont toujours actifs. Ce choix concerne les nouveaux détails.",
   "STMemoryBooks_SlothSidePromptAction": "Vérifier un Side Prompt",
   "STMemoryBooks_SlothSidePromptHelp": "Écrivez un Side Prompt, par exemple un journal, à partir des messages d’origine d’une Scene enregistrée. Vérifiez-le avant de l’enregistrer dans Nexus ou dans le livre configuré.",
   "STMemoryBooks_SlothSidePromptEmpty": "Aucun Side Prompt après mémoire n’a de destination disponible dans cette discussion.",

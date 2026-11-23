@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { getSelectedConnectionProfile, prepareConnectionProfileRequest } from './connectionProfileRequest.js';
+import { getSelectedConnectionProfile, listChatCompletionProfiles, prepareConnectionProfileRequest } from './connectionProfileRequest.js';
 import { applyOpenRouterRoutingSettings } from './openRouterRouting.js';
 import { attachChatCompletionServiceError } from './chatCompletionServiceError.js';
 
@@ -138,6 +138,21 @@ test('checked sender uses active connection even with a separate STMB preset and
     assert.equal(connectionCalls[0][4].model, 'stmb-model');
     assert.equal(connectionCalls[0][4].temperature, 0);
     assert.equal(connectionCalls[0][4].max_tokens, 1500);
+    assert.equal(calls.length, 0);
+});
+
+test('an explicit collection connection uses its model without switching the active connection', async () => {
+    const { context, calls: connectionCalls } = fixture('custom');
+    const manager = context.extensionSettings.connectionManager;
+    manager.profiles = [{ id: 'active', model: 'chat-model' }, { id: 'collection', model: 'memory-model' }, { id: 'invalid' }];
+    context.ConnectionManagerRequestService.getProfile = id => manager.profiles.find(profile => profile.id === id);
+    assert.deepEqual(listChatCompletionProfiles(context).map(profile => profile.id), ['active', 'collection']);
+    const { send, calls } = senderHarness(context);
+    await send({ stConnectionProfileId: 'collection', model: 'chat-model', prompt: 'scene' });
+    assert.equal(manager.selectedProfile, 'active');
+    assert.equal(connectionCalls[0][0], 'collection');
+    assert.equal(connectionCalls[0][4].model, 'memory-model');
+    assert.equal(connectionCalls[0][3].stream, false);
     assert.equal(calls.length, 0);
 });
 

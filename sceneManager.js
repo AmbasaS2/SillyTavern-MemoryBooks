@@ -572,8 +572,8 @@ export async function getSceneData({ includeHiddenMessages = false, warnOnHidden
                     ),
                     'STMemoryBooks',
                     {
-                        timeOut: 0,
-                        extendedTimeOut: 0,
+                        timeOut: 4500,
+                        extendedTimeOut: 1000,
                         tapToDismiss: true,
                         closeButton: true,
                     }
