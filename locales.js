@@ -429,7 +429,7 @@ export const localeData_en = {
     'STMemoryBooks_EstimatedTokens': 'Estimated tokens',
     'STMemoryBooks_MostlyHiddenSceneWarning': 'More than 50% of the messages in this scene are hidden. Please ensure that the scene selection is correct.',
     'STMemoryBooks_NoSceneMarkers': 'No scene markers set. Use the chevron buttons in chat messages to mark start (►) and end (◄) points.',
-    'STMemoryBooks_NoVisibleMessages': 'The selected scene contains only hidden messages. Was this scene previously processed? Either unhide the messages or enable "Unhide hidden messages for memory generation" in General Settings.',
+    'STMemoryBooks_NoVisibleMessages': 'This range contains only hidden messages. Unhide them or choose another range.',
 
     // Memory Status
     'STMemoryBooks_MemoryStatus': 'Memory Status',

@@ -520,8 +520,9 @@ export function createSceneButtons(messageElement) {
  * Get scene data with message excerpts
  * @param {Object} [options] - Scene preview options
  * @param {boolean} [options.includeHiddenMessages=false] - Include hidden messages when estimating the post-unhide scene
+ * @param {boolean} [options.warnOnHiddenMessages=true] - Show the legacy hidden-range warning for this preview
  */
-export async function getSceneData({ includeHiddenMessages = false } = {}) {
+export async function getSceneData({ includeHiddenMessages = false, warnOnHiddenMessages = true } = {}) {
     const markers = getSceneMarkers();
     
     if (markers.sceneStart === null || markers.sceneEnd === null) {
@@ -563,10 +564,10 @@ export async function getSceneData({ includeHiddenMessages = false } = {}) {
         console.warn('STMemoryBooks-SceneManager: getSceneData failed:', e);
         try {
             const msg = e?.message || '';
-            if (msg.includes('No visible messages')) {
+            if (warnOnHiddenMessages && msg.includes('No visible messages')) {
                 toastr?.error?.(
                     translate(
-                        'The selected scene contains only hidden messages. Was this scene previously processed? Either unhide the messages or enable "Unhide hidden messages for memory generation" in General Settings.',
+                        'This range contains only hidden messages. Unhide them or choose another range.',
                         'STMemoryBooks_NoVisibleMessages'
                     ),
                     'STMemoryBooks',

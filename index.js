@@ -11009,9 +11009,6 @@ function initializeSettingsPopupSelect2(popupInstance = currentPopupInstance) {
 async function buildSettingsTemplateData({ includeSidePromptSets = false } = {}) {
   const settings = initializeSettings();
   await SummaryPromptManager.firstRunInitIfMissing(settings);
-  const sceneData = await getSceneData({
-    includeHiddenMessages: !!settings.moduleSettings.unhideBeforeMemory,
-  });
   const sceneMarkers = getSceneMarkers();
 
   // Build Regex script options (Global, Scoped, Preset), include disabled too.
@@ -11070,6 +11067,11 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
   const slothMissingCompanion = canPrepareNexusCompanion(slothChatRef, settings);
   const slothRoleIncomplete = (!!(slothSelectedRoles.nexus || slothSelectedRoles.memory) ||
     !!slothChatOverride?.invalid) && !slothRoleActive;
+  const slothWorkspaceActive = slothRoleActive || slothFirstSetup || slothRoleIncomplete || slothMissingCompanion;
+  const sceneData = await getSceneData({
+    includeHiddenMessages: !!settings.moduleSettings.unhideBeforeMemory,
+    warnOnHiddenMessages: !slothWorkspaceActive,
+  });
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
     name,
     selected: slothSelectedRoles[role] === name,
@@ -11170,7 +11172,7 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
     slothMissingCompanion,
-    slothWorkspaceActive: slothRoleActive || slothFirstSetup || slothRoleIncomplete || slothMissingCompanion,
+    slothWorkspaceActive,
     slothSharedBook: [slothRoleMemory.state, slothRoleNexus.state].includes('shared'),
     slothRoleIncomplete,
     slothCharacterAvailable: !!sloth.character,
