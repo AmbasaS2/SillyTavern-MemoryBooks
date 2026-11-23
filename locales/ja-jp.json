@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: 最新の完結したシーン3件を常時有効にする",
+  "STMemoryBooks_NexusRotationHelp": "専用のMemoryロアブックのみ対象です。番号と結末のあるシーンを手動保存すると切り替わります。このモードでは自動要約・通知・自動非表示は無効です。シーン分割とNexus更新は未実装です。",
+  "STMemoryBooks_NexusRecallMode": "過去のシーンの呼び出し方法",
+  "STMemoryBooks_NexusRecallVector": "ベクトル",
+  "STMemoryBooks_NexusRecallKeyword": "キーワード（既存のキーワードが必要）",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "非表示のメッセージも使用する",
   "STMemoryBooks_Clip_FormatRequired": "形式には{{CONTENT}}を1回だけ含めてください。",
   "STMemoryBooks_CombineClips_PromptRequired": "クリップ結合プロンプトには{{SOURCE_CLIPS}}を1回だけ含めてください。",

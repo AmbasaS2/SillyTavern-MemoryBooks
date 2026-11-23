@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory：始终启用最新3条已完结场景",
+  "STMemoryBooks_NexusRotationHelp": "仅适用于专用Memory世界书。手动保存有编号且有结局的场景时轮换。本模式禁用自动摘要、提醒和自动隐藏消息。场景规划及Nexus更新尚未实现。",
+  "STMemoryBooks_NexusRecallMode": "旧场景召回方式",
+  "STMemoryBooks_NexusRecallVector": "向量",
+  "STMemoryBooks_NexusRecallKeyword": "关键词（须已设置）",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "也使用隐藏的消息",
   "STMemoryBooks_Clip_FormatRequired": "格式必须恰好包含一次 {{CONTENT}}。",
   "STMemoryBooks_CombineClips_PromptRequired": "合并剪辑提示词必须恰好包含一次 {{SOURCE_CLIPS}}。",

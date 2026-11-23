@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: всегда включать три последние завершённые сцены",
+  "STMemoryBooks_NexusRotationHelp": "Только для отдельных лорбуков Memory. При ручном сохранении пронумерованных завершённых сцен выполняется ротация. В этом режиме отключены автосводки, напоминания и автоскрытие сообщений. Планирование сцен и обновление Nexus пока не реализованы.",
+  "STMemoryBooks_NexusRecallMode": "Вызов старых сцен",
+  "STMemoryBooks_NexusRecallVector": "Вектор",
+  "STMemoryBooks_NexusRecallKeyword": "Ключевые слова (должны быть заданы)",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "Также использовать скрытые сообщения",
   "STMemoryBooks_Clip_FormatRequired": "Формат должен содержать {{CONTENT}} ровно один раз.",
   "STMemoryBooks_CombineClips_PromptRequired": "Запрос объединения должен содержать {{SOURCE_CLIPS}} ровно один раз.",

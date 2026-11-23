@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory：始終啟用最新3筆已完結場景",
+  "STMemoryBooks_NexusRotationHelp": "僅適用於專用Memory世界書。手動儲存有編號且有結局的場景時輪替。本模式停用自動摘要、提醒和自動隱藏訊息。場景規劃及Nexus更新尚未實作。",
+  "STMemoryBooks_NexusRecallMode": "舊場景召回方式",
+  "STMemoryBooks_NexusRecallVector": "向量",
+  "STMemoryBooks_NexusRecallKeyword": "關鍵字（須已設定）",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "也使用隱藏的訊息",
   "STMemoryBooks_Clip_FormatRequired": "格式必須恰好包含一次 {{CONTENT}}。",
   "STMemoryBooks_CombineClips_PromptRequired": "合併 Clip 提示詞必須恰好包含一次 {{SOURCE_CLIPS}}。",

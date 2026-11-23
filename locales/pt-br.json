@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: manter sempre ativas as três cenas concluídas mais recentes",
+  "STMemoryBooks_NexusRotationHelp": "Apenas para lorebooks Memory dedicados. Salvar manualmente cenas numeradas e concluídas faz a rotação. Este modo desativa resumos automáticos, lembretes e ocultação automática. O planejamento de cenas e as atualizações de Nexus ainda não foram implementados.",
+  "STMemoryBooks_NexusRecallMode": "Recuperação de cenas antigas",
+  "STMemoryBooks_NexusRecallVector": "Vetor",
+  "STMemoryBooks_NexusRecallKeyword": "Palavras-chave (já devem existir)",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "Usar também mensagens ocultas",
   "STMemoryBooks_Clip_FormatRequired": "O formato deve conter {{CONTENT}} exatamente uma vez.",
   "STMemoryBooks_CombineClips_PromptRequired": "O prompt de combinação deve conter {{SOURCE_CLIPS}} exatamente uma vez.",

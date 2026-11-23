@@ -1,4 +1,9 @@
 {
+  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: selalu aktifkan tiga Scene selesai terbaru",
+  "STMemoryBooks_NexusRotationHelp": "Hanya untuk lorebook Memory khusus. Menyimpan Scene bernomor dan selesai secara manual akan memutar statusnya. Mode ini menonaktifkan ringkasan otomatis, pengingat, dan sembunyi pesan otomatis. Perencanaan Scene dan pembaruan Nexus belum tersedia.",
+  "STMemoryBooks_NexusRecallMode": "Cara memanggil Scene lama",
+  "STMemoryBooks_NexusRecallVector": "Vektor",
+  "STMemoryBooks_NexusRecallKeyword": "Kata kunci (harus sudah ada)",
   "STMemoryBooks_TopicalClip_IncludeHiddenMessages": "Gunakan juga pesan tersembunyi",
   "STMemoryBooks_Clip_FormatRequired": "Format harus memuat {{CONTENT}} tepat satu kali.",
   "STMemoryBooks_CombineClips_PromptRequired": "Prompt Gabungkan Clip harus memuat {{SOURCE_CLIPS}} tepat satu kali.",
