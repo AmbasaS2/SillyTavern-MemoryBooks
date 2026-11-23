@@ -126,3 +126,24 @@ test('new Current Continuity requires canonical headings',()=>{
     assert.equal(Object.values(added.staged.entries).find(e=>
         e.comment==='Current Continuity').constant,true);
 });
+
+
+test('a cited completed current-state line can be retired without affecting adjacent history',()=>{
+    const op={kind:'continuity',action:'replace_exact',uid:3,
+        find:'The letter remains unanswered.',text:'',supersession:'observed_resolution',
+        reason:'A confirmed the letter was answered in the visible chat.',
+        evidence:[{messageId:6,quote:'The letter received an answer this morning.'}],
+    };
+    const original=book(initial),snapshot=structuredClone(original);
+    const staged=stageNexusEdits(original,[op],maker).staged;
+    const current=staged.entries[3].content;
+    assert.ok(!current.includes('The letter remains unanswered.'));
+    assert.equal(current.slice(current.indexOf('## Knowledge Boundaries')),
+        initial.slice(initial.indexOf('## Knowledge Boundaries')));
+    assert.deepEqual(staged.entries[3].STMB_sourceHistory,snapshot.entries[3].STMB_sourceHistory);
+    assert.deepEqual(original,snapshot);
+    assert.throws(()=>stageNexusEdits(original,[{...op,find:'letter remains unanswered'}],maker),
+        /one whole/);
+    assert.throws(()=>stageNexusEdits(original,[{...op,supersession:'new_confirmed_information'}],maker),
+        /empty text/);
+});

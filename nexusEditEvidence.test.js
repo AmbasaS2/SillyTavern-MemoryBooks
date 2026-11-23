@@ -36,7 +36,15 @@ test('current state replacement needs an explicit confirmed supersession and a r
         assert.throws(()=>validateGroundedNexusEdits([{...change,supersession}],source),/superseded/);
     }
     assert.throws(()=>validateGroundedNexusEdits([{...change,reason:'it changed'}],source),/specific reason/);
-    assert.throws(()=>validateGroundedNexusEdits([{...change,text:''}],source),/cannot erase/);
+    // A completed or disproven current-state line can be retired only with
+    // a directly cited source quote; its meaning still needs human review.
+    const retirement={...change,text:''};
+    assert.deepEqual(validateGroundedNexusEdits([retirement],source),[retirement]);
+    for(const supersession of [undefined,'mere_absence','new_confirmed_information']){
+        assert.throws(()=>validateGroundedNexusEdits([{...retirement,supersession}],source),
+            /superseded|cannot erase/);
+    }
+    assert.throws(()=>validateGroundedNexusEdits([{...retirement,evidence:[]}],source),/source quotes/);
 });
 test('additions cite exact deferred messages, including unresolved current conditions',()=>{
     const op={kind:'continuity',action:'append_section',uid:2,section:'Active Conditions',

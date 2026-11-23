@@ -84,11 +84,13 @@ export function groupSlothSourceWindows(messages,maxChars=18000) {
 
 export function fingerprintSlothChat(chat,ids) {
     requireThat(Array.isArray(chat) && Array.isArray(ids),'Invalid chat snapshot.');
-    return JSON.stringify(ids.map(id=>{
+    // A new turn during AI analysis can resolve an allegedly unfinished state.
+    // Include the full chat length so no approval writes a stale current state.
+    return JSON.stringify({chatLength:chat.length,messages:ids.map(id=>{
         const item=chat[id];
         requireThat(item && !item.is_system,'Source #'+id+' is missing or hidden.');
         return [id,item.name,item.mes,item.is_user,item.send_date,item.swipe_id??null];
-    }));
+    })});
 }
 
 const protectedEntry = entry => entry?.disable || Number(entry?.position)===7 ||

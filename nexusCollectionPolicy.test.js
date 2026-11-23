@@ -36,9 +36,13 @@ test('source windows preserve all messages, never silently truncate or invent ID
   assert.ok(windows.length>1);
   assert.throws(()=>groupSlothSourceWindows([{id:1,mes:'X'.repeat(3000)}],2100),/not truncated/);
 });
-test('chat fingerprint fails on source edits/hiding',()=>{
+test('chat fingerprint fails on source edits/hiding and newly appended turns',()=>{
   const old=messages.map(x=>({...x,is_system:false}));
   const a=fingerprintSlothChat(old,[0,1]);
+  old.push({id:10,name:'B',mes:'A new message changes the latest state',is_system:false});
+  assert.notEqual(a,fingerprintSlothChat(old,[0,1]),
+    'a newly appended turn must invalidate a pending current-state update');
+  old.pop();
   old[1].mes='changed';
   assert.notEqual(a,fingerprintSlothChat(old,[0,1]));
   old[1].is_system=true;
