@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "Только ручной сбор. ИИ предложит завершённые события и диапазоны сообщений. Проверьте оба черновика; сообщения не скрываются автоматически.",
   "STMemoryBooks_SlothReviewPlan": "Проверка завершённых событий",
   "STMemoryBooks_SlothPlanGuide": "Проверьте причины, исходы и исходные сообщения. Названия и диапазоны можно изменить.",
+  "STMemoryBooks_SlothUnclassifiedSource": "ИИ не классифицировал эти сообщения. Они останутся в чате.",
+  "STMemoryBooks_SlothEditDeferredGuide": "Чтобы перенести сообщения в Scene, обновите оба диапазона. Очистите отложенный диапазон, если переносите все его сообщения.",
   "STMemoryBooks_SlothDeferred": "Незавершённые и отложенные",
   "STMemoryBooks_SlothApprovePlan": "Утвердить план событий",
   "STMemoryBooks_SlothReviewDraft": "Проверить изменения Memory и Nexus",

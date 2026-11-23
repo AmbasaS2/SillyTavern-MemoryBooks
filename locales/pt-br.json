@@ -1656,6 +1656,8 @@
   "STMemoryBooks_SlothManualHelp": "Coleta apenas manual. A IA sugere eventos concluídos e intervalos de mensagens. Revise os dois rascunhos; nenhuma mensagem será ocultada automaticamente.",
   "STMemoryBooks_SlothReviewPlan": "Revisar eventos concluídos",
   "STMemoryBooks_SlothPlanGuide": "Confira causas, desfechos e mensagens originais. Títulos e intervalos podem ser editados.",
+  "STMemoryBooks_SlothUnclassifiedSource": "A IA não classificou estas mensagens. Elas permanecerão no chat.",
+  "STMemoryBooks_SlothEditDeferredGuide": "Para mover mensagens para uma Scene, altere os dois intervalos. Limpe o intervalo adiado ao mover todas as mensagens dele.",
   "STMemoryBooks_SlothDeferred": "Pendentes ou adiados",
   "STMemoryBooks_SlothApprovePlan": "Aprovar plano de eventos",
   "STMemoryBooks_SlothReviewDraft": "Revisar Memory e Nexus",

@@ -29,6 +29,17 @@ test('reject omitted messages, overlapping events, out-of-bound and unfinished e
   assert.throws(()=>validateNexusEventPlan({...plan,events:[{...plan.events[0],complete:false},plan.events[1]]},messages.map(m=>m.id)),/must have/);
   assert.throws(()=>parseReviewedSegments('11-15',messages.map(m=>m.id)),/not in source/);
 });
+test('initial AI analysis can defer only omitted valid source IDs for review',()=>{
+  const sparse=[0,1,2,3,4,5,6,7,8,9,12];
+  const analysis=validateNexusEventPlan({...plan,deferred:[]},sparse,{deferUnclassified:true});
+  assert.deepEqual(analysis.deferred[0].segments,[[8,9],[12,12]]);
+  assert.equal(analysis.deferred[0].unclassified,true);
+  assert.equal(analysis.fullyCollected,false);
+  assert.throws(()=>validateNexusEventPlan({...plan,events:[plan.events[0],plan.events[0]]},
+    sparse,{deferUnclassified:true}),/already assigned/);
+  assert.throws(()=>validateNexusEventPlan({...plan,events:[{...plan.events[0],complete:false}]},
+    sparse,{deferUnclassified:true}),/completed result/);
+});
 test('source windows preserve all messages, never silently truncate or invent IDs',()=>{
   const source=Array.from({length:12},(_,i)=>({id:i,mes:'story '.repeat(170),name:'Actor'}));
   const windows=groupSlothSourceWindows(source,2100);

@@ -12,7 +12,17 @@ const str = v => typeof v === 'string' ? v.trim() : '';
 const requireThat = (ok, msg) => { if (!ok) throw new Error(msg); };
 const intUid = x => Number.isSafeInteger(Number(x)) && Number(x) >= 0 ? Number(x) : null;
 
-export function validateNexusEventPlan(raw, sourceIds) {
+export function slothSourceRanges(ids) {
+    const ranges = [];
+    for (const id of ids) {
+        const last = ranges.at(-1);
+        if (last && last[1] + 1 === id) last[1] = id;
+        else ranges.push([id, id]);
+    }
+    return ranges;
+}
+
+export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = false } = {}) {
     requireThat(plain(raw) && Array.isArray(sourceIds) && sourceIds.length, 'Missing analysis or source.');
     requireThat(Array.isArray(raw.events), 'Analysis events must be an array.');
     const allowed = new Set(sourceIds), assigned = new Map(), events = [], deferred = [];
@@ -46,8 +56,16 @@ export function validateNexusEventPlan(raw, sourceIds) {
         requireThat(str(item?.reason), 'Deferred '+(i+1)+' needs a reason.');
         deferred.push({reason:str(item.reason),...ranges(item.segments,'deferred '+(i+1))});
     }
-    const lost = sourceIds.filter(id => !assigned.has(id));
-    requireThat(!lost.length, 'AI left '+lost.length+' messages unclassified, first #' + lost[0] + '. No writes.');
+    const lost = sourceIds.filter(id => !assigned.has(id)).sort((a,b)=>a-b);
+    requireThat(!lost.length || deferUnclassified,
+        'AI left '+lost.length+' messages unclassified, first #' + lost[0] + '. No writes.');
+    if (lost.length) {
+        deferred.push({
+            reason:'The analysis did not classify these original messages.',
+            unclassified:true,
+            ...ranges(slothSourceRanges(lost),'unclassified'),
+        });
+    }
     // Interleaved incidents belong in the order their final source beats close.
     events.sort((a,b)=>a.end-b.end);
     return {events,deferred,sourceIds:[...sourceIds],start:sourceIds[0],

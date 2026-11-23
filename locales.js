@@ -596,6 +596,8 @@ export const localeData_en = {
     'STMemoryBooks_SlothReviewPlan': 'Review proposed complete events',
     'STMemoryBooks_SlothPlanGuide': 'Check causal closure and original message ranges before writing. Edit titles and ranges if needed.',
     'STMemoryBooks_SlothDeferred': 'Unfinished or deferred',
+    'STMemoryBooks_SlothUnclassifiedSource': 'The AI left these messages unclassified. They will stay in chat.',
+    'STMemoryBooks_SlothEditDeferredGuide': 'To move messages into a Scene, update both ranges. Clear a deferred range when moving all its messages.',
     'STMemoryBooks_SlothApprovePlan': 'Approve event plan',
     'STMemoryBooks_SlothReviewDraft': 'Review Memory and Nexus edits',
     'STMemoryBooks_SlothSaveGuide': 'Both lorebooks change only after approval. Download a JSON backup first. Chat messages are not hidden.',

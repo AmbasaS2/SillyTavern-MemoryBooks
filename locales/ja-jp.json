@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "自動収集はしません。AIが完結した出来事と元メッセージ範囲を提案します。計画と両方の下書きを確認してから保存し、メッセージは自動非表示にしません。",
   "STMemoryBooks_SlothReviewPlan": "完結した出来事の確認",
   "STMemoryBooks_SlothPlanGuide": "原因・結末・元メッセージ番号を確認してください。タイトルと範囲は編集できます。",
+  "STMemoryBooks_SlothUnclassifiedSource": "AIはこれらのメッセージを分類しませんでした。メッセージはチャットに残ります。",
+  "STMemoryBooks_SlothEditDeferredGuide": "メッセージをSceneに含めるには両方の範囲を更新してください。保留範囲の全メッセージを移す場合は、その範囲を空欄にします。",
   "STMemoryBooks_SlothDeferred": "未完了・保留",
   "STMemoryBooks_SlothApprovePlan": "出来事の計画を承認",
   "STMemoryBooks_SlothReviewDraft": "MemoryとNexusの変更を確認",

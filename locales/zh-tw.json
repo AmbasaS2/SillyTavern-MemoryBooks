@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "僅手動收集。AI 會提出完整事件與原始訊息範圍，須先審核計畫及兩本世界書草稿；不會自動隱藏訊息。",
   "STMemoryBooks_SlothReviewPlan": "審核已完成事件",
   "STMemoryBooks_SlothPlanGuide": "請核對事件起因、結局與原始訊息編號；可修改標題與範圍。",
+  "STMemoryBooks_SlothUnclassifiedSource": "AI 尚未分類這些訊息。訊息會保留在聊天中。",
+  "STMemoryBooks_SlothEditDeferredGuide": "若要將訊息移入 Scene，請更新兩個範圍。若已移走該待處理範圍的所有訊息，請將它清空。",
   "STMemoryBooks_SlothDeferred": "未完成或暫緩",
   "STMemoryBooks_SlothApprovePlan": "核准事件計畫",
   "STMemoryBooks_SlothReviewDraft": "審核 Memory 與 Nexus 修改",

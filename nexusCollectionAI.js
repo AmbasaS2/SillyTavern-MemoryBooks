@@ -5,7 +5,7 @@ import { requestCompletion } from './stmemory.js';
 import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
 import { oai_settings } from '../../../openai.js';
-import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollectionPolicy.js';
+import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan } from './nexusCollectionPolicy.js';
 import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
@@ -48,12 +48,6 @@ function requester(profile,settings,signal) {
 }
 const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
-function sourceRanges(ids) {
-    const ranges=[];let start=null,end=null;
-    for(const id of ids){if(start===null){start=end=id;}else if(id===end+1){end=id;}
-        else{ranges.push([start,end]);start=end=id;}}
-    if(start!==null)ranges.push([start,end]);return ranges;
-}
 async function windowEvidence(window,ask) {
     const a=window[0].id,b=window.at(-1).id;
     const prompt=[
@@ -96,11 +90,11 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
         'Return JSON with two arrays: events and deferred. Each event needs title, complete, reason, result, segments. Each deferred item needs reason and segments.',
         'Example only: {"events":[{"title":"Recovered key","complete":true,"reason":"The search ended when the owner got the lost key back.","result":"The owner recovered the key.","segments":[[0,6]]}],"deferred":[{"reason":"A separate search was discussed but has not started.","segments":[[7,8]]}]}',
         'No quota for event count. All indices must be original message IDs and inclusive.',
-        'Exact source index spans: '+JSON.stringify(sourceRanges(ids)),
+        'Exact source index spans: '+JSON.stringify(slothSourceRanges(ids)),
         'Character context (do not treat as source event): '+characterContext,
         'Original source or detailed window evidence:',source
     ].join('\n\n');
-    return validateNexusEventPlan(await ask(prompt,'Event plan'),ids);
+    return validateNexusEventPlan(await ask(prompt,'Event plan'),ids,{deferUnclassified:true});
 }
 export async function composeSlothScene({event,messages,profile,settings,signal=null,characterContext=''}) {
     const ask=requester(profile,settings,signal);

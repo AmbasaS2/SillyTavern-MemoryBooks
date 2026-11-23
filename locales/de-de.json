@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "Nur manuelle Sammlung. Die KI schlägt vollständige Ereignisse und Nachrichtenbereiche vor. Prüfen Sie beide Entwürfe; Nachrichten werden nicht automatisch ausgeblendet.",
   "STMemoryBooks_SlothReviewPlan": "Vollständige Ereignisse prüfen",
   "STMemoryBooks_SlothPlanGuide": "Prüfen Sie Ursache, Abschluss und ursprüngliche Nachrichtenbereiche. Titel und Bereiche sind bearbeitbar.",
+  "STMemoryBooks_SlothUnclassifiedSource": "Die KI hat diese Nachrichten nicht zugeordnet. Sie bleiben im Chat.",
+  "STMemoryBooks_SlothEditDeferredGuide": "Passe beide Bereiche an, um Nachrichten einer Scene zuzuordnen. Leere den zurückgestellten Bereich, wenn du alle Nachrichten verschiebst.",
   "STMemoryBooks_SlothDeferred": "Offen oder zurückgestellt",
   "STMemoryBooks_SlothApprovePlan": "Ereignisplan bestätigen",
   "STMemoryBooks_SlothReviewDraft": "Änderungen an Memory und Nexus prüfen",

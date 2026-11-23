@@ -351,34 +351,50 @@ async function planApproval(plan) {
             '<input class="text_pole stmb-sloth-range-edit" data-index="'+i+
                 '" value="'+html(readableSegments(item.segments))+'"></label></section>';
     }).join('');
-    const deferred=plan.deferred.map(item=>
-        '<li>'+html(readableSegments(item.segments))+' · '+html(item.reason)+'</li>').join('');
+    const deferred=plan.deferred.map((item,index)=>
+        '<li><label class="stmb-sloth-edit"><span>'+html(item.unclassified
+            ? t('The AI left these messages unclassified. They will stay in chat.',
+                'STMemoryBooks_SlothUnclassifiedSource') : item.reason)+
+        '</span><input class="text_pole stmb-sloth-deferred-range" data-index="'+index+
+        '" value="'+html(readableSegments(item.segments))+'" aria-label="'+
+        html(t('Original message ranges','STMemoryBooks_SlothRangesLabel'))+'"></label></li>').join('');
     const body='<div class="stmb-sloth-review">'+
         '<h3>'+html(t('Review proposed complete events','STMemoryBooks_SlothReviewPlan'))+'</h3>'+
         '<p>'+html(t('Check causal closure and original message ranges before writing. Titles and ranges can be edited.','STMemoryBooks_SlothPlanGuide'))+'</p>'+
         rows+(deferred?'<h4>'+html(t('Unfinished / deferred','STMemoryBooks_SlothDeferred'))+
-            '</h4><ul>'+deferred+'</ul>':'')+'</div>';
+            '</h4><p>'+html(t('To move messages into a Scene, update both ranges. Clear a deferred range when moving all its messages.',
+                'STMemoryBooks_SlothEditDeferredGuide'))+'</p><ul>'+deferred+'</ul>':'')+'</div>';
+    let approvedPlan;
     const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
         wide:true,large:true,allowVerticalScrolling:true,
         okButton:t('Approve event plan','STMemoryBooks_SlothApprovePlan'),
-        cancelButton:t('Cancel','STMemoryBooks_Cancel')});
-    markStmbPopup(popup);
-    const showing=popup.show();
-    // Read the entered text BEFORE Popup closes, rather than trusting stale markup.
-    const inputs=popup.dlg?.querySelectorAll('.stmb-sloth-title-edit,.stmb-sloth-range-edit')||[];
-    const changed=plan.events.map(e=>({...e,segments:e.segments.map(pair=>[...pair])}));
-    for(const input of inputs)input.addEventListener('input',()=>{
-        const index=Number(input.dataset.index);
-        if(!Number.isInteger(index)||!changed[index])return;
-        if(input.classList.contains('stmb-sloth-title-edit'))changed[index].title=input.value.trim();
-        else changed[index].newSegments=input.value;
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        onClosing(closing){
+            if(closing.result!==POPUP_RESULT.AFFIRMATIVE)return true;
+            try{
+                const value=(selector,index)=>{
+                    const field=closing.dlg.querySelector(selector+'[data-index="'+index+'"]');
+                    if(!field)throw new Error('An original-message range field is missing.');
+                    return field.value.trim();
+                };
+                const events=plan.events.map((event,index)=>({
+                    ...event,complete:true,title:value('.stmb-sloth-title-edit',index),
+                    segments:parseReviewedSegments(value('.stmb-sloth-range-edit',index),plan.sourceIds),
+                }));
+                const deferred=plan.deferred.flatMap((item,index)=>{
+                    const reviewed=value('.stmb-sloth-deferred-range',index);
+                    return reviewed?[{reason:item.reason,segments:parseReviewedSegments(reviewed,plan.sourceIds)}]:[];
+                });
+                approvedPlan=validateNexusEventPlan({events,deferred},plan.sourceIds);
+                return true;
+            }catch(error){
+                toastr.error(error.message,'STMemoryBooks');
+                return false;
+            }
+        },
     });
-    if(await showing!==POPUP_RESULT.AFFIRMATIVE)return null;
-    const raw={events:changed.map(e=>({title:e.title,complete:true,reason:e.reason,
-        result:e.result,segments:e.newSegments===undefined?e.segments:
-            parseReviewedSegments(e.newSegments,plan.sourceIds)})),
-        deferred:plan.deferred.map(e=>({reason:e.reason,segments:e.segments}))};
-    return validateNexusEventPlan(raw,plan.sourceIds);
+    markStmbPopup(popup);
+    return await popup.show()===POPUP_RESULT.AFFIRMATIVE ? (approvedPlan ?? null) : null;
 }
 
 function downloadSafetyBackup(states,ref,plan,reviewedChanges=[],initial=false) {

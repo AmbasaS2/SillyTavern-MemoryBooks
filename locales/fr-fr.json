@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "Collecte manuelle uniquement. L’IA propose des événements terminés et leurs messages sources. Vérifiez les deux brouillons ; aucun message n’est masqué automatiquement.",
   "STMemoryBooks_SlothReviewPlan": "Examiner les événements terminés",
   "STMemoryBooks_SlothPlanGuide": "Vérifiez les causes, les résultats et les plages de messages. Titres et plages modifiables.",
+  "STMemoryBooks_SlothUnclassifiedSource": "L’IA n’a pas classé ces messages. Ils restent dans la discussion.",
+  "STMemoryBooks_SlothEditDeferredGuide": "Pour déplacer des messages vers une Scene, modifiez les deux plages. Laissez la plage reportée vide si vous déplacez tous ses messages.",
   "STMemoryBooks_SlothDeferred": "En cours ou reportés",
   "STMemoryBooks_SlothApprovePlan": "Valider le plan",
   "STMemoryBooks_SlothReviewDraft": "Examiner Memory et Nexus",

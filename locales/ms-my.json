@@ -1659,6 +1659,8 @@
   "STMemoryBooks_SlothManualHelp": "Pengumpulan manual sahaja. AI mencadangkan peristiwa lengkap dan julat mesej asal. Semak rancangan serta kedua-dua draf; mesej tidak disembunyikan secara automatik.",
   "STMemoryBooks_SlothReviewPlan": "Semak peristiwa yang selesai",
   "STMemoryBooks_SlothPlanGuide": "Semak sebab, keputusan dan julat mesej asal. Tajuk dan julat boleh disunting.",
+  "STMemoryBooks_SlothUnclassifiedSource": "AI belum mengelaskan mesej ini. Mesej akan kekal dalam sembang.",
+  "STMemoryBooks_SlothEditDeferredGuide": "Untuk memindahkan mesej ke Scene, kemas kini kedua-dua julat. Kosongkan julat tertunda jika semua mesej dipindahkan.",
   "STMemoryBooks_SlothDeferred": "Belum selesai atau ditangguhkan",
   "STMemoryBooks_SlothApprovePlan": "Luluskan rancangan peristiwa",
   "STMemoryBooks_SlothReviewDraft": "Semak perubahan Memory dan Nexus",
