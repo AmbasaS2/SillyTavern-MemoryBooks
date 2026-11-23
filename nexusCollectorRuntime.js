@@ -18,9 +18,9 @@ import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
-import { inspectNexusLegacyMigration, stageNexusLegacyMigration,
-    classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
+import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
+import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
 import { markStmbPopup } from './utils.js';
 
 const t=(source,key)=>translate(source,key);
@@ -266,6 +266,39 @@ async function approveNexusLegacyMigration({state,changes,ref,plan}) {
  * The old single-book (mixed Scenes + non-Scenes) layout has a separate, more
  * complex two-book migration path and is not modified by this command.
  */
+async function approveUnifiedMemorySplit({states,staged,ref}) {
+    const list=staged.mapping.map(item=>'<li>'+html(item.title)+
+        ' · Memory UID '+html(item.originalUid)+' → Nexus UID '+html(item.newUid)+'</li>').join('');
+    const previews=staged.changes.filter(change=>change.action==='create')
+        .map(change=>'<details class="stmb-sloth-detail"><summary>'+
+            html(change.title)+'</summary><pre>'+html(change.after)+'</pre></details>').join('');
+    const body='<div class="stmb-sloth-review"><h3>'+
+        html(t('Review combined Memory / Nexus migration','STMemoryBooks_SlothUnifiedReview'))+
+        '</h3><p>'+html(t('This combined Memory book contains Scenes and other entries. The non-Scenes will be moved to Nexus with a full copy of their original entry metadata, and removed from the old Memory file. Memory will retain all original Scenes, with only recent-3 recall flags rotated. Both original books will be backed up before an explicitly approved two-book save. Neither chat messages nor Scene text will change.',
+            'STMemoryBooks_SlothUnifiedGuide'))+'</p>'+
+        '<h4>Memory → Nexus · '+html(staged.mapping.length)+'</h4><ul>'+list+'</ul>'+
+        '<h4>'+html(t('New Core and Continuity','STMemoryBooks_SlothUnifiedTargets'))+'</h4>'+previews+
+        '<p>'+html(t('Existing Scenes preserved','STMemoryBooks_SlothUnifiedScenes'))+
+        ': '+html(staged.plan.sceneCount)+
+        ' · '+html(t('Recall flags adjusted','STMemoryBooks_SlothUnifiedRotation'))+
+        ': '+html(staged.sceneRotation.length)+'</p></div>';
+    let downloaded=false;
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.TEXT,'',{
+        wide:true,large:true,allowVerticalScrolling:true,
+        okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        customButtons:[{
+            text:t('Back up both originals and approve split','STMemoryBooks_SlothUnifiedApprove'),
+            result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
+            action:()=>{
+                downloadSafetyBackup(states,ref,{events:[],deferred:[]});
+                downloaded=true;
+            },
+        }],
+    });
+    markStmbPopup(popup);
+    return await popup.show()===POPUP_RESULT.CUSTOM1 && downloaded;
+}
+
 export async function runNexusLegacyMigration() {
     if(collectorBusy)throw new Error('A Sloth collection or migration is already in progress.');
     collectorBusy=true;
@@ -284,8 +317,36 @@ export async function runNexusLegacyMigration() {
             loadServerWorld(roleNames.nexus),loadServerWorld(roleNames.memory),
         ]);
         assertLegacyMigrationOrigin(ref,roleNames);
-        if(Object.values(memory.entries).some(e=>classifyNexusLegacyTitle(e.comment))) {
-            throw new Error('Old combined Memory book contains non-Scene legacy entries. A separate two-book split is required; no files changed.');
+        const unified=inspectUnifiedMemorySplit(memory,nexus);
+        if(unified.required){
+            if(unified.errors.length) {
+                throw new Error('Combined Memory cannot be safely split: '+unified.errors.join(' '));
+            }
+            const staged=stageUnifiedMemorySplit({
+                memory,nexus,createNexusEntry:book=>createWorldInfoEntry(roleNames.nexus,book),
+                olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
+            });
+            const states=[
+                {name:roleNames.memory,original:memory,staged:staged.memory},
+                {name:roleNames.nexus,original:nexus,staged:staged.nexus},
+            ];
+            const accepted=await approveUnifiedMemorySplit({states,staged,ref});
+            if(!accepted)return {saved:false,reason:'unified-split-cancelled'};
+            assertLegacyMigrationOrigin(ref,roleNames);
+            const outcome=await commitSlothBooks(states,{
+                loadFresh:loadServerWorld,
+                save:(name,book)=>saveWorldInfo(name,book,true),
+                resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+                withLocks:withBothWriteLanes,
+                verifyOrigin:()=>assertLegacyMigrationOrigin(ref,roleNames),
+            });
+            for(const name of [roleNames.nexus,roleNames.memory]){
+                try{await Promise.resolve(reloadEditor(name));}
+                catch(error){console.warn('Sloth unified editor refresh failed:',error);}
+            }
+            toastr.success(t('Combined Memory separated into Nexus and Scene-only Memory. Both original books were backed up.',
+                'STMemoryBooks_SlothUnifiedSaved'),'STMemoryBooks');
+            return {saved:true,split:true,moved:staged.mapping.length,result:outcome};
         }
         const plan=inspectNexusLegacyMigration(nexus);
         if(!plan.required){
