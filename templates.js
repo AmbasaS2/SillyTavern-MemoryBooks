@@ -129,6 +129,7 @@ export const settingsTemplate = Handlebars.compile(`
           <strong data-i18n="STMemoryBooks_SlothCollectButton">🦥 Collect completed events</strong>
           <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
           <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
+          <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
           <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
           <label class="checkbox_label">
             <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>

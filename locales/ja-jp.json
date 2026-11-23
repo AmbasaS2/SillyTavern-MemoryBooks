@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "元のメッセージによる根拠",
   "STMemoryBooks_SlothNexusOnlyReview": "Nexusの現在の状態だけを更新",
   "STMemoryBooks_SlothNexusOnlyGuide": "完結したSceneはありません。元のメッセージの引用と変更内容を確認し、NexusのJSON全体をバックアップしてから承認してください。Memoryとチャットは変更されません。",
-  "STMemoryBooks_SlothNexusOnlySaved": "確認した現在の状態をNexusに保存しました。Memoryとチャットは変更していません。"
+  "STMemoryBooks_SlothNexusOnlySaved": "確認した現在の状態をNexusに保存しました。Memoryとチャットは変更していません。",
+  "STMemoryBooks_SlothLegacySemanticButton": "旧Current Continuityを整理",
+  "STMemoryBooks_SlothLegacySemanticHelp": "移行後の古い状態を個別に確認し、現在のチャットで裏付けられた情報だけを有効な記憶にします。原本保管とJSONのバックアップ・承認が必要です。",
+  "STMemoryBooks_SlothLegacySemanticNone": "確認できる未整理の旧状態がありません。",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "保存された旧状態と現在のチャットを照合中...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "現在も有効と確認できる旧状態がないため、原文を変更しませんでした。",
+  "STMemoryBooks_SlothLegacySemanticReview": "旧Current Continuityの再構成を確認",
+  "STMemoryBooks_SlothLegacySemanticWarning": "旧状態の本文は現在の記憶として注入されなくなります。元の項目と全文はJSON履歴に保存されます。除外される内容と新しい文章を確認してから承認してください。",
+  "STMemoryBooks_SlothLegacySemanticBefore": "以前の有効な本文",
+  "STMemoryBooks_SlothLegacySemanticExpand": "以前の本文全体を表示",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "現在の事実案と根拠",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "常時注入しない過去・不確かな情報",
+  "STMemoryBooks_SlothLegacySemanticAfter": "変更後の有効なCurrent Continuity",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Nexusの元JSONを保存して置換を承認",
+  "STMemoryBooks_SlothLegacySemanticSaved": "承認したCurrent Continuityを保存しました。元の記録は保管され、Memoryとチャットは変更していません。"
 }

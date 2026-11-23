@@ -67,7 +67,8 @@ import {
   getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides, canChangeNexusChatRolePair,
 } from './nexusChatRoleOverrides.js';
-import { runNexusCollector, runNexusLegacyMigration, runNexusSceneMerge } from './nexusCollectorRuntime.js';
+import { runNexusCollector, runNexusLegacyMigration, runNexusSceneMerge,
+  runNexusLegacyContinuityReview } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -11281,6 +11282,23 @@ async function showSettingsPopup() {
         try { await runNexusLegacyMigration(); }
         catch (error) {
           console.error('Sloth legacy migration blocked:',error);
+          toastr.error(error?.message || String(error),'🦥 STMemoryBooks',{timeOut:10000});
+        }
+      },
+    });
+    customButtons.push({
+      text: '🦥 ' + translate('Review old Current Continuity',
+        'STMemoryBooks_SlothLegacySemanticButton'),
+      classes: ['menu_button'],
+      action: async () => {
+        const selected = currentPopupInstance?.dlg?.querySelector('#stmb-profile-select')?.value;
+        const parsed = Number.parseInt(selected ?? settings.defaultProfile, 10);
+        try {
+          await runNexusLegacyContinuityReview({
+            profileIndex: Number.isSafeInteger(parsed) ? parsed : settings.defaultProfile,
+          });
+        } catch (error) {
+          console.error('Sloth Current Continuity review blocked safely:',error);
           toastr.error(error?.message || String(error),'🦥 STMemoryBooks',{timeOut:10000});
         }
       },

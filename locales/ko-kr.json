@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "원본 메시지 근거",
   "STMemoryBooks_SlothNexusOnlyReview": "Nexus 현재 상태만 갱신",
   "STMemoryBooks_SlothNexusOnlyGuide": "완료된 Scene이 없습니다. 원본 메시지 인용과 변경 내용을 검토하고 Nexus 전체 JSON을 백업한 후 승인해야 Nexus만 바뀝니다. Memory와 채팅은 그대로 둡니다.",
-  "STMemoryBooks_SlothNexusOnlySaved": "현재 상태 변경을 Nexus에 저장했습니다. Memory와 채팅 메시지는 바꾸지 않았습니다."
+  "STMemoryBooks_SlothNexusOnlySaved": "현재 상태 변경을 Nexus에 저장했습니다. Memory와 채팅 메시지는 바꾸지 않았습니다.",
+  "STMemoryBooks_SlothLegacySemanticButton": "구형 현재 상태 기억 재정리",
+  "STMemoryBooks_SlothLegacySemanticHelp": "이전 후 오래된 현재 상태를 별도로 검토하여, 지금도 확인되는 정보만 활성 기억으로 재구성합니다. 원본 보관과 JSON 백업·승인이 필수입니다.",
+  "STMemoryBooks_SlothLegacySemanticNone": "검토할 원본 상태 기록이 없습니다.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "보관된 예전 상태와 현재 채팅을 대조하는 중...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "현재 채팅에서 유효함이 확인된 옛 상태가 없어 원문을 그대로 뒀습니다.",
+  "STMemoryBooks_SlothLegacySemanticReview": "구형 Current Continuity 재구성 검토",
+  "STMemoryBooks_SlothLegacySemanticWarning": "옛 상태 본문은 더 이상 현재 기억으로 주입되지 않습니다. 원본 항목과 기존 전체 본문은 JSON 기록에 보존됩니다. 제외되는 정보와 새 문장을 모두 확인한 후 승인하세요.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "기존 활성 본문",
+  "STMemoryBooks_SlothLegacySemanticExpand": "기존 본문 전체 펼치기",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "현재 사실 제안과 근거",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "상시 주입에서 제외할 과거·불확실 정보",
+  "STMemoryBooks_SlothLegacySemanticAfter": "변경 후 활성 Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticApprove": "원본 Nexus JSON 백업 후 현재 상태 교체 승인",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity를 승인한 내용으로 갱신했습니다. 옛 원본은 보관되며 Memory와 채팅은 변경되지 않았습니다."
 }

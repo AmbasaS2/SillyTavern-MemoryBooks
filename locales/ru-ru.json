@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "Доказательства из исходных сообщений",
   "STMemoryBooks_SlothNexusOnlyReview": "Обновить только текущий статус Nexus",
   "STMemoryBooks_SlothNexusOnlyGuide": "Нет завершённой сцены. Проверьте цитаты из исходных сообщений и изменения, затем скачайте полный JSON Nexus перед подтверждением. Memory и чат не меняются.",
-  "STMemoryBooks_SlothNexusOnlySaved": "Проверенные изменения текущего состояния сохранены в Nexus. Memory и чат не изменены."
+  "STMemoryBooks_SlothNexusOnlySaved": "Проверенные изменения текущего состояния сохранены в Nexus. Memory и чат не изменены.",
+  "STMemoryBooks_SlothLegacySemanticButton": "Проверить старую Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticHelp": "После миграции отдельно проверьте старое состояние. Активными останутся лишь факты, подтверждённые текущим чатом. Нужны оригиналы, резервная копия JSON и согласие.",
+  "STMemoryBooks_SlothLegacySemanticNone": "Нет неизменённых старых записей для проверки.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "Сравнение архивного состояния с текущим чатом...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "Текущий чат не подтверждает старые состояния. Исходный текст сохранён.",
+  "STMemoryBooks_SlothLegacySemanticReview": "Проверка перестройки старой Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticWarning": "Старый текст больше не будет вводиться как текущее состояние. Исходные записи и полный старый текст сохранятся в истории JSON. Проверьте все исключения и новые утверждения до согласия.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "Предыдущий активный текст",
+  "STMemoryBooks_SlothLegacySemanticExpand": "Показать полный старый текст",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "Предлагаемые текущие факты и доказательства",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "Исторические или сомнительные факты вне внедрения",
+  "STMemoryBooks_SlothLegacySemanticAfter": "Новая активная Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Сохранить исходный JSON Nexus и подтвердить замену",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity обновлена после проверки. Оригиналы сохранены; Memory и чат не изменены."
 }

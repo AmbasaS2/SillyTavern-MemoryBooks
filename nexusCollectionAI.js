@@ -8,6 +8,7 @@ import { oai_settings } from '../../../openai.js';
 import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollectionPolicy.js';
 import { validateGroundedNexusEdits, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
+import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 
 function parseStrictJSON(raw,phase) {
     const text=String(raw||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
@@ -306,4 +307,53 @@ export async function composeSlothMergedScene({candidate,profile,settings,signal
         throw new Error('AI could not establish a safe, completed causal Scene. No data saved.');
     }
     return {title:result.title,content:result.content,keywords:result.keywords};
+}
+
+
+/**
+ * Explicit one-time AI review of already-migrated, verbatim legacy state.
+ * Only facts also corroborated by original currently visible chat messages
+ * can enter the new always-on Current Continuity sections.
+ */
+export async function proposeSlothLegacyContinuity({
+    plan,messages,profile,settings,signal=null,
+}) {
+    if(!plan?.required || !Array.isArray(plan.sources) ||
+        !Array.isArray(messages) || !messages.length) {
+        throw new Error('A migrated legacy Continuity and visible source chat are required.');
+    }
+    const ask=requester(profile,settings,signal);
+    const chatEvidence=await nexusStateEvidenceFor(messages,ask);
+    const raw=await ask([
+        'Classify an OLD migrated Current Continuity archive into CURRENT live state,',
+        'and explicitly label obsolete/uncertain historical fragments.',
+        'The original source entries will remain as DISABLED full-history archives.',
+        'Only currently verified facts should remain in the always-on Current Continuity.',
+        'An old document claiming that something once was true is NOT evidence it',
+        'remains true. A later date or silence is NEVER proof of recovery/resolution.',
+        'Use specific, quoted evidence from BOTH the older source AND the current',
+        'visible chat to classify a fact as CURRENT. If no current corroboration is',
+        'available, put it in notCurrent with status "unverified" or "historical".',
+        'Never turn a reported belief into an observation or reveal private knowledge.',
+        'Preserve original names, tone, emotional intensity, exact meaningful details.',
+        'If a promise was actually fulfilled or an injury healed, quote the confirmed',
+        'event; otherwise do not invent closure or continuity.',
+        'Return ONLY STRICT JSON {"current":[{"section":"Present Handoff|Active Threads|',
+        'Knowledge Boundaries|Active Conditions","text":"one concise current fact",',
+        '"reason":"why it is still true","archive":{"uid":NUMBER,',
+        '"quote":"exact 8-400 character substring of archived content"},',
+        '"chat":{"messageId":NUMBER,"quote":"exact 8-400 character substring of',
+        'one original current chat message"}}],',
+        '"notCurrent":[{"status":"resolved|superseded|historical|unverified",',
+        '"reason":"explicit reason for withholding this old fact",',
+        '"archive":{"uid":NUMBER,"quote":"exact substring of old content"},',
+        '"chat":{"messageId":NUMBER,"quote":"optional exact current chat quote"}}]}.',
+        'Every archived UID must occur in at least one classification.',
+        'An empty current list means NO REWRITE. Do not fill headings artificially.',
+        'Use exact evidence text; paraphrases cannot be represented as quotes.',
+        'This operation does not create Scenes, alter Core Memory, or hide messages.',
+        'Old source records:',JSON.stringify(plan.sources),
+        'Actual source chat/evidence (message IDs):',chatEvidence,
+    ].join('\n\n'),'Reviewed legacy Current Continuity reconciliation');
+    return validateSlothLegacyContinuityProposal(plan,raw,messages);
 }

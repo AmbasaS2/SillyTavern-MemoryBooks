@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "Bukti pesan asli",
   "STMemoryBooks_SlothNexusOnlyReview": "Perbarui hanya keadaan Nexus saat ini",
   "STMemoryBooks_SlothNexusOnlyGuide": "Belum ada Scene yang selesai. Tinjau kutipan asli serta perubahannya, lalu cadangkan JSON Nexus lengkap sebelum menyetujui. Memory dan chat tetap sama.",
-  "STMemoryBooks_SlothNexusOnlySaved": "Perubahan keadaan saat ini tersimpan di Nexus setelah ditinjau. Memory dan chat tidak diubah."
+  "STMemoryBooks_SlothNexusOnlySaved": "Perubahan keadaan saat ini tersimpan di Nexus setelah ditinjau. Memory dan chat tidak diubah.",
+  "STMemoryBooks_SlothLegacySemanticButton": "Tinjau Current Continuity lama",
+  "STMemoryBooks_SlothLegacySemanticHelp": "Setelah migrasi, tinjau kondisi lama secara terpisah. Hanya fakta yang dibuktikan chat saat ini yang tetap aktif. Arsip asli, cadangan JSON, dan persetujuan diperlukan.",
+  "STMemoryBooks_SlothLegacySemanticNone": "Tidak ada kondisi lama utuh yang dapat ditinjau.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "Membandingkan kondisi lama yang diarsipkan dengan chat saat ini...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "Tidak ada kondisi lama yang dikonfirmasi oleh chat saat ini. Teks asli dipertahankan.",
+  "STMemoryBooks_SlothLegacySemanticReview": "Tinjau penataan Current Continuity lama",
+  "STMemoryBooks_SlothLegacySemanticWarning": "Teks kondisi lama tidak lagi disisipkan sebagai kondisi saat ini. Entri asli dan seluruh teks lama tetap disimpan dalam riwayat JSON. Tinjau semua fakta yang dikecualikan dan kalimat baru sebelum menyetujui.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "Teks aktif sebelumnya",
+  "STMemoryBooks_SlothLegacySemanticExpand": "Tampilkan seluruh teks lama",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "Usulan fakta saat ini beserta bukti",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "Fakta lama atau belum pasti yang tidak disisipkan",
+  "STMemoryBooks_SlothLegacySemanticAfter": "Current Continuity aktif yang diusulkan",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Cadangkan JSON Nexus asli dan setujui penggantian",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity telah diperbarui setelah ditinjau. Rekaman asli disimpan; Memory dan chat tidak diubah."
 }

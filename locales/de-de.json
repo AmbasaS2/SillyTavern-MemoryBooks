@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "Belege aus ursprünglichen Chatnachrichten",
   "STMemoryBooks_SlothNexusOnlyReview": "Nur den aktuellen Nexus-Status aktualisieren",
   "STMemoryBooks_SlothNexusOnlyGuide": "Es liegt keine abgeschlossene Szene vor. Prüfe die ursprünglichen Zitate und die Änderungen und sichere das vollständige Nexus-JSON vor der Freigabe. Memory und Chat bleiben unverändert.",
-  "STMemoryBooks_SlothNexusOnlySaved": "Die überprüften aktuellen Informationen wurden in Nexus gespeichert. Memory und Chat wurden nicht geändert."
+  "STMemoryBooks_SlothNexusOnlySaved": "Die überprüften aktuellen Informationen wurden in Nexus gespeichert. Memory und Chat wurden nicht geändert.",
+  "STMemoryBooks_SlothLegacySemanticButton": "Alte Current Continuity prüfen",
+  "STMemoryBooks_SlothLegacySemanticHelp": "Nach der Migration alte Zustände gesondert prüfen. Nur im aktuellen Chat belegte Fakten bleiben aktiv. Originale, JSON-Sicherung und Zustimmung sind erforderlich.",
+  "STMemoryBooks_SlothLegacySemanticNone": "Keine unveränderte alte Current Continuity zur Prüfung vorhanden.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "Vergleiche archivierten Zustand mit dem aktuellen Chat...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "Kein alter Zustand wurde durch aktuelle Chat-Belege bestätigt. Original unverändert.",
+  "STMemoryBooks_SlothLegacySemanticReview": "Überarbeitung der alten Current Continuity prüfen",
+  "STMemoryBooks_SlothLegacySemanticWarning": "Alter Zustandstext wird nicht mehr als aktuell eingefügt. Die Originaleinträge und der vollständige alte Text bleiben in den JSON-Metadaten erhalten. Prüfe ausgeschlossene und neue Aussagen vor der Freigabe.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "Bisheriger aktiver Text",
+  "STMemoryBooks_SlothLegacySemanticExpand": "Vollständigen alten Text anzeigen",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "Vorgeschlagene aktuelle Fakten und Belege",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "Nicht mehr eingespeiste historische/ungewisse Fakten",
+  "STMemoryBooks_SlothLegacySemanticAfter": "Neue aktive Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Original-Nexus-JSON sichern und Ersatz genehmigen",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Überarbeitete Current Continuity gespeichert. Alte Originale bleiben erhalten; Memory und Chat unverändert."
 }

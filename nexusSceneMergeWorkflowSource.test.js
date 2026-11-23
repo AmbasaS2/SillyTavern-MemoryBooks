@@ -13,7 +13,9 @@ test('Scene merge is an explicit button, not an automatic collector or migration
     assert.match(runtime,/export async function runNexusSceneMerge/);
     assert.match(runtime,/if\(collectorBusy\)/);
     assert.match(runtime,/getNexusRoleResolutionForChatRef\('memory',ref,settings\)/);
-    const block=runtime.slice(runtime.indexOf('export async function runNexusSceneMerge'));
+    const mergeStart=runtime.indexOf('export async function runNexusSceneMerge');
+    const nextExport=runtime.indexOf('\nexport async function ',mergeStart+1);
+    const block=runtime.slice(mergeStart,nextExport<0?undefined:nextExport);
     assert.match(block,/suggestSlothSceneMerges/);
     assert.match(block,/chooseSlothMergeCandidate/);
     assert.match(block,/composeSlothMergedScene/);
@@ -33,7 +35,9 @@ test('Scene merge requires full Memory JSON backup and preserves unrelated Nexus
     assert.match(block,/POPUP_RESULT\.CUSTOM1 && downloaded/);
     assert.match(block,/resetCache:\(name,book\)=>worldInfoCache\.set/);
     assert.match(block,/verifyOrigin:\(\)=>assertLegacyMigrationOrigin/);
-    const save=block.slice(block.indexOf('export async function runNexusSceneMerge'));
+    const mergeStart=block.indexOf('export async function runNexusSceneMerge');
+    const nextExport=block.indexOf('\nexport async function ',mergeStart+1);
+    const save=block.slice(mergeStart,nextExport<0?undefined:nextExport);
     assert.match(save,/await loadServerWorld\(names\.memory\)/);
     assert.doesNotMatch(save,/await loadServerWorld\(names\.nexus\)/);
     assert.match(save,/name:names\.memory,original,staged:staged\.proposedMemory/);

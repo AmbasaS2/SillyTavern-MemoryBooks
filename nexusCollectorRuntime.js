@@ -17,12 +17,13 @@ import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './n
 import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft,
-    suggestSlothSceneMerges, composeSlothMergedScene } from './nexusCollectionAI.js';
+    suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
 import { stageNexusSceneMerge } from './nexusSceneMerge.js';
+import { inspectSlothLegacyContinuity, stageSlothLegacyContinuity } from './nexusLegacySemantic.js';
 import { markStmbPopup } from './utils.js';
 
 const t=(source,key)=>translate(source,key);
@@ -741,6 +742,151 @@ export async function runNexusSceneMerge({profileIndex}={}) {
             'STMemoryBooks_SlothMergeSaved'),'🦥 STMemoryBooks');
         return {saved:true,sourceUids:staged.plan.sourceUids,result};
     }finally {
+        collectorBusy=false;
+    }
+}
+
+
+/**
+ * A special, one-time explicit review: de-inject archived old status text
+ * only after confirming replacement facts from the current chat.
+ * Original disabled entries and a full snapshot in Nexus metadata survive.
+ */
+export async function runNexusLegacyContinuityReview({profileIndex}={}) {
+    if(collectorBusy)throw new Error('A Sloth collection or migration is already in progress.');
+    collectorBusy=true;
+    try {
+        const ref=structuredClone(getCurrentStmbChatRef());
+        if(ref.type!=='character' || !String(ref.fileName||'').trim()) {
+            throw new Error('Select a saved individual-character chat before reviewing old state.');
+        }
+        const settings=extension_settings.STMemoryBooks;
+        const roles={
+            nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings),
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
+        };
+        if(roles.nexus.state!=='ready'||roles.memory.state!=='ready'||
+            roles.nexus.name===roles.memory.name) {
+            throw new Error('Connect two different character-linked Nexus and Memory books first.');
+        }
+        const names={nexus:roles.nexus.name,memory:roles.memory.name};
+        const original=await loadServerWorld(names.nexus);
+        assertLegacyMigrationOrigin(ref,names);
+        const plan=inspectSlothLegacyContinuity(original);
+        if(!plan.required){
+            toastr.info(t('No untouched legacy Current Continuity is available for review.',
+                'STMemoryBooks_SlothLegacySemanticNone'),'🦥 STMemoryBooks');
+            return {saved:false,reason:plan.reason};
+        }
+        const source=chat.map((entry,id)=>({entry,id}))
+            .filter(({entry})=>entry && !entry.is_system &&
+                typeof entry.mes==='string' && !!entry.mes.trim())
+            .map(({entry,id})=>({id,name:String(entry.name||''),
+                mes:entry.mes,is_user:!!entry.is_user,send_date:entry.send_date||null}));
+        if(!source.length){
+            throw new Error('No visible chat evidence to confirm current state. Original archive preserved.');
+        }
+        const sourceIds=source.map(s=>s.id);
+        const fingerprint=fingerprintSlothChat(chat,sourceIds),chatLength=chat.length;
+        const assertReviewOrigin=()=>{
+            assertLegacyMigrationOrigin(ref,names);
+            if(chat.length!==chatLength ||
+                fingerprintSlothChat(chat,sourceIds)!==fingerprint){
+                throw new Error('Original chat changed during semantic review. No save performed.');
+            }
+        };
+        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
+            ||settings.profiles?.[settings.defaultProfile];
+        if(!profile)throw new Error('Choose an AI profile before reviewing old Continuity.');
+        toastr.info(t('Comparing preserved old states with the visible current chat...',
+            'STMemoryBooks_SlothLegacySemanticAnalyzing'),'🦥 STMemoryBooks');
+        const proposal=await proposeSlothLegacyContinuity({
+            plan,messages:source,profile,settings,
+        });
+        assertReviewOrigin();
+        if(!proposal.current.length){
+            toastr.warning(t('No old status was corroborated by current chat evidence. Original Current Continuity was left untouched.',
+                'STMemoryBooks_SlothLegacySemanticUnverified'),'🦥 STMemoryBooks');
+            return {saved:false,reason:'not-currently-corroborated'};
+        }
+        const staged=stageSlothLegacyContinuity(original,proposal,{
+            chatKey:getStmbChatKey(ref),messages:source,
+        });
+        const details=proposal.current.map(item=>
+            '<details class="stmb-sloth-detail"><summary>'+
+            html(item.section)+' · '+html(item.text)+'</summary>'+
+            '<p>'+html(item.reason)+'</p>'+
+            '<small>Legacy UID '+html(item.archive.uid)+' · '+html(item.archive.quote)+'</small>'+
+            '<p>#'+html(item.chat.messageId)+' · '+html(item.chat.quote)+'</p>'+
+            '</details>').join('');
+        const excluded=proposal.notCurrent.map(item=>
+            '<li><strong>'+html(item.status)+'</strong> · '+
+            html(item.reason)+' (UID '+html(item.archive.uid)+')<p>'+
+            html(item.archive.quote)+'</p></li>').join('');
+        const body='<div class="stmb-sloth-review"><h3>'+
+            html(t('Review historical Continuity restructuring',
+                'STMemoryBooks_SlothLegacySemanticReview'))+'</h3>'+
+            '<p class="stmb-sloth-warning">'+
+            html(t('The old status text will no longer be injected as current. The original source entries and exact old Current Continuity body remain preserved in the full JSON history. Review every excluded old fact and every new sentence before approval.',
+                'STMemoryBooks_SlothLegacySemanticWarning'))+'</p>'+
+            '<h4>'+html(t('Old active text','STMemoryBooks_SlothLegacySemanticBefore'))+
+            '</h4><details class="stmb-sloth-detail"><summary>'+
+            html(t('Expand complete old text','STMemoryBooks_SlothLegacySemanticExpand'))+
+            '</summary><pre>'+html(staged.previous)+'</pre></details>'+
+            '<h4>'+html(t('Proposed current facts and evidence','STMemoryBooks_SlothLegacySemanticEvidence'))+
+            '</h4>'+details+
+            '<h4>'+html(t('Historical / uncertain items not injected',
+                'STMemoryBooks_SlothLegacySemanticExcluded'))+'</h4><ul>'+
+            (excluded||'<li>None</li>')+'</ul>'+
+            '<h4>'+html(t('Proposed active Current Continuity',
+                'STMemoryBooks_SlothLegacySemanticAfter'))+'</h4>'+
+            '<pre>'+html(staged.next)+'</pre></div>';
+        const state={name:names.nexus,original,staged:staged.staged};
+        let downloaded=false;
+        const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.TEXT,'',{
+            wide:true,large:true,allowVerticalScrolling:true,
+            okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+            customButtons:[{
+                text:t('Back up original Nexus JSON and approve current-state replacement',
+                    'STMemoryBooks_SlothLegacySemanticApprove'),
+                result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
+                action:()=>{
+                    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+                    const payload={type:'Sloth original Nexus before reviewed semantic Continuity',
+                        timestamp:new Date().toISOString(),chatRef:ref,
+                        originalNexus:original,approvedProposal:proposal,
+                        exactLegacyContent:staged.previous};
+                    const blob=new Blob([JSON.stringify(payload)],
+                        {type:'application/json;charset=utf-8'});
+                    const url=URL.createObjectURL(blob);
+                    const anchor=document.createElement('a');
+                    anchor.href=url;
+                    anchor.download='Sloth_Nexus_PreSemanticReview_'+stamp+'.json';
+                    document.body.appendChild(anchor);
+                    try{anchor.click();downloaded=true;}
+                    finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+                },
+            }],
+        });
+        markStmbPopup(popup);
+        const accepted=await popup.show()===POPUP_RESULT.CUSTOM1 && downloaded;
+        if(!accepted)return {saved:false,reason:'review-cancelled'};
+        assertReviewOrigin();
+        const result=await commitSlothNexusMigration(state,{
+            loadFresh:loadServerWorld,
+            save:(name,book)=>saveWorldInfo(name,book,true),
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            verifyOrigin:assertReviewOrigin,
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+            operation:'Nexus continuity semantic reconciliation',
+        });
+        try{await Promise.resolve(reloadEditor(names.nexus));}
+        catch(error){console.warn('Sloth Continuity editor refresh failed:',error);}
+        toastr.success(t('Reviewed Current Continuity saved. Original historical entries remain archived. Memory and chat unchanged.',
+            'STMemoryBooks_SlothLegacySemanticSaved'),'🦥 STMemoryBooks');
+        return {saved:true,currentFacts:proposal.current.length,
+            notCurrentFacts:proposal.notCurrent.length,result};
+    }finally{
         collectorBusy=false;
     }
 }

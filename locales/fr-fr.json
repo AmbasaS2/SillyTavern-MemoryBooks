@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "Preuves tirées des messages d’origine",
   "STMemoryBooks_SlothNexusOnlyReview": "Mettre à jour uniquement l’état actuel de Nexus",
   "STMemoryBooks_SlothNexusOnlyGuide": "Aucune Scène n’est terminée. Vérifiez les citations et les changements, puis sauvegardez le JSON complet de Nexus avant validation. Memory et la discussion restent inchangés.",
-  "STMemoryBooks_SlothNexusOnlySaved": "Les changements d’état vérifiés ont été enregistrés dans Nexus. Memory et la discussion restent inchangés."
+  "STMemoryBooks_SlothNexusOnlySaved": "Les changements d’état vérifiés ont été enregistrés dans Nexus. Memory et la discussion restent inchangés.",
+  "STMemoryBooks_SlothLegacySemanticButton": "Examiner l’ancienne Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticHelp": "Après migration, examinez séparément l’ancien état. Seuls les faits confirmés dans le chat actuel resteront actifs. Originaux, sauvegarde JSON et validation sont requis.",
+  "STMemoryBooks_SlothLegacySemanticNone": "Aucun ancien état intact disponible à examiner.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "Comparaison de l’ancien état archivé avec le chat actuel...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "Le chat actuel ne confirme aucun ancien état. Texte original préservé.",
+  "STMemoryBooks_SlothLegacySemanticReview": "Examiner la restructuration de Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticWarning": "L’ancien état ne sera plus injecté comme actuel. Les entrées sources et l’ancien texte intégral restent dans l’historique JSON. Vérifiez les exclusions et chaque nouvel énoncé avant validation.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "Ancien texte actif",
+  "STMemoryBooks_SlothLegacySemanticExpand": "Afficher tout l’ancien texte",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "Faits actuels proposés et preuves",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "Faits historiques ou incertains non injectés",
+  "STMemoryBooks_SlothLegacySemanticAfter": "Nouvelle Current Continuity active",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Sauvegarder le JSON original de Nexus et approuver",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity mise à jour après validation. Originaux conservés; Memory et le chat inchangés."
 }

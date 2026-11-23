@@ -1671,5 +1671,19 @@
   "STMemoryBooks_SlothEvidenceSource": "原始消息证据",
   "STMemoryBooks_SlothNexusOnlyReview": "仅更新 Nexus 当前状态",
   "STMemoryBooks_SlothNexusOnlyGuide": "没有已完成的 Scene。请核对原始消息引文与修改内容，并在批准前备份完整的 Nexus JSON。Memory 与聊天保持不变。",
-  "STMemoryBooks_SlothNexusOnlySaved": "已将审核过的当前状态修改保存到 Nexus。Memory 和聊天消息未更改。"
+  "STMemoryBooks_SlothNexusOnlySaved": "已将审核过的当前状态修改保存到 Nexus。Memory 和聊天消息未更改。",
+  "STMemoryBooks_SlothLegacySemanticButton": "整理旧版 Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticHelp": "迁移后单独审查旧状态，仅将当前聊天能够证实的事实保留为有效记忆。必须保留原始记录并备份 JSON，经批准后才保存。",
+  "STMemoryBooks_SlothLegacySemanticNone": "没有可供审查的未修改旧状态。",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "正在对照保存的旧状态与当前聊天...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "当前聊天无法证实旧状态仍然有效，因此未修改原文。",
+  "STMemoryBooks_SlothLegacySemanticReview": "审查旧版 Current Continuity 重组",
+  "STMemoryBooks_SlothLegacySemanticWarning": "旧状态正文将不再作为当前记忆注入。原始条目和旧正文完整保存在 JSON 历史中。请核对排除的信息和新增文字再批准。",
+  "STMemoryBooks_SlothLegacySemanticBefore": "原来的有效正文",
+  "STMemoryBooks_SlothLegacySemanticExpand": "展开完整旧正文",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "拟保留的当前事实与证据",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "不再持续注入的历史或未证实信息",
+  "STMemoryBooks_SlothLegacySemanticAfter": "重组后的有效 Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticApprove": "备份 Nexus 原始 JSON 并批准替换",
+  "STMemoryBooks_SlothLegacySemanticSaved": "已按审核内容更新 Current Continuity。旧记录已保留，Memory 与聊天未修改。"
 }

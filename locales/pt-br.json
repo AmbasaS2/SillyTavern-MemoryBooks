@@ -1668,5 +1668,19 @@
   "STMemoryBooks_SlothEvidenceSource": "Evidências das mensagens originais",
   "STMemoryBooks_SlothNexusOnlyReview": "Atualizar apenas o estado atual de Nexus",
   "STMemoryBooks_SlothNexusOnlyGuide": "Nenhuma Scene foi concluída. Revise as citações e alterações, faça backup do JSON completo de Nexus e só então aprove. Memory e o chat não serão alterados.",
-  "STMemoryBooks_SlothNexusOnlySaved": "As alterações revisadas do estado atual foram salvas em Nexus. Memory e o chat não foram alterados."
+  "STMemoryBooks_SlothNexusOnlySaved": "As alterações revisadas do estado atual foram salvas em Nexus. Memory e o chat não foram alterados.",
+  "STMemoryBooks_SlothLegacySemanticButton": "Revisar Current Continuity antiga",
+  "STMemoryBooks_SlothLegacySemanticHelp": "Depois da migração, revise o estado antigo separadamente. Só fatos comprovados no chat atual continuam ativos. Originais, backup JSON e aprovação são obrigatórios.",
+  "STMemoryBooks_SlothLegacySemanticNone": "Nenhum estado antigo intacto disponível para revisão.",
+  "STMemoryBooks_SlothLegacySemanticAnalyzing": "Comparando estados antigos arquivados com o chat atual...",
+  "STMemoryBooks_SlothLegacySemanticUnverified": "Nenhum estado antigo foi confirmado pelo chat atual. Texto original preservado.",
+  "STMemoryBooks_SlothLegacySemanticReview": "Revisar a reorganização da Current Continuity",
+  "STMemoryBooks_SlothLegacySemanticWarning": "O texto antigo deixará de ser injetado como estado atual. As entradas originais e o texto antigo completo ficam preservados no histórico JSON. Revise exclusões e frases novas antes de aprovar.",
+  "STMemoryBooks_SlothLegacySemanticBefore": "Texto ativo anterior",
+  "STMemoryBooks_SlothLegacySemanticExpand": "Mostrar texto antigo completo",
+  "STMemoryBooks_SlothLegacySemanticEvidence": "Fatos atuais propostos e evidências",
+  "STMemoryBooks_SlothLegacySemanticExcluded": "Fatos históricos ou incertos não injetados",
+  "STMemoryBooks_SlothLegacySemanticAfter": "Nova Current Continuity ativa",
+  "STMemoryBooks_SlothLegacySemanticApprove": "Fazer backup do JSON original do Nexus e aprovar",
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity atualizada após revisão. Originais preservados; Memory e chat não foram alterados."
 }
