@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "Faits historiques ou incertains non injectés",
   "STMemoryBooks_SlothLegacySemanticAfter": "Nouvelle Current Continuity active",
   "STMemoryBooks_SlothLegacySemanticApprove": "Sauvegarder le JSON original de Nexus et approuver",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity mise à jour après validation. Originaux conservés; Memory et le chat inchangés."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity mise à jour après validation. Originaux conservés; Memory et le chat inchangés.",
+  "STMemoryBooks_SlothSplitButton": "Examiner la division de la dernière Scene",
+  "STMemoryBooks_SlothSplitHelp": "Si la dernière Scene achevée contient des événements indépendants, elle ne peut être divisée que lorsque les messages originaux sont visibles. Tout est vérifié et conservé.",
+  "STMemoryBooks_SlothSplitAnalyzing": "Recherche d'événements indépendants achevés dans la dernière Scene...",
+  "STMemoryBooks_SlothSplitNone": "Aucun ensemble suffisant d'événements indépendants achevés. Memory reste inchangé.",
+  "STMemoryBooks_SlothSplitPlanTitle": "Examiner le plan de division des Scenes",
+  "STMemoryBooks_SlothSplitPlanHelp": "Seule la dernière Scene achevée peut être divisée sans renuméroter les précédentes. Vérifiez causes, conclusions et plages de messages. Les omissions et doublons sont refusés.",
+  "STMemoryBooks_SlothSplitPlanApprove": "Valider les plages de division",
+  "STMemoryBooks_SlothSplitDraftTitle": "Examiner les textes des Scenes divisées",
+  "STMemoryBooks_SlothSplitDraftHelp": "Vérifiez voix, dialogues et Result réellement terminé pour chaque Scene. Les textes sont modifiables avant enregistrement.",
+  "STMemoryBooks_SlothSplitDraftApprove": "Terminer l'examen des nouveaux textes",
+  "STMemoryBooks_SlothSplitFinalTitle": "Validation finale, sauvegarde et enregistrement",
+  "STMemoryBooks_SlothSplitFinalHelp": "Téléchargez d'abord le JSON original complet de Memory. L'ancienne Scene reste archivée et désactivée avec tout son historique; chaque événement reçoit un nouvel UID. Les autres livres et le chat restent inchangés.",
+  "STMemoryBooks_SlothSplitOld": "Scene originale archivée",
+  "STMemoryBooks_SlothSplitNew": "Nouvelles Scenes indépendantes",
+  "STMemoryBooks_SlothSplitApprove": "Sauvegarder le JSON original de Memory et approuver",
+  "STMemoryBooks_SlothSplitSaved": "Division vérifiée enregistrée dans Memory. Original archivé, aucun message masqué."
 }

@@ -17,12 +17,15 @@ import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './n
 import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft,
-    suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity } from './nexusCollectionAI.js';
+    suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity,
+    suggestSlothLatestSceneSplit } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
 import { stageNexusSceneMerge } from './nexusSceneMerge.js';
+import {inspectNexusSceneSplit,validateNexusSceneSplitProposal,
+    stageNexusSceneSplit} from './nexusSceneSplit.js';
 import { inspectSlothLegacyContinuity, stageSlothLegacyContinuity } from './nexusLegacySemantic.js';
 import { markStmbPopup } from './utils.js';
 
@@ -889,4 +892,224 @@ export async function runNexusLegacyContinuityReview({profileIndex}={}) {
     }finally{
         collectorBusy=false;
     }
+}
+
+
+/** Explicit newest-Scene split, limited to verified visible original messages. */
+export async function runNexusLatestSceneSplit({profileIndex}={}) {
+    if(collectorBusy)throw new Error('A Sloth collection or repair is already in progress.');
+    collectorBusy=true;
+    try{
+        const settings=extension_settings.STMemoryBooks;
+        const ref=structuredClone(getCurrentStmbChatRef());
+        if(ref.type!=='character'||!String(ref.fileName||'').trim()) {
+            throw new Error('Choose a saved individual-character chat before splitting a Scene.');
+        }
+        const roles={
+            nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings),
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
+        };
+        if(roles.nexus.state!=='ready'||roles.memory.state!=='ready'||
+            roles.nexus.name===roles.memory.name) {
+            throw new Error('Assign two different character-linked Nexus and Memory lorebooks.');
+        }
+        const names={nexus:roles.nexus.name,memory:roles.memory.name};
+        const original=await loadServerWorld(names.memory);
+        assertLegacyMigrationOrigin(ref,names);
+        const chatIds=[String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean);
+        const sourcePlan=inspectNexusSceneSplit(original,chatIds);
+        const messages=sourcePlan.sourceIds.map(id=>{
+            const message=chat[id];
+            if(!message||message.is_system||typeof message.mes!=='string'||
+                !message.mes.trim()){
+                throw new Error('Original message #'+id+
+                    ' is hidden, missing or blank. Split requires the visible original chat.');
+            }
+            return {id,name:String(message.name||''),mes:message.mes,
+                is_user:!!message.is_user,send_date:message.send_date||null};
+        });
+        const sourceIds=sourcePlan.sourceIds,chatLength=chat.length;
+        const originalFingerprint=fingerprintSlothChat(chat,sourceIds);
+        const verifyOrigin=()=>{
+            assertLegacyMigrationOrigin(ref,names);
+            if(chat.length!==chatLength ||
+                fingerprintSlothChat(chat,sourceIds)!==originalFingerprint) {
+                throw new Error('Original chat changed during Scene split. No data saved.');
+            }
+        };
+        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
+            ||settings.profiles?.[settings.defaultProfile];
+        if(!profile)throw new Error('Choose an AI profile before reviewing a Scene split.');
+        toastr.info(t('Checking the newest Scene for independent completed events...',
+            'STMemoryBooks_SlothSplitAnalyzing'),'🦥 STMemoryBooks');
+        const candidate=await suggestSlothLatestSceneSplit({
+            plan:sourcePlan,messages,profile,settings,
+        });
+        verifyOrigin();
+        if(!candidate){
+            toastr.info(t('No independently completed incidents were found. Memory was not changed.',
+                'STMemoryBooks_SlothSplitNone'),'🦥 STMemoryBooks');
+            return {saved:false,reason:'no-independent-events'};
+        }
+        const items=candidate.parts.map((part,i)=>
+            '<label class="stmb-sloth-plan-item"><strong>'+
+            html(String(i+1)+'. '+part.title)+'</strong><small>'+
+            html(part.reason)+'</small><p>'+html(part.result)+'</p>'+
+            '<small>'+html(part.evidence.map(e=>'#'+e.messageId+' '+e.quote).join(' · '))+
+            '</small><input class="text_pole stmb-sloth-split-title" data-index="'+i+
+            '" value="'+html(part.title)+'" aria-label="Scene title" />'+
+            '<input class="text_pole stmb-sloth-split-ranges" data-index="'+i+
+            '" value="'+html(readableSegments(part.segments))+'" aria-label="Source ranges" />'+
+            '</label>').join('');
+        const planBody='<div class="stmb-sloth-review"><h3>'+
+            html(t('Review independent Scene events','STMemoryBooks_SlothSplitPlanTitle'))+
+            '</h3><p>'+html(t('Only the newest completed Scene can be split safely without renumbering older memories. Check the independent causes, endings and exact message ranges. Missing or repeated source messages block the change.',
+                'STMemoryBooks_SlothSplitPlanHelp'))+'</p>'+
+            '<details class="stmb-sloth-detail"><summary>'+html(sourcePlan.sourceTitle)+
+            ' · UID '+html(sourcePlan.sourceUid)+'</summary><pre>'+
+            html(sourcePlan.sourceContent)+'</pre></details>'+items+'</div>';
+        const planPopup=new Popup(DOMPurify.sanitize(planBody),POPUP_TYPE.CONFIRM,'',{
+            wide:true,large:true,allowVerticalScrolling:true,
+            okButton:t('Approve split boundaries','STMemoryBooks_SlothSplitPlanApprove'),
+            cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        });
+        markStmbPopup(planPopup);
+        const showingPlan=planPopup.show();
+        const reviewed=candidate.parts.map(item=>({
+            title:item.title,reason:item.reason,result:item.result,
+            complete:true,segments:item.segments.map(r=>[...r]),
+            evidence:structuredClone(item.evidence),
+        }));
+        for(const input of planPopup.dlg?.querySelectorAll(
+            '.stmb-sloth-split-title,.stmb-sloth-split-ranges')||[]){
+            input.addEventListener('input',()=>{
+                const i=Number(input.dataset.index);
+                if(!Number.isSafeInteger(i)||!reviewed[i])return;
+                if(input.classList.contains('stmb-sloth-split-title')){
+                    reviewed[i].title=input.value.trim();
+                }else reviewed[i].rawRanges=input.value;
+            });
+        }
+        if(await showingPlan!==POPUP_RESULT.AFFIRMATIVE)return {saved:false,reason:'plan-cancelled'};
+        for(const item of reviewed){
+            if(item.rawRanges!==undefined) {
+                item.segments=parseReviewedSegments(item.rawRanges,sourceIds);
+            }
+            delete item.rawRanges;
+        }
+        const plan=validateNexusSceneSplitProposal(sourcePlan,{parts:reviewed},messages);
+        verifyOrigin();
+        const drafts=[];
+        for(const event of plan.parts){
+            const composed=await composeSlothScene({
+                event,messages,profile,settings,characterContext:'',
+            });
+            drafts.push({...event,content:composed.content,
+                keywords:composed.keywords});
+            verifyOrigin();
+        }
+        if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
+            await auditSlothDraft({messages,scenes:drafts,edits:[],profile,settings});
+            verifyOrigin();
+        }
+        const draftBody='<div class="stmb-sloth-review"><h3>'+
+            html(t('Review split Scene prose','STMemoryBooks_SlothSplitDraftTitle'))+
+            '</h3><p>'+html(t('Edit each new Scene if needed. Preserve actor-specific voice, actual dialogue and a completed Result. Nothing is saved at this step.',
+                'STMemoryBooks_SlothSplitDraftHelp'))+'</p>'+
+            drafts.map((item,i)=>
+                '<label class="stmb-sloth-plan-item"><strong>'+html(item.title)+
+                ' · '+html(readableSegments(item.segments))+'</strong>'+
+                '<input class="text_pole stmb-sloth-split-draft-title" data-index="'+i+
+                '" value="'+html(item.title)+'" aria-label="Scene title" />'+
+                '<textarea class="text_pole stmb-sloth-split-draft-content" rows="13" data-index="'+i+
+                '" aria-label="Completed Scene">'+html(item.content)+'</textarea></label>').join('')+
+            '</div>';
+        const draftPopup=new Popup(DOMPurify.sanitize(draftBody),POPUP_TYPE.CONFIRM,'',{
+            wide:true,large:true,allowVerticalScrolling:true,
+            okButton:t('Review full Memory split and backup','STMemoryBooks_SlothSplitDraftApprove'),
+            cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        });
+        markStmbPopup(draftPopup);
+        const showingDraft=draftPopup.show();
+        for(const input of draftPopup.dlg?.querySelectorAll(
+            '.stmb-sloth-split-draft-title,.stmb-sloth-split-draft-content')||[]){
+            input.addEventListener('input',()=>{
+                const i=Number(input.dataset.index);
+                if(!Number.isSafeInteger(i)||!drafts[i])return;
+                if(input.classList.contains('stmb-sloth-split-draft-title')){
+                    drafts[i].title=input.value.trim();
+                }else drafts[i].content=input.value;
+            });
+        }
+        if(await showingDraft!==POPUP_RESULT.AFFIRMATIVE)return {saved:false,reason:'draft-cancelled'};
+        verifyOrigin();
+        const staged=stageNexusSceneSplit(original,{
+            sourceUid:sourcePlan.sourceUid,parts:drafts,messages,
+            createEntry:book=>createWorldInfoEntry(names.memory,book),
+            olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
+        });
+        const preview='<div class="stmb-sloth-review"><h3>'+
+            html(t('Final split, original backup and save','STMemoryBooks_SlothSplitFinalTitle'))+
+            '</h3><p>'+html(t('The entire original Memory JSON must be backed up before saving. The original Scene will remain as a disabled full-history archive. Separate completed Scenes receive new UIDs. All other lorebooks and chat messages remain unchanged.',
+                'STMemoryBooks_SlothSplitFinalHelp'))+'</p>'+
+            '<h4>'+html(t('Original archived Scene','STMemoryBooks_SlothSplitOld'))+
+            '</h4><details class="stmb-sloth-detail"><summary>'+
+            html(staged.plan.sourceTitle)+' · UID '+html(staged.retiredUid)+
+            '</summary><pre>'+html(staged.originalSnapshot.content)+'</pre></details>'+
+            '<h4>'+html(t('Independent replacement Scenes','STMemoryBooks_SlothSplitNew'))+
+            '</h4>'+staged.writes.map(item=>
+                '<details class="stmb-sloth-detail"><summary>'+
+                html(item.title)+' · UID '+html(item.uid)+
+                ' · '+html(readableSegments(item.segments))+
+                '</summary><pre>'+html(item.after)+'</pre></details>').join('')+
+            '<small>'+html('Rotation changes: '+staged.rotation.length)+'</small></div>';
+        let downloaded=false;
+        const finalPopup=new Popup(DOMPurify.sanitize(preview),POPUP_TYPE.TEXT,'',{
+            wide:true,large:true,allowVerticalScrolling:true,
+            okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+            customButtons:[{
+                text:t('Download original Memory JSON and approve split',
+                    'STMemoryBooks_SlothSplitApprove'),
+                result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
+                action:()=>{
+                    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+                    const backup={type:'Sloth approved latest Scene split: original Memory World Info',
+                        timestamp:new Date().toISOString(),chatRef:ref,
+                        originalMemory:original,
+                        sourceUid:staged.retiredUid,
+                        reviewedParts:staged.writes.map(x=>({
+                            uid:x.uid,title:x.title,segments:x.segments,
+                        }))};
+                    const blob=new Blob([JSON.stringify(backup)],
+                        {type:'application/json;charset=utf-8'});
+                    const url=URL.createObjectURL(blob);
+                    const anchor=document.createElement('a');anchor.href=url;
+                    anchor.download='Sloth_Memory_PreSplit_'+stamp+'.json';
+                    document.body.appendChild(anchor);
+                    try{anchor.click();downloaded=true;}
+                    finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+                },
+            }],
+        });
+        markStmbPopup(finalPopup);
+        const confirmed=await finalPopup.show()===POPUP_RESULT.CUSTOM1 && downloaded;
+        if(!confirmed)return {saved:false,reason:'save-cancelled'};
+        verifyOrigin();
+        const result=await commitSlothNexusMigration({
+            name:names.memory,original,staged:staged.proposedMemory,
+        },{
+            loadFresh:loadServerWorld,
+            save:(name,book)=>saveWorldInfo(name,book,true),
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            verifyOrigin,
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+            operation:'Memory Scene split',
+        });
+        try{await Promise.resolve(reloadEditor(names.memory));}
+        catch(error){console.warn('Sloth Memory split editor refresh failed:',error);}
+        toastr.success(t('Reviewed Scene split saved to Memory. The original was archived, with no chat messages hidden.',
+            'STMemoryBooks_SlothSplitSaved'),'🦥 STMemoryBooks');
+        return {saved:true,retiredUid:sourcePlan.sourceUid,
+            newUids:staged.writes.map(x=>x.uid),result};
+    }finally{collectorBusy=false;}
 }

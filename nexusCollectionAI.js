@@ -9,6 +9,7 @@ import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollecti
 import { validateGroundedNexusEdits, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
+import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 
 function parseStrictJSON(raw,phase) {
     const text=String(raw||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
@@ -356,4 +357,50 @@ export async function proposeSlothLegacyContinuity({
         'Actual source chat/evidence (message IDs):',chatEvidence,
     ].join('\n\n'),'Reviewed legacy Current Continuity reconciliation');
     return validateSlothLegacyContinuityProposal(plan,raw,messages);
+}
+
+
+/**
+ * Explicit latest-Scene split proposal. Only original, still-visible source
+ * messages may support an independent event and its completed Result.
+ * This function NEVER changes a World Info or chat.
+ */
+export async function suggestSlothLatestSceneSplit({
+    plan,messages,profile,settings,signal=null,
+}) {
+    if(!plan?.sourceUid || !Array.isArray(plan.sourceIds) ||
+        !Array.isArray(messages) || !messages.length) {
+        throw new Error('A verified latest Scene and visible source messages are required.');
+    }
+    const originalText=compact(messages);
+    if(originalText.length>66000 || plan.sourceContent.length>45000) {
+        throw new Error('Source chat/Scene is too large for one safe split analysis. No data saved.');
+    }
+    const ask=requester(profile,settings,signal);
+    const answer=await ask([
+        'Review ONE already completed Scene that may contain INDEPENDENT causal incidents.',
+        'Do not split merely because the characters move, change dates, exchange jokes,',
+        'or have several conversations inside ONE continuous incident.',
+        'If there are not at least TWO genuinely independent completed incidents,',
+        'return exactly {"parts":[]}. Never split ongoing or uncertain incidents.',
+        'Otherwise propose TWO TO FOUR separate completed Scene memories.',
+        'Every original source message MUST belong to exactly one proposed event;',
+        'no skipped, invented or overlapping message numbers, including casual dialogue.',
+        'Separate causal arcs even if their source spans are noncontiguous.',
+        'Preserve chronological facts, character voice, unique humor, precise dialogue,',
+        'knowledge limits, secrets, relationships and completion outcomes.',
+        'Return STRICT JSON {"parts":[{"title":"short unnumbered event title",',
+        '"complete":true,"reason":"why this incident is independently complete",',
+        '"result":"one observed completed outcome","segments":[[first,last],...],',
+        '"evidence":[{"messageId":NUMBER,"quote":"exact 8-400 char quote from',
+        'one original message of THIS incident"}]}]}.',
+        'Each incident needs a concrete direct quote; not a paraphrase or an invented ending.',
+        'All ranges must use only these exact source message IDs: '+JSON.stringify(plan.sourceIds),
+        'Existing Scene title:',plan.sourceTitle,
+        'Full previous Scene body (context, not independent proof):',plan.sourceContent,
+        'Verifiable original chat messages:',originalText,
+    ].join('\n\n'),'Latest Scene causal split plan');
+    if(!Array.isArray(answer.parts))throw new Error('Split plan response has no parts array.');
+    if(!answer.parts.length)return null;
+    return validateNexusSceneSplitProposal(plan,answer,messages);
 }

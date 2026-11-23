@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "Исторические или сомнительные факты вне внедрения",
   "STMemoryBooks_SlothLegacySemanticAfter": "Новая активная Current Continuity",
   "STMemoryBooks_SlothLegacySemanticApprove": "Сохранить исходный JSON Nexus и подтвердить замену",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity обновлена после проверки. Оригиналы сохранены; Memory и чат не изменены."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity обновлена после проверки. Оригиналы сохранены; Memory и чат не изменены.",
+  "STMemoryBooks_SlothSplitButton": "Проверить разделение последней Scene",
+  "STMemoryBooks_SlothSplitHelp": "Если последняя завершённая Scene содержит независимые события, разделение возможно только при доступности исходных сообщений чата. Все источники проверяются и сохраняются.",
+  "STMemoryBooks_SlothSplitAnalyzing": "Поиск независимых завершённых событий в последней Scene...",
+  "STMemoryBooks_SlothSplitNone": "Недостаточно независимых завершённых событий. Memory не изменён.",
+  "STMemoryBooks_SlothSplitPlanTitle": "Проверка плана разделения Scenes",
+  "STMemoryBooks_SlothSplitPlanHelp": "Чтобы не менять старые номера, разделяется только последняя завершённая Scene. Проверьте причины, финалы и диапазоны сообщений. Пропуски и дубли блокируются.",
+  "STMemoryBooks_SlothSplitPlanApprove": "Утвердить границы разделения",
+  "STMemoryBooks_SlothSplitDraftTitle": "Проверить тексты разделённых Scenes",
+  "STMemoryBooks_SlothSplitDraftHelp": "Проверьте речь персонажей, диалоги и завершённый Result. Текст можно отредактировать до сохранения.",
+  "STMemoryBooks_SlothSplitDraftApprove": "Завершить проверку текстов",
+  "STMemoryBooks_SlothSplitFinalTitle": "Окончательная проверка, копия и сохранение",
+  "STMemoryBooks_SlothSplitFinalHelp": "Сначала сохраните полный исходный JSON Memory. Старая Scene останется отключённым архивом со всей историей, новые события получат новые UID. Другие книги и чат не меняются.",
+  "STMemoryBooks_SlothSplitOld": "Архивируемая исходная Scene",
+  "STMemoryBooks_SlothSplitNew": "Новые независимые Scenes",
+  "STMemoryBooks_SlothSplitApprove": "Сохранить исходный JSON Memory и утвердить разделение",
+  "STMemoryBooks_SlothSplitSaved": "Проверенное разделение Scenes сохранено в Memory. Оригинал заархивирован, сообщения не скрыты."
 }

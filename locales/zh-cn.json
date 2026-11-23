@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "不再持续注入的历史或未证实信息",
   "STMemoryBooks_SlothLegacySemanticAfter": "重组后的有效 Current Continuity",
   "STMemoryBooks_SlothLegacySemanticApprove": "备份 Nexus 原始 JSON 并批准替换",
-  "STMemoryBooks_SlothLegacySemanticSaved": "已按审核内容更新 Current Continuity。旧记录已保留，Memory 与聊天未修改。"
+  "STMemoryBooks_SlothLegacySemanticSaved": "已按审核内容更新 Current Continuity。旧记录已保留，Memory 与聊天未修改。",
+  "STMemoryBooks_SlothSplitButton": "审核最新 Scene 拆分",
+  "STMemoryBooks_SlothSplitHelp": "最新完成的 Scene 含有独立事件时，只有原始聊天消息仍可见才能拆分。核验全部来源范围并保留原文。",
+  "STMemoryBooks_SlothSplitAnalyzing": "正在分析最新 Scene 中的独立完成事件...",
+  "STMemoryBooks_SlothSplitNone": "没有足够独立且已完成的事件，Memory 未更改。",
+  "STMemoryBooks_SlothSplitPlanTitle": "审核独立 Scene 拆分方案",
+  "STMemoryBooks_SlothSplitPlanHelp": "为避免更改旧 Scene 编号，仅拆分最新完成的 Scene。请核验各事件的起因、结果及消息范围；缺失或重复将被拒绝。",
+  "STMemoryBooks_SlothSplitPlanApprove": "批准事件拆分范围",
+  "STMemoryBooks_SlothSplitDraftTitle": "审核拆分后的 Scene 正文",
+  "STMemoryBooks_SlothSplitDraftHelp": "检查各新 Scene 的人物口吻、原话及已完成的 Result。可修改内容，当前不会保存。",
+  "STMemoryBooks_SlothSplitDraftApprove": "完成新 Scene 正文审查",
+  "STMemoryBooks_SlothSplitFinalTitle": "最终审核拆分、备份与保存",
+  "STMemoryBooks_SlothSplitFinalHelp": "保存前必须备份完整的原始 Memory JSON。旧 Scene 将连同全部历史作为禁用档案保留，独立事件获得新 UID。其他世界书与聊天均不更改。",
+  "STMemoryBooks_SlothSplitOld": "保留的原始 Scene",
+  "STMemoryBooks_SlothSplitNew": "新的独立 Scene",
+  "STMemoryBooks_SlothSplitApprove": "备份原始 Memory JSON 并批准拆分",
+  "STMemoryBooks_SlothSplitSaved": "已将审核后的 Scene 拆分保存到 Memory。原文已保留，聊天消息未隐藏。"
 }

@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "Nicht mehr eingespeiste historische/ungewisse Fakten",
   "STMemoryBooks_SlothLegacySemanticAfter": "Neue aktive Current Continuity",
   "STMemoryBooks_SlothLegacySemanticApprove": "Original-Nexus-JSON sichern und Ersatz genehmigen",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Überarbeitete Current Continuity gespeichert. Alte Originale bleiben erhalten; Memory und Chat unverändert."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Überarbeitete Current Continuity gespeichert. Alte Originale bleiben erhalten; Memory und Chat unverändert.",
+  "STMemoryBooks_SlothSplitButton": "Neueste Scene aufteilen: prüfen",
+  "STMemoryBooks_SlothSplitHelp": "Enthält die neueste abgeschlossene Scene unabhängige Ereignisse, ist eine Aufteilung nur bei sichtbaren Originalnachrichten möglich. Alle Quellen werden geprüft und archiviert.",
+  "STMemoryBooks_SlothSplitAnalyzing": "Suche in der neuesten Scene nach unabhängigen abgeschlossenen Ereignissen...",
+  "STMemoryBooks_SlothSplitNone": "Keine ausreichenden eigenständigen abgeschlossenen Ereignisse gefunden. Memory bleibt unverändert.",
+  "STMemoryBooks_SlothSplitPlanTitle": "Plan zur Aufteilung unabhängiger Scenes prüfen",
+  "STMemoryBooks_SlothSplitPlanHelp": "Um ältere Scenenummern beizubehalten, kann nur die neueste abgeschlossene Scene aufgeteilt werden. Prüfe Ursachen, Ergebnisse und genaue Nachrichtenbereiche. Lücken und Duplikate werden abgelehnt.",
+  "STMemoryBooks_SlothSplitPlanApprove": "Aufteilung der Ereignisbereiche bestätigen",
+  "STMemoryBooks_SlothSplitDraftTitle": "Text der aufgeteilten Scenes prüfen",
+  "STMemoryBooks_SlothSplitDraftHelp": "Prüfe die jeweilige Stimme, Dialoge und das abgeschlossene Result. Bearbeitung ist möglich; noch wird nichts gespeichert.",
+  "STMemoryBooks_SlothSplitDraftApprove": "Neue Scene-Texte geprüft",
+  "STMemoryBooks_SlothSplitFinalTitle": "Letzte Prüfung, Sicherung und Speichern",
+  "STMemoryBooks_SlothSplitFinalHelp": "Vor dem Speichern muss das gesamte ursprüngliche Memory-JSON gesichert werden. Die alte Scene bleibt deaktiviert samt Historie erhalten; eigenständige Ereignisse erhalten neue UIDs. Andere Lorebooks und der Chat bleiben unverändert.",
+  "STMemoryBooks_SlothSplitOld": "Archivierte Original-Scene",
+  "STMemoryBooks_SlothSplitNew": "Neue unabhängige Scenes",
+  "STMemoryBooks_SlothSplitApprove": "Original-Memory-JSON sichern und Aufteilung bestätigen",
+  "STMemoryBooks_SlothSplitSaved": "Geprüfte Scene-Aufteilung in Memory gespeichert. Original archiviert, keine Chatnachrichten ausgeblendet."
 }

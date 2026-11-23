@@ -2,15 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //
 // Optimistic single-World-Info save with a verified, best-effort compensation.
-// The World Info server offers no atomic two-book transaction. This operation
-// intentionally changes Nexus ONLY; the Memory Scene book is not written.
+// The World Info server offers no atomic two-book transaction. This helper
+// changes exactly the one reviewed book supplied by the caller (Nexus or Memory).
 
 const equal=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 
 export async function commitSlothNexusMigration(state,{
     loadFresh,save,withLock,verifyOrigin,resetCache,operation='Nexus migration',
 }) {
-    const subject=operation==='Memory Scene merge'?'Memory':'Nexus';
+    const subject=['Memory Scene merge','Memory Scene split'].includes(operation)
+        ?'Memory':'Nexus';
+    const reviewAction=operation==='Memory Scene split'?'split':
+        subject==='Memory'?'merge':'migration';
     if (!state?.name || !state.original?.entries || !state.staged?.entries ||
         [loadFresh,save,withLock,verifyOrigin].some(fn=>typeof fn!=='function')) {
         throw new Error('A complete Nexus migration snapshot and save dependencies are required.');
@@ -19,7 +22,7 @@ export async function commitSlothNexusMigration(state,{
         verifyOrigin();
         const current=await loadFresh(state.name);
         if (!equal(current,state.original)) {
-            throw new Error(subject+' changed while '+(subject==='Memory'?'merge':'migration')+' was being reviewed. Nothing saved.');
+            throw new Error(subject+' changed while '+reviewAction+' was being reviewed. Nothing saved.');
         }
         try {
             verifyOrigin();

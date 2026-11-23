@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "상시 주입에서 제외할 과거·불확실 정보",
   "STMemoryBooks_SlothLegacySemanticAfter": "변경 후 활성 Current Continuity",
   "STMemoryBooks_SlothLegacySemanticApprove": "원본 Nexus JSON 백업 후 현재 상태 교체 승인",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity를 승인한 내용으로 갱신했습니다. 옛 원본은 보관되며 Memory와 채팅은 변경되지 않았습니다."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity를 승인한 내용으로 갱신했습니다. 옛 원본은 보관되며 Memory와 채팅은 변경되지 않았습니다.",
+  "STMemoryBooks_SlothSplitButton": "최신 Scene 분리 검토",
+  "STMemoryBooks_SlothSplitHelp": "최신 완결 Scene에 독립된 사건이 섞여 있다면 원본 채팅이 보이는 경우에만 분리할 수 있어. 모든 메시지 범위를 검증하고 원본은 보관해.",
+  "STMemoryBooks_SlothSplitAnalyzing": "최신 Scene에서 독립적으로 끝난 사건을 찾는 중...",
+  "STMemoryBooks_SlothSplitNone": "독립적으로 완결된 사건이 충분하지 않아 Memory를 변경하지 않았습니다.",
+  "STMemoryBooks_SlothSplitPlanTitle": "독립 Scene 분할 계획 검토",
+  "STMemoryBooks_SlothSplitPlanHelp": "이전 Scene 번호를 바꾸지 않기 위해 최신 완결 Scene만 분리할 수 있습니다. 사건별 발단·결말과 메시지 범위를 확인하세요. 누락이나 중복이 있으면 차단합니다.",
+  "STMemoryBooks_SlothSplitPlanApprove": "사건 분할 범위 승인",
+  "STMemoryBooks_SlothSplitDraftTitle": "분할 Scene 본문 검토",
+  "STMemoryBooks_SlothSplitDraftHelp": "각 새 Scene의 말투·대사·완료된 Result를 확인하고 필요하면 수정하세요. 아직 저장되지 않습니다.",
+  "STMemoryBooks_SlothSplitDraftApprove": "새 Scene 본문 검토 완료",
+  "STMemoryBooks_SlothSplitFinalTitle": "분할 최종 검토·원본 백업·저장",
+  "STMemoryBooks_SlothSplitFinalHelp": "저장 전에 Memory 전체 원본 JSON을 백업해야 합니다. 기존 Scene은 원문·이력과 함께 비활성 보관하고 각 독립 사건에 새 UID를 부여합니다. 다른 로어북과 채팅은 수정하지 않습니다.",
+  "STMemoryBooks_SlothSplitOld": "보관할 기존 Scene",
+  "STMemoryBooks_SlothSplitNew": "새로운 독립 Scene",
+  "STMemoryBooks_SlothSplitApprove": "Memory 원본 JSON 백업 후 분리 저장 승인",
+  "STMemoryBooks_SlothSplitSaved": "검토한 Scene 분할을 Memory에 저장했습니다. 원본은 보관했고 채팅은 숨기지 않았습니다."
 }

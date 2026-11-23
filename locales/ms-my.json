@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "Fakta lampau atau tidak pasti yang tidak disuntik",
   "STMemoryBooks_SlothLegacySemanticAfter": "Current Continuity aktif yang dicadangkan",
   "STMemoryBooks_SlothLegacySemanticApprove": "Sandarkan JSON Nexus asal dan luluskan penggantian",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity disimpan selepas semakan. Rekod asal dikekalkan; Memory dan chat tidak diubah."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity disimpan selepas semakan. Rekod asal dikekalkan; Memory dan chat tidak diubah.",
+  "STMemoryBooks_SlothSplitButton": "Semak pemisahan Scene terbaru",
+  "STMemoryBooks_SlothSplitHelp": "Jika Scene terkini yang lengkap mengandungi peristiwa berasingan, pemisahan hanya boleh dibuat ketika mesej asal kelihatan. Semua sumber disahkan dan asalnya disimpan.",
+  "STMemoryBooks_SlothSplitAnalyzing": "Menyemak peristiwa lengkap yang berasingan dalam Scene terkini...",
+  "STMemoryBooks_SlothSplitNone": "Tiada peristiwa lengkap bebas yang mencukupi. Memory tidak diubah.",
+  "STMemoryBooks_SlothSplitPlanTitle": "Semak rancangan pemisahan Scene",
+  "STMemoryBooks_SlothSplitPlanHelp": "Hanya Scene lengkap terkini boleh dipisah tanpa menukar nombor Scene lama. Semak sebab, penamat dan julat mesej. Sumber hilang atau bertindih akan ditolak.",
+  "STMemoryBooks_SlothSplitPlanApprove": "Luluskan sempadan peristiwa",
+  "STMemoryBooks_SlothSplitDraftTitle": "Semak teks Scene yang dipisahkan",
+  "STMemoryBooks_SlothSplitDraftHelp": "Semak suara watak, dialog dan Result yang benar-benar lengkap. Anda boleh menyunting sebelum simpan.",
+  "STMemoryBooks_SlothSplitDraftApprove": "Selesaikan semakan teks",
+  "STMemoryBooks_SlothSplitFinalTitle": "Semakan akhir, sandaran dan simpan",
+  "STMemoryBooks_SlothSplitFinalHelp": "Sandarkan keseluruhan JSON Memory asal sebelum simpan. Scene lama kekal sebagai arkib tidak aktif beserta sejarah penuh; peristiwa baharu menerima UID baharu. Buku lore lain dan chat tidak berubah.",
+  "STMemoryBooks_SlothSplitOld": "Scene asal yang diarkibkan",
+  "STMemoryBooks_SlothSplitNew": "Scene bebas yang baharu",
+  "STMemoryBooks_SlothSplitApprove": "Sandarkan JSON Memory asal dan luluskan pemisahan",
+  "STMemoryBooks_SlothSplitSaved": "Pemisahan Scene yang disemak disimpan ke Memory. Asal diarkibkan; tiada mesej chat disembunyikan."
 }

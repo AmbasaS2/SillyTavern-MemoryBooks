@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "Datos históricos o inciertos excluidos de la inyección",
   "STMemoryBooks_SlothLegacySemanticAfter": "Nueva Current Continuity activa",
   "STMemoryBooks_SlothLegacySemanticApprove": "Guardar JSON original de Nexus y aprobar sustitución",
-  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity actualizada tras la revisión. Los originales siguen guardados; Memory y el chat no cambiaron."
+  "STMemoryBooks_SlothLegacySemanticSaved": "Current Continuity actualizada tras la revisión. Los originales siguen guardados; Memory y el chat no cambiaron.",
+  "STMemoryBooks_SlothSplitButton": "Revisar división de la Scene más reciente",
+  "STMemoryBooks_SlothSplitHelp": "Si la última Scene terminada contiene sucesos independientes, solo se puede dividir con los mensajes originales visibles. Se verifican todas las fuentes y se conserva el original.",
+  "STMemoryBooks_SlothSplitAnalyzing": "Analizando sucesos concluidos independientes en la última Scene...",
+  "STMemoryBooks_SlothSplitNone": "No se encontraron suficientes sucesos independientes concluidos. Memory no cambió.",
+  "STMemoryBooks_SlothSplitPlanTitle": "Revisar plan de división de Scenes",
+  "STMemoryBooks_SlothSplitPlanHelp": "Solo se divide la última Scene completa para no renumerar las anteriores. Revisa causas, desenlaces y rangos de mensajes. Se rechazan omisiones y duplicados.",
+  "STMemoryBooks_SlothSplitPlanApprove": "Aprobar los rangos de división",
+  "STMemoryBooks_SlothSplitDraftTitle": "Revisar el texto de las Scenes divididas",
+  "STMemoryBooks_SlothSplitDraftHelp": "Revisa la voz, los diálogos y un Result realmente completado en cada Scene. Puedes editar antes de guardar.",
+  "STMemoryBooks_SlothSplitDraftApprove": "Terminar revisión de los textos",
+  "STMemoryBooks_SlothSplitFinalTitle": "Revisión final, copia y guardado",
+  "STMemoryBooks_SlothSplitFinalHelp": "Antes de guardar, descarga el JSON completo original de Memory. La Scene anterior queda archivada y desactivada con todo su historial; cada suceso separado recibe un UID nuevo. No se modifican otros libros ni el chat.",
+  "STMemoryBooks_SlothSplitOld": "Scene original archivada",
+  "STMemoryBooks_SlothSplitNew": "Nuevas Scenes independientes",
+  "STMemoryBooks_SlothSplitApprove": "Descargar JSON original de Memory y aprobar división",
+  "STMemoryBooks_SlothSplitSaved": "División revisada guardada en Memory. Original archivado y ningún mensaje ocultado."
 }

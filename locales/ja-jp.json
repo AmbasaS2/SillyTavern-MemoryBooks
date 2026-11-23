@@ -1685,5 +1685,21 @@
   "STMemoryBooks_SlothLegacySemanticExcluded": "常時注入しない過去・不確かな情報",
   "STMemoryBooks_SlothLegacySemanticAfter": "変更後の有効なCurrent Continuity",
   "STMemoryBooks_SlothLegacySemanticApprove": "Nexusの元JSONを保存して置換を承認",
-  "STMemoryBooks_SlothLegacySemanticSaved": "承認したCurrent Continuityを保存しました。元の記録は保管され、Memoryとチャットは変更していません。"
+  "STMemoryBooks_SlothLegacySemanticSaved": "承認したCurrent Continuityを保存しました。元の記録は保管され、Memoryとチャットは変更していません。",
+  "STMemoryBooks_SlothSplitButton": "最新Sceneの分割を確認",
+  "STMemoryBooks_SlothSplitHelp": "最新の完結Sceneに独立した事件が混在する場合、元チャットの全メッセージが表示されているときのみ分割します。原文は保存されます。",
+  "STMemoryBooks_SlothSplitAnalyzing": "最新Sceneの独立した完了事件を調査中...",
+  "STMemoryBooks_SlothSplitNone": "独立した完結事件は十分に見つかりませんでした。Memoryは変更していません。",
+  "STMemoryBooks_SlothSplitPlanTitle": "独立Scene分割計画を確認",
+  "STMemoryBooks_SlothSplitPlanHelp": "既存のScene番号を変更しないよう、最新の完結Sceneだけを分割します。各事件の原因・結末・メッセージ範囲を確認してください。漏れや重複は拒否します。",
+  "STMemoryBooks_SlothSplitPlanApprove": "事件の分割範囲を承認",
+  "STMemoryBooks_SlothSplitDraftTitle": "分割後のScene本文を確認",
+  "STMemoryBooks_SlothSplitDraftHelp": "各Sceneの口調、台詞、完結したResultを確認・修正してください。まだ保存しません。",
+  "STMemoryBooks_SlothSplitDraftApprove": "新しいScene本文を確認済み",
+  "STMemoryBooks_SlothSplitFinalTitle": "分割の最終確認・原文バックアップ",
+  "STMemoryBooks_SlothSplitFinalHelp": "保存前にMemoryの完全な元JSONをバックアップします。古いSceneは履歴ごと無効化して保管し、新しい事件にUIDを割り当てます。他のロアブックとチャットは変更しません。",
+  "STMemoryBooks_SlothSplitOld": "保管する旧Scene",
+  "STMemoryBooks_SlothSplitNew": "新しい独立Scene",
+  "STMemoryBooks_SlothSplitApprove": "Memoryの元JSONを保存して分割を承認",
+  "STMemoryBooks_SlothSplitSaved": "確認したScene分割をMemoryに保存しました。原文は保管し、チャットは非表示にしていません。"
 }

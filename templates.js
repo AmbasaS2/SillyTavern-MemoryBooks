@@ -131,6 +131,7 @@ export const settingsTemplate = Handlebars.compile(`
           <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
           <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
           <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
+          <small data-i18n="STMemoryBooks_SlothSplitHelp">The newest complete Scene can be reviewed for independent incidents when its original chat messages remain visible. Every source message is accounted for and the original is archived before approved saving.</small>
           <label class="checkbox_label">
             <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>

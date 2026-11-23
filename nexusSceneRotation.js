@@ -3,6 +3,7 @@
 //
 // Nexus / Memory mode: the pure, pre-save Scene activation planner.
 // It does not read chats, write World Info, trigger AI, or hide messages.
+import {SPLIT_ARCHIVE, validateSplitArchives} from './nexusSceneSplitArchives.js';
 
 const NUMBERED_SCENE = /^\s*(?:\[(\d+)\]|(\d+))\s*[-–—]/;
 const NAMED_SCENE = /^\s*Scene\s*#?(\d+)(?:\b|\s*[-–—:])/i;
@@ -105,6 +106,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
 
     const entries = Object.values(memory.entries);
     validateMergedArchives(entries);
+    validateSplitArchives(entries);
     const numbered = [];
     const usedUids = new Set();
     const usedNumbers = new Set();
@@ -119,7 +121,8 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
         }
         usedUids.add(uid);
         usedNumbers.add(sequence);
-        if (!Object.prototype.hasOwnProperty.call(entry, MERGED_INTO)) numbered.push({ uid, sequence });
+        if (!Object.prototype.hasOwnProperty.call(entry, MERGED_INTO) &&
+            !Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) numbered.push({ uid, sequence });
     }
 
     numbered.sort((a, b) => a.sequence - b.sequence);
@@ -128,7 +131,8 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
     const staged = structuredClone(memory);
     const changes = [];
     for (const entry of Object.values(staged.entries)) {
-        if (Object.prototype.hasOwnProperty.call(entry, MERGED_INTO)) continue; // disabled original retained only for lossless recovery
+        if (Object.prototype.hasOwnProperty.call(entry, MERGED_INTO) ||
+            Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) continue; // archived original retained only for lossless recovery
         const uid = requireValidUid(entry);
         const old = Object.values(memory.entries).find(item => Number(item?.uid) === uid);
         const alwaysOn = recent.has(uid);
