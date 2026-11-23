@@ -86,9 +86,9 @@ test('Sloth collection UI has a real editable draft and a scoped advanced Legacy
         'reviewSlothSceneDrafts','reviewSlothNexusDrafts','applyReviewedDraft','validateGroundedNexusEdits']){
         assert.ok(runtime.includes(target),'missing review UI bridge '+target);
     }
-    assert.ok(template.includes('stmb-sloth-profile-select'));
-    assert.ok(template.includes('stmb-sloth-legacy-settings'));
-    assert.ok(template.includes('STMemoryBooks_SlothDashboardSubtitle'));
-    assert.ok(source.includes("if (!templateData.slothWorkspaceActive)"));
-    assert.ok(source.includes("popupElement.querySelector('#stmb-sloth-profile-select')"));
+    assert.ok(template.includes('STMemoryBooks_SlothAIModule'));
+    assert.ok(template.includes('stmb-workspace-advanced'));
+    assert.match(template, /\{\{#unless slothWorkspaceActive\}\}open/);
+    assert.ok(source.includes("querySelector('#stmb-original-actions')"));
+    assert.ok(source.includes("popupElement.querySelector('#stmb-profile-select')"));
 });

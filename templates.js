@@ -7,87 +7,15 @@ import { Handlebars } from '../../../../lib.js';
  * Main settings template
  */
 export const settingsTemplate = Handlebars.compile(`
-    {{#if slothWorkspaceActive}}
-    <header class="stmb-sloth-heading">
-      <h2 data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h2>
-    </header>
-    {{else}}
     <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books</h2>
-    {{/if}}
 
-        <details class="stmb-help-drawer info-block hint">
-            <summary>
-                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-                <span data-i18n="STMemoryBooks_HelpGuidesSummary">Help &amp; Guides</span>
-            </summary>
-            <div class="stmb-help-drawer-content">
-                <p class="stmb-help-drawer-copy" data-i18n="STMemoryBooks_AIReferenceManualOption">Download the Memory Books AI Reference Manual, upload it to your preferred assistant, and ask it questions about Memory Books.</p>
-                <a class="menu_button menu_button_icon interactable stmb-help-drawer-link justifyCenter"
-                    href="{{aiReferenceManualUrl}}" download="{{aiReferenceManualFilename}}">
-                    <i class="fa-solid fa-download" aria-hidden="true"></i>
-                    <span data-i18n="STMemoryBooks_DownloadAIReferenceManual">Download AI Reference Manual (.md)</span>
-                </a>
-                <small class="stmb-help-languages">
-                    <a href="https://github.com/aikohanasaki/SillyTavern-MemoryBooks/tree/main/userguides"
-                        target="_blank" rel="noopener noreferrer"
-                        data-i18n="STMemoryBooks_BrowseGuideLanguages">Browse the guide in other languages</a>
-                </small>
-            </div>
-        </details>
-
-        {{#if slothWorkspaceActive}}
-        <section class="stmb-sloth-onboarding" aria-label="Sloth collection workflow">
-          <p class="stmb-sloth-intro" data-i18n="STMemoryBooks_SlothDashboardSubtitle">Connect the character’s lorebooks, review complete events, then approve each save. No automatic collection or hiding.</p>
-          <ol class="stmb-sloth-steps">
-            <li class="{{#if slothRoleActive}}stmb-sloth-step-ready{{/if}}" data-i18n="STMemoryBooks_SlothStepRoles">1 · Connect lorebooks</li>
-            <li data-i18n="STMemoryBooks_SlothStepCollect">2 · Review causal events</li>
-            <li data-i18n="STMemoryBooks_SlothStepSave">3 · Approve and save</li>
-          </ol>
-        </section>
-        {{/if}}
-        {{#unless slothWorkspaceActive}}
-        {{#if hasScene}}
-        <div id="stmb-scene" class="padding10 marginBot10">
-            <div class="marginBot5" data-i18n="STMemoryBooks_CurrentScene">Current Scene:</div>
-            <div class="padding10 marginTop5 stmb-box">
-                <pre><code id="stmb-scene-block"><span data-i18n="STMemoryBooks_Start">Start</span>: <span data-i18n="STMemoryBooks_Message">Message</span> #{{sceneData.sceneStart}} ({{sceneData.startSpeaker}})
-{{sceneData.startExcerpt}}
-
-<span data-i18n="STMemoryBooks_End">End</span>: <span data-i18n="STMemoryBooks_Message">Message</span> #{{sceneData.sceneEnd}} ({{sceneData.endSpeaker}})
-{{sceneData.endExcerpt}}
-
-<span data-i18n="STMemoryBooks_Messages">Messages</span>: {{sceneData.messageCount}} | <span data-i18n="STMemoryBooks_EstimatedTokens">Estimated tokens</span>: {{sceneData.estimatedTokens}}</code></pre>
-                {{#if sceneData.hasMostlyHiddenMessages}}
-                <small class="warning">⚠️ <span data-i18n="STMemoryBooks_MostlyHiddenSceneWarning">More than 50% of the messages in this scene are hidden. Please ensure that the scene selection is correct.</span></small>
-                {{/if}}
-            </div>
-        </div>
-        {{else}}
-        <div class="info-block warning">
-            <span data-i18n="STMemoryBooks_NoSceneMarkers">No scene markers set. Use the chevron buttons in chat messages to mark start (►) and end (◄) points.</span>
-        </div>
-        {{/if}}
-
-        {{#if hasHighestMemoryProcessed}}
-        <div id="stmb-memory-status" class="info-block">
-            <span>📊 <span data-i18n="STMemoryBooks_MemoryStatus">Memory Status</span>: 
-                {{#if highestMemoryProcessedManuallySet}}<span data-i18n="STMemoryBooks_LastProcessedManuallySet">last processed message manually set to</span> #{{highestMemoryProcessed}}.
-                {{else}}<span data-i18n="STMemoryBooks_ProcessedUpTo">Processed up to message</span> #{{highestMemoryProcessed}}.
-            {{/if}}</span>
-        </div>
-        {{else}}
-        <div id="stmb-memory-status" class="info-block">
-            <span>📊 <span data-i18n="STMemoryBooks_MemoryStatus">Memory Status</span>: <span data-i18n="STMemoryBooks_NoMemoriesProcessed">No memories have been processed for this chat yet</span> <small data-i18n="STMemoryBooks_SinceVersion">(since updating to version 3.6.2 or higher.)</small></span>
-            <br />
-            <small data-i18n="STMemoryBooks_AutoSummaryNote">Please note that Auto-Summary requires you to "prime" every chat with at least one manual memory. After that, summaries will be made automatically.</small>
-        </div>
-        {{/if}}
-
-        {{/unless}}
-
+    <div class="stmb-workspace">
         {{#unless isGroupChat}}
         <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
           <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h3>
+          {{#if slothCharacterAvailable}}
+          <p class="stmb-current-character"><i class="fa-solid fa-user" aria-hidden="true"></i> {{slothCharacterName}}</p>
+          {{/if}}
           <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the function of each lorebook already linked to this character. These roles also apply in new chats; collection progress remains separate for each chat.</p>
           {{#if slothCharacterAvailable}}
             {{#if slothChatOverrideAvailable}}
@@ -130,49 +58,66 @@ export const settingsTemplate = Handlebars.compile(`
               {{#if slothRoleIncomplete}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothIncompletePair">Both Nexus and Memory must be assigned to different character-linked lorebooks before collection can begin.</p>
               {{/if}}
+              {{#if slothSharedBook}}
+              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothSharedBook">This book is already assigned to another character. Choose a separate book for these memories.</p>
+              {{/if}}
               {{#if slothNexusMissing}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
               {{else}}{{#if slothMemoryMissing}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
               {{/if}}{{/if}}
             {{else}}
-              {{#unless slothFirstSetup}}
+              {{#if slothFirstSetup}}
+              <p data-i18n="STMemoryBooks_SlothNoBooksYet">This character has no linked lorebooks yet.</p>
+              {{else}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
-              {{/unless}}
+              {{/if}}
             {{/if}}
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}
         </section>
         {{/unless}}
+        {{#if slothCanCollect}}
+        <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
+          <h3 id="stmb-collection-title" data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</h3>
+        <div class="world_entry_form_control">
+            <label for="stmb-profile-select" data-i18n="STMemoryBooks_SlothAIModule">AI profile used for memory collection</label>
+            <select id="stmb-profile-select" class="text_pole">
+                {{#each profiles}}
+                <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}</option>
+                {{/each}}
+            </select>
+        </div>
+
         {{#if slothFirstSetup}}
-        <div class="info-block">
+        <div>
           <p data-i18n="STMemoryBooks_SlothFirstBooksHelp">Review the first collection to create Nexus and Memory for this character.</p>
           <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothFirstBooksButton">Set up Nexus and Memory</button>
         </div>
-        {{/if}}
-        {{#if slothMissingCompanion}}
-        <div class="info-block">
-          <p data-i18n="STMemoryBooks_SlothCompanionHelp">Review the existing book before creating its empty companion. The original book is backed up and kept intact. Migration is a separate review.</p>
-          <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Prepare the missing lorebook</button>
-        </div>
-        {{/if}}
-        {{#if slothWorkspaceActive}}
-        <section class="stmb-sloth-profile-card">
-          <label for="stmb-sloth-profile-select">
-            <strong data-i18n="STMemoryBooks_SlothAIModule">AI profile used for memory collection</strong>
-          </label>
-          <select id="stmb-sloth-profile-select" class="text_pole">
-            {{#each profiles}}
-            <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}{{#if isDefault}} (Default){{/if}}</option>
-            {{/each}}
-          </select>
-        </section>
-        {{/if}}
-        {{#if slothRoleActive}}
-        <div class="info-block">
+        {{else}}
           <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect completed events</button>
           <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
+        {{/if}}
+        </section>
+        {{/if}}
+        {{#if slothMissingCompanion}}
+        <section class="stmb-workspace-panel">
+          <p data-i18n="STMemoryBooks_SlothCompanionHelp">Review the existing book before creating its empty companion. The original book is backed up and kept intact. Migration is a separate review.</p>
+          <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Prepare the missing lorebook</button>
+        </section>
+        {{/if}}
+        {{#if slothCanCollect}}
+        <section class="stmb-workspace-panel stmb-recall-panel">
+          <details id="stmb-collection-options" class="stmb-workspace-drawer">
+            <summary data-i18n="STMemoryBooks_SlothCollectionOptions">Recall and review options</summary>
+            <label for="stmb-nexus-older-scene-mode">
+                <span data-i18n="STMemoryBooks_NexusRecallMode">Older Scene recall</span>
+                <select id="stmb-nexus-older-scene-mode" class="text_pole">
+                    <option value="vector" {{#if (eq nexusOlderSceneMode "vector")}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+                    <option value="keyword" {{#if (eq nexusOlderSceneMode "keyword")}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallKeyword">Keywords</option>
+                </select>
+            </label>
           <label for="stmb-nexus-detail-recall-mode">
             <span data-i18n="STMemoryBooks_SlothDetailRecallMode">Recall new Nexus LT and NPC details</span>
             <select id="stmb-nexus-detail-recall-mode" class="text_pole">
@@ -180,7 +125,17 @@ export const settingsTemplate = Handlebars.compile(`
               <option value="keyword" {{#if nexusDetailKeywordRecall}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallKeyword">Keywords</option>
             </select>
           </label>
-          <details class="stmb-sloth-detail stmb-sloth-maintenance">
+
+          <label class="checkbox_label">
+            <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
+            <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>
+          </label>
+          <small data-i18n="STMemoryBooks_SlothPreciseReviewHelp">Runs an additional AI check before saving; may use more tokens. If issues are found, nothing is saved.</small>
+          </details>
+        </section>
+        {{/if}}
+        {{#if slothRoleActive}}
+          <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
               <button type="button" class="menu_button" data-stmb-sloth-action="migrate" data-i18n="STMemoryBooks_SlothLegacyMigrationButton">Review legacy Nexus migration</button>
@@ -193,19 +148,68 @@ export const settingsTemplate = Handlebars.compile(`
               <small data-i18n="STMemoryBooks_SlothSplitHelp">The newest complete Scene can be reviewed for independent incidents when its original chat messages remain visible. Every source message is accounted for and the original is archived before approved saving.</small>
             </div>
           </details>
-          <label class="checkbox_label">
-            <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
-            <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>
-          </label>
-          <small data-i18n="STMemoryBooks_SlothPreciseReviewHelp">Runs an additional AI check before saving; may use more tokens. If issues are found, nothing is saved.</small>
+        {{/if}}
+
+        <details id="stmb-workspace-advanced" class="stmb-workspace-drawer stmb-advanced" {{#unless slothWorkspaceActive}}open{{/unless}}>
+          <summary data-i18n="STMemoryBooks_SlothAdvancedTitle">Advanced settings and original tools</summary>
+          <div class="stmb-advanced-content">
+        <details class="stmb-help-drawer info-block hint">
+            <summary>
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                <span data-i18n="STMemoryBooks_HelpGuidesSummary">Help &amp; Guides</span>
+            </summary>
+            <div class="stmb-help-drawer-content">
+                <p class="stmb-help-drawer-copy" data-i18n="STMemoryBooks_AIReferenceManualOption">Download the Memory Books AI Reference Manual, upload it to your preferred assistant, and ask it questions about Memory Books.</p>
+                <a class="menu_button menu_button_icon interactable stmb-help-drawer-link justifyCenter"
+                    href="{{aiReferenceManualUrl}}" download="{{aiReferenceManualFilename}}">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    <span data-i18n="STMemoryBooks_DownloadAIReferenceManual">Download AI Reference Manual (.md)</span>
+                </a>
+                <small class="stmb-help-languages">
+                    <a href="https://github.com/aikohanasaki/SillyTavern-MemoryBooks/tree/main/userguides"
+                        target="_blank" rel="noopener noreferrer"
+                        data-i18n="STMemoryBooks_BrowseGuideLanguages">Browse the guide in other languages</a>
+                </small>
+            </div>
+        </details>
+
+        {{#if hasScene}}
+        <div id="stmb-scene" class="padding10 marginBot10">
+            <div class="marginBot5" data-i18n="STMemoryBooks_CurrentScene">Current Scene:</div>
+            <div class="padding10 marginTop5 stmb-box">
+                <pre><code id="stmb-scene-block"><span data-i18n="STMemoryBooks_Start">Start</span>: <span data-i18n="STMemoryBooks_Message">Message</span> #{{sceneData.sceneStart}} ({{sceneData.startSpeaker}})
+{{sceneData.startExcerpt}}
+
+<span data-i18n="STMemoryBooks_End">End</span>: <span data-i18n="STMemoryBooks_Message">Message</span> #{{sceneData.sceneEnd}} ({{sceneData.endSpeaker}})
+{{sceneData.endExcerpt}}
+
+<span data-i18n="STMemoryBooks_Messages">Messages</span>: {{sceneData.messageCount}} | <span data-i18n="STMemoryBooks_EstimatedTokens">Estimated tokens</span>: {{sceneData.estimatedTokens}}</code></pre>
+                {{#if sceneData.hasMostlyHiddenMessages}}
+                <small class="warning">⚠️ <span data-i18n="STMemoryBooks_MostlyHiddenSceneWarning">More than 50% of the messages in this scene are hidden. Please ensure that the scene selection is correct.</span></small>
+                {{/if}}
+            </div>
+        </div>
+        {{else}}
+        <div class="info-block warning">
+            <span data-i18n="STMemoryBooks_NoSceneMarkers">No scene markers set. Use the chevron buttons in chat messages to mark start (►) and end (◄) points.</span>
         </div>
         {{/if}}
 
-        {{#if slothWorkspaceActive}}
-        <details class="stmb-sloth-legacy-settings">
-          <summary data-i18n="STMemoryBooks_SlothAdvancedLegacy">Original Memory Books tools and settings</summary>
-          <div class="stmb-sloth-legacy-body">
+        {{#if hasHighestMemoryProcessed}}
+        <div id="stmb-memory-status" class="info-block">
+            <span>📊 <span data-i18n="STMemoryBooks_MemoryStatus">Memory Status</span>:
+                {{#if highestMemoryProcessedManuallySet}}<span data-i18n="STMemoryBooks_LastProcessedManuallySet">last processed message manually set to</span> #{{highestMemoryProcessed}}.
+                {{else}}<span data-i18n="STMemoryBooks_ProcessedUpTo">Processed up to message</span> #{{highestMemoryProcessed}}.
+            {{/if}}</span>
+        </div>
+        {{else}}
+        <div id="stmb-memory-status" class="info-block">
+            <span>📊 <span data-i18n="STMemoryBooks_MemoryStatus">Memory Status</span>: <span data-i18n="STMemoryBooks_NoMemoriesProcessed">No memories have been processed for this chat yet</span> <small data-i18n="STMemoryBooks_SinceVersion">(since updating to version 3.6.2 or higher.)</small></span>
+            <br />
+            <small data-i18n="STMemoryBooks_AutoSummaryNote">Please note that Auto-Summary requires you to "prime" every chat with at least one manual memory. After that, summaries will be made automatically.</small>
+        </div>
         {{/if}}
+
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
 
         <div class="info-block">
@@ -302,6 +306,7 @@ export const settingsTemplate = Handlebars.compile(`
             <small class="opacity50p" data-i18n="STMemoryBooks_TitleFormatDesc">Use [0], [00], [000] for auto-numbering. Available: \{{title}}, \{{scene}}, &#123;&#123;char}}, &#123;&#123;groupname}}, \{{present}}, &#123;&#123;user}}, \{{messages}}, \{{profile}}, &#123;&#123;date}}, &#123;&#123;time}}</small>
         </div>
 
+        {{#unless slothCanCollect}}
         <div class="world_entry_form_control">
             <select id="stmb-profile-select" class="text_pole">
                 {{#each profiles}}
@@ -310,6 +315,7 @@ export const settingsTemplate = Handlebars.compile(`
             </select>
         </div>
 
+        {{/unless}}
         <div id="stmb-profile-summary" class="padding10 marginBot10">
             <div class="marginBot5" data-i18n="STMemoryBooks_ProfileSettings">Profile Settings:</div>
             <div><span data-i18n="STMemoryBooks_Provider">Provider</span>: <span id="stmb-summary-api">{{selectedProfile.connection.api}}</span></div>
@@ -344,10 +350,10 @@ export const settingsTemplate = Handlebars.compile(`
             </div>
         </div>
 
-        {{#if slothWorkspaceActive}}
+        <div class="stmb-original-actions" id="stmb-original-actions"></div>
           </div>
         </details>
-        {{/if}}
+    </div>
 
 `);
 
@@ -429,7 +435,7 @@ export const generalSettingsTemplate = Handlebars.compile(`
                 <input type="checkbox" id="stmb-nexus-scene-rotation" {{#if nexusSceneRotationEnabled}}checked{{/if}}>
                 <span data-i18n="STMemoryBooks_NexusRotationEnabled">🦥 Sloth · keep the three latest completed Scenes always on</span>
             </label>
-            <small class="opacity50p" data-i18n="STMemoryBooks_NexusRotationHelp">Only for dedicated Memory books. Saving a complete numbered Scene rotates activation. Automatic summaries, reminders and auto-hide are disabled in this mode. AI Scene planning and Nexus updates are not yet implemented.</small>
+            <small class="opacity50p" data-i18n="STMemoryBooks_NexusRotationHelp">For the original single-Scene tool. Manual collection with assigned Nexus and Memory roles always keeps the latest three completed Scenes active.</small>
             <label for="stmb-nexus-older-scene-mode">
                 <span data-i18n="STMemoryBooks_NexusRecallMode">Older Scene recall</span>
                 <select id="stmb-nexus-older-scene-mode" class="text_pole">

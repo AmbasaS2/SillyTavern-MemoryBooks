@@ -126,6 +126,16 @@ test('tampered merged history or reenabled archived source fails closed',()=>{
     assert.throws(()=>inspectNexusSceneMerge(pristine,[25,40]),/Nested or previously repaired/);
 });
 
+test('independent repairs remain possible after a merge and retain known STLO book options', () => {
+    const book = example();
+    book.stlo = { priority: 5, budgetMode: 'fixed', budget: 350, characterOverrides: {} };
+    const first = stageNexusSceneMerge(book, review).proposedMemory;
+    const second = stageNexusSceneMerge(first, { ...review, sourceUids: [40, 50] }).proposedMemory;
+    assert.deepEqual(second.stlo, book.stlo);
+    assert.deepEqual(second.entries[10], first.entries[10]);
+    assert.deepEqual(planNexusSceneRotation(second).recentUids, [12, 25, 50]);
+});
+
 test('conflicting old source boundaries cannot be rewritten into a false merged range',()=>{
     const old=example();old.entries[10].STMB_start=0;old.entries[10].STMB_end=99;
     assert.throws(()=>inspectNexusSceneMerge(old,[10,25]),/conflicting legacy source/);

@@ -8,7 +8,7 @@
 const equal=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 
 export async function commitSlothNexusMigration(state,{
-    loadFresh,save,withLock,verifyOrigin,resetCache,operation='Nexus migration',
+    loadFresh,save,withLock,verifyOrigin,resetCache,verifyBeforeWrite,operation='Nexus migration',
 }) {
     const subject=['Memory Scene merge','Memory Scene split'].includes(operation)
         ?'Memory':'Nexus';
@@ -24,22 +24,26 @@ export async function commitSlothNexusMigration(state,{
         if (!equal(current,state.original)) {
             throw new Error(subject+' changed while '+reviewAction+' was being reviewed. Nothing saved.');
         }
+        verifyOrigin();
+        verifyBeforeWrite?.(state.name,state.original);
         try {
-            verifyOrigin();
             await save(state.name,state.staged);
             const readBack=await loadFresh(state.name);
             if (!equal(readBack,state.staged)) {
                 throw new Error(operation+' read-back mismatch.');
             }
+            verifyOrigin();
             return {success:true,name:state.name};
         }catch(error){
             let recoveryIssue='';
             try {
                 const now=await loadFresh(state.name);
                 if(equal(now,state.original)){
+                    verifyBeforeWrite?.(state.name,state.staged,state.original);
                     if(typeof resetCache==='function') await resetCache(state.name,state.original);
                 } else if(equal(now,state.staged)){
                     // Do not clobber a third-party writer's changes.
+                    verifyBeforeWrite?.(state.name,state.staged);
                     await save(state.name,state.original);
                     const restored=await loadFresh(state.name);
                     if(!equal(restored,state.original)) recoveryIssue='Rollback could not be verified.';

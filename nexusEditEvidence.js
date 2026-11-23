@@ -54,6 +54,33 @@ export function validateSlothNexusWindowEvidence(raw, messages) {
     });
 }
 
+/** Keep event maps grounded without forcing one event per extraction window. */
+export function validateSlothEventWindowEvidence(raw, messages) {
+    const source = indexSource(messages);
+    assert(isRecord(raw) && Array.isArray(raw.events) && raw.events.length <= 40,
+        'Event evidence window requires at most 40 event records.');
+    return raw.events.map(event => {
+        assert(isRecord(event) && ['complete', 'open', 'uncertain'].includes(event.closure) &&
+            [event.topic, event.cause, event.development, event.result].every(text => typeof text === 'string' && text.trim() && text.length <= 1400),
+        'Event evidence needs a topic, cause, development, result and closure state.');
+        assert(Array.isArray(event.sourceRanges) && event.sourceRanges.length && event.sourceRanges.length <= source.size,
+            'Event evidence must name its original window ranges.');
+        const eventIds = new Map();
+        for (const pair of event.sourceRanges) {
+            assert(Array.isArray(pair) && pair.length === 2 && pair.every(Number.isSafeInteger) &&
+                pair[0] >= 0 && pair[1] >= pair[0] && pair[1] - pair[0] < source.size,
+            'Event evidence has an invalid source range.');
+            for (let id = pair[0]; id <= pair[1]; id++) {
+                assert(source.has(id) && !eventIds.has(id), 'Event evidence repeats or exceeds its original window.');
+                eventIds.set(id, source.get(id));
+            }
+        }
+        const evidence = verifyEvidence(event.evidence, eventIds, 'Event window');
+        return { topic: event.topic, cause: event.cause, development: event.development,
+            result: event.result, closure: event.closure, sourceRanges: event.sourceRanges, evidence };
+    });
+}
+
 /**
  * Require each proposed delta (including new entries and appends) to cite
  * source text actually present in the CURRENT uncollected chat.

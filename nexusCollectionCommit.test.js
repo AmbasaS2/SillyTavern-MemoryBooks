@@ -28,6 +28,20 @@ test('concurrent Nexus modification blocks both writes',async()=>{
     assert.deepEqual(h.writes,[]);
 });
 
+test('a pending native editor change blocks approval even before its debounced HTTP save', async () => {
+    const h = make();
+    const cache = new Map(h.states.map(state => [state.name, structuredClone(state.original)]));
+    cache.get('Nexus').entries[1].content = 'PENDING EDITOR CHANGE';
+    h.deps.verifyBeforeWrite = (name, ...expected) => {
+        if (!expected.some(value => JSON.stringify(value) === JSON.stringify(cache.get(name)))) {
+            throw new Error('local editor conflict');
+        }
+    };
+    await assert.rejects(commitSlothBooks(h.states, h.deps), /local editor conflict/);
+    assert.deepEqual(h.writes, []);
+    assert.equal(h.db.get('Nexus').entries[1].content, 'OLD-N');
+});
+
 test('a second-book edit during the first save is preserved',async()=>{
     const h=make(),save=h.deps.save;
     h.deps.save=async(name,book)=>{

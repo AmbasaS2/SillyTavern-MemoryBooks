@@ -4,11 +4,12 @@
 // Explicit two-stage Sloth collection. No automatic invocation, auto-hide, or
 // mutation before both the plan and the exact World Info delta are approved.
 
-import { chat, chat_metadata, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
+import { chat, chat_metadata, getMaxContextSize, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { extension_settings } from '../../../extensions.js';
 import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
-    world_info, METADATA_KEY, charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
+    world_info, world_info_budget, world_info_budget_cap, METADATA_KEY, charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
+import { getTokenCountAsync } from '../../../tokenizers.js';
 import { DOMPurify } from '../../../../lib.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
@@ -39,6 +40,16 @@ const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
 const stringify=value=>JSON.stringify(value);
 let collectorBusy=false;
+
+function assertReviewedCache(name, ...allowed) {
+    // Core World Info updates the cache before its debounced HTTP write.
+    // A different cached value can be a live editor's still-pending change.
+    const cached = worldInfoCache.get(name);
+    if (cached && !allowed.some(book => stringify(cached) === stringify(book))) {
+        throw new Error(t('World Info has a different local version. Finish any open edits, then reload and review again.',
+            'STMemoryBooks_SlothLocalConflict') + ' (' + name + ')');
+    }
+}
 
 export function canStartNexusSetup(ref = getCurrentStmbChatRef(), settings = extension_settings.STMemoryBooks) {
     if (menu_type === 'create') return false;
@@ -201,15 +212,14 @@ function readableSegments(segments) {
 
 async function planApproval(plan) {
     const rows=plan.events.map((item,i)=>{
-        return '<label class="stmb-sloth-plan-item">'+
-            '<strong>'+html(String(i+1))+'. '+html(item.title)+'</strong>'+
+        return '<section class="stmb-sloth-plan-item">'+
             '<small>'+html(item.reason)+'</small>'+
             '<span>'+html(item.result)+'</span>'+
-            '<input class="text_pole stmb-sloth-title-edit" data-index="'+i+
-                '" aria-label="Scene title" value="'+html(item.title)+'" />'+
+            '<label class="stmb-sloth-edit">'+html(t('Memory title','STMemoryBooks_MemoryTitle'))+
+            '<input class="text_pole stmb-sloth-title-edit" data-index="'+i+'" value="'+html(item.title)+'"></label>'+
+            '<label class="stmb-sloth-edit">'+html(t('Original message ranges','STMemoryBooks_SlothRangesLabel'))+
             '<input class="text_pole stmb-sloth-range-edit" data-index="'+i+
-                '" aria-label="Source ranges" value="'+html(readableSegments(item.segments))+'" />'+
-            '</label>';
+                '" value="'+html(readableSegments(item.segments))+'"></label></section>';
     }).join('');
     const deferred=plan.deferred.map(item=>
         '<li>'+html(readableSegments(item.segments))+' · '+html(item.reason)+'</li>').join('');
@@ -325,48 +335,66 @@ export async function runNexusCompanionSetup() {
     }
 }
 
-async function draftApproval({scenes,edits,changes,plan,states,ref,initial=false,applyReviewedDraft}) {
-    if(!Array.isArray(edits)||edits.length!==changes.length){
-        throw new Error('Nexus review sources and staged changes no longer match.');
+async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits,applyReviewedDraft}) {
+    if (edits.length !== changes.length) throw new Error('Nexus review changes no longer match the proposed edits.');
+    const alwaysOn = states.flatMap(state => Object.values(state.staged.entries))
+        .filter(entry => entry.constant && !entry.disable && !entry.ignoreBudget)
+        .map(entry => String(entry.content || '')).join('\n');
+    let tokens;
+    const contextSize = getMaxContextSize();
+    if (Number.isFinite(contextSize) && contextSize > 0) {
+        try { tokens = await getTokenCountAsync(alwaysOn); }
+        catch (error) { console.debug('Sloth: World Info token preview unavailable.', error); }
     }
+    const nativeBudget = Math.round(world_info_budget * contextSize / 100) || 1;
+    const cap = world_info_budget_cap > 0 ? Math.min(nativeBudget, world_info_budget_cap) : nativeBudget;
+    const budget = Number.isFinite(tokens) ? '<p class="stmb-sloth-budget' + (tokens >= cap ? ' warning' : '') + '">' +
+        html(t('Always-on draft / SillyTavern World Info budget', 'STMemoryBooks_SlothBudgetPreview')) + ' · ' +
+        html(tokens.toLocaleString()) + ' / ' + html(cap.toLocaleString()) + ' ' +
+        html(t('tokens', 'STMemoryBooks_Tokens')) + '</p>' : '';
+    const rotation = scenes.length ? states.flatMap(state => Object.entries(state.staged.entries)
+        .filter(([key, entry]) => {
+            const before = state.original.entries[key];
+            return before && (before.constant !== entry.constant || before.vectorized !== entry.vectorized);
+        }).map(([, entry]) => '<li>' + html(entry.comment) + ' · ' + html(entry.constant
+            ? t('Constant', 'STMemoryBooks_Constant')
+            : entry.vectorized ? t('Vector', 'STMemoryBooks_NexusRecallVector')
+                : t('Keywords', 'STMemoryBooks_PromptFrame_KeywordsLabel')) + '</li>')).join('') : '';
+    const recall = rotation ? '<details class="stmb-sloth-detail"><summary>' +
+        html(t('Older Scene recall', 'STMemoryBooks_NexusRecallMode')) + '</summary><ul>' + rotation + '</ul></details>' : '';
+    const beforeLabel=html(t('Before','STMemoryBooks_Regeneration_Before'));
+    const afterLabel=html(t('After','STMemoryBooks_Regeneration_After'));
     const pieces=scenes.map((scene,index)=>
-        '<details class="stmb-sloth-detail" open><summary>'+html(scene.title)+' · '+
-        html(readableSegments(scene.segments))+'</summary>'+
-        '<label class="stmb-sloth-edit-label"><strong>'+
-        html(t('Scene title','STMemoryBooks_SlothMergeTitle'))+'</strong>'+
-        '<input class="text_pole" data-sloth-scene-title="'+index+'" value="'+html(scene.title)+'" /></label>'+
-        '<label class="stmb-sloth-edit-label"><strong>'+
-        html(t('Scene content','STMemoryBooks_SlothMergeContent'))+'</strong>'+
-        '<textarea class="text_pole stmb-sloth-prose" data-sloth-scene-content="'+index+
-        '" rows="12">'+html(scene.content)+'</textarea></label>'+
+        '<details class="stmb-sloth-detail"'+(index===0?' open':'')+'><summary>'+html(scene.title)+' · '+
+        html(readableSegments(scene.segments))+'</summary><label class="stmb-sloth-edit">'+
+        html(t('Scene title','STMemoryBooks_SlothMergeTitle'))+
+        '<input class="text_pole" data-sloth-scene-title="'+index+'" value="'+html(scene.title)+'"></label>'+
+        '<label class="stmb-sloth-edit">'+
+        html(t('Memory content','STMemoryBooks_MemoryContent'))+
+        '<textarea class="text_pole" rows="9" data-sloth-scene-content="'+index+'">'+html(scene.content)+'</textarea></label>'+
         '<fieldset class="stmb-sloth-keywords"><legend>'+
         html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel'))+'</legend>'+
         scene.keywords.map((key,i)=>'<input class="text_pole" data-sloth-keywords="'+index+
             '" aria-label="'+html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel')+' '+(i+1))+
             '" value="'+html(key)+'">').join('')+'</fieldset></details>').join('');
-    const delta=changes.map((change,index)=>{
-        const edit=edits[index];
-        const proposedBody=edit.action==='create'?edit.content:edit.text;
-        return '<details class="stmb-sloth-detail" open><summary>'+html(change.action)+' · '+
-            html(change.title)+'</summary><p><strong>'+
-            html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
-            ':</strong> '+html(change.reason)+'</p><p><strong>'+
-            html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
-            ':</strong></p><ul>'+
-            (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
+    const delta=changes.map((change,index)=>
+        '<details class="stmb-sloth-detail"><summary>'+html(change.action)+' · '+
+        html(change.title)+'</summary><p><strong>'+
+        html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
+        ':</strong> '+html(change.reason)+'</p><p><strong>'+
+        html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
+        ':</strong></p><ul>'+
+        (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
             ' · '+html(item.quote)+'</li>').join('')+'</ul>'+
-            '<p class="stmb-sloth-compare-label">BEFORE</p><pre>'+html(change.before)+'</pre>'+
-            '<p class="stmb-sloth-compare-label">AFTER · '+html(change.action)+'</p><pre>'+html(change.after)+'</pre>'+
-            '<label class="stmb-sloth-edit-label"><strong>'+
-            html(t('Review or edit the proposed Nexus change. Source checks still apply.',
-                'STMemoryBooks_SlothEditNexusOperation'))+'</strong>'+
-            '<textarea class="text_pole stmb-sloth-prose" rows="5" data-sloth-nexus-body="'+index+
-            '">'+html(proposedBody??'')+'</textarea></label>'+
-            (edit.keywords!==undefined?'<label class="stmb-sloth-keywords">'+
+        (change.before?'<p>'+beforeLabel+'</p><pre>'+html(change.before)+'</pre>':'')+
+        '<p>'+afterLabel+'</p><pre>'+html(change.after)+'</pre>'+
+        '<label class="stmb-sloth-edit">'+html(t('Edit only the proposed text','STMemoryBooks_SlothEditNexusText'))+
+        '<textarea class="text_pole" rows="4" data-sloth-nexus-body="'+index+'">'+
+        html(edits[index].action==='create'?edits[index].content:edits[index].text)+'</textarea></label>'+
+        (change.keywords?'<label class="stmb-sloth-keywords">'+
             html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel'))+
             '<textarea class="text_pole" rows="3" data-sloth-nexus-keywords="'+index+'">'+
-            html((edit.keywords||[]).join('\n'))+'</textarea></label>':'')+'</details>';
-    }).join('');
+            html(change.keywords.join('\n'))+'</textarea></label>':'')+'</details>').join('');
     const nexusOnly=scenes.length===0 && states.length===1;
     const heading=nexusOnly
         ?t('Review Nexus current-state updates','STMemoryBooks_SlothNexusOnlyReview')
@@ -380,8 +408,8 @@ async function draftApproval({scenes,edits,changes,plan,states,ref,initial=false
         states.map(state=>'<li>'+html(state.name)+'</li>').join('')+'</ul>':'';
     const body='<div class="stmb-sloth-review"><h3>'+
         html(heading)+'</h3>'+creation+'<p>'+html(guide)+
-        '</p><h4>Memory · '+scenes.length+'</h4>'+pieces+
-        '<h4>Nexus · '+changes.length+'</h4>'+(delta||'<p>No Nexus changes proposed.</p>')+
+        '</p>'+budget+'<h4>Memory · '+scenes.length+'</h4>'+pieces+recall+
+        '<h4>Nexus · '+changes.length+'</h4>'+delta+
         (plan.deferred.length?'<p>'+html(t('Unfinished source remains in chat. It will not be marked collected.','STMemoryBooks_SlothDeferredNote'))+'</p>':'')+
         '</div>';
     let downloaded=false;
@@ -392,31 +420,23 @@ async function draftApproval({scenes,edits,changes,plan,states,ref,initial=false
             result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
             action:event=>{
                 try {
-                    const controls=popup.dlg;
-                    if(!controls)throw new Error('The review screen is no longer open.');
-                    const required=(selector,index,attribute)=>{
-                        const matches=Array.from(controls.querySelectorAll(selector))
-                            .filter(field=>Number(field.getAttribute(attribute))===index);
-                        if(matches.length!==1)throw new Error('A reviewed field is missing or repeated.');
+                    const field = (name, index) => {
+                        const matches = popup.dlg.querySelectorAll(`[data-sloth-${name}="${index}"]`);
+                        if (matches.length !== 1) throw new Error('A reviewed field is missing or repeated.');
                         return matches[0].value;
                     };
-                    const reviewedScenes=reviewSlothSceneDrafts(scenes,scenes.map((scene,index)=>({
-                        title:required('[data-sloth-scene-title]',index,'data-sloth-scene-title'),
-                        content:required('[data-sloth-scene-content]',index,'data-sloth-scene-content'),
-                        keywords:Array.from(controls.querySelectorAll('[data-sloth-keywords]'))
-                            .filter(field=>Number(field.dataset.slothKeywords)===index)
-                            .map(field=>field.value),
+                    const reviewedScenes = reviewSlothSceneDrafts(scenes, scenes.map((_, index) => ({
+                        title: field('scene-title', index), content: field('scene-content', index),
+                        keywords: [...popup.dlg.querySelectorAll(`[data-sloth-keywords="${index}"]`)].map(input => input.value),
                     })));
-                    const reviewedEdits=reviewSlothNexusDrafts(edits,edits.map((edit,index)=>({
-                        body:required('[data-sloth-nexus-body]',index,'data-sloth-nexus-body'),
-                        ...(edit.keywords!==undefined?{
-                            keywords:required('[data-sloth-nexus-keywords]',index,'data-sloth-nexus-keywords')
-                                .split(/\r?\n/).map(value=>value.trim()).filter(Boolean),
-                        }:{}),
+                    const editableEdits = edits.map((edit, index) => changes[index].keywords ?
+                        { ...edit, keywords: changes[index].keywords } : edit);
+                    const reviewedEdits = reviewSlothNexusDrafts(editableEdits, editableEdits.map((edit, index) => ({
+                        body: field('nexus-body', index),
+                        keywords: changes[index].keywords ? field('nexus-keywords', index).split(/\r?\n/) : edit.keywords,
                     })));
-                    applyReviewedDraft(reviewedScenes,reviewedEdits);
-                    // Snapshot AFTER review edits have passed all structural guards.
-                    downloadSafetyBackup(states,ref,plan,changes,initial);
+                    applyReviewedDraft(reviewedScenes, reviewedEdits);
+                    downloadSafetyBackup(states, ref, { ...plan, events: reviewedScenes }, changes, initial);
                     downloaded=true;
                 } catch(error) {
                     event?.stopImmediatePropagation();
@@ -588,6 +608,7 @@ export async function runNexusLegacyMigration() {
             const outcome=await commitSlothBooks(states,{
                 loadFresh:loadServerWorld,
                 save:(name,book)=>saveWorldInfo(name,book,true),
+                verifyBeforeWrite:assertReviewedCache,
                 resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
                 withLocks:withBothWriteLanes,
                 verifyOrigin:()=>assertLegacyMigrationOrigin(ref,roleNames),
@@ -619,6 +640,7 @@ export async function runNexusLegacyMigration() {
             save:(name,book)=>saveWorldInfo(name,book,true),
             withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
             verifyOrigin:()=>assertLegacyMigrationOrigin(ref,roleNames),
+            verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
         });
         try{await Promise.resolve(reloadEditor(roleNames.nexus));}
@@ -654,6 +676,9 @@ export async function runNexusCollector({profileIndex}={}) {
             nexus:await loadServerWorld(roleNames.nexus),
             memory:await loadServerWorld(roleNames.memory),
         };
+        if(getStmbChatKey()!==getStmbChatKey(ref)) {
+            throw new Error('The chat changed while its lorebooks were loading. Start collection from the original chat.');
+        }
         const {source,prior}=activeSource(ref,originalBooks.memory,roleNames);
         if(!source.length){
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
@@ -668,6 +693,13 @@ export async function runNexusCollector({profileIndex}={}) {
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'};
         const stageReviewedNexus=edits=>stageNexusEdits(originalBooks.nexus,edits,
             book=>createWorldInfoEntry(roleNames.nexus,book),nexusOptions);
+        const auditReviewed=async(scenes,edits,plan)=>{
+            if(settings.moduleSettings?.slothPreciseReviewEnabled!==true)return;
+            toastr.info(t('Checking for missed or misattributed details...',
+                'STMemoryBooks_SlothAuditing'),'STMemoryBooks');
+            await auditSlothDraft({messages:source,scenes,edits,plan,profile,settings});
+            checkOrigin();
+        };
         const checkOrigin=()=>{
             if(!initial)return assertOrigin(ref,roleNames,sourceIds,fingerprint);
             if(getStmbChatKey()!==getStmbChatKey(ref)||!canStartNexusSetup(ref,settings)||
@@ -678,8 +710,8 @@ export async function runNexusCollector({profileIndex}={}) {
         };
         if(initial){
             await listNexusSetupBooks(ref.avatarUrl);
-            checkOrigin();
         }
+        checkOrigin();
         if(characterContext.length>16000){
             throw new Error('Character data is too large for a safe initial analysis; no content was truncated.');
         }
@@ -712,7 +744,7 @@ export async function runNexusCollector({profileIndex}={}) {
             const reviewed=await planApproval(plan);
             if(!reviewed)return {saved:false,reason:'plan-cancelled'};
             checkOrigin();
-            const edits=await proposeSlothNexusEdits({
+            let edits=await proposeSlothNexusEdits({
                 scenes:[],nexus:originalBooks.nexus,messages:source,
                 plan:reviewed,profile,settings,
             });
@@ -728,19 +760,22 @@ export async function runNexusCollector({profileIndex}={}) {
                 ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
             }));
             const accepted=await draftApproval({
-                scenes:[],edits,changes,plan:reviewed,states:[state],ref,
-                applyReviewedDraft:(_scenes,reviewedEdits)=>{
-                    const verified=validateGroundedNexusEdits(reviewedEdits,source);
-                    state.staged=stageReviewedNexus(verified).staged;
+                scenes:[],changes,plan:reviewed,states:[state],ref,edits,
+                applyReviewedDraft:(_scenes,corrected)=>{
+                    const verified = validateGroundedNexusEdits(corrected, source);
+                    state.staged = stageReviewedNexus(verified).staged;
+                    edits = verified;
                 },
             });
             if(!accepted)return {saved:false,reason:'nexus-only-cancelled'};
             assertOrigin(ref,roleNames,sourceIds,fingerprint);
+            await auditReviewed([],edits,reviewed);
             const result=await commitSlothNexusMigration(state,{
                 loadFresh:loadServerWorld,
                 save:(name,book)=>saveWorldInfo(name,book,true),
                 withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
                 verifyOrigin:()=>assertOrigin(ref,roleNames,sourceIds,fingerprint),
+                verifyBeforeWrite:assertReviewedCache,
                 resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
                 operation:'Nexus current-state update',
             });
@@ -754,13 +789,13 @@ export async function runNexusCollector({profileIndex}={}) {
         if(!approved)return {saved:false,reason:'plan-cancelled'};
         checkOrigin();
         toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
-        const scenes=[];
+        let scenes=[];
         for(const event of approved.events){
             const composed=await composeSlothScene({event,messages:source,profile,settings,characterContext});
             scenes.push(composed);
             checkOrigin();
         }
-        const edits=await proposeSlothNexusEdits({
+        let edits=await proposeSlothNexusEdits({
             scenes,nexus:originalBooks.nexus,messages:source,
             plan:approved,profile,settings,initial,characterContext});
         checkOrigin();
@@ -768,12 +803,6 @@ export async function runNexusCollector({profileIndex}={}) {
             toastr.info(t('There are no completed events to collect yet. Nothing was changed.',
                 'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
             return {saved:false,reason:'no-complete-events-or-deltas'};
-        }
-        if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
-            toastr.info(t('Checking for missed or misattributed details...',
-                'STMemoryBooks_SlothAuditing'),'STMemoryBooks');
-            await auditSlothDraft({messages:source,scenes,edits,profile,settings});
-            checkOrigin();
         }
         const stageReviewedMemory=reviewed=>stageMemoryScenes(originalBooks.memory,reviewed,
             book=>createWorldInfoEntry(roleNames.memory,book),{
@@ -793,28 +822,29 @@ export async function runNexusCollector({profileIndex}={}) {
             }
         }
         const accepted=await draftApproval({
-            scenes,edits,changes:nexus.changes.map((change,index)=>({
+            scenes,changes:nexus.changes.map((change,index)=>({
                 ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
-            })),plan:approved,states,ref,initial,
+            })),plan:approved,states,ref,initial,edits,
             applyReviewedDraft:(reviewedScenes,reviewedEdits)=>{
-                const verified=validateGroundedNexusEdits(reviewedEdits,source);
-                // Prepare both whole replacement drafts before committing either.
-                const nextNexus=stageReviewedNexus(verified).staged;
-                const nextMemory=reviewedScenes.length?
-                    stageReviewedMemory(reviewedScenes).staged:structuredClone(originalBooks.memory);
-                if(initial){
-                    nextNexus.extensions=states[1].staged.extensions;
-                    nextMemory.extensions=states[0].staged.extensions;
+                const verified = validateGroundedNexusEdits(reviewedEdits, source);
+                const nextNexus = stageReviewedNexus(verified).staged;
+                const nextMemory = reviewedScenes.length ? stageReviewedMemory(reviewedScenes).staged : states[0].staged;
+                if (initial) {
+                    nextNexus.extensions = states[1].staged.extensions;
+                    nextMemory.extensions = states[0].staged.extensions;
                 }
-                states[1].staged=nextNexus;
-                states[0].staged=nextMemory;
-            },
-        });
+                states[0].staged = nextMemory;
+                states[1].staged = nextNexus;
+                scenes = reviewedScenes;
+                edits = verified;
+            }});
         if(!accepted)return {saved:false,reason:'draft-cancelled'};
         checkOrigin();
+        await auditReviewed(scenes,edits,approved);
         const outcome=initial?await saveInitialNexusCollection(states,{ref,roleNames,checkOrigin,settings}):
             await commitSlothBooks(states,{
             loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
+            verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,original)=>worldInfoCache.set(name,structuredClone(original)),
             withLocks:withBothWriteLanes,
             verifyOrigin:checkOrigin,
@@ -1015,6 +1045,7 @@ export async function runNexusSceneMerge({profileIndex}={}) {
             save:(name,book)=>saveWorldInfo(name,book,true),
             withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
             verifyOrigin:()=>assertLegacyMigrationOrigin(ref,names),
+            verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
             operation:'Memory Scene merge',
         });
@@ -1159,6 +1190,7 @@ export async function runNexusLegacyContinuityReview({profileIndex}={}) {
             save:(name,book)=>saveWorldInfo(name,book,true),
             withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
             verifyOrigin:assertReviewOrigin,
+            verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
             operation:'Nexus continuity semantic reconciliation',
         });
@@ -1381,6 +1413,7 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
             save:(name,book)=>saveWorldInfo(name,book,true),
             withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
             verifyOrigin,
+            verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
             operation:'Memory Scene split',
         });

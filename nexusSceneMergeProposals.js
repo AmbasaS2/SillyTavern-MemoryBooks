@@ -5,6 +5,7 @@
 import { inspectNexusSceneMerge } from './nexusSceneMerge.js';
 import { isCompletedSceneEntry, planNexusSceneRotation,
     sceneNumberFromTitle } from './nexusSceneRotation.js';
+import { SPLIT_ARCHIVE, SPLIT_FROM } from './nexusSceneSplitArchives.js';
 
 const assert = (value, message) => { if (!value) throw new Error(message); };
 
@@ -16,7 +17,8 @@ export function buildNexusSceneMergeCatalog(memory, chatIds) {
     const allowed = new Set(chatIds.filter(Boolean).map(String));
     const entries = Object.values(memory.entries).filter(entry =>
         allowed.has(String(entry.STMB_chatId || '')) &&
-        !Object.prototype.hasOwnProperty.call(entry, 'STMB_slothSceneMergedInto') &&
+        !entry.disable && !entry.STMB_slothSceneMergedInto && !entry.STMB_slothSceneMerge &&
+        !entry[SPLIT_ARCHIVE] && !entry[SPLIT_FROM] &&
         isCompletedSceneEntry(entry));
     const catalog = entries.map(entry => ({
         uid: entry.uid,
