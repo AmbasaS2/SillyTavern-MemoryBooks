@@ -68,11 +68,10 @@ import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleR
 import { isAssignedToAnotherNexusCharacter, rememberNexusChatWorlds, scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
 import {
   getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
-  moveNexusChatRoleOverrides, removeNexusChatRoleOverrides, canChangeNexusChatRolePair,
+  moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
-import { canStartNexusSetup, canPrepareNexusCompanion, runNexusCompanionSetup,
-  runNexusCollector, runNexusLegacyMigration, runNexusSceneMerge,
-  runNexusLegacyContinuityReview, runNexusSceneSplit, runNexusSidePromptFollowup } from './nexusCollectorRuntime.js';
+import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
+  runNexusSidePromptFollowup } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -631,7 +630,9 @@ const defaultSettings = {
     nexusOlderSceneMode: "vector",
     nexusDetailRecallMode: "vector",
     slothConnectionProfileId: "",
-    slothPreciseReviewEnabled: false,
+    slothProfileName: "",
+    slothCollectionPrompt: "",
+    slothLinkedBooksOnly: true,
     autoSummaryInterval: 50,
     autoSummaryTriggerMode: 'messages',
     autoSummaryTokenThreshold: 4000,
@@ -11066,14 +11067,17 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     ? slothChatOverride : sloth.assigned;
   const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
   const slothFirstSetup = canStartNexusSetup(slothChatRef, settings);
-  const slothMissingCompanion = canPrepareNexusCompanion(slothChatRef, settings);
   const stConnectionProfileId = String(settings.moduleSettings.slothConnectionProfileId || '');
   const slothConnectionProfiles = listChatCompletionProfiles(globalThis.SillyTavern?.getContext?.())
     .map(({ id, name, model }) => ({ id, name, model, selected: id === stConnectionProfileId }));
+  const savedSlothProfile = settings.profiles.findIndex(profile => profile.name === settings.moduleSettings.slothProfileName);
+  const slothProfileIndex = savedSlothProfile >= 0 ? savedSlothProfile : settings.defaultProfile;
   const sceneData = await getSceneData({
     includeHiddenMessages: !!settings.moduleSettings.unhideBeforeMemory,
     warnOnHiddenMessages: false,
   });
+  const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
+  const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
     name,
     selected: slothSelectedRoles[role] === name,
@@ -11149,8 +11153,6 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     showMemoryPreviews: settings.moduleSettings.showMemoryPreviews,
     nexusSceneRotationEnabled: settings.moduleSettings.nexusSceneRotationEnabled === true,
     nexusOlderSceneMode: settings.moduleSettings.nexusOlderSceneMode === "keyword" ? "keyword" : "vector",
-    nexusDetailKeywordRecall: settings.moduleSettings.nexusDetailRecallMode === "keyword",
-    slothPreciseReviewEnabled: settings.moduleSettings.slothPreciseReviewEnabled === true,
     showConsolidationPreviews: settings.moduleSettings.showConsolidationPreviews,
     showNotifications: settings.moduleSettings.showNotifications,
     showFloatingClipButton: settings.moduleSettings.showFloatingClipButton !== false,
@@ -11175,9 +11177,9 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     slothCanCollect: slothRoleActive || slothFirstSetup,
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
+    slothMissingCompanion: getSlothCompanion(slothChatRef, settings)?.missingRole,
+    slothProfileEditable: !stConnectionProfileId && !!settings.profiles[slothProfileIndex] && !settings.profiles[slothProfileIndex].isBuiltinCurrentST,
     slothConnectionProfileMissing: !!stConnectionProfileId && !slothConnectionProfiles.some(profile => profile.selected),
-    slothHasOnlyCurrentProfile: !slothConnectionProfiles.length && settings.profiles.length === 1 && !!settings.profiles[0]?.isBuiltinCurrentST,
-    slothMissingCompanion,
     slothSharedBook: [slothRoleMemory.state, slothRoleNexus.state].includes('shared'),
     slothCharacterAvailable: !!sloth.character,
     slothCharacterName: sloth.character?.name,
@@ -11185,6 +11187,10 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     slothChatOverrideActive: !!slothChatOverride,
     slothChatOverrideInvalid: !!slothChatOverride?.invalid,
     slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
+    slothRoleChoicesAvailable: sloth.linkedBooks.length > 0 || unlinkedBooks.length > 0,
+    slothHasWorldBooks: sloth.worldNames.length > 0,
+    slothLinkedBooksOnly,
+    slothUnlinkedBooks: unlinkedBooks,
     slothNexusRoleOptions: roleOptions('nexus'),
     slothMemoryRoleOptions: roleOptions('memory'),
     slothNexusMissing: !!slothSelectedRoles.nexus && !sloth.linkedBooks.includes(slothSelectedRoles.nexus),
@@ -11236,6 +11242,7 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
             )
           : profile.name,
       isDefault: index === settings.defaultProfile,
+      isSlothProfile: index === slothProfileIndex,
     })),
     titleFormat: defaultProfileTitleFormat,
     // Regex selection UI
@@ -11470,20 +11477,58 @@ function syncGroupSettingsControls(popupElement) {
   );
 }
 
+async function showSlothCollectionPrompt(settings) {
+  const title = translate('Collection prompt', 'STMemoryBooks_SlothPromptSettings');
+  const help = translate('Add your own instructions for dividing events and writing Memory and Nexus.',
+    'STMemoryBooks_SlothPromptHelp');
+  const content = DOMPurify.sanitize(`<div class="stmb-sloth-review"><h3>${escapeHtml(title)}</h3>
+    <label class="stmb-sloth-edit">${escapeHtml(help)}
+      <textarea id="stmb-sloth-prompt" class="text_pole" rows="12">${escapeHtml(settings.moduleSettings.slothCollectionPrompt || '')}</textarea>
+    </label></div>`);
+  const popup = new Popup(content, POPUP_TYPE.CONFIRM, '', {
+    wide: true, allowVerticalScrolling: true,
+    okButton: translate('Save', 'STMemoryBooks_Save'),
+    cancelButton: translate('Cancel', 'STMemoryBooks_Cancel'),
+  });
+  markStmbPopup(popup);
+  const result = await popup.show();
+  if (result !== POPUP_RESULT.AFFIRMATIVE) return;
+  settings.moduleSettings.slothCollectionPrompt = popup.dlg.querySelector('#stmb-sloth-prompt').value.trim();
+  await saveSettings();
+}
+
 async function runSlothSettingsAction(button, popupElement, settings) {
   if (popupElement.querySelector('button[data-stmb-sloth-action]:disabled')) return;
   const choice = popupElement.querySelector('#stmb-sloth-profile-select')?.value || '';
   const stConnectionProfileId = choice.startsWith('st:') ? choice.slice(3) : '';
-  const selected = Number.parseInt(choice || popupElement.querySelector('#stmb-profile-select')?.value, 10);
+  const selected = Number.parseInt(choice, 10);
   const profileIndex = Number.isSafeInteger(selected) ? selected : settings.defaultProfile;
   const actions = {
     collect: () => runNexusCollector({ profileIndex, stConnectionProfileId }),
-    companion: () => runNexusCompanionSetup(),
-    migrate: () => runNexusLegacyMigration(),
-    continuity: () => runNexusLegacyContinuityReview({ profileIndex, stConnectionProfileId }),
+    companion: () => createSlothCompanion(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
-    followup: () => runNexusSidePromptFollowup({ profileIndex }),
+    followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
+    'prompt-settings': () => showSlothCollectionPrompt(settings),
+    'side-prompt-settings': () => showSidePromptsPopup({
+      slothNexusName: getCurrentNexusRoleResolution('nexus', settings).name,
+    }),
+    'new-profile': async () => {
+      const count = settings.profiles.length;
+      await newProfile(settings);
+      if (settings.profiles.length === count) return;
+      settings.moduleSettings.slothConnectionProfileId = '';
+      settings.moduleSettings.slothProfileName = settings.profiles.at(-1).name;
+      return { saved: true };
+    },
+    'edit-profile': async () => {
+      const profile = settings.profiles[profileIndex];
+      if (stConnectionProfileId || !profile || profile.isBuiltinCurrentST) return;
+      await editProfile(settings, profileIndex);
+      if (settings.profiles[profileIndex] === profile) return;
+      settings.moduleSettings.slothProfileName = settings.profiles[profileIndex].name;
+      return { saved: true };
+    },
   };
   const action = button.dataset.stmbSlothAction;
   if (!Object.hasOwn(actions, action)) return;
@@ -11491,8 +11536,9 @@ async function runSlothSettingsAction(button, popupElement, settings) {
   for (const item of buttons) item.disabled = true;
   try {
     const result = await actions[action]();
-    if (result?.saved && currentPopupInstance?.dlg === popupElement) {
-      await refreshPopupContent();
+    if (result?.saved) {
+      if (action === 'new-profile' || action === 'edit-profile') await saveSettings();
+      if (currentPopupInstance?.dlg === popupElement) await refreshPopupContent();
     }
   } catch (error) {
     console.error('Sloth operation stopped:', error);
@@ -11653,9 +11699,10 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
 
-    if (e.target.matches("#stmb-sloth-precise-review")) {
-      settings.moduleSettings.slothPreciseReviewEnabled = e.target.checked;
-      saveSettingsDebounced();
+    if (e.target.matches('#stmb-sloth-linked-books-only')) {
+      settings.moduleSettings.slothLinkedBooksOnly = e.target.checked;
+      await saveSettings();
+      await refreshPopupContent();
       return;
     }
 
@@ -11672,10 +11719,6 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
             nexus: getCurrentNexusRoleResolution('nexus', settings).name,
             memory: getCurrentNexusRoleResolution('memory', settings).name,
           };
-          if (!canChangeNexusChatRolePair(getSceneMarkers(), chatKey, previous, sloth.assigned)) {
-            throw new Error(translate('This chat already contains collected memories. Changing its Nexus / Memory books requires a separate reviewed migration.',
-              'STMemoryBooks_SlothChatOverrideLocked'));
-          }
           const changed = e.target.checked
             ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, sloth.assigned)
             : clearNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
@@ -11711,20 +11754,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
         const ref = getCurrentStmbChatRef();
         const chatKey = getStmbChatKey(ref);
         const override = getNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
-        const previous = {
-          nexus: getCurrentNexusRoleResolution('nexus', settings).name,
-          memory: getCurrentNexusRoleResolution('memory', settings).name,
-        };
         const next = { ...(override?.invalid ? sloth.assigned : (override || sloth.assigned)), [role]: name };
-        const legacyBook = !override && (settings.moduleSettings.manualModeEnabled
-          ? getCurrentManualLorebookResolution({ settings, markers: getSceneMarkers() || {} }).lorebookName
-          : chat_metadata?.[METADATA_KEY]);
-        if (!canChangeNexusChatRolePair(getSceneMarkers(), chatKey, previous, next, legacyBook)) {
-          toastr.warning(translate('This chat already contains collected memories. Changing its Nexus / Memory books requires a separate reviewed migration.',
-            'STMemoryBooks_SlothChatOverrideLocked'), 'STMemoryBooks');
-          await refreshPopupContent();
-          return;
-        }
         const changed = override
           ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, next)
           : setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
@@ -11732,8 +11762,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
           if (override) {
             rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, override);
           }
-          // Companion setup verifies the persisted roles, so finish this save before
-          // showing actions that consume the changed pair.
+          // Collection uses the assigned pair once the settings are saved.
           await saveSettings();
           void refreshMemoryTierMacroCache();
         }
@@ -11752,11 +11781,6 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     }
     if (e.target.matches("#stmb-nexus-older-scene-mode")) {
       settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
-      saveSettingsDebounced();
-      return;
-    }
-    if (e.target.matches("#stmb-nexus-detail-recall-mode")) {
-      settings.moduleSettings.nexusDetailRecallMode = e.target.value === "keyword" ? "keyword" : "vector";
       saveSettingsDebounced();
       return;
     }
@@ -12034,6 +12058,11 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
     if (e.target.matches('#stmb-sloth-profile-select')) {
       settings.moduleSettings.slothConnectionProfileId = e.target.value.startsWith('st:') ? e.target.value.slice(3) : '';
+      if (!settings.moduleSettings.slothConnectionProfileId) {
+        settings.moduleSettings.slothProfileName = settings.profiles[Number(e.target.value)]?.name || '';
+      }
+      const edit = popupElement.querySelector('[data-stmb-sloth-action="edit-profile"]');
+      if (edit) edit.hidden = !settings.profiles[Number(e.target.value)] || !!settings.profiles[Number(e.target.value)].isBuiltinCurrentST;
       await saveSettings();
       return;
     }
@@ -12739,16 +12768,11 @@ async function refreshPopupContent() {
     const originalActions = [...content.querySelectorAll('.stmb-original-action')];
     const drawers = [...content.querySelectorAll('details[id]')].map(drawer => [drawer.id, drawer.open]);
     const activeTab = content.querySelector('[data-stmb-workspace-tab][aria-selected="true"]')?.dataset.stmbWorkspaceTab;
-    const collectionProfileValue = content.querySelector('#stmb-sloth-profile-select')?.value;
     const focusedId = content.contains(document.activeElement) ? document.activeElement.id : '';
     const scrollTop = content.scrollTop;
     currentPopupInstance.content.innerHTML = newHtml;
     content.querySelector('#stmb-original-actions')?.append(...originalActions);
     if (activeTab) selectMemoryBooksWorkspaceTab(content, activeTab);
-    const collectionProfile = content.querySelector('#stmb-sloth-profile-select');
-    if (collectionProfileValue && collectionProfile && [...collectionProfile.options].some(option => option.value === collectionProfileValue)) {
-      collectionProfile.value = collectionProfileValue;
-    }
     for (const [id, open] of drawers) {
       const drawer = content.querySelector('#' + CSS.escape(id));
       if (drawer) drawer.open = open;

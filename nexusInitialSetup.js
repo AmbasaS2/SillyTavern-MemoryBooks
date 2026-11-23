@@ -1,46 +1,27 @@
 // Copyright (C) 2026 AmbasaS2
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { getCharacterNexusRoles, getLinkedCharacterWorlds } from './nexusCharacterRoles.js';
+import { getCharacterNexusRoles } from './nexusCharacterRoles.js';
 import { getNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
-import { getCharacterMemoryBookLock } from './characterMemoryBookLocks.js';
 
-export function canInitializeNexusBooks({ character, ref, key, settings, worldInfo,
-    chatBook, markers }) {
+export function canInitializeNexusBooks({ character, ref, key, settings }) {
     const avatar = character?.avatar;
     if (!avatar || ref?.type !== 'character' || ref.avatarUrl !== avatar || !ref.fileName || !key) return false;
     const roles = getCharacterNexusRoles(settings?.nexusCharacterRoles, avatar);
-    const receipt = markers?.slothCollection;
     return !roles.nexus && !roles.memory
-        && !getNexusChatRoleOverride(settings?.nexusChatRoleOverrides, ref, key)
-        && !getCharacterMemoryBookLock(settings?.characterMemoryBookLocks, avatar)
-        && !markers?.manualLorebook && !chatBook && !character?.data?.character_book && !character?.character_book
-        && !getLinkedCharacterWorlds({ character, worldInfo }).length
-        && !(Number.isSafeInteger(markers?.highestMemoryProcessed) && markers.highestMemoryProcessed >= 0)
-        && !receipt;
+        && !getNexusChatRoleOverride(settings?.nexusChatRoleOverrides, ref, key);
 }
 
-/** Resolve a single existing book without guessing from its title or contents. */
-export function getNexusCompanionPlan({character,ref,key,settings,worldInfo,chatBook,markers,worldNames}) {
-    const avatar=character?.avatar;
-    if(!avatar||ref?.type!=='character'||ref.avatarUrl!==avatar||!ref.fileName||!key||
-        getNexusChatRoleOverride(settings?.nexusChatRoleOverrides,ref,key)||markers?.slothCollection||
-        character?.data?.character_book||character?.character_book) return null;
-    const links=getLinkedCharacterWorlds({character,worldInfo});
-    if(links.length!==1||!Array.isArray(worldNames)||!worldNames.includes(links[0])) return null;
-    const [existing]=links;
-    const roles=getCharacterNexusRoles(settings?.nexusCharacterRoles,avatar);
-    if(roles.nexus&&roles.memory) return null;
-    const bindings=[chatBook,markers?.manualLorebook,
-        getCharacterMemoryBookLock(settings?.characterMemoryBookLocks,avatar)?.lorebookName].filter(Boolean);
-    if(bindings.some(name=>name!==existing)) return null;
-    const recordedMemory=bindings.includes(existing);
-    const hasCheckpoint=Number.isSafeInteger(markers?.highestMemoryProcessed)&&markers.highestMemoryProcessed>=0;
-    if(hasCheckpoint&&(!recordedMemory||roles.nexus)) return null;
-    const existingRole=roles.nexus===existing?'nexus':
-        roles.memory===existing||(!roles.nexus&&!roles.memory&&recordedMemory)?'memory':null;
-    if(!existingRole||roles[existingRole==='nexus'?'memory':'nexus']) return null;
-    return {existing,existingRole,missingRole:existingRole==='nexus'?'memory':'nexus'};
+export function getNexusCompanionPlan({ character, ref, key, settings, linkedBooks }) {
+    const avatar = character?.avatar;
+    if (!avatar || ref?.type !== 'character' || ref.avatarUrl !== avatar || !ref.fileName || !key ||
+        getNexusChatRoleOverride(settings?.nexusChatRoleOverrides, ref, key)) return null;
+    const roles = getCharacterNexusRoles(settings?.nexusCharacterRoles, avatar);
+    if (Boolean(roles.nexus) === Boolean(roles.memory)) return null;
+    const existingRole = roles.nexus ? 'nexus' : 'memory';
+    const existing = roles[existingRole];
+    if (!linkedBooks.includes(existing)) return null;
+    return { existing, existingRole, missingRole: existingRole === 'nexus' ? 'memory' : 'nexus' };
 }
 
 export function initialNexusBookNames(character, id) {
@@ -101,7 +82,7 @@ export async function commitInitialNexusBooks(states, {
             return { success: true, saved: names };
         } catch (cause) {
             if (!attempted.length) throw cause;
-            const error = new Error(cause.message + ' Inspect the backup and these new lorebooks before retrying: ' +
+            const error = new Error(cause.message + ' Check these new lorebooks before retrying: ' +
                 attempted.join(', '), { cause });
             error.partialRecovery = true;
             throw error;

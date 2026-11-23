@@ -5,16 +5,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const file=x=>readFileSync(new URL(x,import.meta.url),'utf8');
 
-test('legacy migration is an explicitly approved UI command, independent of AI collector',()=>{
-    const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
-    assert.match(index,/runNexusLegacyMigration\(\)/);
-    assert.match(file('./templates.js'),/data-stmb-sloth-action="migrate" data-i18n="STMemoryBooks_SlothLegacyMigrationButton"/);
-    assert.match(runtime,/export async function runNexusLegacyMigration\(\)/);
-    assert.match(runtime,/approveNexusLegacyMigration/);
-    assert.match(runtime,/POPUP_RESULT\.CUSTOM1 && downloaded/);
-    assert.match(runtime,/downloadNexusMigrationBackup/);
-    assert.match(runtime,/commitSlothNexusMigration/);
-    assert.match(runtime,/inspectNexusLegacyMigration\(originalBooks\.nexus\)/);
+test('Sloth does not offer or require a legacy migration',()=>{
+    assert.doesNotMatch(file('./templates.js'),/data-stmb-sloth-action="migrate"/);
+    assert.doesNotMatch(file('./index.js'),/runNexusLegacyMigration|canChangeNexusChatRolePair/);
+    assert.doesNotMatch(file('./nexusCollectorRuntime.js'),/runNexusLegacyMigration|inspectNexusLegacyMigration/);
 });
 
 test('old Side Prompt upserts are checked for migrated titles before in-memory mutation or save',()=>{

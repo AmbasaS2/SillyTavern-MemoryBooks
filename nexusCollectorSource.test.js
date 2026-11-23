@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {fingerprintSlothChat} from './nexusCollectionPolicy.js';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-const start=source.indexOf('function activeSource(ref, memoryBook, roleNames = null) {');
+const start=source.indexOf('function activeSource(ref, memoryBook, roleNames) {');
 const end=source.indexOf('\nfunction readableSegments(',start);
 assert.ok(start>=0&&end>start);
 const body=source.slice(start,end);
@@ -13,7 +13,7 @@ function harness() {
     const chat=Array.from({length:10},(_,id)=>({name:'A',mes:'Text '+id,is_system:false}));
     const metadata={
         highestMemoryProcessed:0,
-        slothCollection:{chatKey:'character:A.png:chat-a',savedRanges:[[1,1]]},
+        slothCollection:{chatKey:'character:A.png:chat-a',books:{nexus:'N',memory:'M'},savedRanges:[[1,1]]},
     };
     const current={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
     const scope={chat,getSceneMarkers:()=>metadata,
@@ -28,33 +28,30 @@ test('collector resumes only uncollected source spans for the exact chat',()=>{
         13:{uid:13,STMB_chatId:'other-chat',STMB_start:4,STMB_end:6},
         14:{uid:14,STMB_chatId:'chat-a',STMB_sourceRanges:[[7,7],[9,9]]},
     }};
-    const out=h.fn(h.current,memory);
-    assert.deepEqual(Array.from(out.source,m=>m.id),[4,5,6,8]);
+    const out=h.fn(h.current,memory,{nexus:'N',memory:'M'});
+    assert.deepEqual(Array.from(out.source,m=>m.id),[0,2,3,4,5,6,8]);
     assert.equal(out.prior.chatKey,'character:A.png:chat-a');
 });
 test('branch copy of collection ledger is ignored when chat key differs',()=>{
     const h=harness();
     h.metadata.slothCollection.chatKey='character:A.png:another-branch';
-    const out=h.fn(h.current,{entries:{}});
-    assert.deepEqual(Array.from(out.source,m=>m.id),[1,2,3,4,5,6,7,8,9]);
+    const out=h.fn(h.current,{entries:{}},{nexus:'N',memory:'M'});
+    assert.deepEqual(Array.from(out.source,m=>m.id),[0,1,2,3,4,5,6,7,8,9]);
 });
 test('hidden messages remain outside source and are never marked collected automatically',()=>{
     const h=harness();h.chat[8].is_system=true;
-    const out=h.fn(h.current,{entries:{}});
+    const out=h.fn(h.current,{entries:{}},{nexus:'N',memory:'M'});
     assert.ok(!out.source.some(m=>m.id===8));
 });
 
-test('collector refuses to reuse a different pair for a chat with saved Scene receipts',()=>{
+test('only collection receipts for the selected pair affect the source',()=>{
     const h=harness();
-    const oldPair={nexus:'Old Nexus',memory:'Old Memory'};
-    h.metadata.slothCollection.books=oldPair;
-    assert.deepEqual(Array.from(h.fn(h.current,{entries:{}},oldPair).source,m=>m.id),
-        [2,3,4,5,6,7,8,9]);
-    assert.throws(()=>h.fn(h.current,{entries:{}},{nexus:'New Nexus',memory:'New Memory'}),
-        /reviewed migration/);
+    const oldPair={nexus:'N',memory:'M'};
+    const ids=pair=>Array.from(h.fn(h.current,{entries:{}},pair).source,m=>m.id);
+    assert.deepEqual(ids(oldPair),[0,2,3,4,5,6,7,8,9]);
+    assert.deepEqual(ids({nexus:'Other',memory:'New'}),[0,1,2,3,4,5,6,7,8,9]);
     delete h.metadata.slothCollection.books;
-    assert.throws(()=>h.fn(h.current,{entries:{}},oldPair),/reviewed migration/,
-        'older unbound receipts must be reviewed rather than assumed to match');
+    assert.deepEqual(ids(oldPair),[0,1,2,3,4,5,6,7,8,9]);
 });
 
 test('the collection receipt is tied to persisted source and is reread after metadata save', async () => {
@@ -78,7 +75,7 @@ test('the collection receipt is tied to persisted source and is reread after met
         },
     };
     const first = source.indexOf('async function readReviewedChat(');
-    const last = source.indexOf('\nfunction assertLegacyMigrationOrigin(', first);
+    const last = source.indexOf('\nfunction assertSlothBookRoles(', first);
     const write = vm.runInNewContext(source.slice(first, last) + '\nupdateCollectedLedger', checks);
     const pair = { nexus: 'N', memory: 'M' };
     const fingerprint = fingerprintSlothChat(turns, [0]);

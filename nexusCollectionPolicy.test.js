@@ -88,17 +88,23 @@ test('Memory stage keeps three latest complete scenes active, original book unch
   const book={entries:{0:{uid:0,comment:'001 - Old',content:story,key:[],constant:true,vectorized:false},
     1:{uid:1,comment:'002 - Next',content:story,key:[],constant:true,vectorized:false},
     2:{uid:2,comment:'003 - Recent',content:story,key:[],constant:true,vectorized:false}},stlo:{mode:'manual'}};
+  for (const entry of Object.values(book.entries)) {
+    entry.stmemorybooks=true;
+    entry.STMB_sourceRanges=[[entry.uid,entry.uid]];
+  }
+  book.entries[99]={uid:99,comment:'Independent entry',content:'Preserve',constant:true};
   const before=structuredClone(book);
   const out=stageMemoryScenes(book,[{title:'Finished',content:story,segments:[[0,2],[5,7]],
     messageIds:[0,1,2,5,6,7],keywords:['promise','apology']}],maker,{chatId:'A-chat'});
   assert.equal(out.writes.length,1);
   assert.equal(out.staged.entries[0].constant,false);
-  for(const id of [1,2,3])assert.equal(out.staged.entries[id].constant,true);
-  assert.deepEqual(out.staged.entries[3].STMB_sourceRanges,[[0,2],[5,7]]);
-  assert.equal(out.staged.entries[3].STMB_chatId,'A-chat');
-  assert.equal(out.staged.entries[3].STMB_start,undefined,
+  for(const id of [1,2,100])assert.equal(out.staged.entries[id].constant,true);
+  assert.deepEqual(out.staged.entries[100].STMB_sourceRanges,[[0,2],[5,7]]);
+  assert.equal(out.staged.entries[100].STMB_chatId,'A-chat');
+  assert.equal(out.staged.entries[100].STMB_start,undefined,
       'discontiguous sources must not be disguised as one continuous STMB range');
-  assert.equal(out.staged.entries[3].STMB_discontiguous,true);
+  assert.equal(out.staged.entries[100].STMB_discontiguous,true);
+  assert.deepEqual(out.staged.entries[99],before.entries[99]);
   assert.deepEqual(book,before);
   assert.throws(()=>stageMemoryScenes(book,[{title:'Incomplete',content:'No result',messageIds:[1],segments:[[1,1]]}],maker),/missing Timeline/);
 });

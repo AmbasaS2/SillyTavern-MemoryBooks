@@ -6,6 +6,7 @@ import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotati
 import { appendContinuitySection, guardContinuityChange,
     guardNewContinuityContent } from './nexusContinuitySections.js';
 import { isGroundedContinuityRetirement } from './nexusEditEvidence.js';
+import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 
 const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = v => typeof v === 'string' ? v.trim() : '';
@@ -113,6 +114,7 @@ export function fingerprintSlothChat(chat,ids) {
 
 const protectedEntry = entry => entry?.disable || Number(entry?.position)===7 ||
     str(entry?.outletName) || /^(?:Kinks|PanelAssets)(?:\b|$)/i.test(str(entry?.comment)) ||
+    !!classifyNexusLegacyTitle(entry?.comment) ||
     !!entry?.STMB_sidePromptHistory;
 function getUidEntry(book,uid){
     const matches=Object.values(book.entries||{}).filter(e=>intUid(e?.uid)===uid);
@@ -198,9 +200,7 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
     requireThat(plain(original?.entries) && Array.isArray(scenes) && scenes.length &&
         typeof createEntry==='function','Invalid Memory staging input.');
     const staged=structuredClone(original);
-    const numbers=Object.values(staged.entries).map(e=>sceneNumberFromTitle(e.comment));
-    requireThat(numbers.every(x=>x!==null) && new Set(numbers).size===numbers.length,
-        'Existing Memory scene numbering is ambiguous.');
+    const numbers=Object.values(staged.entries).map(e=>sceneNumberFromTitle(e.comment)).filter(number=>number!==null);
     let next=Math.max(0,...numbers)+1;const writes=[];
     for(const item of scenes){
         const content=str(item?.content),title=str(item?.title);
@@ -230,6 +230,11 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
         entry.constant=false;entry.vectorized=true;entry.selective=true;
         writes.push({uid:entry.uid,title:entry.comment,segments:item.segments});
     }
-    const rotated=planNexusSceneRotation(staged,{olderMode});
-    return {staged:rotated.proposedMemory,writes,rotation:rotated.changes};
+    const entries=Object.fromEntries(Object.entries(staged.entries).filter(([,entry])=>
+        (entry.stmemorybooks===true && Array.isArray(entry.STMB_sourceRanges) && !entry.disable) ||
+        entry.STMB_slothSceneMergedInto || entry.STMB_slothSceneMerge ||
+        entry.STMB_slothSceneSplitArchive || entry.STMB_slothSceneSplitFrom));
+    const rotated=planNexusSceneRotation({entries},{olderMode});
+    Object.assign(staged.entries,rotated.proposedMemory.entries);
+    return {staged,writes,rotation:rotated.changes};
 }

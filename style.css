@@ -982,13 +982,8 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     font-weight: 600;
     color: var(--SmartThemeEmColor, var(--SmartThemeBodyColor));
 }
-.popup.stmb-popup .stmb-workspace .stmb-collection {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(10rem, 42%);
-    gap: 12px 20px;
-    align-items: center;
-}
-.popup.stmb-popup .stmb-collection-action p { margin: 8px 0 0; }
+.popup.stmb-popup .stmb-sloth-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.popup.stmb-popup .stmb-sloth-controls > [hidden] { display: none; }
 .popup.stmb-popup .stmb-collection button[data-stmb-sloth-action="collect"] {
     padding-inline: 16px;
     background: color-mix(in srgb, var(--SmartThemeChatTintColor) 76%, var(--SmartThemeQuoteColor, var(--SmartThemeEmColor)) 24%);
@@ -1077,7 +1072,6 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 @media (max-width: 620px) {
     .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup .stmb-sloth-roles { padding: 12px; }
-    .popup.stmb-popup .stmb-workspace .stmb-collection,
     .popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup .stmb-workspace .menu_button { min-height: 40px; }
 }
@@ -1091,6 +1085,20 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-review h3,
 .popup.stmb-popup .stmb-sloth-review h4 {margin:4px 0;}
+.popup.stmb-popup .stmb-sloth-plan-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 8px 12px;
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+}
+.popup.stmb-popup .stmb-sloth-plan-summary dt { font-weight: 600; }
+.popup.stmb-popup .stmb-sloth-plan-summary dd { margin: 0; overflow-wrap: anywhere; }
+.popup.stmb-popup .stmb-sloth-plan-list { margin: 0; padding-inline-start: 1.5em; }
+.popup.stmb-popup .stmb-sloth-plan-list li { margin-block: 6px; overflow-wrap: anywhere; }
+.popup.stmb-popup .stmb-sloth-plan-list small { display: block; }
 .popup.stmb-popup .stmb-sloth-plan-item {
     display:flex;flex-direction:column;gap:7px;padding:12px;
     border:1px solid var(--SmartThemeBorderColor);border-radius:10px;

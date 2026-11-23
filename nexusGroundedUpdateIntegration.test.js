@@ -68,38 +68,21 @@ test('no-op and repeated append are blocked before any World Info write',()=>{
     }],mk),/no change/);
     assert.deepEqual(original,nexus());
 });
-test('collector explicitly reviews Nexus-only updates without shifting Hide or Memory receipts',()=>{
+test('Nexus-only collection stages the changed book and leaves Memory and Hide alone',()=>{
     const code=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    const start=code.indexOf('if(!initial&&!plan.events.length){');
-    const end=code.indexOf('const approved=await planApproval(plan)',start);
-    assert.ok(start>0 && end>start);
-    const branch=code.slice(start,end);
-    assert.match(branch,/planApproval\(plan\)[\s\S]*proposeSlothNexusEdits/);
-    assert.match(branch,/scenes:\[\]/);
-    assert.match(branch,/states:\[state\]/);
-    assert.match(branch,/commitSlothNexusMigration\(state/);
-    assert.match(branch,/operation:'Nexus current-state update'/);
-    assert.doesNotMatch(branch,/stageMemoryScenes|commitSlothBooks|updateCollectedLedger|hideChat/);
+    const collector=code.slice(code.indexOf('export async function runNexusCollector'),code.indexOf('function isVisibleSceneMessage'));
+    assert.match(collector,/if\(scenes.length\|\|initial\) \{[\s\S]*stageMemoryScenes/);
+    assert.match(collector,/if\(edits.length\|\|initial\) \{[\s\S]*stageNexusEdits/);
+    assert.match(collector,/if\(scenes.length\)\{\s*try \{\s*await updateCollectedLedger/);
+    assert.match(collector,/states.length===1\?await commitSlothNexusMigration/);
+    assert.match(collector,/operation:scenes.length\?'Memory Scene save':'Nexus current-state update'/);
+    assert.doesNotMatch(collector,/hideChat/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
-    assert.match(prompt,/messages,plan,profile/);
     assert.match(prompt,/validateGroundedNexusEdits\(response.edits,messages\)/);
     assert.match(prompt,/Deferred source is still visible/);
 });
-test('review and backup include evidence, and supported UI translations have every new key',()=>{
+test('unverified Nexus changes stop the approved collection before saving books',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    assert.match(runtime,/nexusEvidence:reviewedChanges\.map/);
-    assert.match(runtime,/change\.evidence\|\|\[\]/);
-    assert.match(runtime,/result\.changes\.map\(\(change,index\)/);
-    assert.match(runtime,/downloadSafetyBackup\(states, ref, .*approvedChanges, initial\)/);
-    for (const lang of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr','ms-my',
-        'pt-br','ru-ru','zh-cn','zh-tw']) {
-        const data=JSON.parse(readFileSync(new URL('./locales/'+lang+'.json',import.meta.url),'utf8'));
-        for(const key of ['SlothEvidenceWhy','SlothEvidenceSource',
-            'SlothNexusOnlyReview','SlothNexusOnlyGuide','SlothNexusOnlySaved',
-            'SlothApplyNexusChange','SlothNoApprovedChanges','SlothInvalidNexus',
-            'SlothReviewScenesOnly','SlothSceneOnlyGuide','SlothSceneReceiptUnavailable',
-            'SlothSceneOnlySaved','SlothSceneOnlyKeepSource']) {
-            assert.ok(data['STMemoryBooks_'+key]?.length,lang+':'+key);
-        }
-    }
+    assert.match(runtime,/await proposeSlothNexusEdits[\s\S]*if\(!\(error instanceof InvalidSlothNexusProposal\)\)throw error;\s*throw new Error\(t\([^\n]*\n\s*'STMemoryBooks_SlothCollectionInvalidNexus'/);
+    assert.match(runtime,/commitSlothBooks/);
 });

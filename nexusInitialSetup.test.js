@@ -3,7 +3,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canInitializeNexusBooks, initialNexusBookNames, commitInitialNexusBooks } from './nexusInitialSetup.js';
+import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames, commitInitialNexusBooks } from './nexusInitialSetup.js';
 import { validateSlothSceneResponse, validateSlothSceneKeywords } from './nexusSlothScenePrompt.js';
 
 const avatar='Mira.png';
@@ -12,19 +12,20 @@ const key='character:Mira.png:first';
 const character={name:'Mira / Vue',avatar};
 const eligible={ref,key,character,settings:{},worldInfo:{}};
 
-test('bootstrap only accepts a pristine individual chat without a previous binding',()=>{
-    assert.equal(canInitializeNexusBooks(eligible),true);
+test('bootstrap accepts a saved individual chat with no assigned Sloth books',()=>{
+    assert.equal(canInitializeNexusBooks({...eligible, markers:{highestMemoryProcessed:0},chatBook:'Old chat book'}),true);
     for(const change of [
-        {ref:{...ref,type:'group'}}, {ref:{...ref,avatarUrl:'Other.png'}},
-        {chatBook:'Old chat book'}, {markers:{highestMemoryProcessed:0}},
-        {markers:{manualLorebook:'Old manual book'}}, {markers:{slothCollection:{}}},
-        {worldInfo:{charLore:[{name:'Mira',extraBooks:['Missing auxiliary book']}]}},
-        {character:{...character,data:{extensions:{world:'Missing primary book'}}}},
-        {character:{...character,data:{character_book:{entries:[]}}}},
-        {settings:{nexusCharacterRoles:{[avatar]:{nexus:'Missing Nexus'}}}},
-        {settings:{characterMemoryBookLocks:{[avatar]:{characterName:'Mira',lorebookName:'Missing book'}}}},
+        {ref:{...ref,type:'group'}}, {ref:{...ref,avatarUrl:'Other.png'}}, {ref:{...ref,fileName:''}},
+        {settings:{nexusCharacterRoles:{[avatar]:{nexus:'Assigned Nexus'}}}},
         {settings:{nexusChatRoleOverrides:{[key]:{version:1,avatar,nexus:'Alternate'}}}},
     ])assert.equal(canInitializeNexusBooks({...eligible,...change}),false,JSON.stringify(change));
+});
+
+test('the missing book can be made after assigning the role of an existing linked book',()=>{
+    const context={...eligible,linkedBooks:['A','B'],settings:{nexusCharacterRoles:{[avatar]:{nexus:'B'}}}};
+    assert.deepEqual(getNexusCompanionPlan(context),{existing:'B',existingRole:'nexus',missingRole:'memory'});
+    assert.equal(getNexusCompanionPlan({...context,linkedBooks:['A']}),null);
+    assert.equal(getNexusCompanionPlan({...context,settings:{}}),null);
 });
 
 function harness(){

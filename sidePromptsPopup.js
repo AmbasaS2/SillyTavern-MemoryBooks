@@ -335,12 +335,13 @@ function getLorebookTargetSelectValue(tpl) {
     return '__memory__';
 }
 
-function buildLorebookTargetBlock({ idPrefix, tpl = null }) {
+function buildLorebookTargetBlock({ idPrefix, tpl = null, slothNexusName = null }) {
     const targetInfo = getSidePromptLorebookTargetInfo(tpl);
     const selectedValue = getLorebookTargetSelectValue(tpl);
     const memoryLorebook = getMemoryLorebookName();
     const currentTarget = targetInfo.value || translate('None selected', 'STMemoryBooks_NoneSelected');
-    const memoryLabel = memoryLorebook
+    const isSloth = slothNexusName !== null;
+    const memoryLabel = isSloth ? (slothNexusName ? `Nexus (${slothNexusName})` : 'Nexus') : memoryLorebook
         ? tr('STMemoryBooks_SidePromptLorebookSameAsMemoryNamed', 'Same as memory lorebook ({{name}})', { name: memoryLorebook })
         : translate('Same as memory lorebook (none selected)', 'STMemoryBooks_SidePromptLorebookSameAsMemoryNone');
     const options = [
@@ -353,12 +354,12 @@ function buildLorebookTargetBlock({ idPrefix, tpl = null }) {
     return `
         <div class="world_entry_form_control stmb-sp-lorebook-target">
             <h4>${escapeHtml(translate('Lorebook Target', 'STMemoryBooks_SidePromptLorebookTarget'))}</h4>
-            <div class="info-block">
+            ${isSloth ? '' : `<div class="info-block">
                 <small class="opacity50p">${escapeHtml(translate('Current Target:', 'STMemoryBooks_SidePromptLorebookCurrentTarget'))}</small>
                 <h5 id="${idPrefix}-target-current">${escapeHtml(currentTarget)}</h5>
                 <small class="opacity50p">${escapeHtml(translate('Source:', 'STMemoryBooks_SidePromptLorebookSource'))}</small>
                 <h5 id="${idPrefix}-target-source">${escapeHtml(targetInfo.sourceLabel)}</h5>
-            </div>
+            </div>`}
             <label for="${idPrefix}-target-select">
                 <h5 style="margin: 8px 0 4px 0;">${escapeHtml(translate('Save side prompt entry to:', 'STMemoryBooks_SidePromptLorebookSaveTo'))}</h5>
                 <select id="${idPrefix}-target-select" class="text_pole" data-original-value="${escapeHtml(selectedValue)}">
@@ -839,7 +840,7 @@ async function openEditSet(parentPopup, key = null) {
  * @param {Popup} parentPopup
  * @param {string} key
  */
-async function openEditTemplate(parentPopup, key) {
+async function openEditTemplate(parentPopup, key, slothNexusName) {
     try {
         const tpl = await getTemplate(key);
         if (!tpl) {
@@ -955,7 +956,7 @@ async function openEditTemplate(parentPopup, key) {
 
             ${buildAdditionalContextBlock({ idPrefix: 'stmb-sp-edit', settings: s, contextSettings })}
 
-            ${buildLorebookTargetBlock({ idPrefix: 'stmb-sp-edit-lb', tpl })}
+            ${buildLorebookTargetBlock({ idPrefix: 'stmb-sp-edit-lb', tpl, slothNexusName })}
 
             <div class="world_entry_form_control">
                 <label for="stmb-sp-edit-prompt">
@@ -1242,7 +1243,7 @@ async function openEditTemplate(parentPopup, key) {
  * Open create-new template dialog (triggers-based)
  * @param {Popup} parentPopup
  */
-async function openNewTemplate(parentPopup) {
+async function openNewTemplate(parentPopup, slothNexusName) {
     // Default triggers: manual enabled; others off
     const profiles = extension_settings?.STMemoryBooks?.profiles || [];
     let idx = Number(extension_settings?.STMemoryBooks?.defaultProfile ?? 0);
@@ -1306,7 +1307,7 @@ async function openNewTemplate(parentPopup) {
                 <textarea id="stmb-sp-new-response-format" class="text_pole textarea_compact" rows="6" placeholder="${escapeHtml(translate('Optional response format', 'STMemoryBooks_ResponseFormatPlaceholder'))}"></textarea>
             </label>
         </div>
-        ${buildLorebookTargetBlock({ idPrefix: 'stmb-sp-new-lb' })}
+        ${buildLorebookTargetBlock({ idPrefix: 'stmb-sp-new-lb', slothNexusName })}
         <div class="world_entry_form_control">
             <h4>${escapeHtml(translate('Lorebook Entry Settings', 'STMemoryBooks_LorebookEntrySettings'))}:</h4>
             <label for="stmb-sp-new-lb-entry-title-override">
@@ -1628,7 +1629,7 @@ async function importTemplates(event, parentPopup) {
 /**
  * Show the Side Prompts popup (list view with Edit/Copy/Trash and New/Export/Import)
  */
-export async function showSidePromptsPopup() {
+export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
     try {
         let content = '<h3 data-i18n="STMemoryBooks_SidePrompts_Title">🎡 Trackers & Side Prompts</h3>';
         content += '<div class="world_entry_form_control">';
@@ -1711,7 +1712,7 @@ export async function showSidePromptsPopup() {
 
             // Buttons
             dlg.querySelector('#stmb-sp-new')?.addEventListener('click', async () => {
-                await openNewTemplate(popup);
+                await openNewTemplate(popup, slothNexusName);
             });
             dlg.querySelector('#stmb-sp-review-entries')?.addEventListener('click', async () => {
                 await showStmbEntryReviewPopup({ showGoBack: true });
@@ -1844,7 +1845,7 @@ export async function showSidePromptsPopup() {
                             toastr.error(translate('Failed to change Side Prompt enabled state.', 'STMemoryBooks_FailedToToggleSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
                         }
                     } else if (actionBtn.classList.contains('stmb-sp-action-edit')) {
-                        await openEditTemplate(popup, tplKey);
+                        await openEditTemplate(popup, tplKey, slothNexusName);
                     } else if (actionBtn.classList.contains('stmb-sp-action-reset')) {
                         const warning = `<div class="info_block">${escapeHtml(translate('This will reset only Memory Assistance to its built-in prompts and settings. Its current mode will not change. This action cannot be undone.', 'STMemoryBooks_ClipReview_ResetWarning'))}</div>`;
                         const confirmPopup = new Popup(

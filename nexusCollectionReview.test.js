@@ -79,18 +79,15 @@ test('Nexus direct edit fails before staging when a single exact span or special
     assert.throws(()=>reviewSlothNexusDrafts([op],[]),/missing/);
 });
 
-test('Sloth collection UI has a real editable draft and a separate original workspace',()=>{
+test('Sloth collection asks for the event plan once before any writing',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
     const template=readFileSync(new URL('./templates.js',import.meta.url),'utf8');
     const source=readFileSync(new URL('./index.js',import.meta.url),'utf8');
-    for(const target of ['data-sloth-scene-title','data-sloth-scene-content','data-sloth-nexus-body','data-sloth-nexus-include',
-        'reviewSlothSceneDrafts','reviewSlothNexusDrafts','applyReviewedDraft','validateGroundedNexusEdits']){
-        assert.ok(runtime.includes(target),'missing review UI bridge '+target);
-    }
-    assert.ok(template.includes('STMemoryBooks_SlothAIModule'));
-    assert.match(template, /id="stmb-sloth-tab" role="tab" aria-selected="true"/);
-    assert.match(template, /id="stmb-original-panel"[^>]*role="tabpanel"[^>]*hidden/);
-    assert.match(source, /getSceneData\(\{[^}]*warnOnHiddenMessages: false/);
-    assert.ok(source.includes("querySelector('#stmb-original-actions')"));
+    const collection=runtime.slice(runtime.indexOf('export async function runNexusCollector'),runtime.indexOf('function isVisibleSceneMessage'));
+    assert.match(collection,/await planApproval\(plan,initial\)[\s\S]*await composeSlothScene[\s\S]*await proposeSlothNexusEdits[\s\S]*await commitSlothBooks/);
+    assert.doesNotMatch(collection,/draftApproval|download|hideChat/);
+    assert.match(template,/id="stmb-sloth-tab" role="tab" aria-selected="true"/);
+    assert.match(template,/id="stmb-original-panel"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(source,/getSceneData\(\{[^}]*warnOnHiddenMessages: false/);
     assert.ok(source.includes("popupElement.querySelector('#stmb-sloth-profile-select')"));
 });

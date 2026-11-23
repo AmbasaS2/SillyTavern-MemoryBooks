@@ -34,7 +34,7 @@ test('Scene merge requires full Memory JSON backup and preserves unrelated Nexus
     assert.match(block,/original:memory/);
     assert.match(block,/POPUP_RESULT\.CUSTOM1 && downloaded/);
     assert.match(block,/resetCache:\(name,book\)=>worldInfoCache\.set/);
-    assert.match(block,/verifyOrigin:\(\)=>assertLegacyMigrationOrigin/);
+    assert.match(block,/verifyOrigin:\(\)=>assertSlothBookRoles/);
     const mergeStart=block.indexOf('export async function runNexusSceneMerge');
     const nextExport=block.indexOf('\nexport async function ',mergeStart+1);
     const save=block.slice(mergeStart,nextExport<0?undefined:nextExport);

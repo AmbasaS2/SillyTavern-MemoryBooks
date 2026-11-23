@@ -54,7 +54,9 @@ export async function commitSlothNexusMigration(state,{
                 recoveryIssue='Rollback failed: '+(e?.message||String(e));
             }
             if(recoveryIssue){
-                const failure=new Error(operation+' may be partially saved. Restore the downloaded original backup manually. '+recoveryIssue);
+                const backupHint=['Memory Scene merge','Memory Scene split','Nexus migration',
+                    'Nexus continuity semantic reconciliation'].includes(operation)?' Restore the downloaded original backup manually.':'';
+                const failure=new Error(operation+' may be partially saved.'+backupHint+' '+recoveryIssue);
                 failure.partialRecovery=true;failure.cause=error;
                 throw failure;
             }

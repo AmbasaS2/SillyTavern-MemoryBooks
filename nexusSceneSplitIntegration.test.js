@@ -87,7 +87,7 @@ test('runtime is manual and requires all three reviews plus original JSON backup
         'validateNexusSceneSplitProposal','composeSlothScene','stageNexusSceneSplit',
         'sourceUid:sourcePlan.sourceUid','originalMemory:original',
         'POPUP_RESULT.CUSTOM1 && downloaded','commitSlothNexusMigration',
-        "operation:'Memory Scene split'",'assertLegacyMigrationOrigin',
+        "operation:'Memory Scene split'",'assertSlothBookRoles',
         'fingerprintSlothChat','reloadEditor(names.memory)',
     ])assert.ok(part.includes(name),name);
     assert.match(part,/name:names\.memory,original,staged:staged\.proposedMemory/);

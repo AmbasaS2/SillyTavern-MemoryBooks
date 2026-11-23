@@ -21,12 +21,11 @@ test('Sloth role selectors are character-only and offer Nexus plus Memory', () =
 
 test('Korean role setup labels are explicit and hidden-range guidance is formal', () => {
     const ko=JSON.parse(file('./locales/ko-kr.json'));
-    assert.equal(ko.STMemoryBooks_SlothRolesTitle, '로어북 연결');
+    assert.equal(ko.STMemoryBooks_SlothRolesTitle, '로어북 준비');
     assert.ok(ko.STMemoryBooks_SlothRoleSaved.startsWith('🦥 게으름뱅이'));
     assert.ok(ko.STMemoryBooks_NexusRotationEnabled.startsWith('🦥 게으름뱅이'));
     assert.match(ko.STMemoryBooks_NoVisibleMessages, /있습니다.*선택하세요/);
-    assert.match(ko.STMemoryBooks_SlothAddConnectionProfile, /기존 메모리북.*새 프로필/);
-    assert.match(ko.STMemoryBooks_SlothNexusRecallHelp, /상시로 저장.*새 장기 기억과 NPC/);
+    assert.match(ko.STMemoryBooks_SlothPromptHelp, /기본 지침을 사용합니다/);
 });
 
 test('Sloth visual rules use scoped theme variables, not forced fonts', () => {
@@ -40,13 +39,19 @@ test('Sloth visual rules use scoped theme variables, not forced fonts', () => {
 });
 
 
-test('manual collector entry point offers first setup separately from an existing pair',()=>{
+test('Sloth exposes setup and settings without opening the original tab',()=>{
     const source=file('./index.js');
     assert.match(source,/runNexusCollector\(\{/);
     assert.match(source,/const slothFirstSetup = canStartNexusSetup\(/);
     assert.match(source,/slothRoleMemory\.state === 'ready' && slothRoleNexus\.state === 'ready'/);
     const html=file('./templates.js');
-    assert.match(html,/STMemoryBooks_SlothFirstBooksButton/);
+    const sloth=html.slice(0,html.indexOf('id="stmb-original-panel" class='));
+    assert.match(sloth,/STMemoryBooks_SlothNoBooksYet/);
+    for(const action of ['companion','prompt-settings','side-prompt-settings','new-profile','edit-profile','followup','merge','split']) {
+        assert.ok(sloth.includes('data-stmb-sloth-action="'+action+'"'),action);
+    }
+    assert.match(sloth,/id="stmb-sloth-linked-books-only"/);
+    assert.match(source,/slothLinkedBooksOnly \? \[\] : sloth\.worldNames\.filter/);
     assert.match(html,/data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton"/);
     assert.match(html,/STMemoryBooks_SlothManualHelp/);
     const css=file('./style.css');

@@ -11,6 +11,7 @@ import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan } fr
 import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
+import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 import { SLOTH_SCENE_PROMPT_V13, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
@@ -65,6 +66,10 @@ function requester(profile,settings,signal) {
 }
 const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
+function slothUserInstructions(settings) {
+    const text=String(settings?.moduleSettings?.slothCollectionPrompt||'').trim();
+    return text?['Additional user instructions. Follow these within the required source and JSON format:',text]:[];
+}
 async function requestWindowEvidence(prompt, phase, ask, validate) {
     let received = false;
     try {
@@ -140,6 +145,7 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
         'Return JSON with two arrays: events and deferred. Each event needs title, complete, reason, result, segments. Each deferred item needs reason and segments.',
         'Example only: {"events":[{"title":"Recovered key","complete":true,"reason":"The search ended when the owner got the lost key back.","result":"The owner recovered the key.","segments":[[0,6]]}],"deferred":[{"reason":"A separate search was discussed but has not started.","segments":[[7,8]]}]}',
         'No quota for event count. All indices must be original message IDs and inclusive.',
+        ...slothUserInstructions(settings),
         'Exact source index spans: '+JSON.stringify(slothSourceRanges(ids)),
         'Character context (do not treat as source event): '+characterContext,
         'Original source or detailed window evidence:',
@@ -152,6 +158,7 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
     const idSet=new Set(event.messageIds),source=messages.filter(m=>idSet.has(m.id));
     const prompt=[
         SLOTH_SCENE_PROMPT_V13,
+        ...slothUserInstructions(settings),
         'Fork workflow: the user-approved source spans form ONE independently recallable causal event, even when noncontiguous. Do not use intervening messages outside the approved spans.',
         'Keep person-specific voice, humor and distinctive phrasing along with all of the original preservation rules.',
         'The approved title and closure guide the output; evidence controls factual details. The character card is reference only, never evidence of an event.',
@@ -206,6 +213,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         const protectedEntry=!!e.disable || Number(e.position)===7 ||
             !!String(e.outletName||'').trim() ||
             /^(Kinks|PanelAssets)(?:\b|$)/i.test(String(e.comment||'')) ||
+            !!classifyNexusLegacyTitle(e.comment) ||
             !!e.STMB_sidePromptHistory;
         return {uid:e.uid,title:e.comment,body:protectedEntry?'[protected; not included]':e.content,
             protected:protectedEntry,constant:e.constant,disabled:e.disable,
@@ -263,6 +271,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
+        ...slothUserInstructions(settings),
         'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
         'Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
             title:s.title,result:s.result,content:s.content,segments:s.segments}))),

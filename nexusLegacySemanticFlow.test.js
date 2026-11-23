@@ -74,20 +74,10 @@ test('failed post-write response rolls original state back with verifiable readb
     assert.equal(calls,2);
     assert.deepEqual(h.disk,h.state.original);
 });
-test('UI code requires explicit button, read-only AI, full backup and named approval',()=>{
-    const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
-    assert.match(index,/runNexusLegacyContinuityReview\(\{/);
-    assert.match(file('./templates.js'),/data-stmb-sloth-action="continuity" data-i18n="STMemoryBooks_SlothLegacySemanticButton"/);
-    const start=runtime.indexOf('export async function runNexusLegacyContinuityReview');
-    assert.ok(start>0);
-    const flow=runtime.slice(start);
-    for(const token of ['collectorBusy','loadServerWorld(names.nexus)',
-        'inspectSlothLegacyContinuity','proposeSlothLegacyContinuity',
-        'assertReviewOrigin()','stageSlothLegacyContinuity','originalNexus:original',
-        'POPUP_RESULT.CUSTOM1 && downloaded','commitSlothNexusMigration(state',
-        "operation:'Nexus continuity semantic reconciliation'","reloadEditor(names.nexus)"])
-        assert.ok(flow.includes(token),token);
-    assert.doesNotMatch(flow,/saveWorldInfo\(names\.memory|updateCollectedLedger|hideChat/);
+test('legacy state reconciliation is absent from the Sloth interface',()=>{
+    assert.doesNotMatch(file('./index.js'),/runNexusLegacyContinuityReview/);
+    assert.doesNotMatch(file('./templates.js'),/data-stmb-sloth-action="continuity"/);
+    assert.doesNotMatch(file('./nexusCollectorRuntime.js'),/runNexusLegacyContinuityReview/);
 });
 test('all supported non-English locales include user-visible review translations',()=>{
     const languages=['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr',

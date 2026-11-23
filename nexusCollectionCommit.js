@@ -76,7 +76,7 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
                 }
             }
             if(recoveryFailures.length){
-                const issue=new Error('Two-book save failed. Partial data may remain; use the approved backup for manual recovery. '+recoveryFailures.join('; '));
+                const issue=new Error('Two-book save failed. Partial data may remain in the affected lorebooks. '+recoveryFailures.join('; '));
                 issue.partialRecovery=true;issue.cause=error;
                 throw issue;
             }

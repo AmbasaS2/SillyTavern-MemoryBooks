@@ -391,6 +391,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
         endpoint,
         apiKey,
         connectionProfileId,
+        stConnectionProfileId: overrides?.stConnectionProfileId,
         extra,
         reverseProxy,
         signal: options?.signal || null,
@@ -423,6 +424,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
  * @returns {{api: string, model: string, temperature: number, endpoint?: string|null, apiKey?: string|null, connectionProfileId?: string|null, extra?: Record<string,any>|undefined}} The resolved connection object.
  */
 export function resolveSidePromptConnection(profile = null, options = {}) {
+    if (profile?.stConnectionProfileId) return { stConnectionProfileId: profile.stConnectionProfileId };
     try {
         // Highest priority: explicit profile object (e.g., memory generation profile)
         if (profile && (profile.effectiveConnection || profile.connection)) {
@@ -1535,11 +1537,18 @@ export async function listReviewedSidePromptOptions(nexusName, isAllowedBook) {
     const overrides = getSidePromptChatLorebookOverrides();
     const items = await resolveAfterMemoryItems(markers,
         extension_settings.STMemoryBooks?.moduleSettings || {}, getCurrentMemoryBooksContext());
+    const included = new Set(items.map(item => item.tpl.key));
+    for (const tpl of await listByTrigger('command:sideprompt')) {
+        if (included.has(tpl.key) || tpl.specialKind || collectTemplateRuntimeMacros(tpl).length) continue;
+        items.push({ tpl, baseTpl: tpl, runtimeMacros: {}, name: tpl.name, set: null, item: null });
+    }
     return items.flatMap(item => {
         const templateTarget = String(item.tpl.settings?.lorebook?.targetLorebookName || '').trim();
-        const name = Object.hasOwn(overrides, item.tpl.key)
+        const target = Object.hasOwn(overrides, item.tpl.key)
             ? String(overrides[item.tpl.key] || '').trim() : (templateTarget || nexusName);
-        return name !== '__memory__' && isExistingLorebookName(name) && isAllowedBook(name)
+        // The shared editor's default destination follows the active workspace.
+        const name = target === '__memory__' ? nexusName : target;
+        return isExistingLorebookName(name) && isAllowedBook(name)
             ? [{ ...item, lorebookName: name, inNexus: name === nexusName }] : [];
     });
 }
