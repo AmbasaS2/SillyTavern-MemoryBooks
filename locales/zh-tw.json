@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "原始 Scene",
   "STMemoryBooks_SlothMergeCombined": "預計合併的 Scene",
   "STMemoryBooks_SlothMergeApprove": "下載 Memory JSON 並核准儲存",
-  "STMemoryBooks_SlothMergeSaved": "已將審核後的 Scene 合併儲存至 Memory。原始紀錄已封存，沒有隱藏聊天訊息。"
+  "STMemoryBooks_SlothMergeSaved": "已將審核後的 Scene 合併儲存至 Memory。原始紀錄已封存，沒有隱藏聊天訊息。",
+  "STMemoryBooks_SlothEvidenceWhy": "修改理由",
+  "STMemoryBooks_SlothEvidenceSource": "原始訊息依據",
+  "STMemoryBooks_SlothNexusOnlyReview": "僅更新 Nexus 目前狀態",
+  "STMemoryBooks_SlothNexusOnlyGuide": "沒有已完成的 Scene。請核對原始訊息引文與修改內容，並在核准前備份完整 Nexus JSON。Memory 與聊天保持不變。",
+  "STMemoryBooks_SlothNexusOnlySaved": "已將審核過的目前狀態變更儲存至 Nexus。Memory 和聊天訊息未更動。"
 }

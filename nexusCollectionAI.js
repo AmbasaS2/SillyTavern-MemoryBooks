@@ -6,6 +6,7 @@ import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
 import { oai_settings } from '../../../openai.js';
 import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollectionPolicy.js';
+import { validateGroundedNexusEdits, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 
 function parseStrictJSON(raw,phase) {
@@ -111,8 +112,43 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
         throw new Error('Scene '+event.id+' returned invalid content or keywords.');
     return {...event,title:event.title,content:response.content,keywords:response.keywords};
 }
-export async function proposeSlothNexusEdits({scenes,nexus,profile,settings,signal=null}) {
+
+/**
+ * For a long chat, use separate evidence-only windows rather than silently
+ * dropping old or deferred messages from the current-state reconciliation.
+ * Exact quotes remain verifiable against each original window on return.
+ */
+async function nexusStateEvidenceFor(messages, ask) {
+    const windows=groupSlothSourceWindows(messages,18000);
+    if(windows.length===1) return compact(messages);
+    const evidence=[];
+    for(const window of windows) {
+        const a=window[0].id,b=window.at(-1).id;
+        const raw=await ask([
+            'Extract ONLY durable character/world changes and currently live or completed conditions.',
+            'Use direct text evidence, not narrative extrapolation. Include explicitly resolved',
+            'injuries, promises, secrecy, knowledge changes, relationship changes, NPC details,',
+            'and still-active threads. Silence and a date passing are NOT proof of resolution.',
+            'Return STRICT JSON {"evidence":[{"messageId":NUMBER,"quote":"exact substring of',
+            'the original message, 8-400 chars","meaning":"grounded observation or report"}]}.',
+            'Each quote MUST occur VERBATIM in the message with that exact ID.',
+            'Maximum 40 items. If none are material, return {"evidence":[]}.',
+            'Do not infer a merged event ending from a window boundary.',
+            'Original messages in window '+a+'-'+b+':',compact(window),
+        ].join('\n\n'),'Nexus state evidence '+a+'-'+b);
+        evidence.push({window:[a,b],
+            evidence:validateSlothNexusWindowEvidence(raw,window)});
+    }
+    const payload=JSON.stringify(evidence);
+    if(payload.length>85000) {
+        throw new Error('Grounded Nexus evidence is too large for a safe single update. Nothing saved.');
+    }
+    return payload;
+}
+
+export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null}) {
     const ask=requester(profile,settings,signal);
+    const groundedSource=await nexusStateEvidenceFor(messages,ask);
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const protectedEntry=!!e.disable || Number(e.position)===7 ||
             !!String(e.outletName||'').trim() ||
@@ -127,6 +163,14 @@ export async function proposeSlothNexusEdits({scenes,nexus,profile,settings,sign
     const prompt=[
         'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
         'STRICT JSON {"edits":[...]} only. Empty edits is allowed. Preserve every untouched fact.',
+        'Every edit MUST include "reason":"specific source-backed change" and',
+        '"evidence":[{"messageId":NUMBER,"quote":"8-400 character exact substring of message"}].',
+        'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
+        'A quote proves that text was said, not that an interpretation is correct.',
+        'For continuity replace_exact ALSO include "supersession":',
+        '"observed_resolution|observed_correction|explicit_retraction|new_confirmed_information".',
+        'Never remove an old state just because a date passed or no one mentioned it.',
+        'For a reported state, clearly attribute who reported it; do not present it as observed fact.',
         'Supported edits: {"kind":"core|continuity|lt|npc|npc-index","action":"replace_exact",',
         '"uid":NUMBER,"find":"exact existing substring","text":"minimal replacement"};',
         '{"kind":"core|lt|npc|npc-index","action":"append","uid":NUMBER,"text":"one grounded addition"};',
@@ -148,11 +192,18 @@ export async function proposeSlothNexusEdits({scenes,nexus,profile,settings,sign
         'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
         'Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
             title:s.title,result:s.result,content:s.content,segments:s.segments}))),
+        'Approved event classifications:',JSON.stringify({
+            events:(plan?.events||[]).map(x=>({title:x.title,segments:x.segments})),
+            deferred:(plan?.deferred||[]).map(x=>({reason:x.reason,segments:x.segments})),
+        }),
+        'Deferred source is still visible; use it to assess ongoing state without',
+        'claiming a deferred or uncertain incident is complete.',
+        'Current-chat original grounded evidence (exact message IDs):',groundedSource,
         'Current Nexus entries (exact UIDs):',source
     ].join('\n\n');
     const response=await ask(prompt,'Nexus delta');
     if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
-    return response.edits;
+    return validateGroundedNexusEdits(response.edits,messages);
 }
 
 /**

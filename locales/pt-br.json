@@ -1663,5 +1663,10 @@
   "STMemoryBooks_SlothMergeOriginals": "Scenes originais",
   "STMemoryBooks_SlothMergeCombined": "Scene mesclada proposta",
   "STMemoryBooks_SlothMergeApprove": "Baixar JSON de Memory e aprovar",
-  "STMemoryBooks_SlothMergeSaved": "Fusão revisada salva em Memory. O original foi arquivado; nenhuma mensagem do chat foi ocultada."
+  "STMemoryBooks_SlothMergeSaved": "Fusão revisada salva em Memory. O original foi arquivado; nenhuma mensagem do chat foi ocultada.",
+  "STMemoryBooks_SlothEvidenceWhy": "Motivo da alteração",
+  "STMemoryBooks_SlothEvidenceSource": "Evidências das mensagens originais",
+  "STMemoryBooks_SlothNexusOnlyReview": "Atualizar apenas o estado atual de Nexus",
+  "STMemoryBooks_SlothNexusOnlyGuide": "Nenhuma Scene foi concluída. Revise as citações e alterações, faça backup do JSON completo de Nexus e só então aprove. Memory e o chat não serão alterados.",
+  "STMemoryBooks_SlothNexusOnlySaved": "As alterações revisadas do estado atual foram salvas em Nexus. Memory e o chat não foram alterados."
 }

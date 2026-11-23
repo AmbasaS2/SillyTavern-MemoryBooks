@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "원본 Scene",
   "STMemoryBooks_SlothMergeCombined": "병합 예정 Scene",
   "STMemoryBooks_SlothMergeApprove": "Memory JSON 백업 후 저장 승인",
-  "STMemoryBooks_SlothMergeSaved": "검토한 Scene 병합안을 Memory에 저장했습니다. 원본은 보관했고 채팅 메시지는 숨기지 않았습니다."
+  "STMemoryBooks_SlothMergeSaved": "검토한 Scene 병합안을 Memory에 저장했습니다. 원본은 보관했고 채팅 메시지는 숨기지 않았습니다.",
+  "STMemoryBooks_SlothEvidenceWhy": "변경 이유",
+  "STMemoryBooks_SlothEvidenceSource": "원본 메시지 근거",
+  "STMemoryBooks_SlothNexusOnlyReview": "Nexus 현재 상태만 갱신",
+  "STMemoryBooks_SlothNexusOnlyGuide": "완료된 Scene이 없습니다. 원본 메시지 인용과 변경 내용을 검토하고 Nexus 전체 JSON을 백업한 후 승인해야 Nexus만 바뀝니다. Memory와 채팅은 그대로 둡니다.",
+  "STMemoryBooks_SlothNexusOnlySaved": "현재 상태 변경을 Nexus에 저장했습니다. Memory와 채팅 메시지는 바꾸지 않았습니다."
 }

@@ -139,6 +139,8 @@ export function stageNexusEdits(original, edits, createEntry) {
         if(title==='Current Continuity')requireThat(kind==='continuity','Continuity kind mismatch.');
         const text=str(op.text);
         requireThat(text,'Nexus edit has empty text.');
+        if(action!=='replace_exact')requireThat(!before.includes(text),
+            'Nexus addition already exists; refusing a repeated append.');
         if(action==='replace_exact'){
             const find=str(op.find);
             requireThat(find && before.split(find).length===2,'Nexus exact text does not match uniquely: '+title);
@@ -152,6 +154,7 @@ export function stageNexusEdits(original, edits, createEntry) {
         }
         if(kind==='continuity')guardContinuityChange(before,entry.content,
             {action,section:op.section});
+        requireThat(entry.content!==before,'Nexus edit made no change; refusing a no-op save.');
         changes.push({action,kind,title,uid,before,after:entry.content});
     }
     return {staged,changes};

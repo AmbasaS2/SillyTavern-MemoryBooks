@@ -125,3 +125,25 @@ No manifest/version bump, main merge, live lorebook write or new ZIP release bef
 - Isolated VPS tests: **425 Node tests: 423 PASS, 2 pre-existing upstream FAIL** ('stmbJobsProgress.test.js' / 'createViewSort is not defined'). New candidate, UI wiring/translation, pre-existing archive and single-book commit tests pass; Bun browser bundle + sourcemap, JS syntax and Git diff whitespace check pass.
 - Unverified release blockers: real ST chat/AI provider and permission flow, popup rendering/backup browser download, full original-chat comparison for merge quality, STLO/canonical complex references, concurrent Lore Manager editing, desktop/Termux/mobile. Keep PR #1 Draft. Do not change manifest/version, merge main or ship ZIP before field QA.
 - Rollback point: db494b57291a0717907e880407608fcdf164fb08 on development branch, before this slice.
+
+
+## 2026-11-23 · Grounded Nexus continuity updates + deferred-only collection (development slice, NO release)
+
+### Observed defect and cause
+
+- The manual collector sent the *generated completed Scene drafts* and Nexus entries to its AI delta planner, but did not show it the **original uncollected chat or deferred/ongoing incidents**. Current Continuity could therefore miss real continuing injuries, unresolved promises or newly disclosed secrets, and any returned delta was checked for exact text but not for original-chat citations.
+- If the event planner returned **zero completed Scenes**, the collector exited immediately and never offered an explicitly reviewed Nexus-only current-state update, even when continuing conditions had source-backed changes.
+
+### Narrow implementation
+
+- Added 'nexusEditEvidence.js': verifies each Nexus delta's message ID, verbatim 8–400-character quote and specific reason against original source messages; Current Continuity 'replace_exact' also requires a stated observed resolution/correction/retraction or confirmed new information. A quote is evidence of what was said, **not proof that the model's inference is correct**. Unsupported/missing evidence fails closed. Does not modify World Info.
+- 'nexusCollectionAI.js' now receives *the approved event/deferred classifications and original chat messages* when planning Nexus changes. For longer sources, it separately extracts source-quote-bearing evidence windows with exact-ID verification rather than dropping earlier or ongoing messages. Never invents closure merely because a window or date ended.
+- 'nexusCollectorRuntime.js' shows each Nexus change with the reason and source quote(s) in the second approval screen, and includes their review receipts in the original JSON backup. When the event analysis finds no completed Scene, it can propose, preview, back up and explicitly approve an **isolated Nexus-only** change through the already-tested single-book optimistic commit/readback/conditional recovery path. It neither modifies Memory nor advances the per-chat Scene collection ledger or Hide boundary.
+- 'nexusCollectionPolicy.js' refuses exact duplicate append content and no-op replacements to avoid repeated state accumulation. No rewriting of old legacy source blocks, side-prompt templates, canonical/STLO data, unrelated entries, manifest or main.
+- Added 'nexusEditEvidence.test.js', 'nexusGroundedUpdateIntegration.test.js' and five small UI translation keys in each of 11 supported non-English locales. English source strings are included in UI JS; en*.json intentionally left untouched per upstream AGENTS.md.
+
+### Verification, known limitations and rollback
+
+- Isolated VPS Node suite: **435 tests, 433 PASS and the same two pre-existing upstream FAIL** in 'stmbJobsProgress.test.js' ('createViewSort is not defined'). Targeted source-evidence and Nexus-only mock-save tests PASS; JS syntax, Bun browser bundle and sourcemap, 26 locale JSON parse and Git whitespace checks PASS.
+- Runtime still **not tested** on an actual SillyTavern Windows/Termux instance, real model responses, mobile popup or STLO/lore-manager simultaneous writes. Direct quotes are validated but model *interpretations* still require human review. Large model contexts and source windows can fail closed; no truncation or guaranteed two-request count. Legacy verbatim archive text has not been semantically restructured into canonical current state. Scene splitting, initial two-book creation and full clean UI remain pending.
+- All changes are developer-branch only. No version/manifest bump, main merge, release ZIP or user World Info modification. Rollback point: **bb97c52b5b8c68aac1648a3054341c6e0114fa7d**.

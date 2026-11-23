@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "元のScene",
   "STMemoryBooks_SlothMergeCombined": "統合予定のScene",
   "STMemoryBooks_SlothMergeApprove": "MemoryのJSONを保存して承認",
-  "STMemoryBooks_SlothMergeSaved": "確認済みのScene統合をMemoryに保存しました。原文は保管され、チャットは非表示にしていません。"
+  "STMemoryBooks_SlothMergeSaved": "確認済みのScene統合をMemoryに保存しました。原文は保管され、チャットは非表示にしていません。",
+  "STMemoryBooks_SlothEvidenceWhy": "変更の理由",
+  "STMemoryBooks_SlothEvidenceSource": "元のメッセージによる根拠",
+  "STMemoryBooks_SlothNexusOnlyReview": "Nexusの現在の状態だけを更新",
+  "STMemoryBooks_SlothNexusOnlyGuide": "完結したSceneはありません。元のメッセージの引用と変更内容を確認し、NexusのJSON全体をバックアップしてから承認してください。Memoryとチャットは変更されません。",
+  "STMemoryBooks_SlothNexusOnlySaved": "確認した現在の状態をNexusに保存しました。Memoryとチャットは変更していません。"
 }

@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "Originalszenen",
   "STMemoryBooks_SlothMergeCombined": "Vorgeschlagene zusammengeführte Szene",
   "STMemoryBooks_SlothMergeApprove": "Memory-JSON sichern und Speichern bestätigen",
-  "STMemoryBooks_SlothMergeSaved": "Geprüfte Szenen-Zusammenführung in Memory gespeichert. Das Original ist archiviert; keine Chatnachrichten wurden ausgeblendet."
+  "STMemoryBooks_SlothMergeSaved": "Geprüfte Szenen-Zusammenführung in Memory gespeichert. Das Original ist archiviert; keine Chatnachrichten wurden ausgeblendet.",
+  "STMemoryBooks_SlothEvidenceWhy": "Grund der Änderung",
+  "STMemoryBooks_SlothEvidenceSource": "Belege aus ursprünglichen Chatnachrichten",
+  "STMemoryBooks_SlothNexusOnlyReview": "Nur den aktuellen Nexus-Status aktualisieren",
+  "STMemoryBooks_SlothNexusOnlyGuide": "Es liegt keine abgeschlossene Szene vor. Prüfe die ursprünglichen Zitate und die Änderungen und sichere das vollständige Nexus-JSON vor der Freigabe. Memory und Chat bleiben unverändert.",
+  "STMemoryBooks_SlothNexusOnlySaved": "Die überprüften aktuellen Informationen wurden in Nexus gespeichert. Memory und Chat wurden nicht geändert."
 }

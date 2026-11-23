@@ -1,0 +1,62 @@
+// Copyright (C) 2026 AmbasaS2
+// SPDX-License-Identifier: AGPL-3.0-only
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateSlothNexusWindowEvidence,validateGroundedNexusEdits} from './nexusEditEvidence.js';
+
+const source=[
+    {id:10,name:'A',mes:'I sent the letter to B and received a reply.',is_user:false},
+    {id:14,name:'B',mes:'I told A about the secret in person.',is_user:false},
+    {id:18,name:'A',mes:'My injured wrist still hurts today.',is_user:false},
+];
+const quote=(messageId,quote)=>[{messageId,quote}];
+const change={
+    kind:'continuity',action:'replace_exact',uid:2,find:'The letter is unanswered.',
+    text:'A received B’s reply.',supersession:'observed_resolution',
+    reason:'A explicitly confirmed receiving a response to the letter.',
+    evidence:quote(10,'I sent the letter to B and received a reply.'),
+};
+test('exact source receipts allow scoped updates without changing user inputs',()=>{
+    const original=structuredClone(change);
+    const edits=validateGroundedNexusEdits([change],source);
+    assert.deepEqual(edits,[change]);assert.deepEqual(change,original);
+    assert.equal(edits[0].evidence[0].messageId,10);
+});
+test('the model cannot cite invented quotes, other chat IDs or uncertain fragments',()=>{
+    for(const evidence of [
+        quote(11,'I sent the letter to B and received a reply.'),
+        quote(10,'The letter was delivered to B.'),
+        quote(10,'letter'),
+        [],
+        [{messageId:'10',quote:'I sent the letter to B and received a reply.'}],
+    ])assert.throws(()=>validateGroundedNexusEdits([{...change,evidence}],source),/evidence|quote|source/);
+});
+test('current state replacement needs an explicit confirmed supersession and a reason',()=>{
+    for(const supersession of [undefined,'mere_absence','assumed_resolution']){
+        assert.throws(()=>validateGroundedNexusEdits([{...change,supersession}],source),/superseded/);
+    }
+    assert.throws(()=>validateGroundedNexusEdits([{...change,reason:'it changed'}],source),/specific reason/);
+    assert.throws(()=>validateGroundedNexusEdits([{...change,text:''}],source),/cannot erase/);
+});
+test('additions cite exact deferred messages, including unresolved current conditions',()=>{
+    const op={kind:'continuity',action:'append_section',uid:2,section:'Active Conditions',
+        text:'A is still injured.',reason:'A reports the injury is ongoing in their latest message.',
+        evidence:quote(18,'My injured wrist still hurts today.')};
+    assert.deepEqual(validateGroundedNexusEdits([op],source),[op]);
+    assert.deepEqual(validateGroundedNexusEdits([],source),[]);
+});
+test('window evidence summaries cannot forge source text',()=>{
+    const input={evidence:[{messageId:14,
+        quote:'I told A about the secret in person.',
+        meaning:'B explicitly informed A; the prior secrecy is now resolved.'}]};
+    assert.deepEqual(validateSlothNexusWindowEvidence(input,source),input.evidence);
+    assert.throws(()=>validateSlothNexusWindowEvidence({
+        evidence:[{...input.evidence[0],quote:'A independently guessed the secret.'}]},source),/quote/);
+    assert.throws(()=>validateSlothNexusWindowEvidence({
+        evidence:[{...input.evidence[0],meaning:''}]},source),/meaning/);
+});
+test('duplicate or malformed input IDs fail before any edits',()=>{
+    assert.throws(()=>validateGroundedNexusEdits([change],[...source,source[0]]),/repeated/);
+    assert.throws(()=>validateGroundedNexusEdits([change],[]),/original chat/);
+    assert.throws(()=>validateGroundedNexusEdits([null],source),/invalid/);
+});

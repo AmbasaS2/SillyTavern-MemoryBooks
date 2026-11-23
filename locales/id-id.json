@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "Scene asli",
   "STMemoryBooks_SlothMergeCombined": "Usulan Scene gabungan",
   "STMemoryBooks_SlothMergeApprove": "Unduh JSON Memory dan setujui penyimpanan",
-  "STMemoryBooks_SlothMergeSaved": "Penggabungan Scene yang ditinjau telah disimpan di Memory. Aslinya diarsipkan; tidak ada pesan chat yang disembunyikan."
+  "STMemoryBooks_SlothMergeSaved": "Penggabungan Scene yang ditinjau telah disimpan di Memory. Aslinya diarsipkan; tidak ada pesan chat yang disembunyikan.",
+  "STMemoryBooks_SlothEvidenceWhy": "Alasan perubahan",
+  "STMemoryBooks_SlothEvidenceSource": "Bukti pesan asli",
+  "STMemoryBooks_SlothNexusOnlyReview": "Perbarui hanya keadaan Nexus saat ini",
+  "STMemoryBooks_SlothNexusOnlyGuide": "Belum ada Scene yang selesai. Tinjau kutipan asli serta perubahannya, lalu cadangkan JSON Nexus lengkap sebelum menyetujui. Memory dan chat tetap sama.",
+  "STMemoryBooks_SlothNexusOnlySaved": "Perubahan keadaan saat ini tersimpan di Nexus setelah ditinjau. Memory dan chat tidak diubah."
 }

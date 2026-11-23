@@ -1666,5 +1666,10 @@
   "STMemoryBooks_SlothMergeOriginals": "Исходные сцены",
   "STMemoryBooks_SlothMergeCombined": "Предлагаемая объединённая сцена",
   "STMemoryBooks_SlothMergeApprove": "Скачать JSON Memory и подтвердить сохранение",
-  "STMemoryBooks_SlothMergeSaved": "Проверенное объединение сохранено в Memory. Оригинал заархивирован; сообщения чата не скрывались."
+  "STMemoryBooks_SlothMergeSaved": "Проверенное объединение сохранено в Memory. Оригинал заархивирован; сообщения чата не скрывались.",
+  "STMemoryBooks_SlothEvidenceWhy": "Причина изменения",
+  "STMemoryBooks_SlothEvidenceSource": "Доказательства из исходных сообщений",
+  "STMemoryBooks_SlothNexusOnlyReview": "Обновить только текущий статус Nexus",
+  "STMemoryBooks_SlothNexusOnlyGuide": "Нет завершённой сцены. Проверьте цитаты из исходных сообщений и изменения, затем скачайте полный JSON Nexus перед подтверждением. Memory и чат не меняются.",
+  "STMemoryBooks_SlothNexusOnlySaved": "Проверенные изменения текущего состояния сохранены в Nexus. Memory и чат не изменены."
 }

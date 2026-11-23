@@ -134,15 +134,20 @@ async function planApproval(plan) {
     return validateNexusEventPlan(raw,plan.sourceIds);
 }
 
-function downloadSafetyBackup(states,ref,plan) {
+function downloadSafetyBackup(states,ref,plan,reviewedChanges=[]) {
     const stamp=new Date().toISOString().replace(/[:.]/g,'-');
     const documentData={
-        type:'SillyTavern Sloth two-book pre-commit backup',
+        type:states.length===1?'SillyTavern Sloth Nexus-only pre-commit backup':
+            'SillyTavern Sloth two-book pre-commit backup',
         timestamp:new Date().toISOString(),chatRef:ref,plan:{
             events:plan.events.map(e=>({title:e.title,segments:e.segments})),
             deferred:plan.deferred.map(e=>({segments:e.segments,reason:e.reason})),
         },
         originals:Object.fromEntries(states.map(s=>[s.name,s.original])),
+        nexusEvidence:reviewedChanges.map(change=>({
+            kind:change.kind,action:change.action,uid:change.uid,
+            reason:change.reason,evidence:change.evidence,
+        })),
     };
     const blob=new Blob([stringify(documentData)],{type:'application/json;charset=utf-8'});
     const url=URL.createObjectURL(blob);
@@ -157,11 +162,26 @@ async function draftApproval({scenes,changes,plan,states,ref}) {
         html(readableSegments(scene.segments))+'</summary><pre>'+html(scene.content)+'</pre></details>').join('');
     const delta=changes.map(change=>
         '<details class="stmb-sloth-detail"><summary>'+html(change.action)+' · '+
-        html(change.title)+'</summary><p>'+html('BEFORE')+'</p><pre>'+html(change.before)+'</pre>'+
+        html(change.title)+'</summary><p><strong>'+
+        html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
+        ':</strong> '+html(change.reason)+'</p><p><strong>'+
+        html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
+        ':</strong></p><ul>'+
+        (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
+            ' · '+html(item.quote)+'</li>').join('')+'</ul>'+
+        '<p>'+html('BEFORE')+'</p><pre>'+html(change.before)+'</pre>'+
         '<p>'+html('AFTER')+'</p><pre>'+html(change.after)+'</pre></details>').join('');
+    const nexusOnly=scenes.length===0 && states.length===1;
+    const heading=nexusOnly
+        ?t('Review Nexus current-state updates','STMemoryBooks_SlothNexusOnlyReview')
+        :t('Review Memory and Nexus edits','STMemoryBooks_SlothReviewDraft');
+    const guide=nexusOnly
+        ?t('No Scene is complete. Only the selected Nexus lorebook will change after you review exact source quotes and download its full original JSON. Memory and chat messages will not change.',
+            'STMemoryBooks_SlothNexusOnlyGuide')
+        :t('Both World Info books will change only after approval. A JSON backup will be downloaded first. No messages are hidden.',
+            'STMemoryBooks_SlothSaveGuide');
     const body='<div class="stmb-sloth-review"><h3>'+
-        html(t('Review Memory and Nexus edits','STMemoryBooks_SlothReviewDraft'))+'</h3><p>'+
-        html(t('Both World Info books will change only after approval. A JSON backup will be downloaded first. No messages are hidden.','STMemoryBooks_SlothSaveGuide'))+
+        html(heading)+'</h3><p>'+html(guide)+
         '</p><h4>Memory · '+scenes.length+'</h4>'+pieces+
         '<h4>Nexus · '+changes.length+'</h4>'+(delta||'<p>No Nexus changes proposed.</p>')+
         (plan.deferred.length?'<p>'+html(t('Unfinished source remains in chat. It will not be marked collected.','STMemoryBooks_SlothDeferredNote'))+'</p>':'')+
@@ -172,7 +192,7 @@ async function draftApproval({scenes,changes,plan,states,ref}) {
         okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
         customButtons:[{text:t('Download backup and approve save','STMemoryBooks_SlothBackupApprove'),
             result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
-            action:()=>{downloadSafetyBackup(states,ref,plan);downloaded=true;}}]});
+            action:()=>{downloadSafetyBackup(states,ref,plan,changes);downloaded=true;}}]});
     markStmbPopup(popup);
     const result=await popup.show();
     return result===POPUP_RESULT.CUSTOM1 && downloaded;
@@ -439,9 +459,43 @@ export async function runNexusCollector({profileIndex}={}) {
         const plan=await analyzeSlothEvents({messages:source,profile,settings,characterContext});
         assertOrigin(ref,roleNames,sourceIds,fingerprint);
         if(!plan.events.length){
-            toastr.info(t('There are no completed events to collect yet. Nothing was changed.',
-                'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
-            return {saved:false,reason:'no-complete-events'};
+            // An unfinished event cannot become a Scene, but its confirmed
+            // current state may still need an explicitly reviewed Nexus delta.
+            // Never advance the collected-message ledger or touch Memory here.
+            const edits=await proposeSlothNexusEdits({
+                scenes:[],nexus:originalBooks.nexus,messages:source,
+                plan,profile,settings,
+            });
+            assertOrigin(ref,roleNames,sourceIds,fingerprint);
+            if(!edits.length){
+                toastr.info(t('There are no completed events to collect yet. Nothing was changed.',
+                    'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
+                return {saved:false,reason:'no-complete-events-or-deltas'};
+            }
+            const nexus=stageNexusEdits(originalBooks.nexus,edits,
+                book=>createWorldInfoEntry(roleNames.nexus,book));
+            const state={name:roleNames.nexus,original:originalBooks.nexus,staged:nexus.staged};
+            const changes=nexus.changes.map((change,index)=>({
+                ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
+            }));
+            const accepted=await draftApproval({
+                scenes:[],changes,plan,states:[state],ref,
+            });
+            if(!accepted)return {saved:false,reason:'nexus-only-cancelled'};
+            assertOrigin(ref,roleNames,sourceIds,fingerprint);
+            const result=await commitSlothNexusMigration(state,{
+                loadFresh:loadServerWorld,
+                save:(name,book)=>saveWorldInfo(name,book,true),
+                withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+                verifyOrigin:()=>assertOrigin(ref,roleNames,sourceIds,fingerprint),
+                resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+                operation:'Nexus current-state update',
+            });
+            try{await Promise.resolve(reloadEditor(roleNames.nexus));}
+            catch(error){console.warn('Sloth Nexus-only editor refresh failed',error);}
+            toastr.success(t('Reviewed current-state updates saved to Nexus. Memory and chat messages were not changed.',
+                'STMemoryBooks_SlothNexusOnlySaved'),'🦥 STMemoryBooks');
+            return {saved:true,scenes:0,nexusEdits:nexus.changes.length,result};
         }
         const approved=await planApproval(plan);
         if(!approved)return {saved:false,reason:'plan-cancelled'};
@@ -454,7 +508,8 @@ export async function runNexusCollector({profileIndex}={}) {
             assertOrigin(ref,roleNames,sourceIds,fingerprint);
         }
         const edits=await proposeSlothNexusEdits({
-            scenes,nexus:originalBooks.nexus,profile,settings});
+            scenes,nexus:originalBooks.nexus,messages:source,
+            plan:approved,profile,settings});
         assertOrigin(ref,roleNames,sourceIds,fingerprint);
         if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
             toastr.info(t('Checking for missed or misattributed details...',
@@ -473,7 +528,9 @@ export async function runNexusCollector({profileIndex}={}) {
             {name:roleNames.nexus,original:originalBooks.nexus,staged:nexus.staged},
         ];
         const accepted=await draftApproval({
-            scenes,changes:nexus.changes,plan:approved,states,ref});
+            scenes,changes:nexus.changes.map((change,index)=>({
+                ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
+            })),plan:approved,states,ref});
         if(!accepted)return {saved:false,reason:'draft-cancelled'};
         assertOrigin(ref,roleNames,sourceIds,fingerprint);
         const outcome=await commitSlothBooks(states,{
