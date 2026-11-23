@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
+import { selectSlothRepairKeywords } from './nexusSlothScenePrompt.js';
+
+test('keyword-only repair keeps five usable candidates in model order', () => {
+    const candidates = [' door ', 'DOOR', 'one two three four five six seven',
+        'promise', 'empty cup', 'the crossing', 'ribbon', 'gate', 'letter', 'bell'];
+    assert.deepEqual(selectSlothRepairKeywords(candidates),
+        ['door', 'promise', 'empty cup', 'the crossing', 'ribbon']);
+    assert.throws(() => selectSlothRepairKeywords(candidates.slice(0, 5)), /five distinct/);
+});
 
 const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
 const from=source.indexOf('function parseStrictJSON('),to=source.indexOf('\nfunction resolveConnection(',from);
@@ -59,7 +68,7 @@ test('long original source requires the active model context and a successful to
 });
 
 test('window extraction keeps a verified quote from a source ID omitted from the proposed range', async () => {
-    const start = source.indexOf('async function requestWindowEvidence(');
+    const start = source.indexOf('async function requestValidatedDraft(');
     const end = source.indexOf('async function evidenceFor(', start);
     const collectEvidence = vm.runInNewContext(source.slice(start, end) + '\nwindowEvidence', {
         compact: JSON.stringify, validateSlothEventWindowEvidence,
@@ -75,9 +84,35 @@ test('window extraction keeps a verified quote from a source ID omitted from the
     assert.deepEqual(checked.events[0].evidence, event.evidence);
     assert.deepEqual(checked.events[0].sourceRanges, [[0,0],[1,1]]);
     let attempts = 0;
-    await assert.rejects(collectEvidence(messages, async () => {
+    const fallback = await collectEvidence(messages, async () => {
         attempts++;
         return { events: [{ ...event, evidence: [{ messageId: 0, quote: 'An invented bell quote' }] }] };
-    }), /missing from original/);
+    });
     assert.equal(attempts, 2);
+    assert.equal(JSON.stringify(fallback.originalMessages),JSON.stringify(messages));
+    assert.equal(fallback.events,undefined);
+});
+
+test('a draft with overlapping message ownership gets one corrective request, provider failures do not',async()=>{
+    const start=source.indexOf('async function requestValidatedDraft(');
+    const end=source.indexOf('\nasync function windowEvidence(',start);
+    const checked=vm.runInNewContext(source.slice(start,end)+'\nrequestValidatedDraft');
+    const requests=[];
+    const validate=raw=>{
+        if (raw.duplicate) throw new Error('Message #72 is already assigned.');
+        return raw;
+    };
+    const result=await checked('Original source','Event plan',async prompt=>{
+        requests.push(prompt);
+        return {duplicate:requests.length===1};
+    },validate,'Give every message one owner.');
+    assert.deepEqual(result,{duplicate:false});
+    assert.equal(requests.length,2);
+    assert.match(requests[1],/Message #72 is already assigned\.[\s\S]*Give every message one owner/);
+    let attempts=0;
+    await assert.rejects(checked('Original source','Scene',async()=>{
+        attempts++;
+        throw new Error('Provider unavailable');
+    },validate,'Use the required headings.'),/Provider unavailable/);
+    assert.equal(attempts,1);
 });

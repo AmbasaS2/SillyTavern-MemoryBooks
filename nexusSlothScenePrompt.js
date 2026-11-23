@@ -81,10 +81,19 @@ export const SLOTH_SCENE_PROMPT_V13 = [
 const outputContractStart = SLOTH_SCENE_PROMPT_V13.indexOf('# Output contract');
 const writingRulesStart = SLOTH_SCENE_PROMPT_V13.indexOf('# What to preserve');
 export const SLOTH_SCENE_OUTPUT_CONTRACT = SLOTH_SCENE_PROMPT_V13.slice(outputContractStart, writingRulesStart).trim();
-export const SLOTH_DEFAULT_SUMMARY_PROMPT = SLOTH_SCENE_PROMPT_V13.slice(writingRulesStart).trim()
-    .replace(' The five keyword families are distinct, and the JSON parses with exactly three fields.', ' The five keyword families are distinct.');
+export const SLOTH_DEFAULT_SUMMARY_PROMPT = [
+    "# What to preserve",
+    "Write one self-contained scene memory in connected past-tense prose. Preserve causality, who knew and did what, why it mattered, and the exact stopping point. A simple event can be short. Keep meaningful character voice and concrete recall cues. Compress decoration, routine logistics, repetition and interchangeable details.",
+    "Timeline. Use every directly narrated story date in the selected event, including an earlier date in its first message. A date mentioned in a report or memory does not extend Timeline. Use Unknown when no date is supported.",
+    "Agency and knowledge. Keep proposer, accepter, chooser and executor distinct. Name the chosen route, method, owner or object when it explains the outcome. Keep direct experience, private thought, hearsay and inference separate. Preserve consequential nested relays in attributed prose, e.g. “A told B that C had heard the news from D.” D was the source, not necessarily the subject of the news. Do not invent access, motives, an intermediary or someone who agreed. Retain original names or a consistent transliteration.",
+    "Commitments. Keep each material promise, request, refusal, boundary, precondition, counterterm, finite offer and chooser-owned exception. Attach it to its maker, addressee and response. Keep successive stages distinct: unanswered, heard, permitted, accepted or declined, committed, enacted. An unused permission does not imply a choice. Keep accountability, acceptance and explicit forgiveness distinct.",
+    "Care and contact. Preserve what was offered, supplied, applied or consumed, still prescribed, and finished. Keep each consequential touch in order, including actor, surface, awareness, concealment and exact release. Preserve who or what was in hand, inside or outside, open or closed at the handoff when it matters.",
+    "Scene ending. Weave in short literal English quotes that establish a boundary, decision, correction, secret, joke or change in relationship. Render other languages as accurately attributed English prose. End on the final configuration and meaningful utterance with its speaker, stated reason and unanswered choice, if any. Do not supply a later answer or outcome. Keep the Scene within 650 words.",
+    "Result. One past-tense sentence naming the single defining completed consequence and its actors. An open concern or secondary beat stays in Scene.",
+    "Keywords. Five distinct literal English cues, 1–6 words each. Prefer specific phrases a character could naturally use later. Balance a commitment, object, bodily cue, hidden act, place, action or distinctive line as available. Use at most two dialogue fragments. Do not use whole descriptive clauses.",
+].join('\n\n');
 
-export function validateSlothSceneResponse(response) {
+export function validateSlothSceneBody(response) {
     const keys = Object.keys(response);
     const parts = typeof response.content === 'string' && response.content.trim().match(
         /^\*\*Timeline\*\*:\s*([^\n]+)\r?\n\s*\*\*Scene\*\*\s*\r?\n([\s\S]+?)\r?\n\s*\*\*Result\*\*\s*\r?\n([^\n]+)$/,
@@ -96,13 +105,29 @@ export function validateSlothSceneResponse(response) {
     if (parts[2].trim().split(/\s+/u).length > 650) {
         throw new Error('Scene exceeds the original 650-word limit. Nothing saved.');
     }
-    return {content: response.content.trim(), keywords: validateSlothSceneKeywords(response.keywords)};
+    return response.content.trim();
+}
+
+export function validateSlothSceneResponse(response) {
+    return {content: validateSlothSceneBody(response), keywords: validateSlothSceneKeywords(response.keywords)};
+}
+
+const isRecallPhrase = key => typeof key === 'string' && key.trim() && key.trim().split(/\s+/u).length <= 6;
+
+export function selectSlothRepairKeywords(candidates) {
+    const picked=new Map();
+    for (const candidate of Array.isArray(candidates)?candidates:[]) {
+        if (!isRecallPhrase(candidate)) continue;
+        const text=candidate.trim();
+        if (!picked.has(text.toLowerCase())) picked.set(text.toLowerCase(),text);
+        if (picked.size===5) break;
+    }
+    return validateSlothSceneKeywords([...picked.values()]);
 }
 
 export function validateSlothSceneKeywords(value) {
     const keywords = Array.isArray(value) ? value : [];
-    if (keywords.length !== 5 || keywords.some(key => typeof key !== 'string' ||
-        !key.trim() || key.trim().split(/\s+/u).length > 6) ||
+    if (keywords.length !== 5 || keywords.some(key => !isRecallPhrase(key)) ||
         new Set(keywords.map(key => key.trim().toLowerCase())).size !== 5) {
         throw new Error('Scene needs five distinct recall keywords, each one to six words. Nothing saved.');
     }

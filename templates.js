@@ -15,13 +15,13 @@ export const settingsTemplate = Handlebars.compile(`
           {{/if}}
         </header>
         <div class="stmb-workspace-tabs" role="tablist" aria-label="Memory Books" data-i18n="[aria-label]STMemoryBooks_Settings">
-          <button type="button" id="stmb-sloth-tab" role="tab" aria-selected="true" aria-controls="stmb-sloth-panel" data-stmb-workspace-tab="sloth" data-i18n="STMemoryBooks_SlothTab">Sloth system</button>
+          <button type="button" id="stmb-sloth-tab" role="tab" aria-selected="true" aria-controls="stmb-sloth-panel" data-stmb-workspace-tab="sloth">For 게으름뱅이 🦥</button>
           <button type="button" id="stmb-original-tab" role="tab" aria-selected="false" aria-controls="stmb-original-panel" tabindex="-1" data-stmb-workspace-tab="original" data-i18n="STMemoryBooks_OriginalTab">Original Memory Books</button>
         </div>
         <section id="stmb-sloth-panel" class="stmb-tab-panel" role="tabpanel" aria-labelledby="stmb-sloth-tab">
         {{#unless isGroupChat}}
-        <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
-          <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">Lorebook setup</h3>
+        <details id="stmb-sloth-lorebooks" open class="stmb-sloth-roles stmb-box stmb-workspace-drawer" aria-labelledby="stmb-sloth-roles-title">
+          <summary id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">Lorebook setup</summary>
           {{#if slothCharacterAvailable}}
             {{#if slothLinkedBooksAvailable}}
               {{#unless slothRoleActive}}
@@ -102,20 +102,20 @@ export const settingsTemplate = Handlebars.compile(`
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}
-        </section>
+        </details>
         {{else}}
           <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose an individual character chat to connect lorebooks.</p>
         {{/unless}}
         {{#if slothCharacterAvailable}}
-        <section class="stmb-workspace-panel" aria-labelledby="stmb-sloth-settings-title">
-          <h3 id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</h3>
+        <details id="stmb-sloth-collection-settings" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
+          <summary id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</summary>
         <div class="world_entry_form_control">
             <label for="stmb-sloth-profile-select" data-i18n="STMemoryBooks_SlothAIModule">Memory collection AI</label>
             <select id="stmb-sloth-profile-select" class="text_pole">
                 {{#if slothConnectionProfileMissing}}
                 <option value="st:{{slothConnectionProfileId}}" selected disabled data-i18n="STMemoryBooks_MissingConnectionProfile">Missing connection profile</option>
                 {{/if}}
-                {{#each profiles}}
+                {{#each slothProfiles}}
                 <option value="{{@index}}" {{#unless @root.slothConnectionProfileId}}{{#if isSlothProfile}}selected{{/if}}{{/unless}}>{{name}}</option>
                 {{/each}}
                 {{#if slothConnectionProfiles}}
@@ -127,10 +127,8 @@ export const settingsTemplate = Handlebars.compile(`
                 {{/if}}
             </select>
         </div>
-        <div class="stmb-sloth-controls">
-          <button type="button" class="menu_button" data-stmb-sloth-action="prompt-settings" data-i18n="STMemoryBooks_SlothPromptSettings">Collection prompt</button>
-        </div>
-        </section>
+        <div data-stmb-prompt-library-slot="summary"></div>
+        </details>
         {{/if}}
         {{#if slothCanCollect}}
         <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
@@ -141,16 +139,16 @@ export const settingsTemplate = Handlebars.compile(`
           </div>
         </section>
         {{/if}}
-        <section class="stmb-workspace-panel" aria-labelledby="stmb-sloth-side-title">
-          <h3 id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</h3>
+        <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
+          <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
           <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Choose a saved event and a Side Prompt when you want to update it.</p>
+          <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
-            <button type="button" class="menu_button" data-stmb-sloth-action="side-prompt-settings" data-i18n="STMemoryBooks_SlothSidePromptSettings">Side Prompt settings</button>
             {{#if slothRoleActive}}
             <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Update Side Prompt</button>
             {{/if}}
           </div>
-        </section>
+        </details>
         {{#if slothRoleActive}}
           <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
@@ -176,6 +174,12 @@ export const settingsTemplate = Handlebars.compile(`
               <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
               <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to Send</span>
             </label>
+            <label for="stmb-sloth-composer-icon" class="stmb-sloth-inline-field">
+              <span data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
+              <select id="stmb-sloth-composer-icon" class="text_pole">
+                {{#each slothComposerIcons}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>{{/each}}
+              </select>
+            </label>
             <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
               <span data-i18n="STMemoryBooks_SlothHideRecent">Recent messages to keep visible</span>
               <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
@@ -191,6 +195,7 @@ export const settingsTemplate = Handlebars.compile(`
 
         </section>
         <section id="stmb-original-panel" class="stmb-tab-panel stmb-original-panel" role="tabpanel" aria-labelledby="stmb-original-tab" hidden>
+        {{#if showOriginalSettings}}
         <details class="stmb-help-drawer info-block hint">
             <summary>
                 <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
@@ -386,6 +391,7 @@ export const settingsTemplate = Handlebars.compile(`
             </div>
         </div>
 
+        {{/if}}
         <div class="stmb-original-actions" id="stmb-original-actions"></div>
         </section>
     </div>

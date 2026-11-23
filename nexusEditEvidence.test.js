@@ -73,6 +73,16 @@ test('added terminal punctuation is removed only when the exact remaining quote 
         evidence:[{...raw.evidence[0],quote:'She left the opened letter on the table.'}],
     },messages),/missing from original/);
 });
+
+test('quote presentation can be recovered only as a unique literal source span',()=>{
+    const meaning='The question was said in this scene.';
+    const original='그는 말했다. “그 열쇠를\r\n돌려줄래?” 그녀가 고개를 끄덕였다.';
+    const raw={evidence:[{messageId:11,quote:'"그 열쇠를 돌려줄래?"',meaning}]};
+    const validate=mes=>validateSlothNexusWindowEvidence(raw,[{id:11,mes}]);
+    assert.equal(validate(original)[0].quote,'“그 열쇠를\r\n돌려줄래?”');
+    assert.throws(()=>validate(original+' '+original),/missing from original/);
+    assert.throws(()=>validate(original.replace('돌려줄래','버려줄래')),/missing from original/);
+});
 test('duplicate or malformed input IDs fail before any edits',()=>{
     assert.throws(()=>validateGroundedNexusEdits([change],[...source,source[0]]),/repeated/);
     assert.throws(()=>validateGroundedNexusEdits([change],[]),/original chat/);

@@ -72,7 +72,7 @@ import {
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression } from './nexusCollectorRuntime.js';
-import { showSlothCollectionPrompts, showSlothSidePromptSettings } from './slothSettingsDialogs.js';
+import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
@@ -591,6 +591,15 @@ const STLO_EXTENSION_KEYS = new Set([
   "st-lorebookordering",
   "stlo",
 ]);
+const SLOTH_COMPOSER_ICONS = Object.freeze({
+  otter: ['Otter','SlothIconOtter'],
+  paw: ['Paw print','SlothIconPaw'],
+  inbox: ['Inbox','SlothIconInbox'],
+  'box-archive': ['Archive box','SlothIconArchive'],
+  'layer-group': ['Stacked cards','SlothIconLayers'],
+});
+const getSlothComposerIcon = settings => Object.hasOwn(SLOTH_COMPOSER_ICONS,settings?.moduleSettings?.slothComposerIcon)
+  ? settings.moduleSettings.slothComposerIcon : 'otter';
 const MEMORY_BOUNDARY_MODES = Object.freeze({
   OFF: "",
   DIVIDER: "divider",
@@ -11014,6 +11023,72 @@ function initializeSettingsPopupSelect2(popupInstance = currentPopupInstance) {
   }, 0);
 }
 
+function buildSlothTemplateData(settings) {
+  const sloth = getActiveNexusRoleContext(settings);
+  const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
+  const slothRoleNexus = getCurrentNexusRoleResolution('nexus', settings);
+  const slothChatRef = getCurrentStmbChatRef();
+  const slothChatOverrideAvailable = !!sloth.character &&
+    slothChatRef?.type === 'character' &&
+    slothChatRef.avatarUrl === sloth.character.avatar &&
+    !!String(slothChatRef.fileName || '').trim();
+  const slothChatOverride = slothChatOverrideAvailable
+    ? getNexusChatRoleOverride(settings.nexusChatRoleOverrides, slothChatRef, getStmbChatKey(slothChatRef))
+    : null;
+  const slothSelectedRoles = slothChatOverride && !slothChatOverride.invalid
+    ? slothChatOverride : sloth.assigned;
+  const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
+  const slothFirstSetup = canStartNexusSetup(slothChatRef, settings);
+  const {stConnectionProfileId,profileIndex:slothProfileIndex} = getSlothProfileConfiguration(settings);
+  const slothConnectionProfiles = listChatCompletionProfiles(globalThis.SillyTavern?.getContext?.())
+    .map(({ id, name, model }) => ({ id, name, model, selected: id === stConnectionProfileId }));
+  const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
+  const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
+  const roleOptions = (role) => sloth.linkedBooks.map(name => ({
+    name,
+    selected: slothSelectedRoles[role] === name,
+    disabled: slothSelectedRoles[role === 'nexus' ? 'memory' : 'nexus'] === name,
+  }));
+  return {
+    isGroupChat: slothChatRef?.type === 'group',
+    slothMemoryName: slothRoleMemory.name,
+    slothProfiles: settings.profiles.map((profile, index) => ({
+      name: profile.isBuiltinCurrentST ? translate('Current SillyTavern Settings','STMemoryBooks_Profile_CurrentST') : profile.name,
+      isSlothProfile: index === slothProfileIndex,
+    })),
+    slothRoleActive,
+    slothFirstSetup,
+    slothCanCollect: slothRoleActive || slothFirstSetup,
+    slothConnectionProfiles,
+    slothConnectionProfileId: stConnectionProfileId,
+    slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
+    slothComposerIcons: Object.entries(SLOTH_COMPOSER_ICONS).map(([id,[label,key]])=>({
+      id,title:translate(label,'STMemoryBooks_'+key),selected:id===getSlothComposerIcon(settings),
+    })),
+    slothHideRecent: normalizeSlothVisibleTail(settings.moduleSettings.slothHideRecent),
+    slothMissingCompanion: getSlothCompanion(slothChatRef, settings)?.missingRole,
+    slothProfileEditable: !stConnectionProfileId && !!settings.profiles[slothProfileIndex] && !settings.profiles[slothProfileIndex].isBuiltinCurrentST,
+    slothConnectionProfileMissing: !!stConnectionProfileId && !slothConnectionProfiles.some(profile => profile.selected),
+    slothSharedBook: [slothRoleMemory.state, slothRoleNexus.state].includes('shared'),
+    slothCharacterAvailable: !!sloth.character,
+    slothCharacterName: sloth.character?.name,
+    slothChatOverrideAvailable: slothChatOverrideAvailable && (sloth.linkedBooks.length >= 2 || !!slothChatOverride),
+    slothChatOverrideActive: !!slothChatOverride,
+    slothChatOverrideInvalid: !!slothChatOverride?.invalid,
+    slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
+    slothRoleChoicesAvailable: sloth.linkedBooks.length > 0 || unlinkedBooks.length > 0,
+    slothHasWorldBooks: sloth.worldNames.length > 0,
+    slothLinkedBooksOnly,
+    slothUnlinkedBooks: unlinkedBooks,
+    slothNexusRoleOptions: roleOptions('nexus'),
+    slothMemoryRoleOptions: roleOptions('memory'),
+    slothNexusMissing: !!slothSelectedRoles.nexus && !sloth.linkedBooks.includes(slothSelectedRoles.nexus),
+    slothMemoryMissing: !!slothSelectedRoles.memory && !sloth.linkedBooks.includes(slothSelectedRoles.memory),
+    slothNexusMissingName: slothSelectedRoles.nexus,
+    slothMemoryMissingName: slothSelectedRoles.memory,
+  };
+}
+
 async function buildSettingsTemplateData({ includeSidePromptSets = false } = {}) {
   const settings = initializeSettings();
   await SummaryPromptManager.firstRunInitIfMissing(settings);
@@ -11057,35 +11132,11 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     markers: sceneMarkers || {},
   }).lorebookName;
   const memoryBooksContext = getCurrentMemoryBooksContext();
-  const sloth = getActiveNexusRoleContext(settings);
-  const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
-  const slothRoleNexus = getCurrentNexusRoleResolution('nexus', settings);
-  const slothChatRef = getCurrentStmbChatRef();
-  const slothChatOverrideAvailable = !!sloth.character &&
-    slothChatRef?.type === 'character' &&
-    slothChatRef.avatarUrl === sloth.character.avatar &&
-    !!String(slothChatRef.fileName || '').trim();
-  const slothChatOverride = slothChatOverrideAvailable
-    ? getNexusChatRoleOverride(settings.nexusChatRoleOverrides, slothChatRef, getStmbChatKey(slothChatRef))
-    : null;
-  const slothSelectedRoles = slothChatOverride && !slothChatOverride.invalid
-    ? slothChatOverride : sloth.assigned;
-  const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
-  const slothFirstSetup = canStartNexusSetup(slothChatRef, settings);
-  const {stConnectionProfileId,profileIndex:slothProfileIndex} = getSlothProfileConfiguration(settings);
-  const slothConnectionProfiles = listChatCompletionProfiles(globalThis.SillyTavern?.getContext?.())
-    .map(({ id, name, model }) => ({ id, name, model, selected: id === stConnectionProfileId }));
+  const slothData = buildSlothTemplateData(settings);
   const sceneData = await getSceneData({
     includeHiddenMessages: !!settings.moduleSettings.unhideBeforeMemory,
     warnOnHiddenMessages: false,
   });
-  const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
-  const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
-  const roleOptions = (role) => sloth.linkedBooks.map(name => ({
-    name,
-    selected: slothSelectedRoles[role] === name,
-    disabled: slothSelectedRoles[role === 'nexus' ? 'memory' : 'nexus'] === name,
-  }));
   const narratorConfig = !memoryBooksContext.isGroupChat ? getCurrentNarratorConfig() : null;
   if (!isManualMode && narratorConfig?.enabled) {
     narratorConfig.enabled = false;
@@ -11173,35 +11224,10 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
       settings.moduleSettings.maxTokens ?? DEFAULT_MAX_TOKENS,
 
     // Lorebook status information
-    lorebookMode: slothRoleActive ? '🦥 게으름뱅이' : (isManualMode ? "Manual" : "Automatic (Chat-bound)"),
-    currentLorebookName: slothRoleActive ? slothRoleMemory.name : (isManualMode ? manualLorebook : chatBoundLorebook),
-    slothRoleActive,
-    slothFirstSetup,
-    slothCanCollect: slothRoleActive || slothFirstSetup,
-    slothConnectionProfiles,
-    slothConnectionProfileId: stConnectionProfileId,
-    slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
-    slothHideRecent: normalizeSlothVisibleTail(settings.moduleSettings.slothHideRecent),
-    slothMissingCompanion: getSlothCompanion(slothChatRef, settings)?.missingRole,
-    slothProfileEditable: !stConnectionProfileId && !!settings.profiles[slothProfileIndex] && !settings.profiles[slothProfileIndex].isBuiltinCurrentST,
-    slothConnectionProfileMissing: !!stConnectionProfileId && !slothConnectionProfiles.some(profile => profile.selected),
-    slothSharedBook: [slothRoleMemory.state, slothRoleNexus.state].includes('shared'),
-    slothCharacterAvailable: !!sloth.character,
-    slothCharacterName: sloth.character?.name,
-    slothChatOverrideAvailable: slothChatOverrideAvailable && (sloth.linkedBooks.length >= 2 || !!slothChatOverride),
-    slothChatOverrideActive: !!slothChatOverride,
-    slothChatOverrideInvalid: !!slothChatOverride?.invalid,
-    slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
-    slothRoleChoicesAvailable: sloth.linkedBooks.length > 0 || unlinkedBooks.length > 0,
-    slothHasWorldBooks: sloth.worldNames.length > 0,
-    slothLinkedBooksOnly,
-    slothUnlinkedBooks: unlinkedBooks,
-    slothNexusRoleOptions: roleOptions('nexus'),
-    slothMemoryRoleOptions: roleOptions('memory'),
-    slothNexusMissing: !!slothSelectedRoles.nexus && !sloth.linkedBooks.includes(slothSelectedRoles.nexus),
-    slothMemoryMissing: !!slothSelectedRoles.memory && !sloth.linkedBooks.includes(slothSelectedRoles.memory),
-    slothNexusMissingName: slothSelectedRoles.nexus,
-    slothMemoryMissingName: slothSelectedRoles.memory,
+    ...slothData,
+    showOriginalSettings: true,
+    lorebookMode: slothData.slothRoleActive ? '🦥 게으름뱅이' : (isManualMode ? "Manual" : "Automatic (Chat-bound)"),
+    currentLorebookName: slothData.slothRoleActive ? slothData.slothMemoryName : (isManualMode ? manualLorebook : chatBoundLorebook),
     manualLorebookName: manualLorebook,
     chatBoundLorebookName: chatBoundLorebook,
     availableLorebooks: world_names ?? [],
@@ -11247,7 +11273,6 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
             )
           : profile.name,
       isDefault: index === settings.defaultProfile,
-      isSlothProfile: index === slothProfileIndex,
     })),
     titleFormat: defaultProfileTitleFormat,
     // Regex selection UI
@@ -11300,10 +11325,7 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
 async function showSettingsPopup() {
   if (currentPopupInstance?.dlg.open) return;
   const settings = initializeSettings();
-  const title = escapeHtml(translate('📕 Memory Books','STMemoryBooks_Settings'));
-  const loading = escapeHtml(translate('Loading settings…','STMemoryBooks_SlothLoading'));
-  const content = `<div class="stmb-workspace"><header class="stmb-workspace-header"><h2>${title}</h2></header>
-    <p class="stmb-sloth-loading" role="status">${loading}</p><div id="stmb-original-actions" hidden></div></div>`;
+  const content = DOMPurify.sanitize(settingsTemplate(buildSlothTemplateData(settings)));
 
   // Build customButtons array dynamically based on current state
   const customButtons = [];
@@ -11389,13 +11411,14 @@ async function showSettingsPopup() {
     );
     currentPopupInstance = popup;
     markStmbPopup(popup);
+    popup.dlg.classList.add('stmb-memorybooks-workspace');
     popup.content.querySelector('#stmb-original-actions')?.append(...popup.dlg.querySelectorAll('.stmb-original-action'));
     setupSettingsEventListeners(popup);
+    const heading = popup.content.querySelector('.stmb-workspace-header h2');
+    heading.tabIndex = -1;
+    heading.setAttribute('autofocus', '');
     const showing = popup.show();
-    // Give the dialog a paint before the original settings and token estimates load.
-    requestAnimationFrame(() => setTimeout(() => {
-      if (currentPopupInstance === popup && popup.dlg.open) void refreshPopupContent({firstRender:true});
-    },0));
+    mountSlothPromptLibraries(popup.content,settings);
     await showing;
   } catch (error) {
     console.error("STMemoryBooks: Error showing settings popup:", error);
@@ -11481,6 +11504,18 @@ function syncGroupSettingsControls(popupElement) {
   );
 }
 
+function mountSlothPromptLibraries(content,settings) {
+  const summary=content.querySelector('[data-stmb-prompt-library-slot="summary"]');
+  if(summary&&!summary.firstElementChild) mountSlothCollectionPrompts(summary,settings);
+  const side=content.querySelector('[data-stmb-prompt-library-slot="side"]');
+  if(!side||side.firstElementChild||side.dataset.stmbMounting) return;
+  side.dataset.stmbMounting='true';
+  void mountSlothSidePromptSettings(side).catch(error=>{
+    console.warn('STMemoryBooks: Could not open Side Prompt presets.',error);
+    side.textContent=translate('Settings could not load. Close and reopen Memory Books.','STMemoryBooks_SlothLoadingFailed');
+  }).finally(()=>{delete side.dataset.stmbMounting;});
+}
+
 function getSlothProfileConfiguration(settings) {
   const saved = settings.profiles.findIndex(profile => profile.name === settings.moduleSettings.slothProfileName);
   return {
@@ -11508,22 +11543,29 @@ async function runSlothCollectionEntryPoint() {
   return '';
 }
 
-function syncSlothComposerButton(settings = initializeSettings()) {
+function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   const existing = document.getElementById('stmb-sloth-composer');
   const ref = getCurrentStmbChatRef();
   const send = document.querySelector('#rightSendForm #send_but');
-  if (!send || ref?.type !== 'character' || !ref.fileName || settings.moduleSettings.slothComposerEnabled === false) {
+  if (!send || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
     existing?.remove();
     return;
   }
-  if (existing) return;
+  const icon = getSlothComposerIcon(settings);
+  if (existing) {
+    existing.firstElementChild.className = 'fa-solid fa-'+icon;
+    return;
+  }
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'stmb-sloth-composer';
   const label = translate('Collect memories','STMemoryBooks_SlothCollectionTitle');
   button.title = label;
   button.setAttribute('aria-label', label);
-  button.textContent = translate('Collect','STMemoryBooks_SlothComposerLabel');
+  const glyph = document.createElement('i');
+  glyph.className = 'fa-solid fa-'+icon;
+  glyph.setAttribute('aria-hidden','true');
+  button.append(glyph);
   button.addEventListener('click', async () => {
     button.disabled = true;
     try { await runSlothCollectionEntryPoint(); }
@@ -11545,8 +11587,6 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
     followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
     compress: () => runSlothSceneCompression({ profileIndex, stConnectionProfileId }),
-    'prompt-settings': () => showSlothCollectionPrompts(settings),
-    'side-prompt-settings': () => showSlothSidePromptSettings(),
     'side-prompt-advanced': () => showSidePromptsPopup({slothNexusName:getCurrentNexusRoleResolution('nexus',settings).name}),
     'new-profile': async () => {
       const count = settings.profiles.length;
@@ -11604,7 +11644,22 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   const popupElement = popupInstance.dlg;
   syncGroupSettingsControls(popupElement);
   let originalSettingsPrepared = false;
-  const activateTab = (name,focus=false) => {
+  let loadingOriginal = false;
+  let requestedTab = 'sloth';
+  const activateTab = async (name,focus=false) => {
+    requestedTab = name;
+    if (name === 'original' && !popupElement.dataset.stmbOriginalLoaded) {
+      if (loadingOriginal) return;
+      loadingOriginal = true;
+      popupElement.querySelector('#stmb-original-tab')?.setAttribute('aria-busy','true');
+      try {
+        const rendered = await refreshPopupContent({loadOriginal:true});
+        if (!rendered || requestedTab !== name) return;
+      } finally {
+        loadingOriginal = false;
+        popupElement.querySelector('#stmb-original-tab')?.removeAttribute('aria-busy');
+      }
+    }
     selectMemoryBooksWorkspaceTab(popupElement,name,focus);
     popupInstance.content.scrollTop = 0;
     if (name !== 'original' || originalSettingsPrepared) return;
@@ -11622,14 +11677,14 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     e.preventDefault();
     const name = e.key === 'Home' ? 'sloth' : e.key === 'End' ? 'original' :
       (tab.dataset.stmbWorkspaceTab === 'sloth' ? 'original' : 'sloth');
-    activateTab(name,true);
+    void activateTab(name,true);
   });
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
     const tab = e.target.closest?.('[data-stmb-workspace-tab]');
     if (tab) {
-      activateTab(tab.dataset.stmbWorkspaceTab);
+      await activateTab(tab.dataset.stmbWorkspaceTab);
       return;
     }
     const settings = initializeSettings();
@@ -11753,6 +11808,13 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
     if (e.target.matches('#stmb-sloth-composer-enabled')) {
       settings.moduleSettings.slothComposerEnabled = e.target.checked;
+      syncSlothComposerButton(settings);
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('#stmb-sloth-composer-icon')) {
+      if (!Object.hasOwn(SLOTH_COMPOSER_ICONS,e.target.value)) return;
+      settings.moduleSettings.slothComposerIcon=e.target.value;
       syncSlothComposerButton(settings);
       await saveSettings();
       return;
@@ -12802,36 +12864,45 @@ function handleSettingsFormPopupClose(popup) {
  * Handle main settings popup close.
  */
 function handleSettingsPopupClose(popup) {
-  handleSettingsFormPopupClose(popup);
+  if (popup.dlg.dataset.stmbOriginalLoaded) handleSettingsFormPopupClose(popup);
   currentPopupInstance = null;
 }
 
 /**
  * Refresh popup content while preserving popup properties
  */
-async function refreshPopupContent({firstRender=false} = {}) {
+async function refreshPopupContent({loadOriginal=false} = {}) {
   const popup = currentPopupInstance;
   if (!popup?.dlg.hasAttribute("open")) {
     return;
   }
 
   try {
-    if (!firstRender) persistMainPopupSettings(popup.dlg);
+    if (popup.dlg.dataset.stmbOriginalLoaded) persistMainPopupSettings(popup.dlg);
     const settings = initializeSettings();
-    const templateData = await buildSettingsTemplateData();
+    const content = popup.content;
+    const activeTab = content.querySelector('[data-stmb-workspace-tab][aria-selected="true"]')?.dataset.stmbWorkspaceTab;
+    const includeOriginal = loadOriginal || activeTab === 'original';
+    const original = includeOriginal ? await buildSettingsTemplateData() : {};
     if (popup !== currentPopupInstance || !popup.dlg.hasAttribute('open')) return;
+    const templateData = { ...original, ...buildSlothTemplateData(settings) };
     const newHtml = DOMPurify.sanitize(settingsTemplate(templateData));
 
     // Update the popup content directly
-    const content = popup.content;
     const originalActions = [...content.querySelectorAll('.stmb-original-action')];
+    const promptLibraries = Array.from(content.querySelectorAll('[data-stmb-prompt-library-slot]'));
     const drawers = [...content.querySelectorAll('details[id]')].map(drawer => [drawer.id, drawer.open]);
-    const activeTab = content.querySelector('[data-stmb-workspace-tab][aria-selected="true"]')?.dataset.stmbWorkspaceTab;
     const focusedId = content.contains(document.activeElement) ? document.activeElement.id : '';
     const scrollTop = content.scrollTop;
     currentPopupInstance.content.innerHTML = newHtml;
+    if (includeOriginal) popup.dlg.dataset.stmbOriginalLoaded = 'true';
+    else delete popup.dlg.dataset.stmbOriginalLoaded;
     applyLocale(currentPopupInstance.content);
     content.querySelector('#stmb-original-actions')?.append(...originalActions);
+    for (const promptLibrary of promptLibraries) {
+      content.querySelector(`[data-stmb-prompt-library-slot="${promptLibrary.dataset.stmbPromptLibrarySlot}"]`)?.replaceWith(promptLibrary);
+    }
+    mountSlothPromptLibraries(content,settings);
     if (activeTab) selectMemoryBooksWorkspaceTab(content, activeTab);
     for (const [id, open] of drawers) {
       const drawer = content.querySelector('#' + CSS.escape(id));
@@ -12860,14 +12931,16 @@ async function refreshPopupContent({firstRender=false} = {}) {
     currentPopupInstance.content.style.overflowY = "auto";
 
     // Repopulate profile buttons after content refresh
-    populateInlineButtons();
-    initializeSettingsPopupSelect2(currentPopupInstance);
-    syncGroupSettingsControls(popup.dlg);
+    if (includeOriginal) {
+      populateInlineButtons();
+      initializeSettingsPopupSelect2(currentPopupInstance);
+      syncGroupSettingsControls(popup.dlg);
+    }
+    return true;
   } catch (error) {
     console.error("STMemoryBooks: Error refreshing popup content:", error);
-    if (firstRender) {
-      const status = popup.content.querySelector('.stmb-sloth-loading');
-      if (status) status.textContent = translate('Settings could not load. Close and reopen Memory Books.','STMemoryBooks_SlothLoadingFailed');
+    if (loadOriginal && popup === currentPopupInstance && popup.dlg.open) {
+      toastr.error(translate('Settings could not load. Close and reopen Memory Books.','STMemoryBooks_SlothLoadingFailed'),'STMemoryBooks');
     }
   }
 }

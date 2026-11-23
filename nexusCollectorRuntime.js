@@ -655,8 +655,8 @@ export async function runSlothSceneCompression({ profileIndex, stConnectionProfi
         let next;
         try { next=await compressSlothScene({entry,amount,focus,profile,settings,verifyOrigin}); }
         catch (cause) {
-            if (!['STMB_SLOTH_COMPRESSION_FORMAT','STMB_SLOTH_MALFORMED_JSON'].includes(cause.code)) throw cause;
-            throw new Error(t('The draft did not match the requested length or format. Try another length.','STMemoryBooks_SlothCompressInvalid'),{cause});
+            if (!['STMB_SLOTH_COMPRESSION_FORMAT','STMB_SLOTH_COMPRESSION_VOICE','STMB_SLOTH_MALFORMED_JSON'].includes(cause.code)) throw cause;
+            throw new Error(t('The draft did not meet the selected compression conditions. Try another length.','STMemoryBooks_SlothCompressInvalid'),{cause});
         }
         const compare = (label,text) => `<div><p>${html(label)}</p><pre>${html(text)}</pre></div>`;
         const originalParts=getCompressibleScene(entry);

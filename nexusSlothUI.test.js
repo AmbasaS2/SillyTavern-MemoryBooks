@@ -47,9 +47,10 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     const html=file('./templates.js');
     const sloth=html.slice(0,html.indexOf('id="stmb-original-panel" class='));
     assert.match(sloth,/STMemoryBooks_SlothNoBooksYet/);
-    for(const action of ['companion','prompt-settings','side-prompt-settings','new-profile','edit-profile','followup','merge','split']) {
+    for(const action of ['companion','new-profile','edit-profile','followup','merge','split']) {
         assert.ok(sloth.includes('data-stmb-sloth-action="'+action+'"'),action);
     }
+    for(const slot of ['summary','side']) assert.ok(sloth.includes('data-stmb-prompt-library-slot="'+slot+'"'));
     assert.match(sloth,/id="stmb-sloth-linked-books-only"/);
     assert.match(source,/slothLinkedBooksOnly \? \[\] : sloth\.worldNames\.filter/);
     assert.match(html,/data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton"/);

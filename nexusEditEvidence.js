@@ -16,6 +16,33 @@ function indexSource(messages) {
     }
     return byId;
 }
+
+const normalizeQuotePunctuation = text => text.replace(/[‘’]/g,"'").replace(/[“”]/g,'"');
+
+function recoverLiteralQuote(source, quote) {
+    const candidates = [quote, quote.replace(/[.,!?;:…，。！？；：]+$/u,'').trimEnd()];
+    for (const candidate of candidates) {
+        if (candidate.length >= 8 && source.includes(candidate)) return candidate;
+    }
+    // Some providers regularize curly quotes or the whitespace of prose.
+    // Accept this only when it identifies one unique contiguous original span.
+    let normalized = '';
+    const starts = [], ends = [];
+    for (const {0:part,index} of source.matchAll(/\s+|./g)) {
+        normalized += /^\s/u.test(part) ? ' ' : normalizeQuotePunctuation(part);
+        starts.push(index);
+        ends.push(index+part.length);
+    }
+    for (const candidate of candidates) {
+        const comparable = normalizeQuotePunctuation(candidate).replace(/\s+/gu,' ');
+        if (comparable.length < 8) continue;
+        const offset = normalized.indexOf(comparable);
+        if (offset >= 0 && normalized.indexOf(comparable,offset+1) === -1) {
+            return source.slice(starts[offset],ends[offset+comparable.length-1]);
+        }
+    }
+    return '';
+}
 function verifyEvidence(items,source,label) {
     assert(Array.isArray(items) && items.length>=1 && items.length<=8,
         label+' requires one to eight direct source quotes.');
@@ -24,12 +51,8 @@ function verifyEvidence(items,source,label) {
             typeof entry.quote==='string' && entry.quote===entry.quote.trim() &&
             entry.quote.length>=8 && entry.quote.length<=400,
             label+' evidence '+(index+1)+' needs an exact, short source quote and message ID.');
-        const message=source.get(entry.messageId);
-        // Models sometimes end a verbatim excerpt with their own punctuation.
-        // Keep only text that exists verbatim in the claimed source message.
-        const literal = message?.mes.includes(entry.quote)
-            ? entry.quote : entry.quote.replace(/[.,!?;:…，。！？；：]+$/u, '').trimEnd();
-        assert(literal.length>=8 && message?.mes.includes(literal),
+        const literal = recoverLiteralQuote(source.get(entry.messageId)?.mes ?? '',entry.quote);
+        assert(literal.length>=8 && literal.length<=400,
             label+' cites a quote missing from original message #'+entry.messageId+'.');
         return {messageId:entry.messageId,quote:literal};
     });

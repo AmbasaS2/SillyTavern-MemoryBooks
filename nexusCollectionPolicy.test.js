@@ -4,6 +4,15 @@ import {validateNexusEventPlan,parseReviewedSegments,groupSlothSourceWindows,
   fingerprintSlothChat,stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
 
 const messages=Array.from({length:10},(_,id)=>({id,name:'A',mes:'message '+id}));
+test('one owner per listed message produces disjoint source ranges across gaps',()=>{
+  const payload={events:[{title:'Lantern returned',reason:'The keeper received it',result:'It was returned',complete:true}],
+    deferred:[{reason:'The spare is still missing'}],owners:['e1','d1','e1','e1']};
+  const result=validateNexusEventPlan(payload,[4,5,7,8]);
+  assert.deepEqual(result.events[0].segments,[[4,4],[7,8]]);
+  assert.deepEqual(result.deferred[0].segments,[[5,5]]);
+  assert.throws(()=>validateNexusEventPlan({...payload,owners:['e1','d1']},[4,5,7,8]),/exactly one owner/);
+  assert.throws(()=>validateNexusEventPlan({...payload,owners:['e1','d1','d2','e1']},[4,5,7,8]),/Unknown scene owner/);
+});
 const plan={
   events:[{title:'Argument and repair',complete:true,reason:'same cause and reconciliation',
     result:'The two apologized',segments:[[0,2],[5,7]]},

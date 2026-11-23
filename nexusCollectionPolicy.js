@@ -45,6 +45,25 @@ export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = fal
     requireThat(Array.isArray(raw.events), 'Analysis events must be an array.');
     const allowed = new Set(sourceIds), assigned = new Map(), events = [], deferred = [];
     requireThat(allowed.size === sourceIds.length && sourceIds.every(Number.isSafeInteger), 'Invalid source IDs.');
+    let eventRows=raw.events, deferredRows=raw.deferred||[];
+    if (Object.hasOwn(raw,'owners')) {
+        requireThat(Array.isArray(deferredRows) && Array.isArray(raw.owners) && raw.owners.length===sourceIds.length,
+            'Return exactly one owner for every original message in order.');
+        const byOwner=new Map([
+            ...eventRows.map((_,index)=>['e'+(index+1),[]]),
+            ...deferredRows.map((_,index)=>['d'+(index+1),[]]),
+        ]);
+        for (const [index,owner] of raw.owners.entries()) {
+            requireThat(byOwner.has(owner),'Unknown scene owner at original message #'+sourceIds[index]+'.');
+            byOwner.get(owner).push(sourceIds[index]);
+        }
+        const withRanges=(rows,prefix)=>rows.flatMap((row,index)=>{
+            const ids=byOwner.get(prefix+(index+1));
+            return ids.length ? [{...row,segments:slothSourceRanges(ids)}] : [];
+        });
+        eventRows=withRanges(eventRows,'e');
+        deferredRows=withRanges(deferredRows,'d');
+    }
     function ranges(segments, owner) {
         requireThat(Array.isArray(segments) && segments.length, owner + ': source ranges required.');
         const ids = [];
@@ -62,7 +81,7 @@ export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = fal
         requireThat(ids.length <= sourceIds.length, owner + ': source overflow.');
         return { segments:segments.map(pair=>[...pair]), messageIds:ids };
     }
-    for (const [i,item] of raw.events.entries()) {
+    for (const [i,item] of eventRows.entries()) {
         const title = str(item?.title), reason = str(item?.reason), result=str(item?.result);
         requireThat(title && title.length<=180 && reason && result && item.complete === true,
             'Event '+(i+1)+' must have title, causal boundary reason and completed result.');
@@ -70,7 +89,7 @@ export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = fal
         events.push({ id:'event-'+(i+1), title, reason, result,...data,
             start:data.messageIds[0],end:data.messageIds.at(-1) });
     }
-    for (const [i,item] of (raw.deferred || []).entries()) {
+    for (const [i,item] of deferredRows.entries()) {
         requireThat(str(item?.reason), 'Deferred '+(i+1)+' needs a reason.');
         deferred.push({reason:str(item.reason),...ranges(item.segments,'deferred '+(i+1))});
     }

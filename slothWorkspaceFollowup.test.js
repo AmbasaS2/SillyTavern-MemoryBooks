@@ -57,3 +57,12 @@ test('compression changes only text within Scene, keeps the original once and va
     assert.equal(getCompressibleScene({...entry,disable:true}),null);
     assert.throws(()=>stageSlothSceneCompression(entry,{scene:'Wrong'},short.target),/length or format/);
 });
+
+test('compression keeps a short nonfinal quote when voice was explicitly selected',()=>{
+    const scene='Avi said, “Even the stairs have alibis.” Mira gave Avi a key and told him to return it by dawn. He agreed, kept his route choice, and stepped aside. At the closed door, Mira asked “Who will you tell about the letter?” Avi remained silent.';
+    const {target,voiceCues}=getSlothCompressionInstructions(scene,55,['voice']);
+    assert.deepEqual(voiceCues,['Even the stairs have alibis.']);
+    const entry={content:`**Timeline**: Unknown\n\n**Scene**\n${scene}\n\n**Result**\nMira gave Avi the key.`};
+    assert.throws(()=>stageSlothSceneCompression(entry,{scene:'Mira gave Avi the key. He agreed to return it by dawn and kept his route choice. She asked whom he would tell.'},target,voiceCues),/selected short voice cue/);
+    assert.ok(stageSlothSceneCompression(entry,{scene:'“Even the stairs have alibis,” Avi joked. He agreed to return Mira’s key by dawn.'},target,voiceCues).content);
+});
