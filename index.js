@@ -612,6 +612,8 @@ const defaultSettings = {
     unhiddenEntriesCount: 2,
     ...MEMORY_REMINDER_DEFAULTS,
     autoSummaryEnabled: false,
+    nexusSceneRotationEnabled: false,
+    nexusOlderSceneMode: "vector",
     autoSummaryInterval: 50,
     autoSummaryTriggerMode: 'messages',
     autoSummaryTokenThreshold: 4000,
@@ -11036,6 +11038,8 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     autoRollbackRestorePreviousSidePrompts:
       settings.moduleSettings.autoRollbackRestorePreviousSidePrompts !== false,
     showMemoryPreviews: settings.moduleSettings.showMemoryPreviews,
+    nexusSceneRotationEnabled: settings.moduleSettings.nexusSceneRotationEnabled === true,
+    nexusOlderSceneMode: settings.moduleSettings.nexusOlderSceneMode === "keyword" ? "keyword" : "vector",
     showConsolidationPreviews: settings.moduleSettings.showConsolidationPreviews,
     showNotifications: settings.moduleSettings.showNotifications,
     showFloatingClipButton: settings.moduleSettings.showFloatingClipButton !== false,
@@ -11445,6 +11449,17 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     for (const [selector, settingKey] of Object.entries(rollbackSettingBySelector)) {
       if (!e.target.matches(selector)) continue;
       settings.moduleSettings[settingKey] = e.target.checked;
+      saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-nexus-scene-rotation")) {
+      settings.moduleSettings.nexusSceneRotationEnabled = e.target.checked;
+      saveSettingsDebounced();
+      return;
+    }
+    if (e.target.matches("#stmb-nexus-older-scene-mode")) {
+      settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
       saveSettingsDebounced();
       return;
     }
@@ -12030,6 +12045,11 @@ function persistMainPopupSettings(popupElement) {
       popupElement.querySelector("#stmb-auto-rollback-restore-side-prompts")?.checked ??
       settings.moduleSettings.autoRollbackRestorePreviousSidePrompts,
   };
+  const nexusSceneRotationEnabled =
+    popupElement.querySelector("#stmb-nexus-scene-rotation")?.checked ??
+    (settings.moduleSettings.nexusSceneRotationEnabled === true);
+  const nexusOlderSceneMode =
+    (popupElement.querySelector("#stmb-nexus-older-scene-mode")?.value ?? settings.moduleSettings.nexusOlderSceneMode) === "keyword" ? "keyword" : "vector";
   const showMemoryPreviews =
     popupElement.querySelector("#stmb-show-memory-previews")?.checked ??
     settings.moduleSettings.showMemoryPreviews;
@@ -12200,6 +12220,15 @@ function persistMainPopupSettings(popupElement) {
 
   if (refreshEditor !== settings.moduleSettings.refreshEditor) {
     settings.moduleSettings.refreshEditor = refreshEditor;
+    hasChanges = true;
+  }
+
+  if (nexusSceneRotationEnabled !== (settings.moduleSettings.nexusSceneRotationEnabled === true)) {
+    settings.moduleSettings.nexusSceneRotationEnabled = nexusSceneRotationEnabled;
+    hasChanges = true;
+  }
+  if (nexusOlderSceneMode !== (settings.moduleSettings.nexusOlderSceneMode === "keyword" ? "keyword" : "vector")) {
+    settings.moduleSettings.nexusOlderSceneMode = nexusOlderSceneMode;
     hasChanges = true;
   }
 

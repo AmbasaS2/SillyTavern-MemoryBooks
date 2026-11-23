@@ -120,6 +120,7 @@ async function checkAutoSummaryTrigger() {
     try {
         if (hasPendingProgress()) return;
         const settings = extension_settings.STMemoryBooks;
+        if (settings?.moduleSettings?.nexusSceneRotationEnabled === true) return;
         if (!settings?.moduleSettings?.autoSummaryEnabled) {
             return;
         }

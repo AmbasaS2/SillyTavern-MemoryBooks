@@ -24,6 +24,7 @@ import {
 import { getRequestHeaders, eventSource, event_types } from '../../../../script.js';
 import { SIDE_PROMPT_HISTORY_KEY, formatSidePromptVersionTitle, resolveSidePromptHistory, validateSidePromptHistoryRequest } from './sidePromptHistory.js';
 import { fingerprintRollbackEntry } from './memoryRollback.js';
+import { isNexusMemoryBookName, planNexusSceneRotation } from './nexusSceneRotation.js';
 
 const MODULE_NAME = 'STMemoryBooks-AddLore';
 
@@ -559,6 +560,11 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         }
 
         const settings = extension_settings.STMemoryBooks || {};
+        const rotateNexusMemory = settings.moduleSettings?.nexusSceneRotationEnabled === true
+            && isNexusMemoryBookName(lorebookValidation.name);
+        // Stage changes to avoid polluting the source World Info on validation failure.
+        const workingLorebook = rotateNexusMemory
+            ? structuredClone(lorebookValidation.data) : lorebookValidation.data;
         let titleFormat = memoryResult.titleFormat;
         if (!titleFormat) {
             titleFormat = settings.profiles?.[settings.defaultProfile]?.titleFormat || settings.titleFormat || i18n('addlore.titleFormats.8', '[000] - {{title}}');
@@ -587,7 +593,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
             }
             : memoryResult;
 
-        const newEntry = createWorldInfoEntry(lorebookValidation.name, lorebookValidation.data);
+        const newEntry = createWorldInfoEntry(lorebookValidation.name, workingLorebook);
 
         if (!newEntry) {
             throw new Error(i18n('addlore.errors.createEntryFailed', 'Failed to create new lorebook entry'));
@@ -595,7 +601,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
 
         const entryTitle = options.entryTitle
             ? sanitizeTitle(String(options.entryTitle))
-            : generateEntryTitle(titleFormat, effectiveMemoryResult, lorebookValidation.data);
+            : generateEntryTitle(titleFormat, effectiveMemoryResult, workingLorebook);
         populateLorebookEntry(newEntry, effectiveMemoryResult, entryTitle, lorebookSettings);
         if (options.inclusionGroup) {
             newEntry.group = String(options.inclusionGroup);
@@ -608,7 +614,17 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         if (options.applyCharacterFilters === false || isCharacterAwarenessDisabled({}, effectiveMemoryResult.metadata)) {
             delete newEntry.characterFilter;
         }
-        await saveWorldInfo(lorebookValidation.name, lorebookValidation.data, true);
+        if (rotateNexusMemory) {
+            const plan = planNexusSceneRotation(workingLorebook, {
+                olderMode: settings.moduleSettings?.nexusOlderSceneMode === 'keyword' ? 'keyword' : 'vector',
+            });
+            workingLorebook.entries = plan.proposedMemory.entries;
+        }
+        await saveWorldInfo(lorebookValidation.name, workingLorebook, true);
+        if (rotateNexusMemory) {
+            // Preserve the original caller reference only after successful storage.
+            lorebookValidation.data.entries = workingLorebook.entries;
+        }
 
         if (options.showNotification !== false && settings.moduleSettings?.showNotifications !== false) {
             toastr.success(
@@ -628,7 +644,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         // Execute auto-hide commands if enabled
         const autoHidePlan = getAutoHideRanges(effectiveMemoryResult, settings.moduleSettings);
 
-        if (options.autoHide !== false && autoHidePlan.mode !== 'none') {
+        if (!rotateNexusMemory && options.autoHide !== false && autoHidePlan.mode !== 'none') {
             if (autoHidePlan.invalidRange) {
                 console.warn(i18n('addlore.warn.autohideSkippedInvalidRange', `${MODULE_NAME}: Auto-hide skipped - invalid scene range: "{{range}}"`, { range: autoHidePlan.rawRange }));
                 toastr.warning(

@@ -277,6 +277,20 @@ export const generalSettingsTemplate = Handlebars.compile(`
             <input type="checkbox" id="stmb-refresh-editor" {{#if refreshEditor}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_RefreshEditor">Refresh lorebook editor after adding memories</span>
         </label>
+        <div class="padding10 marginTop5 stmb-box">
+            <label class="checkbox_label">
+                <input type="checkbox" id="stmb-nexus-scene-rotation" {{#if nexusSceneRotationEnabled}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_NexusRotationEnabled">Nexus / Memory: keep the three newest completed Scenes always active</span>
+            </label>
+            <small class="opacity50p" data-i18n="STMemoryBooks_NexusRotationHelp">Only for dedicated Memory books. Saving a complete numbered Scene rotates activation. Automatic summaries, reminders and auto-hide are disabled in this mode. AI Scene planning and Nexus updates are not yet implemented.</small>
+            <label for="stmb-nexus-older-scene-mode">
+                <span data-i18n="STMemoryBooks_NexusRecallMode">Older Scene recall</span>
+                <select id="stmb-nexus-older-scene-mode" class="text_pole">
+                    <option value="vector" {{#if (eq nexusOlderSceneMode "vector")}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+                    <option value="keyword" {{#if (eq nexusOlderSceneMode "keyword")}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallKeyword">Keywords (must already exist)</option>
+                </select>
+            </label>
+        </div>
         <label class="checkbox_label">
             <input type="checkbox" id="stmb-copy-memory-books-on-branch" {{#if copyMemoryBooksOnBranch}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_CopyMemoryBooksOnBranch">Copy Memory Books when branching</span>

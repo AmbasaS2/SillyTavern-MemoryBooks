@@ -27,6 +27,7 @@ export function createMemoryReminderController({ current, save, show, clear }) {
         const context = current();
         if (!context?.chatKey || !context.markers) { dismiss(); return; }
         const { settings, markers, count, chatKey, busy } = context;
+        if (settings?.nexusSceneRotationEnabled === true) { dismiss(); return; }
         const mode = settings.autoSummaryEnabled ? 'automatic' : 'manual';
         const enabled = settings[`${mode}MemoryReminders`] === true;
         const intervalKey = `${mode}MemoryReminderInterval`;
