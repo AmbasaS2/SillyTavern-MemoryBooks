@@ -68,3 +68,12 @@ test('duplicate or malformed input IDs fail before any edits',()=>{
     assert.throws(()=>validateGroundedNexusEdits([change],[]),/original chat/);
     assert.throws(()=>validateGroundedNexusEdits([null],source),/invalid/);
 });
+import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
+test('event windows retain literal citations and reject IDs outside the event or context', () => {
+    const source = [{ id: 3, mes: 'The bell finally rang after the repair.' }, { id: 5, mes: 'Jun called it our rusty soprano.' }];
+    const event = { topic: 'Bell', cause: 'Broken bolt', development: 'Fixed the bolt', result: 'The bell rang', closure: 'complete',
+        sourceRanges: [[3, 3], [5, 5]], evidence: [{ messageId: 5, quote: 'our rusty soprano' }] };
+    assert.deepEqual(validateSlothEventWindowEvidence({ events: [event] }, source), [event]);
+    assert.throws(() => validateSlothEventWindowEvidence({ events: [{ ...event, sourceRanges: [[3, 5]] }] }, source), /range|window/);
+    assert.throws(() => validateSlothEventWindowEvidence({ events: [{ ...event, sourceRanges: [[3, 3]] }] }, source), /missing from original/);
+});

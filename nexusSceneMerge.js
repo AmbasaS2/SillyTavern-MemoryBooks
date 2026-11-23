@@ -5,6 +5,8 @@
 
 import { isCompletedSceneEntry, sceneNumberFromTitle,
     planNexusSceneRotation } from './nexusSceneRotation.js';
+import { SPLIT_ARCHIVE, SPLIT_FROM } from './nexusSceneSplitArchives.js';
+import { hasRecognizedNexusStloSettings } from './nexusStloSettings.js';
 
 const mergeField = 'STMB_slothSceneMerge';
 const archiveField = 'STMB_slothSceneMergedInto';
@@ -58,7 +60,7 @@ function flattenRanges(items) {
 
 function validateBook(memory) {
     assert(record(memory?.entries), 'Memory World Info entries are missing.');
-    assert(!record(memory.stlo) || !Object.keys(memory.stlo).length,
+    assert(hasRecognizedNexusStloSettings(memory.stlo),
         'Memory has STLO root metadata; UID/ordering references need manual review.');
     const uidSet = new Set(), numberSet = new Set();
     for (const entry of Object.values(memory.entries)) {
@@ -66,8 +68,6 @@ function validateBook(memory) {
         assert(safeUid(uid) && !uidSet.has(uid), 'Memory has missing or duplicate UIDs.');
         assert(number !== null && !numberSet.has(number) && isCompletedSceneEntry(entry),
             'Memory has an unnumbered, duplicate or incomplete Scene.');
-        assert(!entry[archiveField] && !entry[mergeField],
-            'Nested or previously repaired Scenes need separate review.');
         assert(!references.some(field => present(entry[field])) &&
             !present(entry.outletName) && Number(entry.position) !== 7 &&
             !present(entry.group),
@@ -75,6 +75,7 @@ function validateBook(memory) {
         uidSet.add(uid);
         numberSet.add(number);
     }
+    planNexusSceneRotation(memory);
     return [...Object.values(memory.entries)];
 }
 
@@ -88,6 +89,8 @@ export function inspectNexusSceneMerge(memory, sourceUids) {
     const chosen = sourceUids.map(uid => {
         const entry = byUid.get(uid);
         assert(entry, 'Selected Scene UID ' + uid + ' does not exist.');
+        assert(!entry[archiveField] && !entry[mergeField] && !entry[SPLIT_ARCHIVE] && !entry[SPLIT_FROM],
+            'Nested or previously repaired Scenes need separate review.');
         assert(entry.disable !== true, 'Disabled Scene cannot be merged silently.');
         assert(typeof entry.STMB_chatId === 'string' && !!entry.STMB_chatId.trim(),
             'Scene UID ' + uid + ' has no stable source chat identity.');
@@ -99,7 +102,7 @@ export function inspectNexusSceneMerge(memory, sourceUids) {
     const allRanges = chosen.map(entry => entryRanges(entry));
     const ranges = flattenRanges(allRanges);
     for (const entry of entries) {
-        if (sourceUids.includes(entry.uid) || entry.STMB_chatId !== chosen[0].STMB_chatId) continue;
+        if (sourceUids.includes(entry.uid) || entry.STMB_chatId !== chosen[0].STMB_chatId || entry[archiveField] || entry[SPLIT_ARCHIVE]) continue;
         const otherRanges = entryRanges(entry);
         for (const [a, b] of otherRanges) for (const [c, d] of ranges) {
             assert(b < c || d < a,

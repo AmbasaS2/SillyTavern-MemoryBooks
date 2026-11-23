@@ -40,7 +40,7 @@ test('Sloth visual rules use scoped theme variables, not forced fonts', () => {
 test('manual collector entry point offers first setup separately from an existing pair',()=>{
     const source=file('./index.js');
     assert.match(source,/runNexusCollector\(\{/);
-    assert.match(source,/slothFirstSetup: canStartNexusSetup/);
+    assert.match(source,/const slothFirstSetup = canStartNexusSetup\(/);
     assert.match(source,/slothRoleMemory\.state === 'ready' && slothRoleNexus\.state === 'ready'/);
     const html=file('./templates.js');
     assert.match(html,/STMemoryBooks_SlothFirstBooksButton/);

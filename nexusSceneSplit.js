@@ -8,6 +8,7 @@ import {isCompletedSceneEntry,planNexusSceneRotation,sceneNumberFromTitle}
 import {validateNexusEventPlan} from './nexusCollectionPolicy.js';
 import {SPLIT_ARCHIVE,SPLIT_FROM,sourceRangesForSplit,
     expandSplitRanges} from './nexusSceneSplitArchives.js';
+import { hasRecognizedNexusStloSettings } from './nexusStloSettings.js';
 
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 const record=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
@@ -22,7 +23,7 @@ const references=[
 
 export function inspectNexusSceneSplit(memory,chatIds) {
     assert(record(memory?.entries),'Memory World Info must have entries.');
-    assert(!record(memory.stlo)||!Object.keys(memory.stlo).length,
+    assert(hasRecognizedNexusStloSettings(memory.stlo),
         'Advanced STLO root references need separate split review.');
     assert(Array.isArray(chatIds)&&chatIds.some(id=>typeof id==='string'&&id.trim()),
         'A stable original chat identity is required.');
@@ -38,24 +39,21 @@ export function inspectNexusSceneSplit(memory,chatIds) {
             isCompletedSceneEntry(e),
             'Memory contains invalid UID, numbering or an incomplete Scene.');
         uids.add(e.uid);numbers.add(n);
-        assert(!e[SPLIT_ARCHIVE]&&!e[SPLIT_FROM]&&
-            !e.STMB_slothSceneMerge&&!e.STMB_slothSceneMergedInto,
-            'Nested or previously repaired Scene histories need manual review.');
         assert(!references.some(key=>present(e[key]))&&
             !present(e.outletName)&&Number(e.position)!==7&&!present(e.group),
             'Memory contains custom Outlet or unresolved canonical/group references.');
-        assert(e.disable!==true,'Disabled Scene needs independent review before splitting.');
     }
-    const latest=entries.reduce((best,e)=>!best||
-        sceneNumberFromTitle(e.comment)>sceneNumberFromTitle(best.comment)?e:best,null);
-    assert(rotation.recentUids.includes(latest.uid),'Latest Scene is not active.');
+    const latest=entries.find(e=>e.uid===rotation.recentUids.at(-1));
+    assert(latest && latest.disable!==true,'Latest Scene is not active.');
+    assert(!latest[SPLIT_FROM]&&!latest.STMB_slothSceneMerge,
+        'Nested or previously repaired Scene histories need manual review.');
     assert(chatIds.includes(latest.STMB_chatId),
         'Latest completed Scene belongs to another chat/AU. Split blocked.');
     const ranges=sourceRangesForSplit(latest),ids=expandSplitRanges(ranges);
     assert(ids.length>=2 && ids.length<=5000,'Scene needs a limited, verifiable source range.');
     const seen=new Set(ids);
     for(const e of entries){
-        if(e.uid===latest.uid||e.STMB_chatId!==latest.STMB_chatId)continue;
+        if(e.uid===latest.uid||e.STMB_chatId!==latest.STMB_chatId||e[SPLIT_ARCHIVE]||e.STMB_slothSceneMergedInto)continue;
         for(const id of expandSplitRanges(sourceRangesForSplit(e))) {
             assert(!seen.has(id),'Another Scene overlaps the selected Scene source range.');
         }

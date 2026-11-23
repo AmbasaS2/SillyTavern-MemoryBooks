@@ -7,6 +7,7 @@
 
 import {isCompletedSceneEntry, sceneNumberFromTitle, planNexusSceneRotation} from './nexusSceneRotation.js';
 import {stageNexusLegacyMigration} from './nexusLegacyMigration.js';
+import { hasNeutralNexusStloSettings } from './nexusStloSettings.js';
 
 const record=v=>!!v && typeof v==='object' && !Array.isArray(v);
 const title=e=>String(e?.comment||'').trim();
@@ -57,9 +58,8 @@ export function inspectUnifiedMemorySplit(memory,nexus) {
         }
     }
     if(other.length) {
-        const memoryStlo=memory?.stlo;
-        if(record(memoryStlo)&&Object.keys(memoryStlo).length) {
-            errors.push('Combined Memory contains STLO root metadata; its entry references require manual review.');
+        if(!hasNeutralNexusStloSettings(memory.stlo)||!hasNeutralNexusStloSettings(nexus.stlo)) {
+            errors.push('STLO root settings may change recall for moved entries; review both books before migrating.');
         }
         for(const item of scenes){
             const reference=crossReference(item.entry);

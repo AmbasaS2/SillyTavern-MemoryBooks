@@ -5,7 +5,7 @@
 const snapshot = value => JSON.stringify(value);
 const isEqual = (a,b) => snapshot(a) === snapshot(b);
 
-export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOrigin,resetCache}) {
+export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOrigin,resetCache,verifyBeforeWrite}) {
     if(!Array.isArray(states) || states.length!==2 ||
         states[0].name===states[1].name ||
         states.some(s=>!s.name||!s.original?.entries||!s.staged?.entries)) {
@@ -23,6 +23,7 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
             if(!isEqual(fresh,state.original)){
                 throw new Error('World Info conflict in '+state.name+' before commit. No changes saved.');
             }
+            verifyBeforeWrite?.(state.name,state.original);
         }
         const attempted=[];
         try {
@@ -32,6 +33,7 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
                     throw new Error('World Info conflict in '+state.name+' during commit.');
                 }
                 verifyOrigin();
+                verifyBeforeWrite?.(state.name,state.original);
                 // A rejected request might still have persisted before throwing.
                 attempted.push(state);
                 await save(state.name,state.staged);
@@ -55,6 +57,7 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
                     const now=await loadFresh(state.name);
                     if(isEqual(now,state.original)){
                         // ST saveWorldInfo mutates its client-side cache before HTTP.
+                        if(verifyBeforeWrite) verifyBeforeWrite(state.name,state.staged,state.original);
                         if(typeof resetCache==='function') await resetCache(state.name,state.original);
                         continue; // Nothing persisted.
                     }
@@ -62,6 +65,7 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
                         recoveryFailures.push(state.name+': changed by another writer; unsafe to overwrite.');
                         continue;
                     }
+                    verifyBeforeWrite?.(state.name,state.staged);
                     await save(state.name,state.original);
                     const restored=await loadFresh(state.name);
                     if(!isEqual(restored,state.original)){

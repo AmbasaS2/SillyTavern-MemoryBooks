@@ -28,7 +28,7 @@ function fixture() {
         61:entry(61,'PanelAssets','Panel content intact',{outletName:'PanelAssets',position:7}),
     }};
     const nexus={entries:{100:entry(100,'LT 01 | Existing topic','Original elsewhere',{constant:false,vectorized:true})},
-        stlo:{priority:26}};
+        stlo:{priority:3, budgetMode:'default', characterOverrides:{}}};
     return {memory,nexus};
 }
 function creator(book){
@@ -92,6 +92,7 @@ test('duplicate destination titles, STLO references and memory cross-references 
     const cases=[
         ({nexus})=>{nexus.entries[400]=entry(400,'kinks','conflicting Outlet');},
         ({memory})=>{memory.stlo={ordering:{59:'depends'}};},
+        ({nexus})=>{nexus.stlo={budgetMode:'fixed', budget:100};},
         ({memory})=>{memory.entries[59].stmbSourceEntryUids=[1];},
         ({memory})=>{memory.entries[59].group='shared-across-book';},
         ({memory})=>{memory.entries[0].disabledBySummaryId=3;},

@@ -89,6 +89,7 @@ test('new future completed Scene preserves archived origin and rotates only acti
     assert.equal(after.entries[9].content,book().entries[9].content);
     assert.equal(after.entries[12].comment,'006 - A later event');
     assert.deepEqual(planNexusSceneRotation(after).recentUids,[10,11,12]);
+    assert.equal(inspectNexusSceneSplit(after, ['chat-1']).sourceUid, 12);
 });
 test('reversed model order uses actual completion IDs, not output order',()=>{
     const plan=inspectNexusSceneSplit(book(),['chat-1']);

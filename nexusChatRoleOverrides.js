@@ -81,7 +81,7 @@ export function removeNexusChatRoleOverrides(store, avatar) {
 
 // A chat that already advanced its collection checkpoint must not point at
 // a different World Info pair without a separate, explicit data migration.
-export function canChangeNexusChatRolePair(markers, chatKey, previous, next) {
+export function canChangeNexusChatRolePair(markers, chatKey, previous, next, legacyBook = '') {
     if (name(previous?.nexus) === name(next?.nexus) &&
         name(previous?.memory) === name(next?.memory)) return true;
     const sloth = markers?.slothCollection;
@@ -89,5 +89,13 @@ export function canChangeNexusChatRolePair(markers, chatKey, previous, next) {
         Array.isArray(sloth.savedRanges) && sloth.savedRanges.length > 0;
     const hasOldCheckpoint = Number.isSafeInteger(markers?.highestMemoryProcessed) &&
         markers.highestMemoryProcessed >= 0;
-    return !hasSlothReceipts && !hasOldCheckpoint;
+    if (hasSlothReceipts) return false;
+    if (!hasOldCheckpoint) return true;
+    // Give an existing chat its first pair without losing its known legacy book.
+    // Keep the guard for complete Sloth pairs and checkpoints with unknown origin.
+    if (!name(legacyBook) || (name(previous?.nexus) && name(previous?.memory))) return false;
+    if (name(next?.nexus) && name(next?.memory)) {
+        return [name(next.nexus), name(next.memory)].includes(name(legacyBook));
+    }
+    return true;
 }

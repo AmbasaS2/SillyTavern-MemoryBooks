@@ -914,6 +914,78 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .stmb-sort-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
 
 /* 🦥 Sloth System — scoped clean role controls; inherit the ST font/theme. */
+.popup.stmb-popup .stmb-workspace {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    text-align: start;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    --stmb-workspace-surface: color-mix(in srgb, var(--SmartThemeChatTintColor) 82%, var(--SmartThemeBodyColor) 5%);
+}
+.popup.stmb-popup .stmb-workspace :is(h3, p) { margin-block: 0 8px; }
+.popup.stmb-popup .stmb-workspace > :is(section, details) {
+    min-width: 0;
+    margin: 0;
+    padding: clamp(12px, 2vw, 18px);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 10px;
+    background: var(--stmb-workspace-surface);
+}
+.popup.stmb-popup .stmb-workspace h3 { font-size: 1.05em; }
+.popup.stmb-popup .stmb-workspace .stmb-current-character {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--SmartThemeEmColor, var(--SmartThemeBodyColor));
+}
+.popup.stmb-popup .stmb-workspace .stmb-collection {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 36%);
+    gap: 8px 18px;
+    align-items: start;
+}
+.popup.stmb-popup .stmb-collection h3 { grid-column: 1 / -1; margin: 0; }
+.popup.stmb-popup .stmb-collection .world_entry_form_control { grid-column: 2; grid-row: 2 / span 2; }
+.popup.stmb-popup .stmb-collection .menu_button { justify-self: start; }
+.popup.stmb-popup .stmb-collection button[data-stmb-sloth-action="collect"] {
+    padding-inline: 14px;
+    background: color-mix(in srgb, var(--SmartThemeChatTintColor) 77%, var(--SmartThemeEmColor));
+    font-weight: 600;
+}
+.popup.stmb-popup .stmb-workspace .stmb-workspace-drawer > summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+.popup.stmb-popup .stmb-workspace :is(summary, button, select):focus-visible {
+    outline: 2px solid var(--SmartThemeEmColor, currentColor);
+    outline-offset: 2px;
+}
+.popup.stmb-popup .stmb-workspace :is(.stmb-advanced-content, #stmb-collection-options[open] > summary) {
+    margin-block: 12px;
+}
+.popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 36%);
+    align-items: center;
+    gap: 8px;
+    margin-block: 8px;
+}
+.popup.stmb-popup .stmb-workspace :is(.buttons_block, .stmb-original-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    white-space: normal;
+}
+.popup.stmb-popup .stmb-workspace :is(.menu_button, select, small) { max-width: 100%; min-width: 0; }
+.popup.stmb-popup .stmb-workspace .menu_button {
+    width: fit-content;
+    white-space: normal;
+    overflow-wrap: break-word;
+    height: auto;
+    min-height: 34px;
+}
 .popup.stmb-popup .stmb-sloth-roles {
     box-sizing: border-box;
     padding: clamp(12px, 2vw, 20px);
@@ -973,12 +1045,18 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 @media (max-width: 620px) {
     .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup .stmb-sloth-roles { padding: 12px; }
+    .popup.stmb-popup .stmb-workspace .stmb-collection,
+    .popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) { grid-template-columns: minmax(0, 1fr); }
+    .popup.stmb-popup .stmb-collection .world_entry_form_control { grid-column: auto; grid-row: auto; }
+    .popup.stmb-popup .stmb-workspace .menu_button { min-height: 40px; }
 }
 
 /* Sloth collector previews: scoped to STMB popups, never global ST styles. */
 .popup.stmb-popup .stmb-sloth-review {
     display:flex;flex-direction:column;gap:10px;min-width:0;
     color:var(--SmartThemeBodyColor);
+    text-align: start;
+    overflow-wrap: anywhere;
 }
 .popup.stmb-popup .stmb-sloth-review h3,
 .popup.stmb-popup .stmb-sloth-review h4 {margin:4px 0;}
@@ -1003,8 +1081,28 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin-block: 10px 0;
 }
 .popup.stmb-popup .stmb-sloth-maintenance small { margin-block-end: 6px; }
-.popup.stmb-popup .stmb-sloth-keywords { display: grid; gap: 5px; min-width: 0; }
+.popup.stmb-popup .stmb-sloth-keywords {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    border-color: var(--SmartThemeBorderColor);
+    border-radius: 6px;
+}
 .popup.stmb-popup .stmb-sloth-keywords :is(input, textarea) { min-width: 0; width: 100%; }
+.popup.stmb-popup .stmb-sloth-review label.stmb-sloth-edit {
+    display: grid;
+    gap: 4px;
+    text-align: start;
+    margin-block: 8px;
+}
+.popup.stmb-popup .stmb-sloth-review .stmb-sloth-edit :is(textarea, input) {
+    box-sizing: border-box;
+    max-width: 100%;
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+}
+.popup.stmb-popup .stmb-sloth-review .stmb-sloth-edit textarea { resize: vertical; }
 .popup.stmb-popup .stmb-sloth-detail pre {
     white-space:pre-wrap;overflow-wrap:anywhere;max-height:35vh;overflow:auto;
     font:inherit;line-height:1.5;margin:8px 0;padding:8px;

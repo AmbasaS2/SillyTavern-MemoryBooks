@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { getCharacterNexusRoles, getLinkedCharacterWorlds, resolveCharacterNexusRole } from './nexusCharacterRoles.js';
 import { getNexusChatRoleOverride, setNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
+import { isAssignedToAnotherNexusCharacter } from './nexusWorldInfoScope.js';
 
 const read = file => readFileSync(new URL(file, import.meta.url), 'utf8');
 const runtime = read('./nexusCharacterRolesRuntime.js');
@@ -30,6 +31,7 @@ function originHarness() {
     }};
     const scope = { characters, world_info, world_names, getCharacterNexusRoles,
         getLinkedCharacterWorlds, resolveCharacterNexusRole, getNexusChatRoleOverride,
+        isAssignedToAnotherNexusCharacter,
         getStmbChatKey: ref => 'character:' + ref.avatarUrl + ':' + ref.fileName,
         getCurrentNexusRoleResolution: () => ({ state:'ready', name:'B Memory' }) };
     const resolve = vm.runInNewContext(originSource + '\ngetNexusRoleResolutionForChatRef', scope);

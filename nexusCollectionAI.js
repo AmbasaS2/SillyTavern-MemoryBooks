@@ -6,7 +6,7 @@ import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
 import { oai_settings } from '../../../openai.js';
 import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollectionPolicy.js';
-import { validateGroundedNexusEdits, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
+import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
@@ -60,19 +60,24 @@ async function windowEvidence(window,ask) {
         'Extract grounded roleplay evidence from ONE window; events can span earlier or later windows.',
         'Preserve exact actors, causal turns, quotes, habits, knowledge access, rumors vs observations,',
         'unresolved promises and what was actually completed. Never invent closure at window boundary.',
-        'Output JSON {"window":[start,end],"events":[{"topic":"...","sourceRanges":[[a,b]],',
+        'Output JSON {"events":[{"topic":"...","sourceRanges":[[a,b]],',
         '"cause":"...","development":"...","result":"... or unresolved",',
-        '"closure":"complete|open|uncertain","quotes":["..."]}],"otherFacts":["..."]}.',
+        '"closure":"complete|open|uncertain","evidence":[{"messageId":0,"quote":"exact source wording"}]}]}.',
+        'At most 40 event records and 8 exact quotes per event (8–400 characters each). Include the words that carry the joke, promise or correction.',
+        'Only cite IDs present in this window. Use separate ranges when IDs skip a message.',
         'Window '+a+'-'+b,compact(window)
     ].join('\n\n');
-    return await ask(prompt,'Window evidence '+a+'-'+b);
+    const raw=await ask(prompt,'Window evidence '+a+'-'+b);
+    return {window:[a,b],events:validateSlothEventWindowEvidence(raw,window)};
 }
 async function evidenceFor(messages,ask) {
     const windows=groupSlothSourceWindows(messages,18000);
     if(windows.length===1)return compact(messages);
     const evidence=[];
     for(const window of windows)evidence.push(await windowEvidence(window,ask));
-    return JSON.stringify(evidence);
+    const payload=JSON.stringify(evidence);
+    if(payload.length>85000) throw new Error('Event evidence is too large for a safe review. Nothing saved.');
+    return payload;
 }
 export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
     const ask=requester(profile,settings,signal),source=await evidenceFor(messages,ask);
@@ -232,11 +237,12 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
  * Optional additional AI call: flags omissions without silently rewriting drafts.
  * Source must fit in a single review context or this phase fails closed.
  */
-export async function auditSlothDraft({messages,scenes,edits,profile,settings,signal=null}) {
+export async function auditSlothDraft({messages,scenes,edits,plan,profile,settings,signal=null}) {
     const ask=requester(profile,settings,signal);
     const source=compact(messages);
     const draft=JSON.stringify({scenes:scenes.map(x=>({
-        title:x.title,segments:x.segments,content:x.content})),edits});
+        title:x.title,segments:x.segments,content:x.content})),edits,
+        deferred:plan?.deferred?.map(({reason,segments})=>({reason,segments})) || []});
     if(source.length+draft.length>68000) {
         throw new Error('Optional omission audit requires a smaller source range; nothing saved.');
     }
@@ -388,7 +394,7 @@ export async function proposeSlothLegacyContinuity({
 export async function suggestSlothLatestSceneSplit({
     plan,messages,profile,settings,signal=null,
 }) {
-    if(!plan?.sourceUid || !Array.isArray(plan.sourceIds) ||
+    if(!Number.isSafeInteger(plan?.sourceUid) || plan.sourceUid < 0 || !Array.isArray(plan.sourceIds) ||
         !Array.isArray(messages) || !messages.length) {
         throw new Error('A verified latest Scene and visible source messages are required.');
     }

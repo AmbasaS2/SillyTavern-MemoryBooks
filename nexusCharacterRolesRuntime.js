@@ -10,6 +10,7 @@ import { world_info, world_names } from '../../../world-info.js';
 import { extension_settings } from '../../../extensions.js';
 import { getCurrentStmbChatRef, getStmbChatKey } from './stmbJobs.js';
 import { getNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
+import { isAssignedToAnotherNexusCharacter } from './nexusWorldInfoScope.js';
 import {
     getCharacterNexusRoles,
     getLinkedCharacterWorlds,
@@ -52,10 +53,14 @@ export function getNexusRoleResolutionForChatRef(role, chatRef, settings = exten
     const override = getNexusChatRoleOverride(
         settings?.nexusChatRoleOverrides, chatRef, getStmbChatKey(chatRef));
     if (override?.invalid) return { state: 'invalid-override', name: '', role };
-    return resolveCharacterNexusRole({
+    const result = resolveCharacterNexusRole({
         roles: override ? { [avatar]: override } : settings?.nexusCharacterRoles,
         avatar, role, linkedBooks, worldNames: world_names || [],
     });
+    if (result.state === 'ready' && isAssignedToAnotherNexusCharacter(settings, avatar, result.name)) {
+        return { ...result, state: 'shared' };
+    }
+    return result;
 }
 
 export function getCurrentNexusRoleResolution(role, settings = extension_settings.STMemoryBooks) {
