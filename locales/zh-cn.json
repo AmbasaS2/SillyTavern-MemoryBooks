@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "保留的原始 Scene",
   "STMemoryBooks_SlothSplitNew": "新的独立 Scene",
   "STMemoryBooks_SlothSplitApprove": "备份原始 Memory JSON 并批准拆分",
-  "STMemoryBooks_SlothSplitSaved": "已将审核后的 Scene 拆分保存到 Memory。原文已保留，聊天消息未隐藏。"
+  "STMemoryBooks_SlothSplitSaved": "已将审核后的 Scene 拆分保存到 Memory。原文已保留，聊天消息未隐藏。",
+  "STMemoryBooks_SlothDashboardSubtitle": "连接角色知识库，审核已结束的事件，再批准保存。不会自动收集或隐藏消息。",
+  "STMemoryBooks_SlothStepRoles": "1 · 连接知识库",
+  "STMemoryBooks_SlothStepCollect": "2 · 审核事件",
+  "STMemoryBooks_SlothStepSave": "3 · 批准并保存",
+  "STMemoryBooks_SlothAIModule": "用于收集记忆的 AI 配置",
+  "STMemoryBooks_SlothAdvancedLegacy": "原版 Memory Books 工具和高级设置",
+  "STMemoryBooks_SlothEditNexusOperation": "审核或修改拟议的 Nexus 更改；原文证据检查仍会执行。"
 }

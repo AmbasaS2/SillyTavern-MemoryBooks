@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "Архивируемая исходная Scene",
   "STMemoryBooks_SlothSplitNew": "Новые независимые Scenes",
   "STMemoryBooks_SlothSplitApprove": "Сохранить исходный JSON Memory и утвердить разделение",
-  "STMemoryBooks_SlothSplitSaved": "Проверенное разделение Scenes сохранено в Memory. Оригинал заархивирован, сообщения не скрыты."
+  "STMemoryBooks_SlothSplitSaved": "Проверенное разделение Scenes сохранено в Memory. Оригинал заархивирован, сообщения не скрыты.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Подключите лорбуки персонажа, проверьте завершённые события и подтвердите сохранение. Автоматического сбора и скрытия сообщений нет.",
+  "STMemoryBooks_SlothStepRoles": "1 · Подключить лорбуки",
+  "STMemoryBooks_SlothStepCollect": "2 · Проверить события",
+  "STMemoryBooks_SlothStepSave": "3 · Подтвердить и сохранить",
+  "STMemoryBooks_SlothAIModule": "Профиль ИИ для сбора воспоминаний",
+  "STMemoryBooks_SlothAdvancedLegacy": "Исходные инструменты Memory Books и расширенные настройки",
+  "STMemoryBooks_SlothEditNexusOperation": "Проверьте или измените предложенную правку Nexus. Проверка исходных сообщений сохраняется."
 }

@@ -32,7 +32,8 @@ import { markStmbPopup } from './utils.js';
 import { getLinkedCharacterWorlds, getCharacterNexusRoles, setCharacterNexusRole } from './nexusCharacterRoles.js';
 import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames,
     commitInitialNexusBooks } from './nexusInitialSetup.js';
-import { validateSlothSceneKeywords } from './nexusSlothScenePrompt.js';
+import { reviewSlothSceneDrafts, reviewSlothNexusDrafts } from './nexusCollectionReview.js';
+import { validateGroundedNexusEdits } from './nexusEditEvidence.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -324,31 +325,48 @@ export async function runNexusCompanionSetup() {
     }
 }
 
-async function draftApproval({scenes,changes,plan,states,ref,initial=false,applyKeywordEdits,
-    applyNexusKeywordEdits}) {
+async function draftApproval({scenes,edits,changes,plan,states,ref,initial=false,applyReviewedDraft}) {
+    if(!Array.isArray(edits)||edits.length!==changes.length){
+        throw new Error('Nexus review sources and staged changes no longer match.');
+    }
     const pieces=scenes.map((scene,index)=>
-        '<details class="stmb-sloth-detail"><summary>'+html(scene.title)+' · '+
-        html(readableSegments(scene.segments))+'</summary><pre>'+html(scene.content)+'</pre>'+
+        '<details class="stmb-sloth-detail" open><summary>'+html(scene.title)+' · '+
+        html(readableSegments(scene.segments))+'</summary>'+
+        '<label class="stmb-sloth-edit-label"><strong>'+
+        html(t('Scene title','STMemoryBooks_SlothMergeTitle'))+'</strong>'+
+        '<input class="text_pole" data-sloth-scene-title="'+index+'" value="'+html(scene.title)+'" /></label>'+
+        '<label class="stmb-sloth-edit-label"><strong>'+
+        html(t('Scene content','STMemoryBooks_SlothMergeContent'))+'</strong>'+
+        '<textarea class="text_pole stmb-sloth-prose" data-sloth-scene-content="'+index+
+        '" rows="12">'+html(scene.content)+'</textarea></label>'+
         '<fieldset class="stmb-sloth-keywords"><legend>'+
         html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel'))+'</legend>'+
         scene.keywords.map((key,i)=>'<input class="text_pole" data-sloth-keywords="'+index+
             '" aria-label="'+html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel')+' '+(i+1))+
             '" value="'+html(key)+'">').join('')+'</fieldset></details>').join('');
-    const delta=changes.map((change,index)=>
-        '<details class="stmb-sloth-detail"><summary>'+html(change.action)+' · '+
-        html(change.title)+'</summary><p><strong>'+
-        html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
-        ':</strong> '+html(change.reason)+'</p><p><strong>'+
-        html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
-        ':</strong></p><ul>'+
-        (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
+    const delta=changes.map((change,index)=>{
+        const edit=edits[index];
+        const proposedBody=edit.action==='create'?edit.content:edit.text;
+        return '<details class="stmb-sloth-detail" open><summary>'+html(change.action)+' · '+
+            html(change.title)+'</summary><p><strong>'+
+            html(t('Reason for change','STMemoryBooks_SlothEvidenceWhy'))+
+            ':</strong> '+html(change.reason)+'</p><p><strong>'+
+            html(t('Original message evidence','STMemoryBooks_SlothEvidenceSource'))+
+            ':</strong></p><ul>'+
+            (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
             ' · '+html(item.quote)+'</li>').join('')+'</ul>'+
-        '<p>'+html('BEFORE')+'</p><pre>'+html(change.before)+'</pre>'+
-        '<p>'+html('AFTER')+'</p><pre>'+html(change.after)+'</pre>'+
-        (change.keywords?'<label class="stmb-sloth-keywords">'+
+            '<p class="stmb-sloth-compare-label">BEFORE</p><pre>'+html(change.before)+'</pre>'+
+            '<p class="stmb-sloth-compare-label">AFTER · '+html(change.action)+'</p><pre>'+html(change.after)+'</pre>'+
+            '<label class="stmb-sloth-edit-label"><strong>'+
+            html(t('Review or edit the proposed Nexus change. Source checks still apply.',
+                'STMemoryBooks_SlothEditNexusOperation'))+'</strong>'+
+            '<textarea class="text_pole stmb-sloth-prose" rows="5" data-sloth-nexus-body="'+index+
+            '">'+html(proposedBody??'')+'</textarea></label>'+
+            (edit.keywords!==undefined?'<label class="stmb-sloth-keywords">'+
             html(t('Keywords','STMemoryBooks_PromptFrame_KeywordsLabel'))+
             '<textarea class="text_pole" rows="3" data-sloth-nexus-keywords="'+index+'">'+
-            html(change.keywords.join('\n'))+'</textarea></label>':'')+'</details>').join('');
+            html((edit.keywords||[]).join('\n'))+'</textarea></label>':'')+'</details>';
+    }).join('');
     const nexusOnly=scenes.length===0 && states.length===1;
     const heading=nexusOnly
         ?t('Review Nexus current-state updates','STMemoryBooks_SlothNexusOnlyReview')
@@ -374,29 +392,30 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,apply
             result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
             action:event=>{
                 try {
-                    if(applyKeywordEdits) {
-                        const fields=Array.from(popup.dlg.querySelectorAll('[data-sloth-keywords]'));
-                        applyKeywordEdits(scenes.map((scene,index)=>({
-                            ...scene,keywords:validateSlothSceneKeywords(fields
-                                .filter(field=>Number(field.dataset.slothKeywords)===index)
-                                .map(field=>field.value)),
-                        })));
-                    }
-                    if(applyNexusKeywordEdits) {
-                        const fields=Array.from(popup.dlg.querySelectorAll('[data-sloth-nexus-keywords]'));
-                        if(fields.length!==changes.filter(change=>change.keywords).length) {
-                            throw new Error('The reviewed Nexus keyword fields could not be verified.');
-                        }
-                        const corrected=new Map(fields.map(field=>[
-                            Number(field.dataset.slothNexusKeywords),
-                            field.value.split(/\r?\n/).map(value=>value.trim()).filter(Boolean),
-                        ]));
-                        if(corrected.size!==fields.length||[...corrected].some(([index,values])=>
-                            !changes[index]?.keywords||values.length>16)) {
-                            throw new Error('Use at most 16 recall keywords per Nexus entry, one per line.');
-                        }
-                        applyNexusKeywordEdits(corrected);
-                    }
+                    const controls=popup.dlg;
+                    if(!controls)throw new Error('The review screen is no longer open.');
+                    const required=(selector,index,attribute)=>{
+                        const matches=Array.from(controls.querySelectorAll(selector))
+                            .filter(field=>Number(field.getAttribute(attribute))===index);
+                        if(matches.length!==1)throw new Error('A reviewed field is missing or repeated.');
+                        return matches[0].value;
+                    };
+                    const reviewedScenes=reviewSlothSceneDrafts(scenes,scenes.map((scene,index)=>({
+                        title:required('[data-sloth-scene-title]',index,'data-sloth-scene-title'),
+                        content:required('[data-sloth-scene-content]',index,'data-sloth-scene-content'),
+                        keywords:Array.from(controls.querySelectorAll('[data-sloth-keywords]'))
+                            .filter(field=>Number(field.dataset.slothKeywords)===index)
+                            .map(field=>field.value),
+                    })));
+                    const reviewedEdits=reviewSlothNexusDrafts(edits,edits.map((edit,index)=>({
+                        body:required('[data-sloth-nexus-body]',index,'data-sloth-nexus-body'),
+                        ...(edit.keywords!==undefined?{
+                            keywords:required('[data-sloth-nexus-keywords]',index,'data-sloth-nexus-keywords')
+                                .split(/\r?\n/).map(value=>value.trim()).filter(Boolean),
+                        }:{}),
+                    })));
+                    applyReviewedDraft(reviewedScenes,reviewedEdits);
+                    // Snapshot AFTER review edits have passed all structural guards.
                     downloadSafetyBackup(states,ref,plan,changes,initial);
                     downloaded=true;
                 } catch(error) {
@@ -649,12 +668,6 @@ export async function runNexusCollector({profileIndex}={}) {
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'};
         const stageReviewedNexus=edits=>stageNexusEdits(originalBooks.nexus,edits,
             book=>createWorldInfoEntry(roleNames.nexus,book),nexusOptions);
-        const applyNexusKeywords=(state,edits)=>corrected=>{
-            const staged=stageReviewedNexus(edits.map((edit,index)=>corrected.has(index)?
-                {...edit,keywords:corrected.get(index)}:edit)).staged;
-            if(initial)staged.extensions=state.staged.extensions;
-            state.staged=staged;
-        };
         const checkOrigin=()=>{
             if(!initial)return assertOrigin(ref,roleNames,sourceIds,fingerprint);
             if(getStmbChatKey()!==getStmbChatKey(ref)||!canStartNexusSetup(ref,settings)||
@@ -715,8 +728,11 @@ export async function runNexusCollector({profileIndex}={}) {
                 ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
             }));
             const accepted=await draftApproval({
-                scenes:[],changes,plan:reviewed,states:[state],ref,
-                applyNexusKeywordEdits:applyNexusKeywords(state,edits),
+                scenes:[],edits,changes,plan:reviewed,states:[state],ref,
+                applyReviewedDraft:(_scenes,reviewedEdits)=>{
+                    const verified=validateGroundedNexusEdits(reviewedEdits,source);
+                    state.staged=stageReviewedNexus(verified).staged;
+                },
             });
             if(!accepted)return {saved:false,reason:'nexus-only-cancelled'};
             assertOrigin(ref,roleNames,sourceIds,fingerprint);
@@ -777,14 +793,23 @@ export async function runNexusCollector({profileIndex}={}) {
             }
         }
         const accepted=await draftApproval({
-            scenes,changes:nexus.changes.map((change,index)=>({
+            scenes,edits,changes:nexus.changes.map((change,index)=>({
                 ...change,reason:edits[index]?.reason,evidence:edits[index]?.evidence,
-            })),plan:approved,states,ref,initial,applyNexusKeywordEdits:applyNexusKeywords(states[1],edits),
-            applyKeywordEdits:scenes.length?reviewed=>{
-                const staged=stageReviewedMemory(reviewed).staged;
-                if(initial)staged.extensions=states[0].staged.extensions;
-                states[0].staged=staged;
-            }:undefined});
+            })),plan:approved,states,ref,initial,
+            applyReviewedDraft:(reviewedScenes,reviewedEdits)=>{
+                const verified=validateGroundedNexusEdits(reviewedEdits,source);
+                // Prepare both whole replacement drafts before committing either.
+                const nextNexus=stageReviewedNexus(verified).staged;
+                const nextMemory=reviewedScenes.length?
+                    stageReviewedMemory(reviewedScenes).staged:structuredClone(originalBooks.memory);
+                if(initial){
+                    nextNexus.extensions=states[1].staged.extensions;
+                    nextMemory.extensions=states[0].staged.extensions;
+                }
+                states[1].staged=nextNexus;
+                states[0].staged=nextMemory;
+            },
+        });
         if(!accepted)return {saved:false,reason:'draft-cancelled'};
         checkOrigin();
         const outcome=initial?await saveInitialNexusCollection(states,{ref,roleNames,checkOrigin,settings}):

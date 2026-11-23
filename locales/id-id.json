@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "Scene asli yang diarsipkan",
   "STMemoryBooks_SlothSplitNew": "Scene mandiri yang baru",
   "STMemoryBooks_SlothSplitApprove": "Cadangkan JSON asli Memory dan setujui pemisahan",
-  "STMemoryBooks_SlothSplitSaved": "Pemisahan Scene yang telah ditinjau disimpan ke Memory. Asli diarsipkan, pesan chat tidak disembunyikan."
+  "STMemoryBooks_SlothSplitSaved": "Pemisahan Scene yang telah ditinjau disimpan ke Memory. Asli diarsipkan, pesan chat tidak disembunyikan.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Hubungkan lorebook karakter, tinjau peristiwa yang telah selesai, lalu setujui penyimpanan. Tidak ada pengumpulan atau penyembunyian otomatis.",
+  "STMemoryBooks_SlothStepRoles": "1 · Hubungkan lorebook",
+  "STMemoryBooks_SlothStepCollect": "2 · Tinjau peristiwa",
+  "STMemoryBooks_SlothStepSave": "3 · Setujui dan simpan",
+  "STMemoryBooks_SlothAIModule": "Profil AI untuk mengumpulkan memori",
+  "STMemoryBooks_SlothAdvancedLegacy": "Alat Memory Books asli dan pengaturan lanjutan",
+  "STMemoryBooks_SlothEditNexusOperation": "Tinjau atau sunting perubahan Nexus yang diusulkan. Pemeriksaan sumber tetap berlaku."
 }

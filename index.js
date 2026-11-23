@@ -11058,6 +11058,10 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
   const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
   const slothRoleIncomplete = (!!(slothSelectedRoles.nexus || slothSelectedRoles.memory) ||
     !!slothChatOverride?.invalid) && !slothRoleActive;
+  const slothFirstSetup = canStartNexusSetup(slothChatRef, settings);
+  const slothMissingCompanion = canPrepareNexusCompanion(slothChatRef, settings);
+  const slothWorkspaceActive = slothRoleActive || slothRoleIncomplete ||
+    slothFirstSetup || slothMissingCompanion;
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
     name,
     selected: slothSelectedRoles[role] === name,
@@ -11155,8 +11159,9 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     lorebookMode: slothRoleActive ? '🦥 게으름뱅이' : (isManualMode ? "Manual" : "Automatic (Chat-bound)"),
     currentLorebookName: slothRoleActive ? slothRoleMemory.name : (isManualMode ? manualLorebook : chatBoundLorebook),
     slothRoleActive,
-    slothFirstSetup: canStartNexusSetup(slothChatRef, settings),
-    slothMissingCompanion: canPrepareNexusCompanion(slothChatRef, settings),
+    slothFirstSetup,
+    slothMissingCompanion,
+    slothWorkspaceActive,
     slothRoleIncomplete,
     slothCharacterAvailable: !!sloth.character,
     slothChatOverrideAvailable,
@@ -11277,7 +11282,8 @@ async function showSettingsPopup() {
 
   // Build customButtons array dynamically based on current state
   const customButtons = [];
-  (customButtons.push({
+  if (!templateData.slothWorkspaceActive) {
+    (customButtons.push({
     text:
       "🧠 " + translate("Create Memory", "STMemoryBooks_CreateMemoryButton"),
     result: null,
@@ -11337,6 +11343,7 @@ async function showSettingsPopup() {
         refreshPopupContent();
       },
     }));
+  }
 
   // Manual lorebook and profile buttons will be populated after popup creation
 
@@ -11448,7 +11455,7 @@ function syncGroupSettingsControls(popupElement) {
 
 async function runSlothSettingsAction(button, popupElement, settings) {
   if (popupElement.querySelector('button[data-stmb-sloth-action]:disabled')) return;
-  const selected = Number.parseInt(popupElement.querySelector('#stmb-profile-select')?.value, 10);
+  const selected = Number.parseInt((popupElement.querySelector('#stmb-sloth-profile-select') || popupElement.querySelector('#stmb-profile-select'))?.value, 10);
   const profileIndex = Number.isSafeInteger(selected) ? selected : settings.defaultProfile;
   const actions = {
     collect: () => runNexusCollector({ profileIndex }),

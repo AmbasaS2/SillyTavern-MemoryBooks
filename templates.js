@@ -7,7 +7,13 @@ import { Handlebars } from '../../../../lib.js';
  * Main settings template
  */
 export const settingsTemplate = Handlebars.compile(`
+    {{#if slothWorkspaceActive}}
+    <header class="stmb-sloth-heading">
+      <h2 data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h2>
+    </header>
+    {{else}}
     <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books</h2>
+    {{/if}}
 
         <details class="stmb-help-drawer info-block hint">
             <summary>
@@ -29,6 +35,17 @@ export const settingsTemplate = Handlebars.compile(`
             </div>
         </details>
 
+        {{#if slothWorkspaceActive}}
+        <section class="stmb-sloth-onboarding" aria-label="Sloth collection workflow">
+          <p class="stmb-sloth-intro" data-i18n="STMemoryBooks_SlothDashboardSubtitle">Connect the character’s lorebooks, review complete events, then approve each save. No automatic collection or hiding.</p>
+          <ol class="stmb-sloth-steps">
+            <li class="{{#if slothRoleActive}}stmb-sloth-step-ready{{/if}}" data-i18n="STMemoryBooks_SlothStepRoles">1 · Connect lorebooks</li>
+            <li data-i18n="STMemoryBooks_SlothStepCollect">2 · Review causal events</li>
+            <li data-i18n="STMemoryBooks_SlothStepSave">3 · Approve and save</li>
+          </ol>
+        </section>
+        {{/if}}
+        {{#unless slothWorkspaceActive}}
         {{#if hasScene}}
         <div id="stmb-scene" class="padding10 marginBot10">
             <div class="marginBot5" data-i18n="STMemoryBooks_CurrentScene">Current Scene:</div>
@@ -65,6 +82,8 @@ export const settingsTemplate = Handlebars.compile(`
             <small data-i18n="STMemoryBooks_AutoSummaryNote">Please note that Auto-Summary requires you to "prime" every chat with at least one manual memory. After that, summaries will be made automatically.</small>
         </div>
         {{/if}}
+
+        {{/unless}}
 
         {{#unless isGroupChat}}
         <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
@@ -138,6 +157,18 @@ export const settingsTemplate = Handlebars.compile(`
           <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Prepare the missing lorebook</button>
         </div>
         {{/if}}
+        {{#if slothWorkspaceActive}}
+        <section class="stmb-sloth-profile-card">
+          <label for="stmb-sloth-profile-select">
+            <strong data-i18n="STMemoryBooks_SlothAIModule">AI profile used for memory collection</strong>
+          </label>
+          <select id="stmb-sloth-profile-select" class="text_pole">
+            {{#each profiles}}
+            <option value="{{@index}}" {{#if isDefault}}selected{{/if}}>{{name}}{{#if isDefault}} (Default){{/if}}</option>
+            {{/each}}
+          </select>
+        </section>
+        {{/if}}
         {{#if slothRoleActive}}
         <div class="info-block">
           <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect completed events</button>
@@ -170,6 +201,11 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
         {{/if}}
 
+        {{#if slothWorkspaceActive}}
+        <details class="stmb-sloth-legacy-settings">
+          <summary data-i18n="STMemoryBooks_SlothAdvancedLegacy">Original Memory Books tools and settings</summary>
+          <div class="stmb-sloth-legacy-body">
+        {{/if}}
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
 
         <div class="info-block">
@@ -307,6 +343,11 @@ export const settingsTemplate = Handlebars.compile(`
                 <!-- prompt manager buttons will be dynamically inserted here -->
             </div>
         </div>
+
+        {{#if slothWorkspaceActive}}
+          </div>
+        </details>
+        {{/if}}
 
 `);
 

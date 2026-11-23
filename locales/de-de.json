@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "Archivierte Original-Scene",
   "STMemoryBooks_SlothSplitNew": "Neue unabhängige Scenes",
   "STMemoryBooks_SlothSplitApprove": "Original-Memory-JSON sichern und Aufteilung bestätigen",
-  "STMemoryBooks_SlothSplitSaved": "Geprüfte Scene-Aufteilung in Memory gespeichert. Original archiviert, keine Chatnachrichten ausgeblendet."
+  "STMemoryBooks_SlothSplitSaved": "Geprüfte Scene-Aufteilung in Memory gespeichert. Original archiviert, keine Chatnachrichten ausgeblendet.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Verbinde die Lorebooks des Charakters, prüfe abgeschlossene Ereignisse und bestätige jede Speicherung. Keine automatische Sammlung oder Ausblendung.",
+  "STMemoryBooks_SlothStepRoles": "1 · Lorebooks verbinden",
+  "STMemoryBooks_SlothStepCollect": "2 · Ereignisse prüfen",
+  "STMemoryBooks_SlothStepSave": "3 · Prüfen und speichern",
+  "STMemoryBooks_SlothAIModule": "KI-Profil für die Erinnerungssammlung",
+  "STMemoryBooks_SlothAdvancedLegacy": "Ursprüngliche Memory-Books-Werkzeuge und erweiterte Einstellungen",
+  "STMemoryBooks_SlothEditNexusOperation": "Prüfe oder bearbeite die vorgeschlagene Nexus-Änderung. Die Quellenprüfung bleibt aktiv."
 }

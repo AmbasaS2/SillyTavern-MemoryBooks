@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "保管する旧Scene",
   "STMemoryBooks_SlothSplitNew": "新しい独立Scene",
   "STMemoryBooks_SlothSplitApprove": "Memoryの元JSONを保存して分割を承認",
-  "STMemoryBooks_SlothSplitSaved": "確認したScene分割をMemoryに保存しました。原文は保管し、チャットは非表示にしていません。"
+  "STMemoryBooks_SlothSplitSaved": "確認したScene分割をMemoryに保存しました。原文は保管し、チャットは非表示にしていません。",
+  "STMemoryBooks_SlothDashboardSubtitle": "キャラクターのロアブックを接続し、完結した出来事を確認して保存を承認します。自動収集や自動非表示は行いません。",
+  "STMemoryBooks_SlothStepRoles": "1 · ロアブックを接続",
+  "STMemoryBooks_SlothStepCollect": "2 · 出来事を確認",
+  "STMemoryBooks_SlothStepSave": "3 · 承認して保存",
+  "STMemoryBooks_SlothAIModule": "記憶収集用のAIプロファイル",
+  "STMemoryBooks_SlothAdvancedLegacy": "従来のMemory Booksツールと詳細設定",
+  "STMemoryBooks_SlothEditNexusOperation": "提案されたNexusの変更を確認・編集できます。原文の根拠チェックは維持されます。"
 }

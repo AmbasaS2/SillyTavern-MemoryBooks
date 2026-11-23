@@ -1706,5 +1706,12 @@
   "STMemoryBooks_SlothSplitOld": "Scene original arquivada",
   "STMemoryBooks_SlothSplitNew": "Novas Scenes independentes",
   "STMemoryBooks_SlothSplitApprove": "Fazer backup do JSON original de Memory e aprovar divisão",
-  "STMemoryBooks_SlothSplitSaved": "Divisão revisada salva em Memory. Original arquivado; nenhuma mensagem do chat foi ocultada."
+  "STMemoryBooks_SlothSplitSaved": "Divisão revisada salva em Memory. Original arquivado; nenhuma mensagem do chat foi ocultada.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Conecte os livros de conhecimento do personagem, revise eventos concluídos e aprove cada gravação. Sem coleta ou ocultação automática.",
+  "STMemoryBooks_SlothStepRoles": "1 · Conectar livros",
+  "STMemoryBooks_SlothStepCollect": "2 · Revisar eventos",
+  "STMemoryBooks_SlothStepSave": "3 · Aprovar e salvar",
+  "STMemoryBooks_SlothAIModule": "Perfil de IA para coletar memórias",
+  "STMemoryBooks_SlothAdvancedLegacy": "Ferramentas originais do Memory Books e configurações avançadas",
+  "STMemoryBooks_SlothEditNexusOperation": "Revise ou edite a alteração proposta no Nexus. A verificação das fontes continua ativa."
 }

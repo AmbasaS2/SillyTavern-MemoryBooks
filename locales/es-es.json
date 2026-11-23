@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "Scene original archivada",
   "STMemoryBooks_SlothSplitNew": "Nuevas Scenes independientes",
   "STMemoryBooks_SlothSplitApprove": "Descargar JSON original de Memory y aprobar división",
-  "STMemoryBooks_SlothSplitSaved": "División revisada guardada en Memory. Original archivado y ningún mensaje ocultado."
+  "STMemoryBooks_SlothSplitSaved": "División revisada guardada en Memory. Original archivado y ningún mensaje ocultado.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Conecta los libros de conocimiento del personaje, revisa los sucesos completos y aprueba cada guardado. No se recopila ni se oculta nada automáticamente.",
+  "STMemoryBooks_SlothStepRoles": "1 · Conectar libros",
+  "STMemoryBooks_SlothStepCollect": "2 · Revisar sucesos",
+  "STMemoryBooks_SlothStepSave": "3 · Aprobar y guardar",
+  "STMemoryBooks_SlothAIModule": "Perfil de IA para recopilar recuerdos",
+  "STMemoryBooks_SlothAdvancedLegacy": "Herramientas originales de Memory Books y ajustes avanzados",
+  "STMemoryBooks_SlothEditNexusOperation": "Revisa o edita el cambio propuesto para Nexus. Se mantiene la comprobación de las fuentes."
 }

@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "Scene asal yang diarkibkan",
   "STMemoryBooks_SlothSplitNew": "Scene bebas yang baharu",
   "STMemoryBooks_SlothSplitApprove": "Sandarkan JSON Memory asal dan luluskan pemisahan",
-  "STMemoryBooks_SlothSplitSaved": "Pemisahan Scene yang disemak disimpan ke Memory. Asal diarkibkan; tiada mesej chat disembunyikan."
+  "STMemoryBooks_SlothSplitSaved": "Pemisahan Scene yang disemak disimpan ke Memory. Asal diarkibkan; tiada mesej chat disembunyikan.",
+  "STMemoryBooks_SlothDashboardSubtitle": "Sambungkan buku lore watak, semak peristiwa yang selesai, kemudian luluskan penyimpanan. Tiada pengumpulan atau penyembunyian automatik.",
+  "STMemoryBooks_SlothStepRoles": "1 · Sambung buku lore",
+  "STMemoryBooks_SlothStepCollect": "2 · Semak peristiwa",
+  "STMemoryBooks_SlothStepSave": "3 · Luluskan dan simpan",
+  "STMemoryBooks_SlothAIModule": "Profil AI untuk pengumpulan memori",
+  "STMemoryBooks_SlothAdvancedLegacy": "Alat Memory Books asal dan tetapan lanjutan",
+  "STMemoryBooks_SlothEditNexusOperation": "Semak atau sunting perubahan Nexus yang dicadangkan. Semakan sumber masih diwajibkan."
 }

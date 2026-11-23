@@ -1709,5 +1709,12 @@
   "STMemoryBooks_SlothSplitOld": "보관할 기존 Scene",
   "STMemoryBooks_SlothSplitNew": "새로운 독립 Scene",
   "STMemoryBooks_SlothSplitApprove": "Memory 원본 JSON 백업 후 분리 저장 승인",
-  "STMemoryBooks_SlothSplitSaved": "검토한 Scene 분할을 Memory에 저장했습니다. 원본은 보관했고 채팅은 숨기지 않았습니다."
+  "STMemoryBooks_SlothSplitSaved": "검토한 Scene 분할을 Memory에 저장했습니다. 원본은 보관했고 채팅은 숨기지 않았습니다.",
+  "STMemoryBooks_SlothDashboardSubtitle": "캐릭터 로어북을 연결하고 완결 사건을 검토한 다음 저장을 승인해요. 자동 수집이나 자동 Hide는 하지 않아요.",
+  "STMemoryBooks_SlothStepRoles": "1 · 로어북 연결",
+  "STMemoryBooks_SlothStepCollect": "2 · 사건 검토",
+  "STMemoryBooks_SlothStepSave": "3 · 승인 후 저장",
+  "STMemoryBooks_SlothAIModule": "기억 수집에 사용할 AI 프로필",
+  "STMemoryBooks_SlothAdvancedLegacy": "기존 메모리북 도구와 고급 설정",
+  "STMemoryBooks_SlothEditNexusOperation": "제안된 Nexus 변경을 검토하거나 수정하세요. 원문 근거 검사는 유지됩니다."
 }
