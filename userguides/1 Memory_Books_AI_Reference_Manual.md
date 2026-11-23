@@ -18,6 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 - [3. Core Vocabulary and Feature Selection](#3-core-vocabulary-and-feature-selection)
 - [4. Requirements, Installation, and Initial Verification](#4-requirements-installation-and-initial-verification)
 - [5. Opening Memory Books and Understanding the Main Panel](#5-opening-memory-books-and-understanding-the-main-panel)
+  - [5.1 게으름뱅이 포크에서 기억 수집과 백업 복구](#51-게으름뱅이-포크에서-기억-수집과-백업-복구)
 - [6. Memory Book Storage Modes](#6-memory-book-storage-modes)
 - [7. Profiles, Connections, and Generation Routing](#7-profiles-connections-and-generation-routing)
 - [8. Scenes, Manual Memories, Automatic Memories, and Catch-Up](#8-scenes-manual-memories-automatic-memories-and-catch-up)
@@ -270,6 +271,23 @@ For a first Memory, only three decisions are required:
 1. Which Memory Book will receive the entry?
 2. Which profile/connection will generate it?
 3. Which chat messages are the scene?
+
+### 5.1 게으름뱅이 포크에서 기억 수집과 백업 복구
+
+개별 캐릭터 채팅의 **Memory Books** 화면에서 **로어북 연결**을 먼저 확인한다. **Nexus**에는 Core Memory와 Current Continuity, 장기 기억, NPC 등 Scene 외 기록을 둔다. **Memory**에는 완결 Scene을 둔다. 연결된 책을 지정하거나, 책이 없다면 두 권을 처음 구축한다. AU에만 다른 책을 쓰려면 해당 채팅의 역할 예외를 지정한다. 새 채팅은 캐릭터 기본 연결을 사용한다.
+
+1. 기억 수집을 열고 사용할 AI 프로필을 고른다. 사건의 발단과 결말, 원문 메시지 범위를 확인한 뒤 계획을 승인한다. 아직 끝나지 않은 사건은 다음 수집에서 다시 볼 수 있게 남는다.
+2. Scene 본문·키워드와 Nexus 변경안의 근거를 확인하고 필요하면 수정한다. 백업을 다운로드하고 최종 승인하면 서버에 저장한다. 최근 완결 Scene 세 개는 상시 사용하고, 지난 Scene은 설정한 벡터 또는 키워드로 회수한다.
+3. 저장 뒤 Hide 안내가 나오면 표시된 원문 번호까지만 검토한다. 수집 자체는 대화를 숨기지 않는다. 여러 원문 범위에 걸친 사건이라도 중간에 미완결 메시지가 남아 있으면 현재 화면의 Hide 안내를 따른다.
+
+**기존 기억 관리**에서 검토형 이전, Scene 병합·분할과 Side Prompt를 찾을 수 있다. 분할은 원본 메시지가 보이고 완료 순서를 확인할 수 있는 Scene에 적용된다. Side Prompt는 설정된 기억 후 템플릿과 선택한 Scene 원문을 사용한다. 초안을 보고 Nexus나 지정 책에 저장할 수 있다. 나머지 Memory Books 기능은 **고급 설정과 기존 도구**에 있다.
+
+저장 충돌이 표시되면 로어북을 다시 열어 다른 편집이 반영됐는지 확인한 뒤 새로 수집하거나 검토한다. 자동 복구를 확인할 수 없다는 메시지가 나오면, 먼저 현재 로어북도 별도 파일로 내보낸다. 승인 때 다운로드한 백업 JSON에서 해당 책의 원본 World Info 객체를 찾아 임시 이름으로 가져온 뒤 현재 본과 비교한다.
+
+- 두 권 수집, 통합 이전, Side Prompt 백업은 일반적으로 `originals` 안에 책 이름별 원본이 있다. 값이 `null`이면 그 작업 전에 해당 책이 없었다는 뜻이다.
+- 단일 책 수정 백업은 작업에 따라 `original`, `originalMemory`, `originalNexus`에 원본이 있다. 원본 World Info 객체 하나를 그 자체로 저장한 JSON을 SillyTavern의 가져오기에 사용한다.
+
+책을 복구하기로 했다면 현재 본의 독립 편집을 보존하고, 차이가 있는 항목을 검토한 뒤 반영한다. 책 백업을 가져오면 채팅의 수집 기록과 Hide 상태는 각각 별도로 확인해야 한다. 원래 게으름뱅이 기억의 역할과 프롬프트 전문은 [원본 사용법](https://app.notion.com/p/3b4a96b06fd48027b2d9d97590b77d31)에 있다.
 
 ---
 
