@@ -36,6 +36,46 @@ function requireValidUid(entry) {
     return uid;
 }
 
+const MERGED_INTO = 'STMB_slothSceneMergedInto';
+const MERGE_HISTORY = 'STMB_slothSceneMerge';
+
+function validateMergedArchives(entries) {
+    for (const entry of entries) {
+        const hasArchive = Object.prototype.hasOwnProperty.call(entry, MERGED_INTO);
+        const hasHistory = Object.prototype.hasOwnProperty.call(entry, MERGE_HISTORY);
+        if (!hasArchive && !hasHistory) continue;
+        if (hasArchive) {
+            const archive = entry[MERGED_INTO];
+            const target = entries.find(item => item?.uid === archive?.targetUid);
+            const history = target?.[MERGE_HISTORY];
+            const previous = Array.isArray(history?.sources)
+                ? history.sources.find(item => item?.uid === entry.uid) : null;
+            if (archive?.version !== 1 || !target || !previous ||
+                history.version !== 1 || history.sources.length !== 2 ||
+                entry.disable !== true || entry.constant !== false ||
+                entry.vectorized !== false || entry.selective !== false ||
+                entry.comment !== previous.comment || entry.content !== previous.content) {
+                throw new Error('Broken merged Scene archive (UID ' + entry.uid + ').');
+            }
+            for (const [field, oldValue] of Object.entries(previous)) {
+                if (['disable', 'constant', 'vectorized', 'selective'].includes(field)) continue;
+                if (JSON.stringify(entry[field]) !== JSON.stringify(oldValue)) {
+                    throw new Error('Merged Scene archive metadata mismatch: ' + field);
+                }
+            }
+        } else {
+            const history = entry[MERGE_HISTORY];
+            if (history?.version !== 1 || !Array.isArray(history.sources) ||
+                history.sources.length !== 2 || !history.sources.some(item => item.uid === entry.uid) ||
+                history.sources.filter(item => item.uid !== entry.uid).length !== 1 ||
+                !entries.some(item => item?.uid !== entry.uid &&
+                    item?.[MERGED_INTO]?.targetUid === entry.uid)) {
+                throw new Error('Merged Scene history has missing source/archived UID ' + entry.uid + '.');
+            }
+        }
+    }
+}
+
 function requireKeywords(entry, uid) {
     if (!Array.isArray(entry.key) || !entry.key.some(value => String(value || '').trim())) {
         throw new Error(`Scene ${uid} has no keywords. Keyword recall would make this past Scene unreachable.`);
@@ -64,6 +104,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
     }
 
     const entries = Object.values(memory.entries);
+    validateMergedArchives(entries);
     const numbered = [];
     const usedUids = new Set();
     const usedNumbers = new Set();
@@ -78,7 +119,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
         }
         usedUids.add(uid);
         usedNumbers.add(sequence);
-        numbered.push({ uid, sequence });
+        if (!Object.prototype.hasOwnProperty.call(entry, MERGED_INTO)) numbered.push({ uid, sequence });
     }
 
     numbered.sort((a, b) => a.sequence - b.sequence);
@@ -87,6 +128,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
     const staged = structuredClone(memory);
     const changes = [];
     for (const entry of Object.values(staged.entries)) {
+        if (Object.prototype.hasOwnProperty.call(entry, MERGED_INTO)) continue; // disabled original retained only for lossless recovery
         const uid = requireValidUid(entry);
         const old = Object.values(memory.entries).find(item => Number(item?.uid) === uid);
         const alwaysOn = recent.has(uid);
