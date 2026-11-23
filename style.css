@@ -916,10 +916,10 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 /* 🦥 Sloth System — scoped clean role controls; inherit the ST font/theme. */
 .popup.stmb-popup .stmb-workspace {
     display: grid;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
     text-align: start;
-    line-height: 1.45;
+    line-height: 1.32;
     overflow-wrap: anywhere;
     --stmb-workspace-surface: color-mix(in srgb, var(--SmartThemeChatTintColor) 92%, var(--SmartThemeBodyColor) 8%);
     --stmb-workspace-rule: color-mix(in srgb, var(--SmartThemeBorderColor) 74%, var(--SmartThemeBodyColor) 26%);
@@ -930,7 +930,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     justify-content: space-between;
     align-items: baseline;
     gap: 4px 16px;
-    padding: 5px 4px 12px;
+    padding: 2px 2px 7px;
     border-bottom: 1px solid var(--stmb-workspace-rule);
 }
 .popup.stmb-popup .stmb-workspace-header h2 {
@@ -949,8 +949,8 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-workspace-tabs button {
     min-width: 0;
-    min-height: 42px;
-    padding: 6px 10px;
+    min-height: 36px;
+    padding: 4px 8px;
     border: 1px solid transparent;
     border-radius: 7px;
     background: transparent;
@@ -967,12 +967,12 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-tab-panel[hidden] { display: none; }
 .popup.stmb-popup :is(.stmb-tab-panel, .stmb-original-panel) { min-width: 0; }
-.popup.stmb-popup #stmb-sloth-panel:not([hidden]) { display: grid; gap: 10px; }
-.popup.stmb-popup #stmb-sloth-panel :is(h3, p) { margin-block: 0 8px; }
+.popup.stmb-popup #stmb-sloth-panel:not([hidden]) { display: grid; gap: 7px; }
+.popup.stmb-popup #stmb-sloth-panel :is(h3, p) { margin-block: 0 5px; }
 .popup.stmb-popup #stmb-sloth-panel > :is(section, details) {
     min-width: 0;
     margin: 0;
-    padding: clamp(12px, 2vw, 18px);
+    padding: 8px 10px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 10px;
     background: var(--stmb-workspace-surface);
@@ -984,6 +984,14 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-controls { display: flex; flex-wrap: wrap; gap: 6px; }
 .popup.stmb-popup .stmb-sloth-controls > [hidden] { display: none; }
+.popup.stmb-popup :is(#stmb-sloth-panel, .stmb-sloth-form) .menu_button {
+    margin: 0;
+    min-height: 34px;
+    padding: 3px 8px;
+    line-height: 1.2;
+}
+.popup.stmb-popup #stmb-sloth-panel .world_entry_form_control { margin-block: 0 5px; gap: 3px; }
+.popup.stmb-popup #stmb-sloth-panel .text_pole { margin-block: 0; }
 .popup.stmb-popup .stmb-collection button[data-stmb-sloth-action="collect"] {
     padding-inline: 16px;
     background: color-mix(in srgb, var(--SmartThemeChatTintColor) 76%, var(--SmartThemeQuoteColor, var(--SmartThemeEmColor)) 24%);
@@ -1028,36 +1036,36 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     color: var(--SmartThemeBodyColor);
 }
 .popup.stmb-popup .stmb-sloth-roles h3 {
-    margin: 0 0 8px;
+    margin: 0 0 5px;
     padding: 0;
     font-size: 1.05em;
     font-weight: 700;
 }
 .popup.stmb-popup .stmb-sloth-roles p {
-    margin: 8px 0;
+    margin: 4px 0;
 }
 .popup.stmb-popup .stmb-sloth-chat-override {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 12px 0 0;
+    gap: 6px;
+    margin: 5px 0 0;
 }
 .popup.stmb-popup .stmb-sloth-chat-override + small {
     display: block;
-    margin: 2px 0 0;
-    line-height: 1.5;
+    margin: 2px 0 0 1.5em;
+    line-height: 1.25;
 }
 .popup.stmb-popup .stmb-sloth-role-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 6px 10px;
 }
 .popup.stmb-popup .stmb-sloth-role-grid label {
     display: flex;
     flex-direction: column;
     align-items: stretch;
     min-width: 0;
-    gap: 4px;
+    gap: 2px;
 }
 .popup.stmb-popup .stmb-sloth-role-grid select {
     width: 100%;
@@ -1066,39 +1074,53 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     box-sizing: border-box;
 }
 .popup.stmb-popup .stmb-sloth-roles .stmb-sloth-warning {
-    margin-top: 12px;
+    margin-top: 5px;
     color: var(--warning-color, var(--SmartThemeEmColor));
 }
 @media (max-width: 620px) {
     .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
-    .popup.stmb-popup .stmb-sloth-roles { padding: 12px; }
     .popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) { grid-template-columns: minmax(0, 1fr); }
-    .popup.stmb-popup .stmb-workspace .menu_button { min-height: 40px; }
 }
 
 /* Sloth collector previews: scoped to STMB popups, never global ST styles. */
 .popup.stmb-popup .stmb-sloth-review {
-    display:flex;flex-direction:column;gap:10px;min-width:0;
+    display:flex;flex-direction:column;gap:7px;min-width:0;
     color:var(--SmartThemeBodyColor);
     text-align: start;
     overflow-wrap: anywhere;
 }
 .popup.stmb-popup .stmb-sloth-review h3,
-.popup.stmb-popup .stmb-sloth-review h4 {margin:4px 0;}
+.popup.stmb-popup .stmb-sloth-review h4 {margin:2px 0;}
+.popup.stmb-popup .stmb-sloth-review [hidden] { display: none; }
+.popup.stmb-popup .stmb-sloth-review .text_pole { margin: 0; }
 .popup.stmb-popup .stmb-sloth-plan-summary {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
-    gap: 8px 12px;
+    gap: 4px 10px;
     margin: 0;
-    padding: 12px;
+    padding: 7px 9px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 8px;
 }
 .popup.stmb-popup .stmb-sloth-plan-summary dt { font-weight: 600; }
 .popup.stmb-popup .stmb-sloth-plan-summary dd { margin: 0; overflow-wrap: anywhere; }
 .popup.stmb-popup .stmb-sloth-plan-list { margin: 0; padding-inline-start: 1.5em; }
-.popup.stmb-popup .stmb-sloth-plan-list li { margin-block: 6px; overflow-wrap: anywhere; }
+.popup.stmb-popup .stmb-sloth-plan-list li { margin-block: 3px; overflow-wrap: anywhere; }
 .popup.stmb-popup .stmb-sloth-plan-list small { display: block; }
+.popup.stmb-popup :is(.stmb-sloth-plan-hide, .stmb-sloth-advanced-fields, .stmb-sloth-focus) {
+    display: grid;
+    gap: 5px;
+    margin-block: 3px;
+}
+.popup.stmb-popup .stmb-sloth-inline-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+}
+.popup.stmb-popup .stmb-sloth-inline-field input { width: 5em; max-width: 100%; margin: 0; }
+.popup.stmb-popup .stmb-sloth-focus { padding: 4px 7px; border: 1px solid var(--SmartThemeBorderColor); }
+.popup.stmb-popup .stmb-sloth-loading { min-height: 2em; }
 .popup.stmb-popup .stmb-sloth-plan-item {
     display:flex;flex-direction:column;gap:7px;padding:12px;
     border:1px solid var(--SmartThemeBorderColor);border-radius:10px;
@@ -1115,17 +1137,36 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-sloth-maintenance { margin-block: 12px; }
 .popup.stmb-popup .stmb-sloth-maintenance > div {
     display: grid;
-    margin-block: 10px 0;
+    margin-block: 4px 0;
 }
 .popup.stmb-popup .stmb-management-action {
     display: grid;
     grid-template-columns: minmax(11rem, 34%) minmax(0, 1fr);
     align-items: center;
-    gap: 10px 14px;
-    padding-block: 9px;
+    gap: 4px 8px;
+    padding-block: 4px;
     border-top: 1px solid var(--stmb-workspace-rule);
 }
-.popup.stmb-popup .stmb-management-action small { line-height: 1.5; }
+.popup.stmb-popup .stmb-management-action small { line-height: 1.28; }
+
+#rightSendForm #stmb-sloth-composer {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    align-self: stretch;
+    min-width: 30px;
+    border: 0;
+    padding: 0 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: .78em;
+    white-space: nowrap;
+    opacity: .72;
+    cursor: pointer;
+}
+#rightSendForm #stmb-sloth-composer:is(:hover,:focus-visible) { opacity: 1; }
+#rightSendForm #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
 .popup.stmb-popup .stmb-sloth-comparison {
     display: grid;
     gap: 8px;

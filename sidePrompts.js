@@ -265,7 +265,7 @@ async function resolveSidePromptAdditionalContextEntries(tpl) {
     return { ...resolved, source: mode === 'fixed' ? 'fixed' : 'chat' };
 }
 
-function buildPrompt(templatePrompt, priorContent, compiledScene, responseFormat, previousSummaries = [], runtimeMacros = {}, additionalContextEntries = []) {
+function buildPrompt(templatePrompt, priorContent, compiledScene, responseFormat, previousSummaries = [], runtimeMacros = {}, additionalContextEntries = [], savedSceneText = null) {
     const parts = [];
     parts.push(applySidePromptMacros(templatePrompt, runtimeMacros));
     if (priorContent && String(priorContent).trim()) {
@@ -308,11 +308,11 @@ function buildPrompt(templatePrompt, priorContent, compiledScene, responseFormat
     }
     appendSidePromptAdditionalContext(parts, additionalContextEntries);
     // Derive scene text from the compiled scene here to keep a single source of truth
-    const sceneText = compiledScene ? toReadableText(compiledScene) : '';
+    const sceneText = compiledScene ? toReadableText(compiledScene) : (savedSceneText ?? '');
     parts.push(`\n${translate(
-        '=== SCENE TEXT ===',
-        'STMemoryBooks_PromptFrame_SideSceneTextStart',
+        '=== SCENE TEXT ===', 'STMemoryBooks_PromptFrame_SideSceneTextStart',
     )}\n`);
+    if (savedSceneText !== null) parts.push('Source is an existing saved event summary. Do not infer any missing dialogue or facts.\n');
     parts.push(sceneText);
     if (responseFormat && String(responseFormat).trim()) {
         parts.push(`\n${translate(
@@ -706,6 +706,7 @@ async function prepareSidePromptRun({
     fallbackKinds = [],
     runtimeMacros = {},
     priorContentOverride = undefined,
+    savedSceneText = null,
 }) {
     const unifiedTitle = getUnifiedSidePromptTitle(tpl, runtimeMacros);
     const sidePromptHistory = getSidePromptHistory(tpl, runtimeMacros, fallbackKinds);
@@ -727,7 +728,7 @@ async function prepareSidePromptRun({
     }
 
     const additionalContext = await resolveSidePromptAdditionalContextEntries(tpl);
-    const finalPrompt = buildPrompt(tpl.prompt, prior, compiledScene, tpl.responseFormat, prevSummaries, runtimeMacros, additionalContext.entries);
+    const finalPrompt = buildPrompt(tpl.prompt, prior, compiledScene, tpl.responseFormat, prevSummaries, runtimeMacros, additionalContext.entries, savedSceneText);
     const idx = Number(tpl?.settings?.overrideProfileIndex);
     const useOverride = !!tpl?.settings?.overrideProfileEnabled && Number.isFinite(idx);
     const conn = useOverride
@@ -1554,13 +1555,13 @@ export async function listReviewedSidePromptOptions(nexusName, isAllowedBook) {
 }
 
 /** Prepare a supplemental record using the original template, connection and history policy. */
-export async function proposeReviewedSidePrompt(item, original, compiledScene, profile) {
+export async function proposeReviewedSidePrompt(item, original, compiledScene, profile, savedSceneText = null) {
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
     const { tpl, runtimeMacros, lorebookName } = item;
     try {
         const prepared = await prepareSidePromptRun({ tpl, loreData: original, compiledScene,
             defaultOverrides: resolveSidePromptConnection(profile),
-            fallbackKinds: ['plotpoints', 'scoreboard'], runtimeMacros });
+            fallbackKinds: ['plotpoints', 'scoreboard'], runtimeMacros, savedSceneText });
         if (item.inNexus) {
             const { titleBase, legacyTitles, chatId } = prepared.sidePromptHistory;
             const reserved = [titleBase, ...legacyTitles].some(title =>
@@ -1587,9 +1588,12 @@ export async function proposeReviewedSidePrompt(item, original, compiledScene, p
                 const item = {
                     title: prepared.unifiedTitle, content,
                     defaults, entryOverrides, sidePromptHistory: prepared.sidePromptHistory,
-                    metadataUpdates: { [`STMB_sp_${tpl.key}_lastRunAt`]: new Date().toISOString() },
-                    metadataFactory: createSidePromptRegenerationMetadataFactory(
-                        tpl, prepared.prior, compiledScene, runtimeMacros),
+                    metadataUpdates: {
+                        [`STMB_sp_${tpl.key}_lastRunAt`]: new Date().toISOString(),
+                        ...(compiledScene ? {} : { [SIDE_PROMPT_REGENERATION_METADATA_KEY]: null }),
+                    },
+                    metadataFactory: compiledScene ? createSidePromptRegenerationMetadataFactory(
+                        tpl, prepared.prior, compiledScene, runtimeMacros) : undefined,
                 };
                 return stageLorebookEntriesBatch(lorebookName, structuredClone(original), [item]).lorebookData;
             },

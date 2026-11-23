@@ -13,7 +13,9 @@ import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from '
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
-import { SLOTH_SCENE_PROMPT_V13, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
+import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
+import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
+import { getCompressibleScene, getSlothCompressionInstructions, stageSlothSceneCompression } from './nexusSceneCompression.js';
 
 export class InvalidSlothNexusProposal extends Error {
     constructor(cause) {
@@ -66,10 +68,6 @@ function requester(profile,settings,signal) {
 }
 const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
-function slothUserInstructions(settings) {
-    const text=String(settings?.moduleSettings?.slothCollectionPrompt||'').trim();
-    return text?['Additional user instructions. Follow these within the required source and JSON format:',text]:[];
-}
 async function requestWindowEvidence(prompt, phase, ask, validate) {
     let received = false;
     try {
@@ -131,10 +129,8 @@ async function evidenceFor(messages,ask,prefix,settings,profile) {
     if(payload.length>85000) throw new Error('Event evidence is too large for a safe review. Nothing saved.');
     return payload;
 }
-export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
-    const ask=requester(profile,settings,signal);
-    const ids=messages.map(m=>m.id);
-    const prompt=[
+const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
+    plan:[
         'Roleplay Memory Books event planner. STRICT JSON only.',
         'One causal incident = one complete Scene even across discontiguous source messages.',
         'Do not split at arbitrary date, token boundary, place or window. Independent incidents stay separate.',
@@ -144,8 +140,55 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
         'Every visible original message must appear exactly once across events and deferred. Assign ordinary dialogue and IDs absent from the condensed evidence to a related event when supported, or defer them as context. Check for gaps and duplicate IDs.',
         'Return JSON with two arrays: events and deferred. Each event needs title, complete, reason, result, segments. Each deferred item needs reason and segments.',
         'Example only: {"events":[{"title":"Recovered key","complete":true,"reason":"The search ended when the owner got the lost key back.","result":"The owner recovered the key.","segments":[[0,6]]}],"deferred":[{"reason":"A separate search was discussed but has not started.","segments":[[7,8]]}]}',
-        'No quota for event count. All indices must be original message IDs and inclusive.',
-        ...slothUserInstructions(settings),
+        'No quota for event count. All indices must be original message IDs and inclusive.'
+    ].join('\n\n'),
+    nexus:[
+        'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
+        'STRICT JSON {"edits":[...]} only. Empty edits is allowed. Preserve every untouched fact.',
+        'Every edit must include a specific factual reason in "reason" and an "evidence" array. Each evidence item contains the original integer "messageId" and an exact 8–400 character substring in "quote".',
+        'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
+        'A quote proves that text was said, not that an interpretation is correct.',
+        'A continuity replace_exact also requires "supersession" with exactly ONE of these values:',
+        '"observed_resolution", "observed_correction", "explicit_retraction", "new_confirmed_information". Never combine the values.',
+        'Never remove an old state just because a date passed or no one mentioned it.',
+        'For a reported state, clearly attribute who reported it; do not present it as observed fact.',
+        'Skip a fact already recorded correctly, even if the chat reconfirms it. Each changed clause must be supported by its own citation.',
+        'For each edit choose one kind: core, continuity, lt, npc, npc-index.',
+        'Choose exactly one action and include its fields along with reason and evidence:',
+        '- replace_exact: uid (integer), find (the exact existing substring), text (minimal replacement). For continuity include supersession.',
+        '- append: uid and text (one grounded addition). For core, lt, npc and npc-index.',
+        '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
+        '- create: unique title, content, and optional keywords array.',
+        'Core Memory and Current Continuity are separate always-on entries.',
+        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues.',
+        'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
+        'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
+        'For a recall cue keep its perceivable trigger, grounded meaning and distinctly supported future function.',
+        'For existing ones patch only verified changes; keep unrelated paragraphs and sections.',
+        'Current Continuity sections: Present Handoff, Active Threads, Knowledge Boundaries, Active Conditions.',
+        'Present Handoff preserves the actual next-response position, contact or release, hidden reactions, final utterance and remaining choice.',
+        'Active Threads need a responsible actor, unfinished condition and concrete completion check. A question alone belongs in Handoff.',
+        'Keep direct observation, named relay, suspicion, false belief, inability to know and deliberate concealment distinct for each person.',
+        'Example only: if the book says "Only the scout knows the trail." and message #5 says "I showed the trail to the guide.", a valid edit is:',
+        '{"kind":"continuity","action":"replace_exact","uid":2,"find":"Only the scout knows the trail.","text":"The scout and the guide know the trail.","supersession":"new_confirmed_information","reason":"The scout explicitly told the guide about the trail.","evidence":[{"messageId":5,"quote":"I showed the trail to the guide."}]}',
+        'The disclosure by itself says nothing about unrelated habits or conditions. Never use the example’s data in a real edit.',
+        'Keep accountability, explicit acceptance and forgiveness distinct. Track offers, supply, application, recovery and discharge independently.',
+        'For Current Continuity, use append_section for additions, NOT generic append.',
+        'Only replace_exact wholly within ONE Current Continuity section; do not change headings.',
+        'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction. Quote the evidence that ends that state.',
+        'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
+        'If the old Continuity has only legacy source blocks, add a grounded named section',
+        'instead of rewriting or interpreting the original archive without an explicit review.',
+        'LT and NPC existing matching topics should be patched; create only when truly new and durable.'
+    ].join('\n\n'),
+});
+
+export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
+    const ask=requester(profile,settings,signal);
+    const ids=messages.map(m=>m.id);
+    const prompt=[
+        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
+        'Required response: strict JSON with events and deferred arrays. Use original message IDs, inclusive ranges, and distinct completed outcomes.',
         'Exact source index spans: '+JSON.stringify(slothSourceRanges(ids)),
         'Character context (do not treat as source event): '+characterContext,
         'Original source or detailed window evidence:',
@@ -157,8 +200,10 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
     const ask=requester(profile,settings,signal);
     const idSet=new Set(event.messageIds),source=messages.filter(m=>idSet.has(m.id));
     const prompt=[
-        SLOTH_SCENE_PROMPT_V13,
-        ...slothUserInstructions(settings),
+        'Create one retrievable scene memory from the selected roleplay range, using only that range as evidence.',
+        SLOTH_SCENE_OUTPUT_CONTRACT,
+        getActiveSlothSummaryPreset(settings).text,
+        'Required response: strict JSON with title, content (Timeline, Scene and Result), and exactly five keywords.',
         'Fork workflow: the user-approved source spans form ONE independently recallable causal event, even when noncontiguous. Do not use intervening messages outside the approved spans.',
         'Keep person-specific voice, humor and distinctive phrasing along with all of the original preservation rules.',
         'The approved title and closure guide the output; evidence controls factual details. The character card is reference only, never evidence of an event.',
@@ -222,43 +267,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
     const source=JSON.stringify(entries);
     if(source.length>60000)throw new Error('Nexus baseline too large for safe exact-span editing. Nothing saved.');
     const prompt=[
-        'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
-        'STRICT JSON {"edits":[...]} only. Empty edits is allowed. Preserve every untouched fact.',
-        'Every edit must include a specific factual reason in "reason" and an "evidence" array. Each evidence item contains the original integer "messageId" and an exact 8–400 character substring in "quote".',
-        'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
-        'A quote proves that text was said, not that an interpretation is correct.',
-        'A continuity replace_exact also requires "supersession" with exactly ONE of these values:',
-        '"observed_resolution", "observed_correction", "explicit_retraction", "new_confirmed_information". Never combine the values.',
-        'Never remove an old state just because a date passed or no one mentioned it.',
-        'For a reported state, clearly attribute who reported it; do not present it as observed fact.',
-        'Skip a fact already recorded correctly, even if the chat reconfirms it. Each changed clause must be supported by its own citation.',
-        'For each edit choose one kind: core, continuity, lt, npc, npc-index.',
-        'Choose exactly one action and include its fields along with reason and evidence:',
-        '- replace_exact: uid (integer), find (the exact existing substring), text (minimal replacement). For continuity include supersession.',
-        '- append: uid and text (one grounded addition). For core, lt, npc and npc-index.',
-        '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
-        '- create: unique title, content, and optional keywords array.',
-        'Core Memory and Current Continuity are separate always-on entries.',
-        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues.',
-        'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
-        'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
-        'For a recall cue keep its perceivable trigger, grounded meaning and distinctly supported future function.',
-        'For existing ones patch only verified changes; keep unrelated paragraphs and sections.',
-        'Current Continuity sections: Present Handoff, Active Threads, Knowledge Boundaries, Active Conditions.',
-        'Present Handoff preserves the actual next-response position, contact or release, hidden reactions, final utterance and remaining choice.',
-        'Active Threads need a responsible actor, unfinished condition and concrete completion check. A question alone belongs in Handoff.',
-        'Keep direct observation, named relay, suspicion, false belief, inability to know and deliberate concealment distinct for each person.',
-        'Example only: if the book says "Only the scout knows the trail." and message #5 says "I showed the trail to the guide.", a valid edit is:',
-        '{"kind":"continuity","action":"replace_exact","uid":2,"find":"Only the scout knows the trail.","text":"The scout and the guide know the trail.","supersession":"new_confirmed_information","reason":"The scout explicitly told the guide about the trail.","evidence":[{"messageId":5,"quote":"I showed the trail to the guide."}]}',
-        'The disclosure by itself says nothing about unrelated habits or conditions. Never use the example’s data in a real edit.',
-        'Keep accountability, explicit acceptance and forgiveness distinct. Track offers, supply, application, recovery and discharge independently.',
-        'For Current Continuity, use append_section for additions, NOT generic append.',
-        'Only replace_exact wholly within ONE Current Continuity section; do not change headings.',
-        'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction. Quote the evidence that ends that state.',
-        'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
-        'If the old Continuity has only legacy source blocks, add a grounded named section',
-        'instead of rewriting or interpreting the original archive without an explicit review.',
-        'LT and NPC existing matching topics should be patched; create only when truly new and durable.',
+        DEFAULT_SLOTH_COLLECTION_PROMPTS.nexus,
         ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
             ['Supply specific literal recall keywords for every new LT or NPC detail. Never overwrite existing entry activation settings.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
@@ -271,7 +280,6 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
-        ...slothUserInstructions(settings),
         'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
         'Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
             title:s.title,result:s.result,content:s.content,segments:s.segments}))),
@@ -282,6 +290,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         'Deferred source is still visible; use it to assess ongoing state without',
         'claiming a deferred or uncertain incident is complete.',
         'Current Nexus entries (exact UIDs):',source,
+        'Required response: strict JSON with an edits array. Every proposed edit must include a factual reason and literal chat citations.',
         'Current-chat original grounded evidence (exact message IDs):',
     ].join('\n\n')+'\n\n';
     const original = compact(messages);
@@ -303,6 +312,26 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         return edits;
     } catch (error) {
         throw new InvalidSlothNexusProposal(error);
+    }
+}
+
+export async function compressSlothScene({entry,amount,focus,profile,settings,verifyOrigin,signal=null}) {
+    const {scene}=getCompressibleScene(entry);
+    const {target,instructions}=getSlothCompressionInstructions(scene,amount,focus);
+    const ask=requester(profile,settings,signal);
+    const prompt=instructions+'\n\nSaved Scene:\n'+scene;
+    const draft = async suffix => {
+        verifyOrigin();
+        const response=await ask(prompt+suffix+'\n\nRebuild the body in short, information-dense sentences. Target '+target+' characters. Return {"scene":"..."}.','Shorten saved Scene');
+        verifyOrigin();
+        return stageSlothSceneCompression(entry,response,target);
+    };
+    try { return await draft(''); }
+    catch (error) {
+        if (!['STMB_SLOTH_COMPRESSION_FORMAT','STMB_SLOTH_MALFORMED_JSON'].includes(error.code)) throw error;
+        const details=error.actualLength ? `The previous response was ${error.actualLength} characters. ` : '';
+        return await draft(`\n\n${details}Retry with one JSON object. Aim for ${target} characters. ` +
+            'Rewrite in fewer clauses and drop setup details. Keep the required final spoken line and the actual outcome.');
     }
 }
 

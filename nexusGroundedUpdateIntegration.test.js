@@ -76,7 +76,8 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
     assert.match(collector,/if\(scenes.length\)\{\s*try \{\s*await updateCollectedLedger/);
     assert.match(collector,/states.length===1\?await commitSlothNexusMigration/);
     assert.match(collector,/operation:scenes.length\?'Memory Scene save':'Nexus current-state update'/);
-    assert.doesNotMatch(collector,/hideChat/);
+    assert.match(code,/const checkbox = popup\.dlg\.querySelector\('#stmb-sloth-plan-hide'\)/);
+    assert.match(code,/if \(checkbox\)[\s\S]*checkbox\.checked \? getSlothHideRanges/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
     assert.match(prompt,/validateGroundedNexusEdits\(response.edits,messages\)/);
     assert.match(prompt,/Deferred source is still visible/);

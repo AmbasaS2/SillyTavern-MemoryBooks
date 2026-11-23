@@ -37,7 +37,7 @@ export const settingsTemplate = Handlebars.compile(`
             {{#if slothRoleChoicesAvailable}}
               <div class="stmb-sloth-role-grid">
                 <label for="stmb-sloth-role-nexus">
-                  <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · stable knowledge and current state</strong>
+                  <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · what the story needs now</strong>
                   <select id="stmb-sloth-role-nexus" class="text_pole">
                     <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothNexusMissing}}
@@ -54,7 +54,7 @@ export const settingsTemplate = Handlebars.compile(`
                   </select>
                 </label>
                 <label for="stmb-sloth-role-memory">
-                  <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · complete Scenes</strong>
+                  <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · what happened</strong>
                   <select id="stmb-sloth-role-memory" class="text_pole">
                     <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothMemoryMissing}}
@@ -89,11 +89,9 @@ export const settingsTemplate = Handlebars.compile(`
             {{#if slothChatOverrideAvailable}}
             <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
               <input id="stmb-sloth-chat-override" type="checkbox" {{#if slothChatOverrideActive}}checked{{/if}}>
-              <span data-i18n="STMemoryBooks_SlothChatOverride">Use different lorebooks in this chat</span>
+              <span data-i18n="STMemoryBooks_SlothChatOverride">Choose books for this chat only</span>
             </label>
-              {{#if slothChatOverrideActive}}
-              <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">These choices apply to this chat only.</small>
-              {{/if}}
+            <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">Other chats still use the character's default books.</small>
             {{/if}}
             {{#if slothChatOverrideInvalid}}
             <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
@@ -131,8 +129,6 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
         <div class="stmb-sloth-controls">
           <button type="button" class="menu_button" data-stmb-sloth-action="prompt-settings" data-i18n="STMemoryBooks_SlothPromptSettings">Collection prompt</button>
-          <button type="button" class="menu_button" data-stmb-sloth-action="new-profile" data-i18n="STMemoryBooks_NewProfile">New profile</button>
-          <button type="button" class="menu_button" data-stmb-sloth-action="edit-profile" data-i18n="STMemoryBooks_EditProfile" {{#unless slothProfileEditable}}hidden{{/unless}}>Edit profile</button>
         </div>
         </section>
         {{/if}}
@@ -166,9 +162,32 @@ export const settingsTemplate = Handlebars.compile(`
               <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button>
               <small data-i18n="STMemoryBooks_SlothSplitHelp">Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
               </div>
+              <div class="stmb-management-action">
+                <button type="button" class="menu_button" data-stmb-sloth-action="compress" data-i18n="STMemoryBooks_SlothCompress">Shorten an event</button>
+                <small data-i18n="STMemoryBooks_SlothCompressHelp">Choose what to keep and review the shorter memory.</small>
+              </div>
             </div>
           </details>
         {{/if}}
+        <details id="stmb-sloth-advanced" class="stmb-workspace-drawer">
+          <summary data-i18n="STMemoryBooks_SlothAdvanced">Advanced settings</summary>
+          <div class="stmb-sloth-advanced-fields">
+            <label class="checkbox_label">
+              <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
+              <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to Send</span>
+            </label>
+            <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
+              <span data-i18n="STMemoryBooks_SlothHideRecent">Recent messages to keep visible</span>
+              <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
+            </label>
+            <small><code>/sloth-collect</code> <span data-i18n="STMemoryBooks_SlothCommandHelp">Opens the same collection plan.</span></small>
+            <div class="stmb-sloth-controls">
+              <button type="button" class="menu_button" data-stmb-sloth-action="side-prompt-advanced" data-i18n="STMemoryBooks_SlothSideAdvanced">Advanced Side Prompt settings</button>
+              <button type="button" class="menu_button" data-stmb-sloth-action="new-profile" data-i18n="STMemoryBooks_SlothCustomProfile">Create a custom AI profile</button>
+              <button type="button" class="menu_button" data-stmb-sloth-action="edit-profile" data-i18n="STMemoryBooks_EditProfile" {{#unless slothProfileEditable}}hidden{{/unless}}>Edit profile</button>
+            </div>
+          </div>
+        </details>
 
         </section>
         <section id="stmb-original-panel" class="stmb-tab-panel stmb-original-panel" role="tabpanel" aria-labelledby="stmb-original-tab" hidden>

@@ -76,6 +76,14 @@ export const SLOTH_SCENE_PROMPT_V13 = [
     "7. Scene stays within 650 words. Result contains exactly one concise sentence, selects one defining completed consequence, reuses Scene's established actor-action relation, and ends at its supported completion stage. Scene carries secondary and open states. The five keyword families are distinct, and the JSON parses with exactly three fields.",
 ].join('\n');
 
+// Only the writing guidance appears in the preset editor. The machine format
+// and the selected source boundaries are supplied by the collection pipeline.
+const outputContractStart = SLOTH_SCENE_PROMPT_V13.indexOf('# Output contract');
+const writingRulesStart = SLOTH_SCENE_PROMPT_V13.indexOf('# What to preserve');
+export const SLOTH_SCENE_OUTPUT_CONTRACT = SLOTH_SCENE_PROMPT_V13.slice(outputContractStart, writingRulesStart).trim();
+export const SLOTH_DEFAULT_SUMMARY_PROMPT = SLOTH_SCENE_PROMPT_V13.slice(writingRulesStart).trim()
+    .replace(' The five keyword families are distinct, and the JSON parses with exactly three fields.', ' The five keyword families are distinct.');
+
 export function validateSlothSceneResponse(response) {
     const keys = Object.keys(response);
     const parts = typeof response.content === 'string' && response.content.trim().match(

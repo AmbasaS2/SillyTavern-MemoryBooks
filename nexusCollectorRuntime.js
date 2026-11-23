@@ -5,6 +5,7 @@
 
 import { chat, getMaxContextSize, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
+import { hideChatMessageRange } from '../../../chats.js';
 import { extension_settings } from '../../../extensions.js';
 import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
     charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
@@ -15,9 +16,11 @@ import { translate } from '../../../i18n.js';
 import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, withStmbWriteLane } from './stmbJobs.js';
 import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
-import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
+import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
+    getSlothHideRanges, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, InvalidSlothNexusProposal,
-    auditSlothDraft, suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit } from './nexusCollectionAI.js';
+    auditSlothDraft, suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
+import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { stageNexusSceneMerge } from './nexusSceneMerge.js';
@@ -172,7 +175,7 @@ export async function createSlothCompanion() {
     }
 }
 
-function assertOrigin(ref, roles, sourceIds, sourceFingerprint) {
+function assertOrigin(ref, roles, sourceIds, sourceFingerprint, fingerprintOptions) {
     if(getStmbChatKey()!==getStmbChatKey(ref)) {
         throw new Error('Switch back to the original chat. This collection cannot be saved to another chat.');
     }
@@ -183,7 +186,7 @@ function assertOrigin(ref, roles, sourceIds, sourceFingerprint) {
             throw new Error('Character '+role+' lorebook was renamed, unlinked or changed. No save performed.');
         }
     }
-    if(fingerprintSlothChat(chat,sourceIds)!==sourceFingerprint) {
+    if(fingerprintSlothChat(chat,sourceIds,fingerprintOptions)!==sourceFingerprint) {
         throw new Error('Original chat messages changed while AI was running. No save performed.');
     }
 }
@@ -241,25 +244,28 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         const options = await listReviewedSidePromptOptions(roles.nexus, isAllowedBook);
         assertSlothBookRoles(ref, roles);
         if (!options.length) {
-            toastr.info(t('No after-memory Side Prompt has an available destination in this chat.',
+            toastr.info(t('Create a Side Prompt in Side Prompt settings before updating.',
                 'STMemoryBooks_SlothSidePromptEmpty'), 'STMemoryBooks');
             return { saved: false };
         }
         const memory = await loadServerWorld(roles.memory);
         assertSlothBookRoles(ref, roles);
+        const chatIds = new Set([ref.fileName, ref.chatId].filter(Boolean).map(value => String(value).replace(/\.jsonl$/i,'')));
+        const fingerprintOptions = {allowHidden:true};
         const scenes = Object.values(memory.entries).flatMap(entry => {
-            if (entry.disable || !isCompletedSceneEntry(entry) || entry.STMB_chatId !== ref.fileName) return [];
+            if (entry.disable || !isCompletedSceneEntry(entry) ||
+                !chatIds.has(String(entry.STMB_chatId||'').replace(/\.jsonl$/i,''))) return [];
             try {
                 const ranges = sourceRangesForSplit(entry);
                 const ids = expandSplitRanges(ranges);
-                if (ids.some(id => !isVisibleSceneMessage(id))) return [];
-                return [{ entry, ranges, ids, fingerprint: fingerprintSlothChat(chat, ids) }];
+                if (ids.some(id => !chat[id]?.mes?.trim())) return [{entry}];
+                return [{ entry, ranges, ids, fingerprint: fingerprintSlothChat(chat, ids, fingerprintOptions) }];
             } catch {
-                return [];
+                return [{entry}];
             }
-        }).sort((left, right) => right.ids.at(-1) - left.ids.at(-1));
+        }).sort((left, right) => (right.ids?.at(-1) ?? -1) - (left.ids?.at(-1) ?? -1) || right.entry.uid-left.entry.uid);
         if (!scenes.length) {
-            toastr.info(t('No saved Scene in this chat has all of its original messages visible.',
+            toastr.info(t('There are no saved events from this chat. Run Collect memories first.',
                 'STMemoryBooks_SlothSidePromptNoSource'), 'STMemoryBooks');
             return { saved: false };
         }
@@ -269,7 +275,7 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         const title = t('Review a Side Prompt', 'STMemoryBooks_SlothSidePromptAction');
         const selection = new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>' + html(title) + '</h3>' +
             choose(t('Saved Scene', 'STMemoryBooks_SlothSidePromptSource'), 'stmb-sideprompt-source', scenes.map(({ entry, ranges }) =>
-                entry.comment + ' · ' + readableSegments(ranges))) +
+                entry.comment + ' · ' + (ranges ? '#'+readableSegments(ranges) : t('Saved text', 'STMemoryBooks_SlothSideSavedText')))) +
             choose(t('Side Prompt', 'STMemoryBooks_SidePrompt'), 'stmb-sideprompt-template', options.map(item =>
                 item.name + ' · ' + item.lorebookName)) + '</div>'), POPUP_TYPE.CONFIRM, '', {
             wide: true, allowVerticalScrolling: true,
@@ -291,18 +297,20 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         if (!scene || !option || !isAllowedBook(option.lorebookName)) throw new Error('The reviewed selection changed.');
         const fingerprint = scene.fingerprint;
         const verifyOrigin = () => {
-            assertOrigin(ref, roles, scene.ids, fingerprint);
+            if (scene.ids) assertOrigin(ref, roles, scene.ids, fingerprint, fingerprintOptions);
+            else assertSlothBookRoles(ref,roles);
             if (!isAllowedBook(option.lorebookName)) throw new Error('The Side Prompt destination is no longer available for this chat.');
         };
-        const compiled = compileScene(createSceneRequest(scene.ids[0], scene.ids.at(-1)), { messageIndices: scene.ids });
+        const compiled = scene.ids ? compileScene(createSceneRequest(scene.ids[0], scene.ids.at(-1)),
+            { messageIndices: scene.ids, includeHiddenMessages: true }) : null;
         const profile = collectionProfile(settings, profileIndex, stConnectionProfileId);
         verifyOrigin();
         const original = await loadServerWorld(option.lorebookName);
         verifyOrigin();
-        const draft = await proposeReviewedSidePrompt(option, original, compiled, profile);
+        const draft = await proposeReviewedSidePrompt(option, original, compiled, profile, compiled ? null : scene.entry.content);
         verifyOrigin();
         const staged = draft.stage(draft.text);
-        await readReviewedChat(ref, scene.ids, fingerprint);
+        if (scene.ids) await readReviewedChat(ref, scene.ids, fingerprint, fingerprintOptions);
         const storedMemory = await loadServerWorld(roles.memory);
         if (!Object.values(storedMemory.entries).some(entry => entry.uid === scene.entry.uid && stringify(entry) === stringify(scene.entry))) {
             throw new Error('The source Scene changed while the Side Prompt was being written.');
@@ -322,7 +330,7 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
     }
 }
 
-async function planApproval(plan,initial) {
+async function planApproval(plan,initial,keepRecent) {
     const lastScene=plan.events.at(-1)?.end;
     const pending=plan.deferred.reduce((count,item)=>count+item.messageIds.length,0);
     const eventCount=t('{{count}} events','STMemoryBooks_SlothPlanEvents').replace('{{count}}',String(plan.events.length));
@@ -335,6 +343,12 @@ async function planApproval(plan,initial) {
         '<dt>Nexus</dt><dd>'+html(t('Review through message','STMemoryBooks_SlothPlanNexusThrough'))+' #'+html(plan.end)+'</dd>'+
         (pending?'<dt>'+html(t('Held for later','STMemoryBooks_SlothPlanPending'))+'</dt><dd>'+html(pending)+'</dd>':'')+
         '</dl>'+(rows?'<ol class="stmb-sloth-plan-list">'+rows+'</ol>':'')+
+        (rows?'<div class="stmb-sloth-plan-hide"><label class="checkbox_label"><input id="stmb-sloth-plan-hide" type="checkbox"> '+
+            html(t('Hide saved chat messages after collection','STMemoryBooks_SlothHideAfter'))+'</label>'+
+            '<label class="stmb-sloth-inline-field" for="stmb-sloth-plan-keep">'+
+            html(t('Recent messages to keep visible','STMemoryBooks_SlothHideRecent'))+
+            '<input id="stmb-sloth-plan-keep" class="text_pole" type="number" min="0" max="9999" value="'+html(keepRecent)+'"></label>'+
+            '<small id="stmb-sloth-plan-hide-summary" aria-live="polite"></small></div>':'')+
         (initial?'<p>'+html(t('New Nexus and Memory lorebooks will be connected to this character.',
             'STMemoryBooks_SlothFirstBooksReview'))+'</p>':'')+'</div>';
     const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
@@ -344,7 +358,22 @@ async function planApproval(plan,initial) {
         cancelButton:t('Cancel','STMemoryBooks_Cancel'),
     });
     markStmbPopup(popup);
-    return await popup.show()===POPUP_RESULT.AFFIRMATIVE;
+    const checkbox = popup.dlg.querySelector('#stmb-sloth-plan-hide');
+    const keep = popup.dlg.querySelector('#stmb-sloth-plan-keep');
+    let hideRanges = [];
+    if (checkbox) {
+        const summary = popup.dlg.querySelector('#stmb-sloth-plan-hide-summary');
+        const update = () => {
+            keep.disabled = !checkbox.checked;
+            hideRanges = checkbox.checked ? getSlothHideRanges(plan.events,chat,keep.value) : [];
+            summary.textContent = hideRanges.length ? t('Hide messages','STMemoryBooks_SlothHideRange') + ' #' + readableSegments(hideRanges) :
+                t('No messages will be hidden.','STMemoryBooks_SlothHideNone');
+        };
+        checkbox.addEventListener('change',update);
+        keep.addEventListener('input',update);
+        update();
+    }
+    return await popup.show()===POPUP_RESULT.AFFIRMATIVE ? {hideRanges} : null;
 }
 
 async function loadServerWorld(name) {
@@ -364,7 +393,7 @@ async function withBothWriteLanes(names,task) {
     return await visit(0);
 }
 
-async function readReviewedChat(ref, sourceIds, fingerprint) {
+async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions, hiddenRanges=[]) {
     const response = await fetch('/api/chats/get', {
         method: 'POST', headers: getRequestHeaders(),
         body: stringify({ avatar_url: ref.avatarUrl, file_name: ref.fileName }),
@@ -372,8 +401,11 @@ async function readReviewedChat(ref, sourceIds, fingerprint) {
     if (!response.ok) throw new Error('The original chat could not be read from SillyTavern.');
     const stored = await response.json();
     if (!Array.isArray(stored) || !stored[0]?.chat_metadata ||
-        fingerprintSlothChat(stored.slice(1), sourceIds) !== fingerprint) {
+        fingerprintSlothChat(stored.slice(1), sourceIds, fingerprintOptions) !== fingerprint) {
         throw new Error('The saved chat differs from the reviewed messages. Reload it before collecting again.');
+    }
+    for (const [start,end] of hiddenRanges) for (let id=start;id<=end;id++) {
+        if (stored[id+1]?.is_system !== true) throw new Error('The approved Hide range did not persist.');
     }
     return stored[0].chat_metadata.STMemoryBooks?.slothCollection;
 }
@@ -475,7 +507,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         const plan=await analyzeSlothEvents({messages:source,profile,settings,characterContext});
         checkOrigin();
-        if(!await planApproval(plan,initial))return {saved:false,reason:'plan-cancelled'};
+        const approval=await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent));
+        if(!approval)return {saved:false,reason:'plan-cancelled'};
         checkOrigin();
 
         toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
@@ -543,6 +576,24 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
+        if (approval.hideRanges.length) {
+            try {
+                if (!receiptVerified) throw new Error('The stored collection receipt could not be verified.');
+                let remaining = [...sourceIds];
+                assertOrigin(ref,roleNames,remaining,fingerprint);
+                for (const [start,end] of approval.hideRanges) {
+                    const expected = fingerprintSlothChat(chat,remaining.filter(id=>id<start||id>end));
+                    await hideChatMessageRange(start,end,false);
+                    remaining = remaining.filter(id=>id<start||id>end);
+                    assertOrigin(ref,roleNames,remaining,expected);
+                }
+                await readReviewedChat(ref,sourceIds,fingerprint,{allowHidden:true},approval.hideRanges);
+            } catch (error) {
+                console.warn('Memory saved; Sloth Hide stopped.',error);
+                toastr.warning(t('The memories are saved. Check which messages were hidden before trying again.',
+                    'STMemoryBooks_SlothHideInterrupted'),'STMemoryBooks');
+            }
+        }
         for(const {name} of states){
             try{await Promise.resolve(reloadEditor(name));}
             catch(error){console.warn('Memory Books editor refresh failed.',error);}
@@ -561,6 +612,78 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
 function isVisibleSceneMessage(id) {
     const message=chat[id];
     return !!message&&!message.is_system&&typeof message.mes==='string'&&!!message.mes.trim();
+}
+
+export async function runSlothSceneCompression({ profileIndex, stConnectionProfileId } = {}) {
+    if (collectorBusy) throw new Error('A Sloth operation is already in progress.');
+    collectorBusy = true;
+    try {
+        const settings = extension_settings.STMemoryBooks;
+        const ref = structuredClone(getCurrentStmbChatRef());
+        const roles = Object.fromEntries(['nexus','memory'].map(role=>[role,getNexusRoleResolutionForChatRef(role,ref,settings).name]));
+        const verifyOrigin = () => assertSlothBookRoles(ref,roles);
+        verifyOrigin();
+        const original = await loadServerWorld(roles.memory);
+        verifyOrigin();
+        const candidates = Object.values(original.entries).filter(entry=>isCompletedSceneEntry(entry) && getCompressibleScene(entry)).reverse();
+        if (!candidates.length) {
+            toastr.info(t('There are no saved events long enough to shorten.','STMemoryBooks_SlothCompressEmpty'),'STMemoryBooks');
+            return {saved:false};
+        }
+        const focusOptions = [
+            ['voice',t('Distinctive dialogue and humor','STMemoryBooks_SlothCompressVoice')],
+            ['relationships',t('Relationships and emotions','STMemoryBooks_SlothCompressRelationships')],
+            ['recall',t('Objects, places and recall cues','STMemoryBooks_SlothCompressRecall')],
+        ];
+        const title = html(t('Shorten an event','STMemoryBooks_SlothCompress'));
+        const choice = new Popup(DOMPurify.sanitize(`<div class="stmb-sloth-review stmb-sloth-form"><h3>${title}</h3>
+            <label class="stmb-sloth-edit">${html(t('Saved event','STMemoryBooks_SlothSidePromptSource'))}
+              <select id="stmb-sloth-compress-source" class="text_pole">${candidates.map((entry,index)=>`<option value="${index}">${html(entry.comment)}</option>`).join('')}</select></label>
+            <label class="stmb-sloth-edit">${html(t('Length to keep','STMemoryBooks_SlothCompressAmount'))}
+              <select id="stmb-sloth-compress-length" class="text_pole">${SLOTH_COMPRESSION_AMOUNTS.map(value=>`<option value="${value}" ${value===55?'selected':''}>${value}%</option>`).join('')}</select></label>
+            <fieldset class="stmb-sloth-focus"><legend>${html(t('Give extra priority to','STMemoryBooks_SlothCompressFocus'))}</legend>
+              ${focusOptions.map(([key,label])=>`<label class="checkbox_label"><input name="stmb-sloth-compress-focus" type="checkbox" value="${key}" checked> ${html(label)}</label>`).join('')}
+            </fieldset></div>`), POPUP_TYPE.CONFIRM, '', {wide:true,allowVerticalScrolling:true,
+            okButton:t('Make a shorter draft','STMemoryBooks_SlothCompressGenerate'),cancelButton:t('Cancel','STMemoryBooks_Cancel')});
+        markStmbPopup(choice);
+        if (await choice.show()!==POPUP_RESULT.AFFIRMATIVE) return {saved:false};
+        verifyOrigin();
+        const entry = candidates[Number(choice.dlg.querySelector('#stmb-sloth-compress-source').value)];
+        const amount = Number(choice.dlg.querySelector('#stmb-sloth-compress-length').value);
+        const focus = Array.from(choice.dlg.querySelectorAll('input[name="stmb-sloth-compress-focus"]:checked'),control=>control.value);
+        const profile = collectionProfile(settings,profileIndex,stConnectionProfileId);
+        let next;
+        try { next=await compressSlothScene({entry,amount,focus,profile,settings,verifyOrigin}); }
+        catch (cause) {
+            if (!['STMB_SLOTH_COMPRESSION_FORMAT','STMB_SLOTH_MALFORMED_JSON'].includes(cause.code)) throw cause;
+            throw new Error(t('The draft did not match the requested length or format. Try another length.','STMemoryBooks_SlothCompressInvalid'),{cause});
+        }
+        const compare = (label,text) => `<div><p>${html(label)}</p><pre>${html(text)}</pre></div>`;
+        const originalParts=getCompressibleScene(entry);
+        const kept = Math.round((next.content.length-originalParts.before.length-originalParts.after.length) * 100 / originalParts.scene.length);
+        const amountLabel = t('Target {{target}}% · Draft {{actual}}%', 'STMemoryBooks_SlothCompressActual')
+            .replace('{{target}}',amount).replace('{{actual}}',kept);
+        const review = new Popup(DOMPurify.sanitize(`<div class="stmb-sloth-review"><h3>${title}</h3><strong>${html(entry.comment)}</strong>
+            <small>${html(amountLabel)}</small>
+            <div class="stmb-sloth-comparison has-before">${compare(t('Before','STMemoryBooks_Regeneration_Before'),entry.content)}
+            ${compare(t('After','STMemoryBooks_Regeneration_After'),next.content)}</div></div>`), POPUP_TYPE.CONFIRM, '',
+            {wide:true,allowVerticalScrolling:true,okButton:t('Save','STMemoryBooks_Save'),cancelButton:t('Cancel','STMemoryBooks_Cancel')});
+        markStmbPopup(review);
+        if (await review.show()!==POPUP_RESULT.AFFIRMATIVE) return {saved:false};
+        const staged = structuredClone(original);
+        const key = Object.keys(original.entries).find(key=>original.entries[key]===entry);
+        staged.entries[key]=next;
+        await commitSlothNexusMigration({name:roles.memory,original,staged},{
+            loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),verifyOrigin,
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),verifyBeforeWrite:assertReviewedCache,
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),operation:'Shorten saved Scene',
+        });
+        await Promise.resolve(reloadEditor(roles.memory)).catch(error=>console.warn('Sloth editor refresh failed.',error));
+        toastr.success(t('The shortened event was saved.','STMemoryBooks_SlothCompressSaved'),'STMemoryBooks');
+        return {saved:true};
+    } finally {
+        collectorBusy = false;
+    }
 }
 
 /** Select a suggested causal pair without changing any World Info or chat state. */

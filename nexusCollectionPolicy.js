@@ -23,6 +23,23 @@ export function slothSourceRanges(ids) {
     return ranges;
 }
 
+export const DEFAULT_SLOTH_VISIBLE_TAIL = 6;
+
+export function normalizeSlothVisibleTail(value) {
+    const count = String(value ?? '').trim();
+    if (!/^\d+$/.test(count)) return DEFAULT_SLOTH_VISIBLE_TAIL;
+    return Math.min(9999, Number(count));
+}
+
+export function getSlothHideRanges(events, messages, keepRecent) {
+    const visible = messages.flatMap((message,id) =>
+        message && !message.is_system && typeof message.mes === 'string' && message.mes.trim() ? [id] : []);
+    const count = normalizeSlothVisibleTail(keepRecent);
+    const cutoff = count > 0 ? (visible.at(-count) ?? 0) : messages.length;
+    const collected = new Set(events.flatMap(event => event.messageIds));
+    return slothSourceRanges(visible.filter(id => id < cutoff && collected.has(id)));
+}
+
 export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = false } = {}) {
     requireThat(plain(raw) && Array.isArray(sourceIds) && sourceIds.length, 'Missing analysis or source.');
     requireThat(Array.isArray(raw.events), 'Analysis events must be an array.');
@@ -101,13 +118,13 @@ export function groupSlothSourceWindows(messages,maxChars=18000) {
     return windows;
 }
 
-export function fingerprintSlothChat(chat,ids) {
+export function fingerprintSlothChat(chat,ids,{allowHidden=false}={}) {
     requireThat(Array.isArray(chat) && Array.isArray(ids),'Invalid chat snapshot.');
     // A new turn during AI analysis can resolve an allegedly unfinished state.
     // Include the full chat length so no approval writes a stale current state.
     return JSON.stringify({chatLength:chat.length,messages:ids.map(id=>{
         const item=chat[id];
-        requireThat(item && !item.is_system,'Source #'+id+' is missing or hidden.');
+        requireThat(item && (allowHidden || !item.is_system),'Source #'+id+' is missing or hidden.');
         return [id,item.name,item.mes,item.is_user,item.send_date,item.swipe_id??null];
     })});
 }
