@@ -1319,10 +1319,6 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
                 keywords:composed.keywords});
             verifyOrigin();
         }
-        if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
-            await auditSlothDraft({messages,scenes:drafts,edits:[],profile,settings});
-            verifyOrigin();
-        }
         const draftBody='<div class="stmb-sloth-review"><h3>'+
             html(t('Review split Scene prose','STMemoryBooks_SlothSplitDraftTitle'))+
             '</h3><p>'+html(t('Edit each new Scene if needed. Preserve actor-specific voice, actual dialogue and a completed Result. Nothing is saved at this step.',
@@ -1359,6 +1355,10 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
             createEntry:book=>createWorldInfoEntry(names.memory,book),
             olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
         });
+        if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
+            await auditSlothDraft({messages,scenes:drafts,edits:[],profile,settings});
+            verifyOrigin();
+        }
         const preview='<div class="stmb-sloth-review"><h3>'+
             html(t('Final split, original backup and save','STMemoryBooks_SlothSplitFinalTitle'))+
             '</h3><p>'+html(t('The entire original Memory JSON must be backed up before saving. The original Scene will remain as a disabled full-history archive. Separate completed Scenes receive new UIDs. All other lorebooks and chat messages remain unchanged.',

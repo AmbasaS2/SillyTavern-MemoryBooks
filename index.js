@@ -11,6 +11,7 @@ import {
   getCurrentChatId,
   saveMetadata,
   saveChatDebounced,
+  saveSettings,
   saveSettingsDebounced,
   characters,
   this_chid,
@@ -11639,7 +11640,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
             : clearNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
           if (changed) {
             if (!e.target.checked) rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, previous);
-            saveSettingsDebounced();
+            await saveSettings();
             void refreshMemoryTierMacroCache();
           }
         } catch (err) {
@@ -11690,7 +11691,9 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
           if (override) {
             rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, override);
           }
-          saveSettingsDebounced();
+          // Companion setup verifies the persisted roles, so finish this save before
+          // showing actions that consume the changed pair.
+          await saveSettings();
           void refreshMemoryTierMacroCache();
           toastr.success(translate('🦥 Sloth: character lorebook roles saved.', 'STMemoryBooks_SlothRoleSaved'), 'STMemoryBooks');
         }
