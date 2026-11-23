@@ -132,8 +132,8 @@ async function resolveSidePromptLorebook(tpl, resolveContext = null) {
         // another chat's overrides while updating the originating character.
         throw new Error('Return to the original chat before updating Nexus Side Prompts.');
     }
-    if (['missing', 'detached'].includes(memoryRole.state) ||
-        ['missing', 'detached'].includes(nexusRole.state)) {
+    if (['missing', 'detached', 'invalid-override'].includes(memoryRole.state) ||
+        ['missing', 'detached', 'invalid-override'].includes(nexusRole.state)) {
         throw new Error('Assigned Nexus / Memory lorebook is missing or detached. Resolve the character bindings before updating side prompts.');
     }
     if ((memoryRole.state === 'ready' || nexusRole.state === 'ready') &&

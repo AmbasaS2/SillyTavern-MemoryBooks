@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { getCharacterNexusRoles, getLinkedCharacterWorlds, resolveCharacterNexusRole } from './nexusCharacterRoles.js';
+import { getNexusChatRoleOverride, setNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
 
 const read = file => readFileSync(new URL(file, import.meta.url), 'utf8');
 const runtime = read('./nexusCharacterRolesRuntime.js');
@@ -28,7 +29,8 @@ function originHarness() {
         'B.png': { nexus: 'B Nexus', memory: 'B Memory' },
     }};
     const scope = { characters, world_info, world_names, getCharacterNexusRoles,
-        getLinkedCharacterWorlds, resolveCharacterNexusRole,
+        getLinkedCharacterWorlds, resolveCharacterNexusRole, getNexusChatRoleOverride,
+        getStmbChatKey: ref => 'character:' + ref.avatarUrl + ':' + ref.fileName,
         getCurrentNexusRoleResolution: () => ({ state:'ready', name:'B Memory' }) };
     const resolve = vm.runInNewContext(originSource + '\ngetNexusRoleResolutionForChatRef', scope);
     return { resolve, settings, characters, world_info, world_names };
@@ -42,6 +44,33 @@ test('queued generation resolves original A despite B currently open', () => {
     assert.equal(memory.name, 'A Memory');
     assert.equal(h.resolve('nexus', ref, h.settings).name, 'A Nexus');
     assert.notEqual(memory.name, 'B Memory');
+});
+
+test('AU override resolves by originating chat, not the currently opened B chat', () => {
+    const h = originHarness();
+    h.settings.nexusChatRoleOverrides = {};
+    h.world_info.charLore[0].extraBooks.push('A Alternate Nexus', 'A Alternate Memory');
+    h.world_names.push('A Alternate Nexus', 'A Alternate Memory');
+    const refA = {type:'character', avatarUrl:'A.png', fileName:'chat-a'};
+    setNexusChatRoleOverride(h.settings.nexusChatRoleOverrides, refA,
+        'character:A.png:chat-a', {nexus:'A Alternate Nexus', memory:'A Alternate Memory'});
+    assert.equal(h.resolve('nexus',refA,h.settings).name,'A Alternate Nexus');
+    assert.equal(h.resolve('memory',refA,h.settings).name,'A Alternate Memory');
+    assert.equal(h.resolve('memory',{...refA,fileName:'chat-a-copy'},h.settings).name,'A Memory',
+        'forked chat uses the original character default');
+    assert.equal(h.resolve('memory',{type:'character',avatarUrl:'B.png',fileName:'chat-a'},h.settings).name,'B Memory',
+        'another character cannot inherit A even with the same filename');
+    h.world_info.charLore[0].extraBooks = ['A Memory'];
+    assert.equal(h.resolve('memory',refA,h.settings).state,'detached',
+        'unlinked AU book must not silently fall back to default');
+});
+
+test('corrupt AU override fails closed instead of writing into the character default', () => {
+    const h=originHarness();
+    const ref={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
+    h.settings.nexusChatRoleOverrides={'character:A.png:chat-a':{
+        version:1,avatar:'B.png',nexus:'A Nexus',memory:'A Memory'}};
+    assert.equal(h.resolve('memory',ref,h.settings).state,'invalid-override');
 });
 
 test('origin role cannot fall back to a chat-only book after unlink or deletion', () => {

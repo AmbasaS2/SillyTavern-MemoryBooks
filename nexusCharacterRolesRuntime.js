@@ -8,6 +8,8 @@ import { characters, this_chid } from '../../../../script.js';
 import { selected_group } from '../../../group-chats.js';
 import { world_info, world_names } from '../../../world-info.js';
 import { extension_settings } from '../../../extensions.js';
+import { getCurrentStmbChatRef, getStmbChatKey } from './stmbJobs.js';
+import { getNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
 import {
     getCharacterNexusRoles,
     getLinkedCharacterWorlds,
@@ -47,15 +49,23 @@ export function getNexusRoleResolutionForChatRef(role, chatRef, settings = exten
     const linkedBooks = getLinkedCharacterWorlds({
         character, worldInfo: world_info, worldNames: world_names,
     });
+    const override = getNexusChatRoleOverride(
+        settings?.nexusChatRoleOverrides, chatRef, getStmbChatKey(chatRef));
+    if (override?.invalid) return { state: 'invalid-override', name: '', role };
     return resolveCharacterNexusRole({
-        roles: settings?.nexusCharacterRoles, avatar, role,
-        linkedBooks, worldNames: world_names || [],
+        roles: override ? { [avatar]: override } : settings?.nexusCharacterRoles,
+        avatar, role, linkedBooks, worldNames: world_names || [],
     });
 }
 
 export function getCurrentNexusRoleResolution(role, settings = extension_settings.STMemoryBooks) {
     const { character, linkedBooks, worldNames } = getActiveNexusRoleContext(settings);
     if (!character) return { state: 'no-character', name: '', role };
+    const currentRef = getCurrentStmbChatRef();
+    if (currentRef?.type === 'character' && currentRef.avatarUrl === character.avatar &&
+        String(currentRef.fileName || '').trim()) {
+        return getNexusRoleResolutionForChatRef(role, currentRef, settings);
+    }
     return resolveCharacterNexusRole({
         roles: settings?.nexusCharacterRoles,
         avatar: character.avatar,

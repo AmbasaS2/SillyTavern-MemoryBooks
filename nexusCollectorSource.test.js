@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-const start=source.indexOf('function activeSource(ref, memoryBook) {');
+const start=source.indexOf('function activeSource(ref, memoryBook, roleNames = null) {');
 const end=source.indexOf('\nfunction readableSegments(',start);
 assert.ok(start>=0&&end>start);
 const body=source.slice(start,end);
@@ -41,4 +41,17 @@ test('hidden messages remain outside source and are never marked collected autom
     const h=harness();h.chat[8].is_system=true;
     const out=h.fn(h.current,{entries:{}});
     assert.ok(!out.source.some(m=>m.id===8));
+});
+
+test('collector refuses to reuse a different pair for a chat with saved Scene receipts',()=>{
+    const h=harness();
+    const oldPair={nexus:'Old Nexus',memory:'Old Memory'};
+    h.metadata.slothCollection.books=oldPair;
+    assert.deepEqual(Array.from(h.fn(h.current,{entries:{}},oldPair).source,m=>m.id),
+        [2,3,4,5,6,7,8,9]);
+    assert.throws(()=>h.fn(h.current,{entries:{}},{nexus:'New Nexus',memory:'New Memory'}),
+        /reviewed migration/);
+    delete h.metadata.slothCollection.books;
+    assert.throws(()=>h.fn(h.current,{entries:{}},oldPair),/reviewed migration/,
+        'older unbound receipts must be reviewed rather than assumed to match');
 });

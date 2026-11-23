@@ -388,7 +388,7 @@ export async function getEffectiveLorebookName() {
     const settings = extension_settings.STMemoryBooks;
     const role = getCurrentNexusRoleResolution('memory', settings);
     if (role.state === 'ready') return role.name;
-    if (role.state === 'missing' || role.state === 'detached') return null;
+    if (role.state !== 'unassigned' && role.state !== 'no-character') return null;
 
     // This helper keeps its legacy behavior on purpose. Passive read paths still
     // use it to resolve a best-effort lorebook without invoking the shared

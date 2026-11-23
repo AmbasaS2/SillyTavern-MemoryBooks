@@ -71,6 +71,16 @@ export const settingsTemplate = Handlebars.compile(`
           <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h3>
           <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the function of each lorebook already linked to this character. These roles also apply in new chats; collection progress remains separate for each chat.</p>
           {{#if slothCharacterAvailable}}
+            {{#if slothChatOverrideAvailable}}
+            <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
+              <input id="stmb-sloth-chat-override" type="checkbox" {{#if slothChatOverrideActive}}checked{{/if}}>
+              <span data-i18n="STMemoryBooks_SlothChatOverride">Use different lorebooks for this chat only</span>
+            </label>
+            <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">While enabled, the Nexus / Memory choices below belong only to this chat. Other chats and new chats keep the character defaults.</small>
+            {{/if}}
+            {{#if slothChatOverrideInvalid}}
+            <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
+            {{/if}}
             {{#if slothLinkedBooksAvailable}}
               <div class="stmb-sloth-role-grid">
                 <label for="stmb-sloth-role-nexus">

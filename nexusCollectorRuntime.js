@@ -41,11 +41,15 @@ function assertOrigin(ref, roles, sourceIds, sourceFingerprint) {
     }
 }
 
-function activeSource(ref, memoryBook) {
+function activeSource(ref, memoryBook, roleNames = null) {
     const markers=getSceneMarkers()||{};
     const currentKey=getStmbChatKey(ref);
     const prior=markers.slothCollection?.chatKey===currentKey
         ? markers.slothCollection : {chatKey:currentKey,savedRanges:[]};
+    if (roleNames && (prior.savedRanges||[]).length &&
+        (prior.books?.nexus !== roleNames.nexus || prior.books?.memory !== roleNames.memory)) {
+        throw new Error('This chat has collected Scenes bound to a different Nexus / Memory pair. A reviewed migration is required before changing books.');
+    }
     const already=new Set();
     for(const pair of prior.savedRanges||[]) {
         if(!Array.isArray(pair)||pair.length!==2)continue;
@@ -186,11 +190,12 @@ async function withBothWriteLanes(names,task) {
     return await visit(0);
 }
 
-function updateCollectedLedger(prior,events,ref) {
+function updateCollectedLedger(prior,events,ref,roleNames) {
     const markers=getSceneMarkers();
     const savedRanges=[...(prior.savedRanges||[])];
     for(const event of events)for(const range of event.segments)savedRanges.push([...range]);
-    markers.slothCollection={chatKey:getStmbChatKey(ref),savedRanges};
+    markers.slothCollection={chatKey:getStmbChatKey(ref),savedRanges,
+        books:{nexus:roleNames.nexus,memory:roleNames.memory}};
     saveMetadataForCurrentContext();
 }
 
@@ -214,7 +219,7 @@ export async function runNexusCollector({profileIndex}={}) {
             nexus:await loadServerWorld(roleNames.nexus),
             memory:await loadServerWorld(roleNames.memory),
         };
-        const {source,prior}=activeSource(ref,originalBooks.memory);
+        const {source,prior}=activeSource(ref,originalBooks.memory,roleNames);
         if(!source.length){
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
             return {saved:false,reason:'no-source'};
@@ -291,7 +296,7 @@ export async function runNexusCollector({profileIndex}={}) {
             verifyOrigin:()=>assertOrigin(ref,roleNames,sourceIds,fingerprint),
         });
         // Metadata must change ONLY after both book writes and read-backs succeeded.
-        updateCollectedLedger(prior,approved.events,ref);
+        updateCollectedLedger(prior,approved.events,ref,roleNames);
         for(const state of states){
             try{await Promise.resolve(reloadEditor(state.name));}
             catch(error){console.warn('Sloth: editor refresh failed',error);}

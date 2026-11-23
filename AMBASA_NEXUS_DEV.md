@@ -23,6 +23,15 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 - The assigned **Memory** target overrides stale chat-bound and manual lorebook selection for memory collection. Assigned **Nexus** is the default target for non-Scene Side Prompt updates, while explicit custom Side Prompt targets remain supported if not the assigned Memory Scene book.
 - Automatic summaries, reminders and auto-hide are suppressed when Sloth roles are active. Memory saves still require explicit preview approval.
 
+### Per-chat AU lorebook overrides (2026-11-23 development slice)
+
+- In an individual character chat with a stable chat filename, turn on **Use different lorebooks for this chat only** to override the character's default Nexus/Memory pair. The existing selectors then edit only that chat's pair; turn it off to restore the character defaults.
+- The opt-in pair is stored in the nexusChatRoleOverrides extension setting under character:<avatar>:<chat-file>, not copied per-chat metadata. New and branched chats start with the character defaults rather than accidentally inheriting an AU. A queued job resolves the original chat key, even if another chat becomes active.
+- Only existing character-linked books are eligible. A missing, detached or corrupt mapping blocks writes; different Nexus and Memory books remain mandatory. Group chats still use legacy behavior.
+- Changing the pair is blocked after the chat has a Sloth collection receipt or legacy processed checkpoint; previously collected Scenes require a separate reviewed migration. New collection receipts also bind the saved pair, preventing external changes to the settings from silently redirecting later collections.
+- Avatar file renames migrate the chat-key registry without replacing a conflicting record; deleting a character clears its old chat overrides.
+- Added pure and routing regression tests, source/UI wiring checks, and translations for the new controls in non-English locales. Original user lorebooks, installed ST, main, and extension manifest are untouched. **Not live-tested**.
+
 ### Scene rotation (first integration)
 
 - Keeps the latest three numbered, **completed** Scene entries constant/always-on. Older complete Scenes become vector-recalled, or keyword-recalled when existing keywords are present.
@@ -54,7 +63,7 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 
 - Evidence-preserving migration of legacy Long-Term Memory / Scene Continuity / Status to separate Core Memory and sectioned Current Continuity. The new collector intentionally blocks unreviewed legacy input to prevent destructive replacement.
 - AI-assisted merge or split of already saved Scene memories, preserving UID/source references.
-- Per-chat AU lorebook role override and full branch-copy policies; character role defaults are inherited but two chats can still share the same selected lorebook.
+- Full branch-copy policies for copying lorebook contents are still missing. Per-chat AU role overrides now isolate book selection, but existing collection data is not migrated between books and chats can still intentionally reference the same book.
 - Truly atomic two-book writes are not available over two independent SillyTavern World Info endpoints; compensation is best effort, not a database transaction.
 - Long-chat provider quality evaluation and token handling, original user PC/mobile SillyTavern UI tests, STLO vector recall and lore-manager synchronization, whole-extension clean digital UI redesign.
 - User-approved install/release and version/manifest adjustment or main merge.

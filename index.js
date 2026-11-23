@@ -63,6 +63,10 @@ import {
   setCharacterNexusRole, moveCharacterNexusRoles, removeCharacterNexusRoles,
 } from './nexusCharacterRoles.js';
 import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
+import {
+  getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
+  moveNexusChatRoleOverrides, removeNexusChatRoleOverrides, canChangeNexusChatRolePair,
+} from './nexusChatRoleOverrides.js';
 import { runNexusCollector } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
@@ -673,6 +677,7 @@ const defaultSettings = {
   },
   characterMemoryBookLocks: {},
   nexusCharacterRoles: {},
+  nexusChatRoleOverrides: {},
   titleFormat: DEFAULT_TITLE_FORMAT,
   profiles: [], // Will be populated dynamically with current ST settings
   defaultProfile: 0,
@@ -1284,8 +1289,8 @@ function getMemoryReminderController() {
       settings: {
         ...(extension_settings[MODULE_NAME]?.moduleSettings || {}),
         nexusSceneRotationEnabled: extension_settings[MODULE_NAME]?.moduleSettings?.nexusSceneRotationEnabled === true ||
-          ['ready','missing','detached'].includes(getCurrentNexusRoleResolution('memory', extension_settings[MODULE_NAME]).state) ||
-          ['ready','missing','detached'].includes(getCurrentNexusRoleResolution('nexus', extension_settings[MODULE_NAME]).state),
+          ['ready','missing','detached','invalid-override'].includes(getCurrentNexusRoleResolution('memory', extension_settings[MODULE_NAME]).state) ||
+          ['ready','missing','detached','invalid-override'].includes(getCurrentNexusRoleResolution('nexus', extension_settings[MODULE_NAME]).state),
       },
       busy: isMemoryProcessing() || hasPendingProgress(),
     }),
@@ -2515,6 +2520,12 @@ function initializeSettings() {
   const roleNormalization = normalizeNexusCharacterRoles(extension_settings.STMemoryBooks.nexusCharacterRoles);
   if (roleNormalization.changed) {
     extension_settings.STMemoryBooks.nexusCharacterRoles = roleNormalization.roles;
+    saveSettingsDebounced();
+  }
+  if (!extension_settings.STMemoryBooks.nexusChatRoleOverrides ||
+      typeof extension_settings.STMemoryBooks.nexusChatRoleOverrides !== 'object' ||
+      Array.isArray(extension_settings.STMemoryBooks.nexusChatRoleOverrides)) {
+    extension_settings.STMemoryBooks.nexusChatRoleOverrides = {};
     saveSettingsDebounced();
   }
 
@@ -11031,12 +11042,23 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
   const sloth = getActiveNexusRoleContext(settings);
   const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
   const slothRoleNexus = getCurrentNexusRoleResolution('nexus', settings);
+  const slothChatRef = getCurrentStmbChatRef();
+  const slothChatOverrideAvailable = !!sloth.character &&
+    slothChatRef?.type === 'character' &&
+    slothChatRef.avatarUrl === sloth.character.avatar &&
+    !!String(slothChatRef.fileName || '').trim();
+  const slothChatOverride = slothChatOverrideAvailable
+    ? getNexusChatRoleOverride(settings.nexusChatRoleOverrides, slothChatRef, getStmbChatKey(slothChatRef))
+    : null;
+  const slothSelectedRoles = slothChatOverride && !slothChatOverride.invalid
+    ? slothChatOverride : sloth.assigned;
   const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
-  const slothRoleIncomplete = !!(sloth.assigned.nexus || sloth.assigned.memory) && !slothRoleActive;
+  const slothRoleIncomplete = (!!(slothSelectedRoles.nexus || slothSelectedRoles.memory) ||
+    !!slothChatOverride?.invalid) && !slothRoleActive;
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
     name,
-    selected: sloth.assigned[role] === name,
-    disabled: sloth.assigned[role === 'nexus' ? 'memory' : 'nexus'] === name,
+    selected: slothSelectedRoles[role] === name,
+    disabled: slothSelectedRoles[role === 'nexus' ? 'memory' : 'nexus'] === name,
   }));
   const narratorConfig = !memoryBooksContext.isGroupChat ? getCurrentNarratorConfig() : null;
   if (!isManualMode && narratorConfig?.enabled) {
@@ -11131,13 +11153,16 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     slothRoleActive,
     slothRoleIncomplete,
     slothCharacterAvailable: !!sloth.character,
+    slothChatOverrideAvailable,
+    slothChatOverrideActive: !!slothChatOverride,
+    slothChatOverrideInvalid: !!slothChatOverride?.invalid,
     slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
     slothNexusRoleOptions: roleOptions('nexus'),
     slothMemoryRoleOptions: roleOptions('memory'),
-    slothNexusMissing: !!sloth.assigned.nexus && !sloth.linkedBooks.includes(sloth.assigned.nexus),
-    slothMemoryMissing: !!sloth.assigned.memory && !sloth.linkedBooks.includes(sloth.assigned.memory),
-    slothNexusMissingName: sloth.assigned.nexus,
-    slothMemoryMissingName: sloth.assigned.memory,
+    slothNexusMissing: !!slothSelectedRoles.nexus && !sloth.linkedBooks.includes(slothSelectedRoles.nexus),
+    slothMemoryMissing: !!slothSelectedRoles.memory && !sloth.linkedBooks.includes(slothSelectedRoles.memory),
+    slothNexusMissingName: slothSelectedRoles.nexus,
+    slothMemoryMissingName: slothSelectedRoles.memory,
     manualLorebookName: manualLorebook,
     chatBoundLorebookName: chatBoundLorebook,
     availableLorebooks: world_names ?? [],
@@ -11558,6 +11583,35 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
 
+    if (e.target.matches("#stmb-sloth-chat-override")) {
+      const sloth = getActiveNexusRoleContext(settings);
+      const ref = getCurrentStmbChatRef();
+      const chatKey = getStmbChatKey(ref);
+      if (!sloth.character || ref.avatarUrl !== sloth.character.avatar || !String(ref.fileName || '').trim()) {
+        toastr.warning(translate('Choose an existing individual-character chat before overriding lorebooks.',
+          'STMemoryBooks_SlothChatOverrideUnavailable'), 'STMemoryBooks');
+      } else {
+        try {
+          const previous = {
+            nexus: getCurrentNexusRoleResolution('nexus', settings).name,
+            memory: getCurrentNexusRoleResolution('memory', settings).name,
+          };
+          if (!canChangeNexusChatRolePair(getSceneMarkers(), chatKey, previous, sloth.assigned)) {
+            throw new Error(translate('This chat already contains collected memories. Changing its Nexus / Memory books requires a separate reviewed migration.',
+              'STMemoryBooks_SlothChatOverrideLocked'));
+          }
+          const changed = e.target.checked
+            ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, sloth.assigned)
+            : clearNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
+          if (changed) { saveSettingsDebounced(); void refreshMemoryTierMacroCache(); }
+        } catch (err) {
+          toastr.warning(err?.message || String(err), 'STMemoryBooks');
+        }
+      }
+      await refreshPopupContent();
+      return;
+    }
+
     if (e.target.matches("#stmb-sloth-role-nexus, #stmb-sloth-role-memory")) {
       const role = e.target.id === 'stmb-sloth-role-nexus' ? 'nexus' : 'memory';
       const sloth = getActiveNexusRoleContext(settings);
@@ -11568,14 +11622,29 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
         return;
       }
       try {
-        const changed = setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
+        const ref = getCurrentStmbChatRef();
+        const chatKey = getStmbChatKey(ref);
+        const override = getNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
+        const previous = {
+          nexus: getCurrentNexusRoleResolution('nexus', settings).name,
+          memory: getCurrentNexusRoleResolution('memory', settings).name,
+        };
+        const next = { ...(override?.invalid ? sloth.assigned : (override || sloth.assigned)), [role]: name };
+        if (!canChangeNexusChatRolePair(getSceneMarkers(), chatKey, previous, next)) {
+          throw new Error(translate('This chat already contains collected memories. Changing its Nexus / Memory books requires a separate reviewed migration.',
+            'STMemoryBooks_SlothChatOverrideLocked'));
+        }
+        const changed = override
+          ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, next)
+          : setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
         if (changed) {
           saveSettingsDebounced();
           void refreshMemoryTierMacroCache();
           toastr.success(translate('🦥 Sloth: character lorebook roles saved.', 'STMemoryBooks_SlothRoleSaved'), 'STMemoryBooks');
         }
       } catch (err) {
-        toastr.warning(translate('Nexus and Memory must use different lorebooks.', 'STMemoryBooks_SlothDifferentBooks'), 'STMemoryBooks');
+        toastr.warning(err?.message?.includes('collected memories') ? err.message :
+          translate('Nexus and Memory must use different lorebooks.', 'STMemoryBooks_SlothDifferentBooks'), 'STMemoryBooks');
       }
       await refreshPopupContent();
       return;
@@ -13504,7 +13573,8 @@ function setupEventListeners() {
       settings.characterMemoryBookLocks, oldAvatar, newAvatar, renamedCharacter?.name,
     );
     const movedSlothRoles = moveCharacterNexusRoles(settings.nexusCharacterRoles, oldAvatar, newAvatar);
-    if (movedMemoryLock || movedSlothRoles) {
+    const movedChatOverrides = moveNexusChatRoleOverrides(settings.nexusChatRoleOverrides, oldAvatar, newAvatar);
+    if (movedMemoryLock || movedSlothRoles || movedChatOverrides) {
       saveSettingsDebounced();
       populateInlineButtons();
     }
@@ -13528,7 +13598,8 @@ function setupEventListeners() {
     const settings = initializeSettings();
     const removedMemoryLock = removeCharacterMemoryBookLock(settings.characterMemoryBookLocks, character.avatar);
     const removedSlothRoles = removeCharacterNexusRoles(settings.nexusCharacterRoles, character.avatar);
-    if (removedMemoryLock || removedSlothRoles) {
+    const removedChatOverrides = removeNexusChatRoleOverrides(settings.nexusChatRoleOverrides, character.avatar);
+    if (removedMemoryLock || removedSlothRoles || removedChatOverrides) {
       saveSettingsDebounced();
       populateInlineButtons();
     }

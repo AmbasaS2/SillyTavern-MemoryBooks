@@ -135,3 +135,13 @@ test('queued after-memory Nexus updates refuse another chat’s live override', 
         /Return to the original chat/);
     assert.equal(h.loaded.length,0);
 });
+
+test('invalid chat-specific role cannot silently fall back to a Side Prompt chat book', async()=>{
+    const bad={state:'invalid-override',name:''};
+    const h=sideHarness({memory:bad,nexus:bad});
+    await assert.rejects(()=>h.fn(h.tpl),/missing or detached/);
+    assert.equal(h.loaded.length,0);
+    const v=validateHarness({role:bad,nexusRole:bad});
+    assert.equal((await v.fn()).valid,false);
+    assert.equal(v.loaded.length,0);
+});

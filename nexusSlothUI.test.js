@@ -47,3 +47,28 @@ test('manual collector entry point is wired and gated on both ready roles',()=>{
     const css=file('./style.css');
     assert.match(css,/\.popup\.stmb-popup \.stmb-sloth-review/);
 });
+
+test('AU chat-only lorebook switch is opt-in and routed separately from character defaults', () => {
+    const template = file('./templates.js');
+    assert.match(template, /id="stmb-sloth-chat-override"/);
+    assert.match(template, /\{\{#if slothChatOverrideAvailable\}\}/);
+    assert.match(template, /STMemoryBooks_SlothChatOverrideHelp/);
+    const runtime = file('./nexusCharacterRolesRuntime.js');
+    assert.match(runtime, /getNexusChatRoleOverride\(/);
+    assert.match(runtime, /getStmbChatKey\(chatRef\)/);
+    const source = file('./index.js');
+    assert.match(source, /setNexusChatRoleOverride\(settings\.nexusChatRoleOverrides/);
+    assert.match(source, /clearNexusChatRoleOverride\(settings\.nexusChatRoleOverrides/);
+    assert.match(source, /setCharacterNexusRole\(settings\.nexusCharacterRoles/);
+    assert.match(source, /moveNexusChatRoleOverrides/);
+    assert.match(source, /removeNexusChatRoleOverrides/);
+    assert.match(file('./style.css'), /\.popup\.stmb-popup \.stmb-sloth-chat-override/);
+    for (const locale of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr',
+        'ms-my','pt-br','ru-ru','zh-cn','zh-tw']) {
+        const data=JSON.parse(file('./locales/'+locale+'.json'));
+        for (const key of ['SlothChatOverride','SlothChatOverrideHelp',
+            'SlothChatOverrideInvalid','SlothChatOverrideUnavailable']) {
+            assert.ok(data['STMemoryBooks_'+key],locale+':'+key);
+        }
+    }
+});
