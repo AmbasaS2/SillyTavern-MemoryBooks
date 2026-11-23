@@ -32,6 +32,16 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 - Avatar file renames migrate the chat-key registry without replacing a conflicting record; deleting a character clears its old chat overrides.
 - Added pure and routing regression tests, source/UI wiring checks, and translations for the new controls in non-English locales. Original user lorebooks, installed ST, main, and extension manifest are untouched. **Not live-tested**.
 
+### Reviewed legacy Nexus migration (2026-11-23 development slice)
+
+- Added an explicit **🦥 Review legacy Nexus migration** button in the same character role screen. This is **not** an automatic conversion and **not** an installed release.
+- Examines the selected **Nexus** World Info for legacy Long-Term Memory (…), Scene Continuity (…) and Status entries, including the title shape present in the user-provided Remus/Catherine Core JSON. Refuses duplicate UIDs, duplicate source types, conflicting new titles, disabled originals, special Outlets and ambiguous structures; does not read source contents through an AI.
+- Before any write, clones the full Nexus JSON and constructs a lossless proposal: Long-Term Memory text is copied verbatim into a new, always-on Core Memory entry, with its original insertion position/order; old Scene Continuity and Status texts are copied verbatim into source-labelled sections of a new, always-on Current Continuity. No unconfirmed lore, attribution, dates or current status is inferred. When there is no old status content, the migration does not invent a Current Continuity entry.
+- Every original entry (including content, UID, STMB history, STLO/custom metadata, NPC/LT, Kinks, PanelAssets, and other Outlets) stays in the same Nexus file. Migrated original entries are marked as **disabled archives**, never deleted, to prevent double injection. A migration receipt on each new entry ties its source UIDs to the archived records; missing/invalid links fail closed. Old Side Prompt upserts in the Memory Books extension are blocked from recreating or overwriting archived legacy types. Existing Side Prompt templates themselves remain untouched and require separate reviewed redesign; not silently retargeted.
+- Preview displays exact original and proposed new text. The user must explicitly approve after triggering a download of the full original JSON backup. Before writing, the server copy is freshly reloaded to reject stale edits; write is followed by server read-back. On a failed/uncertain write, an optimistic rollback restores the original only if the server still holds the staged version, otherwise warns that manual recovery from backup may be required.
+- This slice is intentionally **Nexus-only**. The Memory World Info is read for safety but not written. **Old combined one-book Memory + Side Prompt + special Outlet layouts still require a separately designed, two-book UID/reference-preserving split**; they are detected and blocked. Neither already-existing split/merged Scene repair nor final semantic conversion of the verbatim Current Continuity sections is claimed as finished.
+- Isolation tests cover known legacy title format, history preservation, source copy integrity, Outlet/UID conflicts, idempotency, blocked Side Prompt writes, optimistic save/read-back/recovery, UI wiring and localization. Actual running SillyTavern, STLO, lore-manager, browser popup and real content-quality tests remain unfinished.
+
 ### Scene rotation (first integration)
 
 - Keeps the latest three numbered, **completed** Scene entries constant/always-on. Older complete Scenes become vector-recalled, or keyword-recalled when existing keywords are present.
@@ -61,7 +71,7 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 
 ## Still missing / blocked / unverified
 
-- Evidence-preserving migration of legacy Long-Term Memory / Scene Continuity / Status to separate Core Memory and sectioned Current Continuity. The new collector intentionally blocks unreviewed legacy input to prevent destructive replacement.
+- The **Nexus-only reviewed and verbatim-preserving** legacy migration path now exists in developer code, but actual SillyTavern verification and follow-up semantic, subsection-aware Current Continuity conversion remain pending. Legacy single-book mixed Memory/Scene/Side Prompt/Outlet structures still need a verified cross-book split preserving UID and reference integrity. Collector still blocks unreviewed legacy input.
 - AI-assisted merge or split of already saved Scene memories, preserving UID/source references.
 - Full branch-copy policies for copying lorebook contents are still missing. Per-chat AU role overrides now isolate book selection, but existing collection data is not migrated between books and chats can still intentionally reference the same book.
 - Truly atomic two-book writes are not available over two independent SillyTavern World Info endpoints; compensation is best effort, not a database transaction.

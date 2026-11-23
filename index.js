@@ -67,7 +67,7 @@ import {
   getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides, canChangeNexusChatRolePair,
 } from './nexusChatRoleOverrides.js';
-import { runNexusCollector } from './nexusCollectorRuntime.js';
+import { runNexusCollector, runNexusLegacyMigration } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -11273,6 +11273,18 @@ async function showSettingsPopup() {
   const customButtons = [];
   if (['nexus', 'memory'].every(role =>
       getCurrentNexusRoleResolution(role, settings).state === 'ready')) {
+    customButtons.push({
+      text: '🦥 ' + translate('Review legacy Nexus migration',
+        'STMemoryBooks_SlothLegacyMigrationButton'),
+      classes: ['menu_button'],
+      action: async () => {
+        try { await runNexusLegacyMigration(); }
+        catch (error) {
+          console.error('Sloth legacy migration blocked:',error);
+          toastr.error(error?.message || String(error),'🦥 STMemoryBooks',{timeOut:10000});
+        }
+      },
+    });
     customButtons.push({
       text: '🦥 ' + translate('Collect completed events',
         'STMemoryBooks_SlothCollectButton'),

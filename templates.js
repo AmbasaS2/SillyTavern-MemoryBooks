@@ -128,6 +128,7 @@ export const settingsTemplate = Handlebars.compile(`
         <div class="info-block hint">
           <strong data-i18n="STMemoryBooks_SlothCollectButton">🦥 Collect completed events</strong>
           <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
+          <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
           <label class="checkbox_label">
             <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>

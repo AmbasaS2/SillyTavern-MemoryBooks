@@ -3,6 +3,7 @@
 
 import { getContext } from '../../../extensions.js';
 import { isCharacterAwarenessDisabled } from './groupChatPolicy.js';
+import { guardArchivedNexusSidePromptWrite } from './nexusLegacyMigration.js';
 import {
     METADATA_KEY,
     loadWorldInfo,
@@ -1358,6 +1359,12 @@ export async function upsertLorebookEntriesBatch(lorebookName, lorebookData, ite
         throw new Error(i18n('addlore.upsert.errors.invalidArgs', 'Invalid arguments to upsertLorebookEntriesBatch'));
     }
 
+    // Fail BEFORE any staging or save when a legacy Side Prompt was archived.
+    // Recreating an old Status / Long-Term Memory entry would fork the truth.
+    for (const item of items) {
+        if (item?.title) guardArchivedNexusSidePromptWrite(
+            lorebookData, item.title, item.sidePromptHistory?.titleBase);
+    }
     if (items.some(item => item?.sidePromptHistory)) lorebookData = structuredClone(lorebookData);
 
     const results = [];
@@ -1491,6 +1498,7 @@ export async function upsertLorebookEntryByTitle(lorebookName, lorebookData, tit
         throw new Error(i18n('addlore.upsert.errors.invalidArgs', 'Invalid arguments to upsertLorebookEntryByTitle'));
     }
 
+    guardArchivedNexusSidePromptWrite(lorebookData, title, sidePromptHistory?.titleBase);
     if (sidePromptHistory) {
         if (!String(content ?? '').trim()) throw new Error('Side-prompt history cannot save blank content.');
         lorebookData = structuredClone(lorebookData);
