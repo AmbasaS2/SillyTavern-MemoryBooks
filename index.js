@@ -5633,7 +5633,7 @@ async function executeMemoryGeneration(
     // Check if memory previews are enabled and handle accordingly
     let finalMemoryResult = memoryResult;
 
-    if (settings.moduleSettings.showMemoryPreviews) {
+    if (settings.moduleSettings.showMemoryPreviews || settings.moduleSettings.nexusSceneRotationEnabled === true) {
       // Clear working toast before showing preview popup
       toastr.clear();
 
@@ -6395,7 +6395,7 @@ async function executeQueuedMemoryJob(job, jobContext) {
   jobContext.throwIfCancelled();
 
   let finalMemoryResult = memoryResult;
-  if (settings.moduleSettings?.showMemoryPreviews) {
+  if (settings.moduleSettings?.showMemoryPreviews || settings.moduleSettings?.nexusSceneRotationEnabled === true) {
     const approval = await awaitStmbJobApproval(
       jobContext,
       {
