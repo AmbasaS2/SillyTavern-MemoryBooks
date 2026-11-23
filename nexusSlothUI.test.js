@@ -37,12 +37,14 @@ test('Sloth visual rules use scoped theme variables, not forced fonts', () => {
 });
 
 
-test('manual collector entry point is wired and gated on both ready roles',()=>{
+test('manual collector entry point offers first setup separately from an existing pair',()=>{
     const source=file('./index.js');
     assert.match(source,/runNexusCollector\(\{/);
-    assert.match(source,/getCurrentNexusRoleResolution\(role, settings\)\.state === 'ready'/);
-    assert.match(source,/STMemoryBooks_SlothCollectButton/);
+    assert.match(source,/slothFirstSetup: canStartNexusSetup/);
+    assert.match(source,/slothRoleMemory\.state === 'ready' && slothRoleNexus\.state === 'ready'/);
     const html=file('./templates.js');
+    assert.match(html,/STMemoryBooks_SlothFirstBooksButton/);
+    assert.match(html,/data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton"/);
     assert.match(html,/STMemoryBooks_SlothManualHelp/);
     const css=file('./style.css');
     assert.match(css,/\.popup\.stmb-popup \.stmb-sloth-review/);

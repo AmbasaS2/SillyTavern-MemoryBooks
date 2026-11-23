@@ -77,8 +77,8 @@ test('post-persistence network failure is compensated without losing original',a
 });
 test('runtime is manual and requires all three reviews plus original JSON backup',()=>{
     const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
-    assert.match(index,/runNexusLatestSceneSplit\(\{\s*profileIndex:/);
-    assert.match(index,/STMemoryBooks_SlothSplitButton/);
+    assert.match(index,/runNexusLatestSceneSplit\(\{\s*profileIndex/);
+    assert.match(file('./templates.js'),/data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton"/);
     const start=runtime.indexOf('export async function runNexusLatestSceneSplit');
     assert.ok(start>0);
     const part=runtime.slice(start);

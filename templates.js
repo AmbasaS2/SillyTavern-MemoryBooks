@@ -117,21 +117,51 @@ export const settingsTemplate = Handlebars.compile(`
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
               {{/if}}{{/if}}
             {{else}}
+              {{#unless slothFirstSetup}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
+              {{/unless}}
             {{/if}}
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}
         </section>
         {{/unless}}
+        {{#if slothFirstSetup}}
+        <div class="info-block">
+          <p data-i18n="STMemoryBooks_SlothFirstBooksHelp">Review the first collection to create Nexus and Memory for this character.</p>
+          <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothFirstBooksButton">Set up Nexus and Memory</button>
+        </div>
+        {{/if}}
+        {{#if slothMissingCompanion}}
+        <div class="info-block">
+          <p data-i18n="STMemoryBooks_SlothCompanionHelp">Review the existing book before creating its empty companion. The original book is backed up and kept intact. Migration is a separate review.</p>
+          <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Prepare the missing lorebook</button>
+        </div>
+        {{/if}}
         {{#if slothRoleActive}}
-        <div class="info-block hint">
-          <strong data-i18n="STMemoryBooks_SlothCollectButton">🦥 Collect completed events</strong>
+        <div class="info-block">
+          <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect completed events</button>
           <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
-          <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
-          <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
-          <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
-          <small data-i18n="STMemoryBooks_SlothSplitHelp">The newest complete Scene can be reviewed for independent incidents when its original chat messages remain visible. Every source message is accounted for and the original is archived before approved saving.</small>
+          <label for="stmb-nexus-detail-recall-mode">
+            <span data-i18n="STMemoryBooks_SlothDetailRecallMode">Recall new Nexus LT and NPC details</span>
+            <select id="stmb-nexus-detail-recall-mode" class="text_pole">
+              <option value="vector" {{#unless nexusDetailKeywordRecall}}selected{{/unless}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+              <option value="keyword" {{#if nexusDetailKeywordRecall}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallKeyword">Keywords</option>
+            </select>
+          </label>
+          <details class="stmb-sloth-detail stmb-sloth-maintenance">
+            <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
+            <div>
+              <button type="button" class="menu_button" data-stmb-sloth-action="migrate" data-i18n="STMemoryBooks_SlothLegacyMigrationButton">Review legacy Nexus migration</button>
+              <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
+              <button type="button" class="menu_button" data-stmb-sloth-action="continuity" data-i18n="STMemoryBooks_SlothLegacySemanticButton">Review old Current Continuity</button>
+              <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
+              <button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button>
+              <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
+              <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting newest Scene</button>
+              <small data-i18n="STMemoryBooks_SlothSplitHelp">The newest complete Scene can be reviewed for independent incidents when its original chat messages remain visible. Every source message is accounted for and the original is archived before approved saving.</small>
+            </div>
+          </details>
           <label class="checkbox_label">
             <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>

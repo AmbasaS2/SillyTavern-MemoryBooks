@@ -995,6 +995,16 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     min-width:0;max-width:100%;
 }
 .popup.stmb-popup .stmb-sloth-detail summary {cursor:pointer;font-weight:600;overflow-wrap:anywhere;}
+.popup.stmb-popup .stmb-sloth-maintenance { margin-block: 12px; }
+.popup.stmb-popup .stmb-sloth-maintenance > div {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+    margin-block: 10px 0;
+}
+.popup.stmb-popup .stmb-sloth-maintenance small { margin-block-end: 6px; }
+.popup.stmb-popup .stmb-sloth-keywords { display: grid; gap: 5px; min-width: 0; }
+.popup.stmb-popup .stmb-sloth-keywords :is(input, textarea) { min-width: 0; width: 100%; }
 .popup.stmb-popup .stmb-sloth-detail pre {
     white-space:pre-wrap;overflow-wrap:anywhere;max-height:35vh;overflow:auto;
     font:inherit;line-height:1.5;margin:8px 0;padding:8px;

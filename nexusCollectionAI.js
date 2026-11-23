@@ -10,6 +10,7 @@ import { validateGroundedNexusEdits, validateSlothNexusWindowEvidence } from './
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
+import { SLOTH_SCENE_PROMPT_V13, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
 function parseStrictJSON(raw,phase) {
     const text=String(raw||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
@@ -98,21 +99,16 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
     const idSet=new Set(event.messageIds),source=messages.filter(m=>idSet.has(m.id));
     const evidence=await evidenceFor(source,ask);
     const prompt=[
-        'Write ONE independently recallable, completed causal memory with no invented facts.',
-        'Preserve actor-specific voice, humor, exact unique dialogue, relationship strength, secrecy,',
-        'knowledge boundaries, uncertainty and chronological cause -> action -> result.',
-        'STRICT JSON {"title":"...","content":"**Timeline**\\n...\\n\\n**Scene**\\n...\\n\\n**Result**\\n...","keywords":["..."]}.',
-        'Timeline gives source-backed time anchors; Scene is flowing paragraphs with causes, choices and conclusion;',
-        'Result gives one grounded completed outcome sentence, not a plan.',
-        'Keep evidence of important in-between events and source certainty.',
+        SLOTH_SCENE_PROMPT_V13,
+        'Fork workflow: the user-approved source spans form ONE independently recallable causal event, even when noncontiguous. Do not use intervening messages outside the approved spans.',
+        'Keep person-specific voice, humor and distinctive phrasing along with all of the original preservation rules.',
+        'The approved title and closure guide the output; evidence controls factual details. The character card is reference only, never evidence of an event.',
         'Approved title: '+event.title,
         'Closure: '+event.result,'Source spans: '+JSON.stringify(event.segments),
         'Character context: '+characterContext,'Evidence:',evidence
     ].join('\n\n');
     const response=await ask(prompt,'Scene '+event.id);
-    if(typeof response.content!=='string'||!Array.isArray(response.keywords))
-        throw new Error('Scene '+event.id+' returned invalid content or keywords.');
-    return {...event,title:event.title,content:response.content,keywords:response.keywords};
+    return {...event,...validateSlothSceneResponse(response),title:event.title};
 }
 
 /**
@@ -148,7 +144,8 @@ async function nexusStateEvidenceFor(messages, ask) {
     return payload;
 }
 
-export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null}) {
+export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null,
+    initial=false,characterContext=''}) {
     const ask=requester(profile,settings,signal);
     const groundedSource=await nexusStateEvidenceFor(messages,ask);
     const entries=Object.values(nexus.entries||{}).map(e=>{
@@ -181,14 +178,33 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         '"text":"a grounded addition to that section only"};',
         '{"kind":"...","action":"create","title":"unique title","content":"content","keywords":["..."]}.',
         'Core Memory and Current Continuity are separate always-on entries.',
+        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues.',
+        'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
+        'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
+        'For a recall cue keep its perceivable trigger, grounded meaning and distinctly supported future function.',
         'For existing ones patch only verified changes; keep unrelated paragraphs and sections.',
         'Current Continuity sections: Present Handoff, Active Threads, Knowledge Boundaries, Active Conditions.',
+        'Present Handoff preserves the actual next-response position, contact or release, hidden reactions, final utterance and remaining choice.',
+        'Active Threads need a responsible actor, unfinished condition and concrete completion check. A question alone belongs in Handoff.',
+        'Keep direct observation, named relay, suspicion, false belief, inability to know and deliberate concealment distinct for each person.',
+        'Keep accountability, explicit acceptance and forgiveness distinct. Track offers, supply, application, recovery and discharge independently.',
         'For Current Continuity, use append_section for additions, NOT generic append.',
         'Only replace_exact wholly within ONE Current Continuity section; do not change headings.',
+        'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction. Quote the evidence that ends that state.',
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
         'If the old Continuity has only legacy source blocks, add a grounded named section',
         'instead of rewriting or interpreting the original archive without an explicit review.',
         'LT and NPC existing matching topics should be patched; create only when truly new and durable.',
+        ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
+            ['Supply specific literal recall keywords for every new LT or NPC detail. Never overwrite existing entry activation settings.']:[]),
+        'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
+        'Do not add a one-scene NPC without a continuing tie, repeated function or explicit unfinished duty. A temporary duty can close without erasing an independent enduring role.',
+        ...(initial?[
+            'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
+            'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
+            'The following character card is reference for disambiguation only. Every new memory still needs an exact source quote from the chat:',
+            characterContext,
+        ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
         'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
@@ -205,7 +221,11 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
     ].join('\n\n');
     const response=await ask(prompt,'Nexus delta');
     if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
-    return validateGroundedNexusEdits(response.edits,messages);
+    const edits=validateGroundedNexusEdits(response.edits,messages);
+    if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
+        throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
+    }
+    return edits;
 }
 
 /**

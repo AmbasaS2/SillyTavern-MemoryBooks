@@ -77,7 +77,7 @@ test('failed post-write response rolls original state back with verifiable readb
 test('UI code requires explicit button, read-only AI, full backup and named approval',()=>{
     const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
     assert.match(index,/runNexusLegacyContinuityReview\(\{/);
-    assert.match(index,/STMemoryBooks_SlothLegacySemanticButton/);
+    assert.match(file('./templates.js'),/data-stmb-sloth-action="continuity" data-i18n="STMemoryBooks_SlothLegacySemanticButton"/);
     const start=runtime.indexOf('export async function runNexusLegacyContinuityReview');
     assert.ok(start>0);
     const flow=runtime.slice(start);

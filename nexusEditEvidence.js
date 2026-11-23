@@ -31,6 +31,12 @@ function verifyEvidence(items,source,label) {
     });
 }
 
+export function isGroundedContinuityRetirement(edit) {
+    return edit?.kind==='continuity' && edit.action==='replace_exact' && edit.text==='' &&
+        ['observed_resolution','observed_correction','explicit_retraction'].includes(edit.supersession) &&
+        Array.isArray(edit.evidence) && edit.evidence.length>0;
+}
+
 /**
  * Validate raw model evidence summaries against the exact text of each window.
  * Even a window summarizer is not trusted to manufacture a quote or message ID.
@@ -72,7 +78,7 @@ export function validateGroundedNexusEdits(edits, messages) {
         }
         if(op.action==='replace_exact'){
             assert(typeof op.find==='string' && op.find.trim() &&
-                typeof op.text==='string' && op.text.trim(),
+                typeof op.text==='string' && (op.text.trim()||isGroundedContinuityRetirement(op)),
                 label+' cannot erase a fact without an explicit grounded replacement.');
         }
         return {...op,reason:op.reason.trim(),evidence};

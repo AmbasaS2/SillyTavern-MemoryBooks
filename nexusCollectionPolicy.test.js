@@ -19,7 +19,7 @@ function maker(book) {
 const story='**Timeline**\nDay 1.\n\n**Scene**\nCause, choices, repair.\n\n**Result**\nThe conflict ended.';
 test('AI may unify non-adjacent causal segments, while preserving separate intervening event',()=>{
   const got=validateNexusEventPlan(plan,messages.map(m=>m.id));
-  assert.deepEqual(got.events[0].segments,[[0,2],[5,7]]);
+  assert.deepEqual(got.events.map(event=>event.segments),[[[3,4]],[[0,2],[5,7]]]);
   assert.equal(got.fullyCollected,false);
   assert.deepEqual(got.deferred[0].messageIds,[8,9]);
 });

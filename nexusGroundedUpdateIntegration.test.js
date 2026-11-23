@@ -70,11 +70,11 @@ test('no-op and repeated append are blocked before any World Info write',()=>{
 });
 test('collector explicitly reviews Nexus-only updates without shifting Hide or Memory receipts',()=>{
     const code=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    const start=code.indexOf('if(!plan.events.length){');
+    const start=code.indexOf('if(!initial&&!plan.events.length){');
     const end=code.indexOf('const approved=await planApproval(plan)',start);
     assert.ok(start>0 && end>start);
     const branch=code.slice(start,end);
-    assert.match(branch,/proposeSlothNexusEdits/);
+    assert.match(branch,/planApproval\(plan\)[\s\S]*proposeSlothNexusEdits/);
     assert.match(branch,/scenes:\[\]/);
     assert.match(branch,/states:\[state\]/);
     assert.match(branch,/commitSlothNexusMigration\(state/);

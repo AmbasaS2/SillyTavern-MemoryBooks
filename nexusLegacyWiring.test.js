@@ -8,7 +8,7 @@ const file=x=>readFileSync(new URL(x,import.meta.url),'utf8');
 test('legacy migration is an explicitly approved UI command, independent of AI collector',()=>{
     const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
     assert.match(index,/runNexusLegacyMigration\(\)/);
-    assert.match(index,/STMemoryBooks_SlothLegacyMigrationButton/);
+    assert.match(file('./templates.js'),/data-stmb-sloth-action="migrate" data-i18n="STMemoryBooks_SlothLegacyMigrationButton"/);
     assert.match(runtime,/export async function runNexusLegacyMigration\(\)/);
     assert.match(runtime,/approveNexusLegacyMigration/);
     assert.match(runtime,/POPUP_RESULT\.CUSTOM1 && downloaded/);

@@ -5,6 +5,7 @@
 import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
 import { appendContinuitySection, guardContinuityChange,
     guardNewContinuityContent } from './nexusContinuitySections.js';
+import { isGroundedContinuityRetirement } from './nexusEditEvidence.js';
 
 const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = v => typeof v === 'string' ? v.trim() : '';
@@ -47,7 +48,8 @@ export function validateNexusEventPlan(raw, sourceIds) {
     }
     const lost = sourceIds.filter(id => !assigned.has(id));
     requireThat(!lost.length, 'AI left '+lost.length+' messages unclassified, first #' + lost[0] + '. No writes.');
-    events.sort((a,b)=>a.start-b.start);
+    // Interleaved incidents belong in the order their final source beats close.
+    events.sort((a,b)=>a.end-b.end);
     return {events,deferred,sourceIds:[...sourceIds],start:sourceIds[0],
         end:sourceIds.at(-1), fullyCollected:deferred.length===0};
 }
@@ -98,9 +100,10 @@ function getUidEntry(book,uid){
     requireThat(!protectedEntry(matches[0]),'Special/disabled Nexus entry cannot be edited.');
     return matches[0];
 }
-export function stageNexusEdits(original, edits, createEntry) {
+export function stageNexusEdits(original, edits, createEntry, {detailRecallMode='vector'}={}) {
     requireThat(plain(original?.entries) && Array.isArray(edits) && typeof createEntry==='function',
         'Invalid Nexus staging input.');
+    requireThat(['vector','keyword'].includes(detailRecallMode),'Unsupported Nexus detail recall mode.');
     const staged=structuredClone(original),changes=[];
     const titles=new Set(Object.values(staged.entries).map(e=>str(e?.comment).toLowerCase()));
     for(const [i,op] of edits.entries()){
@@ -123,11 +126,15 @@ export function stageNexusEdits(original, edits, createEntry) {
             requireThat(entry && intUid(entry.uid)!==null,'World Info entry constructor failed.');
             entry.comment=title;entry.content=content;entry.disable=false;entry.position=0;
             entry.constant=['core','continuity','npc-index'].includes(kind);
-            entry.vectorized=['lt','npc'].includes(kind);
-            entry.selective=['lt','npc'].includes(kind);
+            const detail=['lt','npc'].includes(kind);
+            entry.vectorized=detail && detailRecallMode==='vector';
+            entry.selective=detail;
             entry.key=Array.isArray(op.keywords)?[...new Set(op.keywords.map(str).filter(Boolean))].slice(0,16):[];
+            requireThat(!detail||detailRecallMode!=='keyword'||entry.key.length,
+                'A new keyword-triggered Nexus detail requires a recall keyword.');
             titles.add(title.toLowerCase());
-            changes.push({action,kind,title,uid:entry.uid,before:'',after:content});
+            changes.push({action,kind,title,uid:entry.uid,before:'',after:content,
+                ...(detail?{keywords:[...entry.key]}:{})});
             continue;
         }
         const uid=intUid(op?.uid);
@@ -138,13 +145,20 @@ export function stageNexusEdits(original, edits, createEntry) {
         if(title==='Core Memory')requireThat(kind==='core','Core Memory kind mismatch.');
         if(title==='Current Continuity')requireThat(kind==='continuity','Continuity kind mismatch.');
         const text=str(op.text);
-        requireThat(text,'Nexus edit has empty text.');
+        const retirement=isGroundedContinuityRetirement(op);
+        requireThat(text||retirement,'Nexus edit has empty text.');
         if(action!=='replace_exact')requireThat(!before.includes(text),
             'Nexus addition already exists; refusing a repeated append.');
         if(action==='replace_exact'){
             const find=str(op.find);
             requireThat(find && before.split(find).length===2,'Nexus exact text does not match uniquely: '+title);
-            entry.content=before.replace(find,text);
+            if(retirement){
+                const start=before.indexOf(find), end=start+find.length;
+                requireThat(!/[\r\n]/.test(find) && (start===0||before[start-1]==='\n') &&
+                    (end===before.length||/^[\r\n]/.test(before.slice(end))),
+                    'Clean up only one whole, explicitly ended Continuity line at a time.');
+            }
+            entry.content=before.replace(find,()=>text);
         }else if(action==='append_section'){
             entry.content=appendContinuitySection(before,op.section,text);
         }else{
