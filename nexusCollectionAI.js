@@ -12,6 +12,12 @@ import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js'
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 import { SLOTH_SCENE_PROMPT_V13, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
+export class InvalidSlothNexusProposal extends Error {
+    constructor(cause) {
+        super(cause.message, {cause});
+    }
+}
+
 function parseStrictJSON(raw,phase) {
     const text=String(raw||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
     const fenced=text.match(/^\x60{3,}(?:json)?\s*\n([\s\S]*?)\n\x60{3,}\s*$/i);
@@ -21,6 +27,7 @@ function parseStrictJSON(raw,phase) {
     if(!parsed || typeof parsed!=='object' || Array.isArray(parsed))throw new Error(phase+': JSON object required.');
     return parsed;
 }
+
 function resolveConnection(profile) {
     if(!profile || profile?.connection?.api==='current_st'||profile.useDynamicSTSettings){
         const apiInfo=getCurrentApiInfo(), modelInfo=getUIModelSettings();
@@ -225,12 +232,16 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         'Current Nexus entries (exact UIDs):',source
     ].join('\n\n');
     const response=await ask(prompt,'Nexus delta');
-    if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
-    const edits=validateGroundedNexusEdits(response.edits,messages);
-    if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
-        throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
+    try {
+        if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
+        const edits=validateGroundedNexusEdits(response.edits,messages);
+        if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
+            throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
+        }
+        return edits;
+    } catch (error) {
+        throw new InvalidSlothNexusProposal(error);
     }
-    return edits;
 }
 
 /**

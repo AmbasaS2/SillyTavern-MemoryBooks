@@ -18,7 +18,7 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
-import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft,
+import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, InvalidSlothNexusProposal, auditSlothDraft,
     suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity,
     suggestSlothSceneSplit } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
@@ -481,7 +481,7 @@ export async function runNexusCompanionSetup() {
     }
 }
 
-async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits,applyReviewedDraft}) {
+async function draftApproval({scenes,changes,plan,states,ref,initial=false,sceneOnly=false,edits,applyReviewedDraft}) {
     if (edits.length !== changes.length) throw new Error('Nexus review changes no longer match the proposed edits.');
     const alwaysOn = states.flatMap(state => Object.values(state.staged.entries))
         .filter(entry => entry.constant && !entry.disable && !entry.ignoreBudget)
@@ -550,8 +550,11 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,edits
     const guide=nexusOnly
         ?t('No Scene is complete. Only the selected Nexus lorebook will change after you review exact source quotes and download its full original JSON. Memory and chat messages will not change.',
             'STMemoryBooks_SlothNexusOnlyGuide')
-        :t('Both World Info books will change only after approval. A JSON backup will be downloaded first. No messages are hidden.',
-            'STMemoryBooks_SlothSaveGuide');
+        :sceneOnly
+            ?t('The approved Scene changes will be saved to Memory after a JSON backup. No Nexus changes are staged.',
+                'STMemoryBooks_SlothSceneOnlyGuide')
+            :t('Both World Info books will change only after approval. A JSON backup will be downloaded first. No messages are hidden.',
+                'STMemoryBooks_SlothSaveGuide');
     const creation=initial?'<p>'+html(t('These new lorebooks will be created and linked to this character.','STMemoryBooks_SlothFirstBooksReview'))+'</p><ul>'+
         states.map(state=>'<li>'+html(state.name)+'</li>').join('')+'</ul>':'';
     const body='<div class="stmb-sloth-review"><h3>'+
@@ -976,9 +979,26 @@ export async function runNexusCollector({profileIndex}={}) {
             scenes.push(composed);
             checkOrigin();
         }
-        let edits=await proposeSlothNexusEdits({
-            scenes,nexus:originalBooks.nexus,messages:source,
-            plan:approved,profile,settings,initial,characterContext});
+        let edits,sceneOnly=false;
+        try {
+            edits=await proposeSlothNexusEdits({
+                scenes,nexus:originalBooks.nexus,messages:source,
+                plan:approved,profile,settings,initial,characterContext});
+        } catch(error) {
+            if(!(error instanceof InvalidSlothNexusProposal)||!scenes.length)throw error;
+            checkOrigin();
+            const notice='<div class="stmb-sloth-review"><p>'+
+                html(t('The AI’s Nexus changes failed validation. You can review the completed Scenes separately.',
+                    'STMemoryBooks_SlothInvalidNexus'))+'</p><small>'+html(error.message)+'</small></div>';
+            const popup=new Popup(DOMPurify.sanitize(notice),POPUP_TYPE.CONFIRM,'',{
+                okButton:t('Review Scenes only','STMemoryBooks_SlothReviewScenesOnly'),
+                cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+            });
+            markStmbPopup(popup);
+            if(await popup.show()!==POPUP_RESULT.AFFIRMATIVE)return {saved:false,reason:'invalid-nexus-cancelled'};
+            sceneOnly=true;
+            edits=[];
+        }
         checkOrigin();
         if(initial&&!scenes.length&&!edits.length) {
             toastr.info(t('There are no completed events to collect yet. Nothing was changed.',
@@ -1003,7 +1023,7 @@ export async function runNexusCollector({profileIndex}={}) {
             }
         }
         const accepted=await draftApproval({
-            scenes,changes:nexus.changes,plan:approved,states,ref,initial,edits,
+            scenes,changes:nexus.changes,plan:approved,states,ref,initial,sceneOnly,edits,
             applyReviewedDraft:(reviewedScenes,reviewedEdits)=>{
                 const verified = validateGroundedNexusEdits(reviewedEdits, source);
                 const nextNexus = stageReviewedNexus(verified);
@@ -1022,15 +1042,18 @@ export async function runNexusCollector({profileIndex}={}) {
         checkOrigin();
         await auditReviewed(scenes,edits,approved);
         if (approved.events.length) await readReviewedChat(ref, sourceIds, fingerprint);
-        const outcome=initial?await saveInitialNexusCollection(states,{ref,roleNames,checkOrigin,settings}):
-            await commitSlothBooks(states,{
+        const commitOptions={
             loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
             verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,original)=>worldInfoCache.set(name,structuredClone(original)),
-            withLocks:withBothWriteLanes,
             verifyOrigin:checkOrigin,
-        });
-        // Metadata must change ONLY after both book writes and read-backs succeeded.
+        };
+        const outcome=initial?await saveInitialNexusCollection(states,{ref,roleNames,checkOrigin,settings}):
+            sceneOnly?await commitSlothNexusMigration(states[0],{
+                ...commitOptions,operation:'Memory Scene save',
+                withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            }):await commitSlothBooks(states,{...commitOptions,withLocks:withBothWriteLanes});
+        // Write the chat receipt only after verified World Info persistence.
         let receiptVerified = false;
         try {
             if (approved.events.length) {
@@ -1040,22 +1063,30 @@ export async function runNexusCollector({profileIndex}={}) {
             assertOrigin(ref,roleNames,sourceIds,fingerprint);
         } catch (error) {
             console.warn('Sloth: books verified but the original chat receipt is unavailable.', error);
-            toastr.warning(t('Both lorebooks were saved. Check the original chat before hiding any messages.',
-                'STMemoryBooks_SlothReceiptUnavailable'), 'STMemoryBooks', { timeOut: 10000 });
+            toastr.warning(sceneOnly&&!initial
+                ?t('Memory was saved. Check the original chat before hiding any messages.',
+                    'STMemoryBooks_SlothSceneReceiptUnavailable')
+                :t('Both lorebooks were saved. Check the original chat before hiding any messages.',
+                    'STMemoryBooks_SlothReceiptUnavailable'), 'STMemoryBooks', { timeOut: 10000 });
             return { saved:true, receiptVerified, reason:'chat-receipt-unavailable', result:outcome };
         }
         for(const state of states){
             try{await Promise.resolve(reloadEditor(state.name));}
             catch(error){console.warn('Sloth: editor refresh failed',error);}
         }
-        const msg=t('Collection saved to both lorebooks. No chat messages were hidden.','STMemoryBooks_SlothSaved');
-        const hideHint=approved.fullyCollected
+        const msg=sceneOnly&&!initial
+            ?t('Approved Scenes saved to Memory.','STMemoryBooks_SlothSceneOnlySaved')
+            :t('Collection saved to both lorebooks. No chat messages were hidden.','STMemoryBooks_SlothSaved');
+        const hideHint=sceneOnly
+            ? t('Keep the original messages visible until you can review the Nexus changes.',
+                'STMemoryBooks_SlothSceneOnlyKeepSource')
+            :approved.fullyCollected
             ? t('Manual hide may be considered through original message #',
                 'STMemoryBooks_SlothHideCandidate')+String(approved.end)
             :t('Unfinished source remains, so no hide boundary can be recommended.',
                 'STMemoryBooks_SlothNoHideCandidate');
         toastr.success(msg+' '+hideHint,'STMemoryBooks',{timeOut:9000});
-        return {saved:true,scenes:scenes.length,nexusEdits:nexus.changes.length,
+        return {saved:true,scenes:scenes.length,nexusEdits:edits.length,
             deferred:approved.deferred.length,receiptVerified,result:outcome};
     }finally{
         collectorBusy=false;

@@ -96,7 +96,9 @@ test('review and backup include evidence, and supported UI translations have eve
         const data=JSON.parse(readFileSync(new URL('./locales/'+lang+'.json',import.meta.url),'utf8'));
         for(const key of ['SlothEvidenceWhy','SlothEvidenceSource',
             'SlothNexusOnlyReview','SlothNexusOnlyGuide','SlothNexusOnlySaved',
-            'SlothApplyNexusChange','SlothNoApprovedChanges']) {
+            'SlothApplyNexusChange','SlothNoApprovedChanges','SlothInvalidNexus',
+            'SlothReviewScenesOnly','SlothSceneOnlyGuide','SlothSceneReceiptUnavailable',
+            'SlothSceneOnlySaved','SlothSceneOnlyKeepSource']) {
             assert.ok(data['STMemoryBooks_'+key]?.length,lang+':'+key);
         }
     }

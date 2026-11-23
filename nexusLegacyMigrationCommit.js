@@ -11,9 +11,10 @@ export async function commitSlothNexusMigration(state,{
     loadFresh,save,withLock,verifyOrigin,resetCache,verifyBeforeWrite,operation='Nexus migration',
 }) {
     const subject=operation==='Side Prompt update'?state?.name:
-        ['Memory Scene merge','Memory Scene split'].includes(operation)?'Memory':'Nexus';
+        ['Memory Scene merge','Memory Scene split','Memory Scene save'].includes(operation)?'Memory':'Nexus';
     const reviewAction=operation==='Memory Scene split'?'split':
-        operation==='Side Prompt update'?'the Side Prompt update':subject==='Memory'?'merge':'migration';
+        operation==='Side Prompt update'?'the Side Prompt update':
+        operation==='Memory Scene save'?'the collection':subject==='Memory'?'merge':'migration';
     if (!state?.name || !state.original?.entries || !state.staged?.entries ||
         [loadFresh,save,withLock,verifyOrigin].some(fn=>typeof fn!=='function')) {
         throw new Error('A complete Nexus migration snapshot and save dependencies are required.');
