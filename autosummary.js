@@ -15,6 +15,7 @@ import { isMemoryProcessing } from './index.js';
 import { translate } from '../../../i18n.js';
 import { validateLorebookRequirement } from './lorebookValidation.js';
 import { hasPendingProgress } from './stmbProgress.js';
+import { getCurrentNexusRoleResolution } from './nexusCharacterRolesRuntime.js';
 import { createSceneRequest, compileScene, estimateTokenCount } from './chatcompile.js';
 
 let autoSummarySkippedForProcessing = false;
@@ -120,7 +121,9 @@ async function checkAutoSummaryTrigger() {
     try {
         if (hasPendingProgress()) return;
         const settings = extension_settings.STMemoryBooks;
-        if (settings?.moduleSettings?.nexusSceneRotationEnabled === true) return;
+        if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+            getCurrentNexusRoleResolution('memory', settings).state !== 'unassigned' &&
+            getCurrentNexusRoleResolution('memory', settings).state !== 'no-character') return;
         if (!settings?.moduleSettings?.autoSummaryEnabled) {
             return;
         }

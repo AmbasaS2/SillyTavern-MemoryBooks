@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: selalu aktifkan tiga Scene selesai terbaru",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 Pemalas · Selalu aktifkan tiga Scene selesai terbaru",
   "STMemoryBooks_NexusRotationHelp": "Hanya untuk lorebook Memory khusus. Menyimpan Scene bernomor dan selesai secara manual akan memutar statusnya. Mode ini menonaktifkan ringkasan otomatis, pengingat, dan sembunyi pesan otomatis. Perencanaan Scene dan pembaruan Nexus belum tersedia.",
   "STMemoryBooks_NexusRecallMode": "Cara memanggil Scene lama",
   "STMemoryBooks_NexusRecallVector": "Vektor",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "tidak diurutkan",
   "STMemoryBooks_Jobs_SortTitle": "Judul tugas",
   "STMemoryBooks_Jobs_SortStatus": "Status",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Pesan berubah sejak rollback Memori. Pesan tersembunyi tidak dapat ditampilkan kembali dengan aman. Periksa chat yang tersisa sebelum menampilkannya secara manual."
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Pesan berubah sejak rollback Memori. Pesan tersembunyi tidak dapat ditampilkan kembali dengan aman. Periksa chat yang tersisa sebelum menampilkannya secara manual.",
+  "STMemoryBooks_SlothRolesTitle": "🦥 Sistem Pemalas · Peran lorebook",
+  "STMemoryBooks_SlothRolesDescription": "Tentukan peran lorebook yang terhubung ke karakter. Peran berlaku di chat baru; progres pengumpulan tetap terpisah per chat.",
+  "STMemoryBooks_SlothNexusRole": "Nexus · Latar dan status kini",
+  "STMemoryBooks_SlothMemoryRole": "Memory · Peristiwa lengkap",
+  "STMemoryBooks_SlothUnassigned": "Belum dipilih",
+  "STMemoryBooks_SlothMissingRole": "Lorebook yang dipilih tidak lagi terhubung. Hubungkan lagi atau pilih yang lain.",
+  "STMemoryBooks_SlothNoLinkedBooks": "Tidak ada lorebook terhubung. Hubungkan dulu melalui SillyTavern.",
+  "STMemoryBooks_SlothSelectCharacter": "Pilih karakter.",
+  "STMemoryBooks_SlothRoleActive": "🦥 Pemalas · Menggunakan Memory karakter",
+  "STMemoryBooks_SlothInvalidChoice": "Pilih lorebook yang terhubung ke karakter.",
+  "STMemoryBooks_SlothRoleSaved": "🦥 Pemalas · Peran tersimpan.",
+  "STMemoryBooks_SlothDifferentBooks": "Nexus dan Memory harus memakai lorebook berbeda.",
+  "STMemoryBooks_SlothMissingRoleError": "Lorebook Memory '{{name}}' hilang atau tidak lagi terhubung. Perbaiki pengaturan.",
+  "STMemoryBooks_SlothIncompletePair": "Sebelum mengumpulkan, tetapkan Nexus dan Memory ke dua lorebook berbeda yang terhubung dengan karakter."
 }

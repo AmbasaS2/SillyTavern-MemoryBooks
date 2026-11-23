@@ -66,6 +66,55 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
         {{/if}}
 
+        {{#unless isGroupChat}}
+        <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
+          <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h3>
+          <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the function of each lorebook already linked to this character. These roles also apply in new chats; collection progress remains separate for each chat.</p>
+          {{#if slothCharacterAvailable}}
+            {{#if slothLinkedBooksAvailable}}
+              <div class="stmb-sloth-role-grid">
+                <label for="stmb-sloth-role-nexus">
+                  <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · stable knowledge and current state</strong>
+                  <select id="stmb-sloth-role-nexus" class="text_pole">
+                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Not assigned</option>
+                    {{#if slothNexusMissing}}
+                    <option selected disabled value="{{slothNexusMissingName}}">⚠ {{slothNexusMissingName}}</option>
+                    {{/if}}
+                    {{#each slothNexusRoleOptions}}
+                    <option value="{{name}}" {{#if selected}}selected{{/if}} {{#if disabled}}disabled{{/if}}>{{name}}</option>
+                    {{/each}}
+                  </select>
+                </label>
+                <label for="stmb-sloth-role-memory">
+                  <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · complete Scenes</strong>
+                  <select id="stmb-sloth-role-memory" class="text_pole">
+                    <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Not assigned</option>
+                    {{#if slothMemoryMissing}}
+                    <option selected disabled value="{{slothMemoryMissingName}}">⚠ {{slothMemoryMissingName}}</option>
+                    {{/if}}
+                    {{#each slothMemoryRoleOptions}}
+                    <option value="{{name}}" {{#if selected}}selected{{/if}} {{#if disabled}}disabled{{/if}}>{{name}}</option>
+                    {{/each}}
+                  </select>
+                </label>
+              </div>
+              {{#if slothRoleIncomplete}}
+              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothIncompletePair">Both Nexus and Memory must be assigned to different character-linked lorebooks before collection can begin.</p>
+              {{/if}}
+              {{#if slothNexusMissing}}
+              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
+              {{else}}{{#if slothMemoryMissing}}
+              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
+              {{/if}}{{/if}}
+            {{else}}
+              <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
+            {{/if}}
+          {{else}}
+            <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
+          {{/if}}
+        </section>
+        {{/unless}}
+
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
 
         <div class="info-block">
@@ -92,11 +141,13 @@ export const settingsTemplate = Handlebars.compile(`
 
             <div id="stmb-automatic-info" class="marginTop5" style="display: {{#if manualModeEnabled}}none{{else}}block{{/if}};">
                 <small class="opacity50p">
-                    {{#if chatBoundLorebookName}}
+                    {{#if slothRoleActive}}
+                        <span data-i18n="STMemoryBooks_SlothRoleActive">🦥 Sloth: using the character Memory lorebook in this chat</span>
+                    {{else}}{{#if chatBoundLorebookName}}
                         <span data-i18n="STMemoryBooks_UsingChatBound">Using chat-bound lorebook</span> "{{chatBoundLorebookName}}"
                     {{else}}
                         <span data-i18n="STMemoryBooks_NoChatBound">No chat-bound lorebook. Memories will require lorebook selection.</span>
-                    {{/if}}
+                    {{/if}}{{/if}}
                 </small>
             </div>
         </div>
@@ -280,7 +331,7 @@ export const generalSettingsTemplate = Handlebars.compile(`
         <div class="padding10 marginTop5 stmb-box">
             <label class="checkbox_label">
                 <input type="checkbox" id="stmb-nexus-scene-rotation" {{#if nexusSceneRotationEnabled}}checked{{/if}}>
-                <span data-i18n="STMemoryBooks_NexusRotationEnabled">Nexus / Memory: keep the three newest completed Scenes always active</span>
+                <span data-i18n="STMemoryBooks_NexusRotationEnabled">🦥 Sloth · keep the three latest completed Scenes always on</span>
             </label>
             <small class="opacity50p" data-i18n="STMemoryBooks_NexusRotationHelp">Only for dedicated Memory books. Saving a complete numbered Scene rotates activation. Automatic summaries, reminders and auto-hide are disabled in this mode. AI Scene planning and Nexus updates are not yet implemented.</small>
             <label for="stmb-nexus-older-scene-mode">

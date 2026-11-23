@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: mantener siempre activas las tres últimas escenas completas",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 Perezoso · Mantener siempre activas las tres últimas escenas completas",
   "STMemoryBooks_NexusRotationHelp": "Solo para lorebooks Memory dedicados. Al guardar manualmente escenas numeradas y completas, se rotan. Este modo desactiva los resúmenes automáticos, los avisos y la ocultación automática. La planificación de escenas y la actualización de Nexus aún no están implementadas.",
   "STMemoryBooks_NexusRecallMode": "Recuperación de escenas anteriores",
   "STMemoryBooks_NexusRecallVector": "Vector",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "sin ordenar",
   "STMemoryBooks_Jobs_SortTitle": "Título del trabajo",
   "STMemoryBooks_Jobs_SortStatus": "Estado",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Los mensajes cambiaron desde la reversión de Memoria. No se pudieron volver a mostrar los mensajes ocultos de forma segura. Revisa el chat restante antes de mostrarlos manualmente."
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Los mensajes cambiaron desde la reversión de Memoria. No se pudieron volver a mostrar los mensajes ocultos de forma segura. Revisa el chat restante antes de mostrarlos manualmente.",
+  "STMemoryBooks_SlothRolesTitle": "🦥 Sistema perezoso · Función de los lorebooks",
+  "STMemoryBooks_SlothRolesDescription": "Asigna una función a los lorebooks vinculados al personaje. Se conserva en chats nuevos; el progreso es independiente por chat.",
+  "STMemoryBooks_SlothNexusRole": "Nexus · Contexto y estado actual",
+  "STMemoryBooks_SlothMemoryRole": "Memory · Sucesos completos",
+  "STMemoryBooks_SlothUnassigned": "Sin asignar",
+  "STMemoryBooks_SlothMissingRole": "El lorebook asignado ya no está vinculado. Vuelve a vincularlo o elige otro.",
+  "STMemoryBooks_SlothNoLinkedBooks": "Este personaje no tiene lorebooks vinculados. Vincúlalos primero en SillyTavern.",
+  "STMemoryBooks_SlothSelectCharacter": "Selecciona un personaje.",
+  "STMemoryBooks_SlothRoleActive": "🦥 Perezoso · Usando el Memory del personaje",
+  "STMemoryBooks_SlothInvalidChoice": "Selecciona un lorebook vinculado al personaje.",
+  "STMemoryBooks_SlothRoleSaved": "🦥 Perezoso · Funciones guardadas.",
+  "STMemoryBooks_SlothDifferentBooks": "Nexus y Memory deben ser lorebooks distintos.",
+  "STMemoryBooks_SlothMissingRoleError": "El lorebook Memory «{{name}}» no existe o ya no está vinculado. Corrige la asignación.",
+  "STMemoryBooks_SlothIncompletePair": "Antes de recopilar, asigna Nexus y Memory a dos lorebooks distintos vinculados al personaje."
 }

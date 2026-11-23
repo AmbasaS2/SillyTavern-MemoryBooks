@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory：始終啟用最新3筆已完結場景",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 懶人 · 始終啟用最新3筆完整場景",
   "STMemoryBooks_NexusRotationHelp": "僅適用於專用Memory世界書。手動儲存有編號且有結局的場景時輪替。本模式停用自動摘要、提醒和自動隱藏訊息。場景規劃及Nexus更新尚未實作。",
   "STMemoryBooks_NexusRecallMode": "舊場景召回方式",
   "STMemoryBooks_NexusRecallVector": "向量",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "未排序",
   "STMemoryBooks_Jobs_SortTitle": "工作標題",
   "STMemoryBooks_Jobs_SortStatus": "狀態",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "記憶回滾後訊息已發生變更，無法安全地取消隱藏訊息。手動取消隱藏前，請先檢查剩餘聊天。"
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "記憶回滾後訊息已發生變更，無法安全地取消隱藏訊息。手動取消隱藏前，請先檢查剩餘聊天。",
+  "STMemoryBooks_SlothRolesTitle": "🦥 懶人系統 · 世界書角色",
+  "STMemoryBooks_SlothRolesDescription": "替此角色已連結的世界書指定用途。新聊天會沿用設定，但收集進度依聊天分別儲存。",
+  "STMemoryBooks_SlothNexusRole": "Nexus · 設定與目前狀態",
+  "STMemoryBooks_SlothMemoryRole": "Memory · 完整事件",
+  "STMemoryBooks_SlothUnassigned": "未指定",
+  "STMemoryBooks_SlothMissingRole": "指定的世界書已不再連結角色。請重新連結或選擇其他世界書。",
+  "STMemoryBooks_SlothNoLinkedBooks": "此角色尚未連結世界書。請先在SillyTavern角色設定中連結。",
+  "STMemoryBooks_SlothSelectCharacter": "請選擇角色。",
+  "STMemoryBooks_SlothRoleActive": "🦥 懶人 · 正在使用此角色的Memory世界書",
+  "STMemoryBooks_SlothInvalidChoice": "請選擇已連結至目前角色的世界書。",
+  "STMemoryBooks_SlothRoleSaved": "🦥 懶人 · 世界書用途已儲存。",
+  "STMemoryBooks_SlothDifferentBooks": "Nexus與Memory必須使用不同的世界書。",
+  "STMemoryBooks_SlothMissingRoleError": "角色的Memory世界書「{{name}}」已遺失或取消連結。請重新連結或修改用途。",
+  "STMemoryBooks_SlothIncompletePair": "開始收集前，請為Nexus與Memory分別指定兩本不同的角色連結世界書。"
 }

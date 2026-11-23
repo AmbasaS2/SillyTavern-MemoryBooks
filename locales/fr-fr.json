@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory : garder actives les trois dernières scènes terminées",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 Paresseux · Garder actives les trois scènes achevées les plus récentes",
   "STMemoryBooks_NexusRotationHelp": "Réservé aux lorebooks Memory dédiés. L'enregistrement manuel de scènes numérotées et achevées déclenche la rotation. Ce mode désactive les résumés automatiques, les rappels et le masquage automatique. La planification des scènes et la mise à jour de Nexus restent à développer.",
   "STMemoryBooks_NexusRecallMode": "Rappel des anciennes scènes",
   "STMemoryBooks_NexusRecallVector": "Vecteur",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "non trié",
   "STMemoryBooks_Jobs_SortTitle": "Titre de la tâche",
   "STMemoryBooks_Jobs_SortStatus": "Statut",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Les messages ont changé depuis l'annulation de la mémoire. Les messages masqués n'ont pas pu être réaffichés en toute sécurité. Vérifiez le chat restant avant de les réafficher manuellement."
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Les messages ont changé depuis l'annulation de la mémoire. Les messages masqués n'ont pas pu être réaffichés en toute sécurité. Vérifiez le chat restant avant de les réafficher manuellement.",
+  "STMemoryBooks_SlothRolesTitle": "🦥 Système paresseux · Rôles des lorebooks",
+  "STMemoryBooks_SlothRolesDescription": "Attribuez un rôle aux lorebooks liés à ce personnage. Il sera repris dans les nouveaux chats ; la progression reste distincte par chat.",
+  "STMemoryBooks_SlothNexusRole": "Nexus · Contexte et état actuel",
+  "STMemoryBooks_SlothMemoryRole": "Memory · Événements achevés",
+  "STMemoryBooks_SlothUnassigned": "Non attribué",
+  "STMemoryBooks_SlothMissingRole": "Le lorebook choisi n'est plus lié au personnage. Reliez-le de nouveau ou choisissez-en un autre.",
+  "STMemoryBooks_SlothNoLinkedBooks": "Aucun lorebook n'est lié à ce personnage. Reliez-en un dans SillyTavern.",
+  "STMemoryBooks_SlothSelectCharacter": "Choisissez un personnage.",
+  "STMemoryBooks_SlothRoleActive": "🦥 Paresseux · Utilisation du Memory du personnage",
+  "STMemoryBooks_SlothInvalidChoice": "Choisissez un lorebook lié à ce personnage.",
+  "STMemoryBooks_SlothRoleSaved": "🦥 Paresseux · Rôles enregistrés.",
+  "STMemoryBooks_SlothDifferentBooks": "Nexus et Memory doivent être des lorebooks distincts.",
+  "STMemoryBooks_SlothMissingRoleError": "Le lorebook Memory « {{name}} » est absent ou délié. Veuillez corriger l'attribution.",
+  "STMemoryBooks_SlothIncompletePair": "Avant la collecte, attribuez Nexus et Memory à deux lorebooks distincts liés au personnage."
 }

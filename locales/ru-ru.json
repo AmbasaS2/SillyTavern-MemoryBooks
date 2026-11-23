@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: всегда включать три последние завершённые сцены",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 Ленивец · Всегда включать три последние завершённые сцены",
   "STMemoryBooks_NexusRotationHelp": "Только для отдельных лорбуков Memory. При ручном сохранении пронумерованных завершённых сцен выполняется ротация. В этом режиме отключены автосводки, напоминания и автоскрытие сообщений. Планирование сцен и обновление Nexus пока не реализованы.",
   "STMemoryBooks_NexusRecallMode": "Вызов старых сцен",
   "STMemoryBooks_NexusRecallVector": "Вектор",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "без сортировки",
   "STMemoryBooks_Jobs_SortTitle": "Название задачи",
   "STMemoryBooks_Jobs_SortStatus": "Статус",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Сообщения изменились после отката воспоминания. Не удалось безопасно показать скрытые сообщения. Проверьте оставшийся чат, прежде чем показывать их вручную."
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "Сообщения изменились после отката воспоминания. Не удалось безопасно показать скрытые сообщения. Проверьте оставшийся чат, прежде чем показывать их вручную.",
+  "STMemoryBooks_SlothRolesTitle": "🦥 Система ленивца · Роли лорбуков",
+  "STMemoryBooks_SlothRolesDescription": "Назначьте роли лорбукам персонажа. Они сохраняются в новых чатах, но прогресс сбора памяти у каждого чата свой.",
+  "STMemoryBooks_SlothNexusRole": "Nexus · Контекст и текущее состояние",
+  "STMemoryBooks_SlothMemoryRole": "Memory · Завершённые события",
+  "STMemoryBooks_SlothUnassigned": "Не назначено",
+  "STMemoryBooks_SlothMissingRole": "Назначенный лорбук больше не привязан. Привяжите его снова или выберите другой.",
+  "STMemoryBooks_SlothNoLinkedBooks": "К персонажу не привязаны лорбуки. Сначала привяжите их в SillyTavern.",
+  "STMemoryBooks_SlothSelectCharacter": "Выберите персонажа.",
+  "STMemoryBooks_SlothRoleActive": "🦥 Ленивец · Используется Memory персонажа",
+  "STMemoryBooks_SlothInvalidChoice": "Выберите лорбук, привязанный к персонажу.",
+  "STMemoryBooks_SlothRoleSaved": "🦥 Ленивец · Роли сохранены.",
+  "STMemoryBooks_SlothDifferentBooks": "Для Nexus и Memory нужны разные лорбуки.",
+  "STMemoryBooks_SlothMissingRoleError": "Лорбук Memory «{{name}}» отсутствует или отвязан. Исправьте назначение.",
+  "STMemoryBooks_SlothIncompletePair": "Перед сбором памяти назначьте Nexus и Memory двум разным лорбукам, привязанным к персонажу."
 }

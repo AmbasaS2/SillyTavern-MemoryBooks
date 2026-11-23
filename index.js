@@ -58,6 +58,11 @@ import {
   normalizeLorebookEntrySettings,
 } from "./addlore.js";
 import { autoCreateLorebook } from "./autocreate.js";
+import {
+  normalizeNexusCharacterRoles,
+  setCharacterNexusRole, moveCharacterNexusRoles, removeCharacterNexusRoles,
+} from './nexusCharacterRoles.js';
+import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -665,6 +670,7 @@ const defaultSettings = {
     },
   },
   characterMemoryBookLocks: {},
+  nexusCharacterRoles: {},
   titleFormat: DEFAULT_TITLE_FORMAT,
   profiles: [], // Will be populated dynamically with current ST settings
   defaultProfile: 0,
@@ -1273,7 +1279,12 @@ function getMemoryReminderController() {
       chatKey: getStmbChatKey(),
       markers: getSceneMarkers(),
       count: chat.length,
-      settings: extension_settings[MODULE_NAME]?.moduleSettings || {},
+      settings: {
+        ...(extension_settings[MODULE_NAME]?.moduleSettings || {}),
+        nexusSceneRotationEnabled: extension_settings[MODULE_NAME]?.moduleSettings?.nexusSceneRotationEnabled === true ||
+          ['ready','missing','detached'].includes(getCurrentNexusRoleResolution('memory', extension_settings[MODULE_NAME]).state) ||
+          ['ready','missing','detached'].includes(getCurrentNexusRoleResolution('nexus', extension_settings[MODULE_NAME]).state),
+      },
       busy: isMemoryProcessing() || hasPendingProgress(),
     }),
     save: () => saveMetadataForCurrentContext(),
@@ -2498,7 +2509,10 @@ function initializeSettings() {
     extension_settings.STMemoryBooks || deepClone(defaultSettings);
 
   const lockNormalization = ensureCharacterMemoryBookLocks(extension_settings.STMemoryBooks);
-  if (lockNormalization.changed) {
+  if (lockNormalization.changed) saveSettingsDebounced();
+  const roleNormalization = normalizeNexusCharacterRoles(extension_settings.STMemoryBooks.nexusCharacterRoles);
+  if (roleNormalization.changed) {
+    extension_settings.STMemoryBooks.nexusCharacterRoles = roleNormalization.roles;
     saveSettingsDebounced();
   }
 
@@ -5633,7 +5647,9 @@ async function executeMemoryGeneration(
     // Check if memory previews are enabled and handle accordingly
     let finalMemoryResult = memoryResult;
 
-    if (settings.moduleSettings.showMemoryPreviews || settings.moduleSettings.nexusSceneRotationEnabled === true) {
+    if (settings.moduleSettings.showMemoryPreviews || settings.moduleSettings.nexusSceneRotationEnabled === true ||
+        !['unassigned', 'no-character'].includes(
+          getNexusRoleResolutionForChatRef('memory', memoryOriginSnapshot.chatRef, settings).state)) {
       // Clear working toast before showing preview popup
       toastr.clear();
 
@@ -5758,6 +5774,12 @@ async function executeMemoryGeneration(
           })
         : null;
 
+    const slothOriginRole = getNexusRoleResolutionForChatRef('memory', memoryOriginSnapshot.chatRef, settings);
+    if (!['unassigned', 'no-character'].includes(slothOriginRole.state) &&
+        !isStmbJobChatCurrent(memoryOriginSnapshot.chatRef)) {
+      throw new Error('Return to the originating chat before saving its Memory Scene.');
+    }
+
     const addResult =
       shouldWriteManualGroupLorebooks
         ? await addMemoryToManualGroupLorebooks(
@@ -5773,7 +5795,12 @@ async function executeMemoryGeneration(
         : await addMemoryToLorebook(
             finalMemoryResult,
             lorebookValidation,
-            automaticGroupAddOptions,
+            {
+              ...automaticGroupAddOptions,
+              originChatRef: memoryOriginSnapshot.chatRef,
+              requiredCharacterMemoryName: lorebookValidation?.source === 'character-role'
+                ? lorebookValidation.name : undefined,
+            },
           );
 
     if (!addResult.success) {
@@ -6248,6 +6275,15 @@ async function flushDeferredQueuedAutoHideRanges() {
   const chatKey = getStmbChatKeySafe();
   const ranges = chatKey ? deferredQueuedAutoHideRanges.get(chatKey) : null;
   if (!ranges?.length) return;
+  const settings = extension_settings.STMemoryBooks;
+  const memoryRole = getCurrentNexusRoleResolution('memory', settings);
+  const nexusRole = getCurrentNexusRoleResolution('nexus', settings);
+  if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+      [memoryRole, nexusRole].some(role => !['unassigned', 'no-character'].includes(role.state))) {
+    // Suppress old pending hides, not merely postpone them until the mode changes.
+    deferredQueuedAutoHideRanges.delete(chatKey);
+    return;
+  }
 
   try {
     await runAutoHideRangesForCurrentChat(ranges);
@@ -6258,6 +6294,10 @@ async function flushDeferredQueuedAutoHideRanges() {
 }
 
 async function applyQueuedMemoryAutoHide(job, memoryResult, settings) {
+  const memoryRole = getNexusRoleResolutionForChatRef('memory', job.chatRef, settings);
+  const nexusRole = getNexusRoleResolutionForChatRef('nexus', job.chatRef, settings);
+  if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+      [memoryRole, nexusRole].some(role => !['unassigned', 'no-character'].includes(role.state))) return;
   const autoHidePlan = getAutoHideRanges(memoryResult, settings?.moduleSettings || {});
   if (autoHidePlan.mode === "none") return;
 
@@ -6395,7 +6435,9 @@ async function executeQueuedMemoryJob(job, jobContext) {
   jobContext.throwIfCancelled();
 
   let finalMemoryResult = memoryResult;
-  if (settings.moduleSettings?.showMemoryPreviews || settings.moduleSettings?.nexusSceneRotationEnabled === true) {
+  if (settings.moduleSettings?.showMemoryPreviews || settings.moduleSettings?.nexusSceneRotationEnabled === true ||
+      !['unassigned', 'no-character'].includes(
+        getNexusRoleResolutionForChatRef('memory', job.chatRef, settings).state)) {
     const approval = await awaitStmbJobApproval(
       jobContext,
       {
@@ -6498,6 +6540,8 @@ async function executeQueuedMemoryJob(job, jobContext) {
             baseValidation,
             {
               ...automaticGroupAddOptions,
+              originChatRef: job.chatRef,
+              requiredCharacterMemoryName: getNexusRoleResolutionForChatRef('memory', job.chatRef, settings).name || undefined,
               autoHide: false,
               refreshEditor: getStmbChatKey(job.chatRef) === getStmbChatKey(),
               updateHighestMemoryProcessed: false,
@@ -7251,17 +7295,22 @@ function updateLorebookStatusDisplay() {
   // Update mode badge
   const modeBadge = document.querySelector("#stmb-mode-badge");
   if (modeBadge) {
-    modeBadge.textContent = isManualMode
-      ? translate("Manual", "STMemoryBooks_Manual")
-      : translate("Automatic (Chat-bound)", "STMemoryBooks_AutomaticChatBound");
+    const slothRole = getCurrentNexusRoleResolution('memory', settings);
+    modeBadge.textContent = slothRole.state === 'ready' && getCurrentNexusRoleResolution('nexus', settings).state === 'ready'
+      ? '🦥 게으름뱅이'
+      : isManualMode
+        ? translate("Manual", "STMemoryBooks_Manual")
+        : translate("Automatic (Chat-bound)", "STMemoryBooks_AutomaticChatBound");
   }
 
   // Update active lorebook display
   const activeLorebookSpan = document.querySelector("#stmb-active-lorebook");
   if (activeLorebookSpan) {
-    const currentLorebook = isManualMode
-      ? getCurrentManualLorebookResolution({ settings, markers: stmbData }).lorebookName
-      : chat_metadata?.[METADATA_KEY];
+    const slothMemoryRole = getCurrentNexusRoleResolution('memory', settings);
+    const currentLorebook = slothMemoryRole.state === 'ready' ? slothMemoryRole.name
+      : isManualMode
+        ? getCurrentManualLorebookResolution({ settings, markers: stmbData }).lorebookName
+        : chat_metadata?.[METADATA_KEY];
 
     activeLorebookSpan.textContent =
       currentLorebook ||
@@ -7285,12 +7334,19 @@ function updateLorebookStatusDisplay() {
     const infoText = automaticInfo.querySelector("small");
     if (infoText) {
       const chatBoundLorebook = chat_metadata?.[METADATA_KEY] ?? null;
-      infoText.innerHTML = chatBoundLorebook
-        ? __st_t_tag`Using chat-bound lorebook "<strong>${chatBoundLorebook}</strong>"`
-        : translate(
-            "No chat-bound lorebook. Memories will require lorebook selection.",
-            "STMemoryBooks_NoChatBoundLorebook",
-          );
+      if (getCurrentNexusRoleResolution('memory', settings).state === 'ready') {
+        infoText.textContent = translate(
+          '🦥 Sloth: using this character’s Memory lorebook.',
+          'STMemoryBooks_SlothRoleActive',
+        );
+      } else {
+        infoText.textContent = chatBoundLorebook
+          ? translate('Using chat-bound lorebook', 'STMemoryBooks_UsingChatBound') + ' "' + chatBoundLorebook + '"'
+          : translate(
+              "No chat-bound lorebook. Memories will require lorebook selection.",
+              "STMemoryBooks_NoChatBoundLorebook",
+            );
+      }
     }
   }
 
@@ -10970,6 +11026,16 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     markers: sceneMarkers || {},
   }).lorebookName;
   const memoryBooksContext = getCurrentMemoryBooksContext();
+  const sloth = getActiveNexusRoleContext(settings);
+  const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
+  const slothRoleNexus = getCurrentNexusRoleResolution('nexus', settings);
+  const slothRoleActive = slothRoleMemory.state === 'ready' && slothRoleNexus.state === 'ready';
+  const slothRoleIncomplete = !!(sloth.assigned.nexus || sloth.assigned.memory) && !slothRoleActive;
+  const roleOptions = (role) => sloth.linkedBooks.map(name => ({
+    name,
+    selected: sloth.assigned[role] === name,
+    disabled: sloth.assigned[role === 'nexus' ? 'memory' : 'nexus'] === name,
+  }));
   const narratorConfig = !memoryBooksContext.isGroupChat ? getCurrentNarratorConfig() : null;
   if (!isManualMode && narratorConfig?.enabled) {
     narratorConfig.enabled = false;
@@ -11057,8 +11123,18 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
       settings.moduleSettings.maxTokens ?? DEFAULT_MAX_TOKENS,
 
     // Lorebook status information
-    lorebookMode: isManualMode ? "Manual" : "Automatic (Chat-bound)",
-    currentLorebookName: isManualMode ? manualLorebook : chatBoundLorebook,
+    lorebookMode: slothRoleActive ? '🦥 게으름뱅이' : (isManualMode ? "Manual" : "Automatic (Chat-bound)"),
+    currentLorebookName: slothRoleActive ? slothRoleMemory.name : (isManualMode ? manualLorebook : chatBoundLorebook),
+    slothRoleActive,
+    slothRoleIncomplete,
+    slothCharacterAvailable: !!sloth.character,
+    slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
+    slothNexusRoleOptions: roleOptions('nexus'),
+    slothMemoryRoleOptions: roleOptions('memory'),
+    slothNexusMissing: !!sloth.assigned.nexus && !sloth.linkedBooks.includes(sloth.assigned.nexus),
+    slothMemoryMissing: !!sloth.assigned.memory && !sloth.linkedBooks.includes(sloth.assigned.memory),
+    slothNexusMissingName: sloth.assigned.nexus,
+    slothMemoryMissingName: sloth.assigned.memory,
     manualLorebookName: manualLorebook,
     chatBoundLorebookName: chatBoundLorebook,
     availableLorebooks: world_names ?? [],
@@ -11450,6 +11526,29 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       if (!e.target.matches(selector)) continue;
       settings.moduleSettings[settingKey] = e.target.checked;
       saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-sloth-role-nexus, #stmb-sloth-role-memory")) {
+      const role = e.target.id === 'stmb-sloth-role-nexus' ? 'nexus' : 'memory';
+      const sloth = getActiveNexusRoleContext(settings);
+      const name = String(e.target.value || '').trim();
+      if (!sloth.character || (name && !sloth.linkedBooks.includes(name))) {
+        toastr.warning(translate('Choose a lorebook linked to the current character.', 'STMemoryBooks_SlothInvalidChoice'), 'STMemoryBooks');
+        await refreshPopupContent();
+        return;
+      }
+      try {
+        const changed = setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
+        if (changed) {
+          saveSettingsDebounced();
+          void refreshMemoryTierMacroCache();
+          toastr.success(translate('🦥 Sloth: character lorebook roles saved.', 'STMemoryBooks_SlothRoleSaved'), 'STMemoryBooks');
+        }
+      } catch (err) {
+        toastr.warning(translate('Nexus and Memory must use different lorebooks.', 'STMemoryBooks_SlothDifferentBooks'), 'STMemoryBooks');
+      }
+      await refreshPopupContent();
       return;
     }
 
@@ -13372,12 +13471,11 @@ function setupEventListeners() {
   eventSource.on(event_types.CHARACTER_RENAMED, (oldAvatar, newAvatar) => {
     const settings = initializeSettings();
     const renamedCharacter = characters?.find(character => character?.avatar === newAvatar);
-    if (moveCharacterMemoryBookLock(
-      settings.characterMemoryBookLocks,
-      oldAvatar,
-      newAvatar,
-      renamedCharacter?.name,
-    )) {
+    const movedMemoryLock = moveCharacterMemoryBookLock(
+      settings.characterMemoryBookLocks, oldAvatar, newAvatar, renamedCharacter?.name,
+    );
+    const movedSlothRoles = moveCharacterNexusRoles(settings.nexusCharacterRoles, oldAvatar, newAvatar);
+    if (movedMemoryLock || movedSlothRoles) {
       saveSettingsDebounced();
       populateInlineButtons();
     }
@@ -13399,10 +13497,9 @@ function setupEventListeners() {
     const character = payload?.detail?.character || payload?.character;
     if (!character?.avatar) return;
     const settings = initializeSettings();
-    if (removeCharacterMemoryBookLock(
-      settings.characterMemoryBookLocks,
-      character.avatar,
-    )) {
+    const removedMemoryLock = removeCharacterMemoryBookLock(settings.characterMemoryBookLocks, character.avatar);
+    const removedSlothRoles = removeCharacterNexusRoles(settings.nexusCharacterRoles, character.avatar);
+    if (removedMemoryLock || removedSlothRoles) {
       saveSettingsDebounced();
       populateInlineButtons();
     }

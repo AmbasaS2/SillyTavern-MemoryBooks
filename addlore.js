@@ -25,6 +25,7 @@ import { getRequestHeaders, eventSource, event_types } from '../../../../script.
 import { SIDE_PROMPT_HISTORY_KEY, formatSidePromptVersionTitle, resolveSidePromptHistory, validateSidePromptHistoryRequest } from './sidePromptHistory.js';
 import { fingerprintRollbackEntry } from './memoryRollback.js';
 import { isNexusMemoryBookName, planNexusSceneRotation } from './nexusSceneRotation.js';
+import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 
 const MODULE_NAME = 'STMemoryBooks-AddLore';
 
@@ -560,8 +561,30 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         }
 
         const settings = extension_settings.STMemoryBooks || {};
-        const rotateNexusMemory = settings.moduleSettings?.nexusSceneRotationEnabled === true
-            && isNexusMemoryBookName(lorebookValidation.name);
+        // Generation may outlive a chat switch; enforce the original character's roles.
+        const resolveRole = role => options.originChatRef
+            ? getNexusRoleResolutionForChatRef(role, options.originChatRef, settings)
+            : getCurrentNexusRoleResolution(role, settings);
+        const characterMemoryRole = resolveRole('memory');
+        const characterNexusRole = resolveRole('nexus');
+        if (options.requiredCharacterMemoryName &&
+            (characterMemoryRole.state !== 'ready' || characterMemoryRole.name !== options.requiredCharacterMemoryName)) {
+            throw new Error('Character Memory role changed during generation; no save performed.');
+        }
+        const isSlothAssigned = [characterMemoryRole, characterNexusRole].some(role =>
+            role.state !== 'unassigned' && role.state !== 'no-character');
+        if (isSlothAssigned && (characterMemoryRole.state !== 'ready' || characterNexusRole.state !== 'ready')) {
+            throw new Error('Both Nexus and Memory roles must be connected before saving character memories.');
+        }
+        if (characterMemoryRole.state === 'missing' || characterMemoryRole.state === 'detached') {
+            throw new Error('Assigned character Memory lorebook is missing or detached; no save performed.');
+        }
+        if (characterMemoryRole.state === 'ready' && characterMemoryRole.name !== lorebookValidation.name) {
+            throw new Error('Memory target changed from the assigned character Memory lorebook; no save performed.');
+        }
+        const rotateNexusMemory = characterMemoryRole.state === 'ready'
+            || (settings.moduleSettings?.nexusSceneRotationEnabled === true
+                && isNexusMemoryBookName(lorebookValidation.name));
         // Stage changes to avoid polluting the source World Info on validation failure.
         const workingLorebook = rotateNexusMemory
             ? structuredClone(lorebookValidation.data) : lorebookValidation.data;

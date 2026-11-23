@@ -39,6 +39,8 @@ import {
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
 
 
+import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
+
 const MODULE_NAME = 'STMemoryBooks-SidePrompts';
 let hasShownSidePromptRangeTip = false;
 export const STMB_SIDE_PROMPT_TITLE_SUFFIX = ' (STMB SidePrompt)';
@@ -118,27 +120,64 @@ async function resolveMemoryDefaultLorebook(resolveContext = null, source = 'mem
 }
 
 async function resolveSidePromptLorebook(tpl, resolveContext = null) {
+    const resolveRole = role => resolveContext?.chatRef
+        ? getNexusRoleResolutionForChatRef(role, resolveContext.chatRef)
+        : getCurrentNexusRoleResolution(role);
+    const memoryRole = resolveRole('memory');
+    const nexusRole = resolveRole('nexus');
+    if (resolveContext?.chatRef &&
+        getStmbChatKey(resolveContext.chatRef) !== getStmbChatKey() &&
+        [memoryRole, nexusRole].some(role => !['unassigned', 'no-character'].includes(role.state))) {
+        // Chat-only Side Prompt overrides belong to the open chat. Never read
+        // another chat's overrides while updating the originating character.
+        throw new Error('Return to the original chat before updating Nexus Side Prompts.');
+    }
+    if (['missing', 'detached'].includes(memoryRole.state) ||
+        ['missing', 'detached'].includes(nexusRole.state)) {
+        throw new Error('Assigned Nexus / Memory lorebook is missing or detached. Resolve the character bindings before updating side prompts.');
+    }
+    if ((memoryRole.state === 'ready' || nexusRole.state === 'ready') &&
+        (memoryRole.state !== 'ready' || nexusRole.state !== 'ready')) {
+        throw new Error('Set both Nexus and Memory character lorebooks before updating side prompts.');
+    }
+    const ensureNotMemory = (lorebook) => {
+        if (memoryRole.state === 'ready' && lorebook?.name === memoryRole.name) {
+            throw new Error('A side prompt cannot be stored in the character Memory Scene book. Select Nexus or another lorebook.');
+        }
+        return lorebook;
+    };
     const key = String(tpl?.key || '').trim();
     const chatOverrides = getSidePromptChatLorebookOverrides();
     if (key && Object.hasOwn(chatOverrides, key)) {
         const chatOverride = String(chatOverrides[key] || '').trim();
         if (chatOverride === '__memory__') {
-            return resolveMemoryDefaultLorebook(resolveContext, 'chatOverride');
+            if (memoryRole.state === 'ready') {
+                throw new Error('A side prompt cannot be stored in the character Memory Scene book.');
+            }
+            return ensureNotMemory(await resolveMemoryDefaultLorebook(resolveContext, 'chatOverride'));
         }
 
         const chatLore = await tryLoadOverrideLorebook(chatOverride, 'chatOverride', tpl);
         if (chatLore) {
-            return chatLore;
+            return ensureNotMemory(chatLore);
         }
     }
 
     const templateOverride = String(tpl?.settings?.lorebook?.targetLorebookName || '').trim();
     const templateLore = await tryLoadOverrideLorebook(templateOverride, 'templateOverride', tpl);
     if (templateLore) {
-        return templateLore;
+        return ensureNotMemory(templateLore);
     }
 
-    return resolveMemoryDefaultLorebook(resolveContext, 'memoryDefault');
+    if (nexusRole.state === 'ready') {
+        const assignedNexus = await tryLoadOverrideLorebook(nexusRole.name, 'characterNexusRole', tpl);
+        if (!assignedNexus) throw new Error('Assigned Nexus lorebook could not be loaded.');
+        return assignedNexus;
+    }
+    if (memoryRole.state === 'ready') {
+        throw new Error('Set a Nexus role before saving non-Scene side prompts.');
+    }
+    return ensureNotMemory(await resolveMemoryDefaultLorebook(resolveContext, 'memoryDefault'));
 }
 
 /**
@@ -1552,7 +1591,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
         const results = [];
 
         const maxConcurrent = clampInt(Number(settings?.moduleSettings?.sidePromptsMaxConcurrent ?? 2),1,10);
-        const lorebookResolveContext = {};
+        const lorebookResolveContext = { chatRef: options.chatRef || null };
 
         if (areStmbJobsEnabled()) {
             ensureSidePromptJobExecutorRegistered();

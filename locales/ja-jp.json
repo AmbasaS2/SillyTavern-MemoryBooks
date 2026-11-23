@@ -1,5 +1,5 @@
 {
-  "STMemoryBooks_NexusRotationEnabled": "Nexus / Memory: 最新の完結したシーン3件を常時有効にする",
+  "STMemoryBooks_NexusRotationEnabled": "🦥 なまけもの · 最新の完結したシーン3件を常時有効にする",
   "STMemoryBooks_NexusRotationHelp": "専用のMemoryロアブックのみ対象です。番号と結末のあるシーンを手動保存すると切り替わります。このモードでは自動要約・通知・自動非表示は無効です。シーン分割とNexus更新は未実装です。",
   "STMemoryBooks_NexusRecallMode": "過去のシーンの呼び出し方法",
   "STMemoryBooks_NexusRecallVector": "ベクトル",
@@ -1591,5 +1591,19 @@
   "STMemoryBooks_SortUnsorted": "並べ替えなし",
   "STMemoryBooks_Jobs_SortTitle": "ジョブのタイトル",
   "STMemoryBooks_Jobs_SortStatus": "状態",
-  "STMemoryBooks_AutoRollback_UnhideUnsafe": "メモリーのロールバック後にメッセージが変更されました。非表示のメッセージを安全に再表示できませんでした。手動で再表示する前に、残っているチャットを確認してください。"
+  "STMemoryBooks_AutoRollback_UnhideUnsafe": "メモリーのロールバック後にメッセージが変更されました。非表示のメッセージを安全に再表示できませんでした。手動で再表示する前に、残っているチャットを確認してください。",
+  "STMemoryBooks_SlothRolesTitle": "🦥 なまけものシステム · ロアブックの役割",
+  "STMemoryBooks_SlothRolesDescription": "このキャラクターに紐付くロアブックの役割を選択します。新しいチャットでも引き継がれますが、収集の進捗はチャットごとに独立しています。",
+  "STMemoryBooks_SlothNexusRole": "Nexus · 設定と現在の状態",
+  "STMemoryBooks_SlothMemoryRole": "Memory · 完結した出来事",
+  "STMemoryBooks_SlothUnassigned": "未設定",
+  "STMemoryBooks_SlothMissingRole": "指定したロアブックがキャラクターから外れています。再接続するか別の本を選んでください。",
+  "STMemoryBooks_SlothNoLinkedBooks": "このキャラクターにロアブックがありません。先にSillyTavernで関連付けてください。",
+  "STMemoryBooks_SlothSelectCharacter": "キャラクターを選択してください。",
+  "STMemoryBooks_SlothRoleActive": "🦥 なまけもの · キャラクターのMemoryを使用中",
+  "STMemoryBooks_SlothInvalidChoice": "キャラクターに紐付くロアブックを選んでください。",
+  "STMemoryBooks_SlothRoleSaved": "🦥 なまけもの · 役割を保存しました。",
+  "STMemoryBooks_SlothDifferentBooks": "NexusとMemoryには別々のロアブックを指定してください。",
+  "STMemoryBooks_SlothMissingRoleError": "Memory「{{name}}」が存在しないか、キャラクターから外れています。再接続または変更してください。",
+  "STMemoryBooks_SlothIncompletePair": "収集するには、キャラクターに紐付く別々のロアブックをNexusとMemoryの両方に指定してください。"
 }

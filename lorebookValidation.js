@@ -21,6 +21,7 @@ import {
 } from "./utils.js";
 import { escapeHtml } from "../../../utils.js";
 import { tr } from "./i18nHelpers.js";
+import { getCurrentNexusRoleResolution } from './nexusCharacterRolesRuntime.js';
 
 function getDefaultRetryText(manualMode) {
   return manualMode
@@ -214,6 +215,26 @@ export async function validateLorebookRequirement(options = {}) {
     lorebookName: lorebookNameOverride = undefined,
   } = options;
   const settings = extension_settings.STMemoryBooks;
+  const assignedMemoryRole = getCurrentNexusRoleResolution('memory', settings);
+  const assignedNexusRole = getCurrentNexusRoleResolution('nexus', settings);
+  const hasSlothAssignment = [assignedMemoryRole, assignedNexusRole].some(role =>
+    role.state !== 'unassigned' && role.state !== 'no-character');
+  if (hasSlothAssignment && (assignedMemoryRole.state !== 'ready' || assignedNexusRole.state !== 'ready')) {
+    return {
+      valid: false, handled: false,
+      error: translate('Both Nexus and Memory must be assigned to valid character-linked lorebooks.', 'STMemoryBooks_SlothIncompletePair'),
+    };
+  }
+  const useAssignedRole = lorebookNameOverride === undefined
+    && assignedMemoryRole.state !== 'unassigned' && assignedMemoryRole.state !== 'no-character';
+  if (useAssignedRole && assignedMemoryRole.state !== 'ready') {
+    return {
+      valid: false, handled: false,
+      error: tr('STMemoryBooks_SlothMissingRoleError',
+        'The character Memory lorebook "{{name}}" is missing or no longer linked. Reconnect the book or change its role.',
+        { name: assignedMemoryRole.name }),
+    };
+  }
   const resolvedManualMode =
     manualMode ?? !!settings?.moduleSettings?.manualModeEnabled;
   const allowCreate =
@@ -225,11 +246,13 @@ export async function validateLorebookRequirement(options = {}) {
     ? getCurrentManualLorebookResolution({ settings, markers: stmbData })
     : null;
   const usesCharacterLock =
-    lorebookNameOverride === undefined && manualResolution?.source === "character-lock";
+    !useAssignedRole && lorebookNameOverride === undefined && manualResolution?.source === "character-lock";
   const resolvedRetryText = retryText || getDefaultRetryText(resolvedManualMode);
   let lorebookName =
     lorebookNameOverride !== undefined
       ? lorebookNameOverride
+      : useAssignedRole
+        ? assignedMemoryRole.name
       : resolvedManualMode
         ? manualResolution?.lorebookName ?? null
         : chat_metadata?.[METADATA_KEY] || null;
@@ -289,7 +312,7 @@ export async function validateLorebookRequirement(options = {}) {
         valid: true,
         data: lorebookData,
         name: lorebookName,
-        source: usesCharacterLock ? "character-lock" : undefined,
+        source: useAssignedRole ? 'character-role' : (usesCharacterLock ? "character-lock" : undefined),
       };
     } catch (error) {
       if (usesCharacterLock) {

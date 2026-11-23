@@ -13,6 +13,7 @@ import { DISPLAY_NAME_DEFAULTS, DISPLAY_NAME_I18N_KEYS, MEMORY_TIER_CACHE_REFRES
 import { translate } from '../../../i18n.js';
 import { escapeHtml } from '../../../utils.js';
 import { tr } from './i18nHelpers.js';
+import { getCurrentNexusRoleResolution } from './nexusCharacterRolesRuntime.js';
 import { isNarratorModeActive } from './narratorMode.js';
 import {
     getCharacterMemoryBookLock,
@@ -357,6 +358,10 @@ export function getCurrentMemoryBooksContext() {
 
 export function getCurrentManualLorebookResolution(options = {}) {
     const settings = options.settings || extension_settings.STMemoryBooks || {};
+    const role = getCurrentNexusRoleResolution('memory', settings);
+    if (!options.character && role.state !== 'no-character' && role.state !== 'unassigned') {
+        return { lorebookName: role.name, source: 'character-role', roleState: role.state };
+    }
     const markers = options.markers || getSceneMarkers() || {};
     const context = options.context || getCurrentMemoryBooksContext();
     const character = options.character || characters?.[this_chid] || null;
@@ -381,7 +386,10 @@ export function getCurrentManualLorebookResolution(options = {}) {
  */
 export async function getEffectiveLorebookName() {
     const settings = extension_settings.STMemoryBooks;
-    
+    const role = getCurrentNexusRoleResolution('memory', settings);
+    if (role.state === 'ready') return role.name;
+    if (role.state === 'missing' || role.state === 'detached') return null;
+
     // This helper keeps its legacy behavior on purpose. Passive read paths still
     // use it to resolve a best-effort lorebook without invoking the shared
     // interactive recovery flow, which is reserved for write/generation paths.

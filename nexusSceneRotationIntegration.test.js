@@ -25,7 +25,7 @@ const entry = uid => ({
 const baseBook = () => ({ entries: Object.fromEntries([1,2,3].map(uid => [uid, entry(uid)])),
     stlo: { budget: 5000, priority: 4 } });
 
-function harness({ failSave = false, bookName = 'Memory-Remus_Catherine', keyword = false } = {}) {
+function harness({ failSave = false, bookName = 'Memory-Remus_Catherine', keyword = false, assignedRole = '' } = {}) {
     const saves = [], hides = [], notifications = [], errors = [];
     const moduleSettings = {
         nexusSceneRotationEnabled: true, nexusOlderSceneMode: keyword ? 'keyword' : 'vector',
@@ -37,6 +37,12 @@ function harness({ failSave = false, bookName = 'Memory-Remus_Catherine', keywor
         extension_settings: { STMemoryBooks: { moduleSettings } },
         i18n: (_key, fallback) => fallback,
         isNexusMemoryBookName, planNexusSceneRotation,
+        getCurrentNexusRoleResolution: () => assignedRole
+            ? { state: 'ready', name: assignedRole }
+            : { state: 'unassigned', name: '' },
+        getNexusRoleResolutionForChatRef: () => assignedRole
+            ? { state: 'ready', name: assignedRole }
+            : { state: 'unassigned', name: '' },
         createWorldInfoEntry(_name, data) {
             const uid = Math.max(-1, ...Object.values(data.entries).map(x => x.uid)) + 1;
             return data.entries[uid] = { uid, disable: false, position: 1, outletName: '' };
@@ -120,4 +126,49 @@ test('Nexus mode forces a memory preview in both direct and queued generation', 
     const index = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
     assert.match(index, /settings\.moduleSettings\.showMemoryPreviews \|\| settings\.moduleSettings\.nexusSceneRotationEnabled === true/);
     assert.match(index, /settings\.moduleSettings\?\.showMemoryPreviews \|\| settings\.moduleSettings\?\.nexusSceneRotationEnabled === true/);
+});
+
+test('arbitrarily named character Memory role still rotates latest three', async () => {
+    const h = harness({ bookName:'My Events Chronicle', assignedRole:'My Events Chronicle' });
+    const source = baseBook();
+    const out = await h.fn({ content:body, suggestedKeys:[] },
+        { valid:true, name:h.bookName, data:source }, {refreshEditor:false});
+    assert.equal(out.success, true);
+    assert.equal(h.saves.length, 1);
+    assert.equal(source.entries[1].constant, false);
+    assert.deepEqual(h.hides, []);
+});
+
+test('wrong chat-bound target cannot override assigned character Memory role', async () => {
+    const h = harness({bookName:'Other Chat Lorebook',assignedRole:'Actual Memory'});
+    const source = baseBook(), before=structuredClone(source);
+    const out = await h.fn({ content:body, suggestedKeys:[] },
+        { valid:true, name:h.bookName, data:source }, {refreshEditor:false});
+    assert.equal(out.success, false);
+    assert.deepEqual(source,before);
+    assert.equal(h.saves.length,0);
+});
+
+test('approved save remains bound to original character role after chat switches', async () => {
+    const h = harness({ bookName:'A Personal Chronicle', assignedRole:'A Personal Chronicle' });
+    const book = baseBook();
+    const result = await h.fn({content:body,suggestedKeys:[]},
+        {valid:true,name:h.bookName,data:book},
+        {refreshEditor:false,originChatRef:{type:'character',avatarUrl:'A.png',fileName:'chat-a'},
+            requiredCharacterMemoryName:'A Personal Chronicle'});
+    assert.equal(result.success,true);
+    assert.equal(h.saves.length,1);
+    assert.equal(book.entries[1].constant,false);
+});
+
+test('changed character role after preview blocks save instead of quietly switching books', async () => {
+    const h = harness({ bookName:'New Memory', assignedRole:'New Memory' });
+    const book = baseBook(), before = structuredClone(book);
+    const result = await h.fn({content:body,suggestedKeys:[]},
+        {valid:true,name:h.bookName,data:book},
+        {refreshEditor:false,originChatRef:{type:'character',avatarUrl:'A.png',fileName:'chat-a'},
+            requiredCharacterMemoryName:'Old Memory'});
+    assert.equal(result.success,false);
+    assert.equal(h.saves.length,0);
+    assert.deepEqual(book,before);
 });
