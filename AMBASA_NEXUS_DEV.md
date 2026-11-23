@@ -94,3 +94,13 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 Run `node --check` on changed JS, `node --test` and `bun run build.ts`; commit both `index.build.js` + map and `style.build.css` after rebuilding. Node test failures present in unchanged upstream `stmbJobsProgress.test.js` are tracked separately from regressions in this fork.
 
 No manifest/version bump, main merge, live lorebook write or new ZIP release before actual SillyTavern tests. For design decisions, source revision and work log see [Notion](https://app.notion.com/p/421a96b06fd4816b9778fe6a60046d54).
+
+
+## 2026-11-23 · Current Continuity section-preserving updates (developer slice)
+
+- Added a pure `nexusContinuitySections.js` policy and tests. Existing canonical Present Handoff / Active Threads / Knowledge Boundaries / Active Conditions headings are treated as immutable section boundaries, so one AI edit cannot delete a neighboring section or rewrite an unrelated preamble.
+- Introduced a `continuity / append_section` AI-delta action targeting one named section instead of appending unrelated continuity facts to the document tail. A missing named section is appended with a canonical heading while retaining the original text exactly. Existing `replace_exact` can still patch verified text within one section, but generic Continuity `append`, multi-section rewrites and unstructured legacy replacement are rejected before staging writes.
+- For migrated legacy Continuity, the `=== BEGIN/END ORIGINAL ... ===` source blocks must remain byte-for-byte unchanged; appending new named sections is allowed. New AI-generated Current Continuity entries must have at least one named section. This does NOT rewrite the historical archives, infer what happened afterward, or complete the separate semantic-conversion/review feature.
+- AI delta instructions now request `append_section` and explicitly preserve old source blocks. Existing source, World Info metadata, user installation and character JSON remain untouched. Existing event planning, Scene rotation and two-book approval/backup/rollback code are not modified.
+- Regression checks: targeted section tests plus all Node tests, Bun bundle, JS syntax, 26 locale JSON parsing and whitespace check. Expected pre-existing upstream failures: two `stmbJobsProgress.test.js` tests with `createViewSort is not defined`. **No real SillyTavern, provider, STLO or mobile integration QA**.
+- Do not bump manifest/version, merge `main`, install over a user's ST, or claim this slice completes all Current Continuity semantic updates. Rollback commit: `9c00f9c4348df03178d48f166ffda29c0dcaf109` before this slice.

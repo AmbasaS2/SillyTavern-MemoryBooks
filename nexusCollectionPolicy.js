@@ -3,6 +3,8 @@
 // Pure, loss-averse event validation and World Info staging.
 
 import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
+import { appendContinuitySection, guardContinuityChange,
+    guardNewContinuityContent } from './nexusContinuitySections.js';
 
 const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = v => typeof v === 'string' ? v.trim() : '';
@@ -104,7 +106,9 @@ export function stageNexusEdits(original, edits, createEntry) {
     for(const [i,op] of edits.entries()){
         const kind=str(op?.kind).toLowerCase(), action=str(op?.action).toLowerCase();
         requireThat(['core','continuity','lt','npc','npc-index'].includes(kind),'Invalid Nexus entry kind '+i);
-        requireThat(['replace_exact','append','create'].includes(action),'Invalid Nexus edit action '+i);
+        requireThat(['replace_exact','append','append_section','create'].includes(action),'Invalid Nexus edit action '+i);
+        requireThat(action!=='append_section' || kind==='continuity',
+            'Only Current Continuity supports append_section.');
         if(action==='create'){
             const title=str(op.title), content=str(op.content);
             requireThat(title && title.length<=180 && content && !titles.has(title.toLowerCase()),
@@ -114,6 +118,7 @@ export function stageNexusEdits(original, edits, createEntry) {
             if(kind==='continuity')requireThat(title==='Current Continuity','Continuity title mismatch.');
             if(title==='Core Memory')requireThat(kind==='core','Core Memory must use core kind.');
             if(title==='Current Continuity')requireThat(kind==='continuity','Continuity must use continuity kind.');
+            if(kind==='continuity')guardNewContinuityContent(content);
             const entry=createEntry(staged);
             requireThat(entry && intUid(entry.uid)!==null,'World Info entry constructor failed.');
             entry.comment=title;entry.content=content;entry.disable=false;entry.position=0;
@@ -138,9 +143,15 @@ export function stageNexusEdits(original, edits, createEntry) {
             const find=str(op.find);
             requireThat(find && before.split(find).length===2,'Nexus exact text does not match uniquely: '+title);
             entry.content=before.replace(find,text);
+        }else if(action==='append_section'){
+            entry.content=appendContinuitySection(before,op.section,text);
         }else{
+            requireThat(kind!=='continuity',
+                'Current Continuity append must specify a section using append_section.');
             entry.content=before+(before.endsWith('\n')?'\n':'\n\n')+text;
         }
+        if(kind==='continuity')guardContinuityChange(before,entry.content,
+            {action,section:op.section});
         changes.push({action,kind,title,uid,before,after:entry.content});
     }
     return {staged,changes};
