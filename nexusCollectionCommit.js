@@ -27,6 +27,10 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
         const attempted=[];
         try {
             for(const state of ordered){
+                // The first save gives other editors time to change the second book.
+                if(attempted.length && !isEqual(await loadFresh(state.name),state.original)){
+                    throw new Error('World Info conflict in '+state.name+' during commit.');
+                }
                 verifyOrigin();
                 // A rejected request might still have persisted before throwing.
                 attempted.push(state);
@@ -36,6 +40,13 @@ export async function commitSlothBooks(states,{loadFresh,save,withLocks,verifyOr
                     throw new Error('Read-back mismatch after writing '+state.name);
                 }
             }
+            // The first read-back predates the second save. Both books must still
+            // match the approved draft before collection can advance in this chat.
+            const first=ordered[0];
+            if(!isEqual(await loadFresh(first.name),first.staged)){
+                throw new Error('World Info conflict in '+first.name+' after writing both books.');
+            }
+            verifyOrigin();
             return {success:true,saved:attempted.map(s=>s.name)};
         }catch(error){
             const recoveryFailures=[];

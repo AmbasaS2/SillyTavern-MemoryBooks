@@ -5,13 +5,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
+import { createViewSort } from './viewSortPolicy.js';
 
 function jobsHarness() {
     const state = { blocked: false, loaded: true, saves: 0, metadata: { STMemoryBooks: { keep: true } } };
     const source = readFileSync(new URL('./stmbJobs.js', import.meta.url), 'utf8')
         .replace(/^import[\s\S]*?;\r?\n/gm, '').replace(/^export /gm, '');
     const deps = {
-        POPUP_RESULT: { CUSTOM1: 1001 }, structuredClone, console, setTimeout, clearTimeout, AbortController,
+        POPUP_RESULT: { CUSTOM1: 1001 }, createViewSort, structuredClone, console, setTimeout, clearTimeout, AbortController,
         translate: fallback => fallback,
         guardPendingProgress: () => state.blocked,
         isProgressChatLoaded: () => state.loaded,
