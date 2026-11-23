@@ -63,6 +63,7 @@ import {
   setCharacterNexusRole, moveCharacterNexusRoles, removeCharacterNexusRoles,
 } from './nexusCharacterRoles.js';
 import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
+import { runNexusCollector } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -619,6 +620,7 @@ const defaultSettings = {
     autoSummaryEnabled: false,
     nexusSceneRotationEnabled: false,
     nexusOlderSceneMode: "vector",
+    slothPreciseReviewEnabled: false,
     autoSummaryInterval: 50,
     autoSummaryTriggerMode: 'messages',
     autoSummaryTokenThreshold: 4000,
@@ -11106,6 +11108,7 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
     showMemoryPreviews: settings.moduleSettings.showMemoryPreviews,
     nexusSceneRotationEnabled: settings.moduleSettings.nexusSceneRotationEnabled === true,
     nexusOlderSceneMode: settings.moduleSettings.nexusOlderSceneMode === "keyword" ? "keyword" : "vector",
+    slothPreciseReviewEnabled: settings.moduleSettings.slothPreciseReviewEnabled === true,
     showConsolidationPreviews: settings.moduleSettings.showConsolidationPreviews,
     showNotifications: settings.moduleSettings.showNotifications,
     showFloatingClipButton: settings.moduleSettings.showFloatingClipButton !== false,
@@ -11243,6 +11246,26 @@ async function showSettingsPopup() {
 
   // Build customButtons array dynamically based on current state
   const customButtons = [];
+  if (['nexus', 'memory'].every(role =>
+      getCurrentNexusRoleResolution(role, settings).state === 'ready')) {
+    customButtons.push({
+      text: '🦥 ' + translate('Collect completed events',
+        'STMemoryBooks_SlothCollectButton'),
+      classes: ['menu_button'],
+      action: async () => {
+        const selected = currentPopupInstance?.dlg?.querySelector('#stmb-profile-select')?.value;
+        const parsed = Number.parseInt(selected ?? settings.defaultProfile, 10);
+        try {
+          await runNexusCollector({
+            profileIndex: Number.isSafeInteger(parsed) ? parsed : settings.defaultProfile,
+          });
+        } catch (error) {
+          console.error('Sloth collection cancelled or failed safely:', error);
+          toastr.error(error?.message || String(error), '🦥 STMemoryBooks', { timeOut: 10000 });
+        }
+      },
+    });
+  }
 
   (customButtons.push({
     text:
@@ -11525,6 +11548,12 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     for (const [selector, settingKey] of Object.entries(rollbackSettingBySelector)) {
       if (!e.target.matches(selector)) continue;
       settings.moduleSettings[settingKey] = e.target.checked;
+      saveSettingsDebounced();
+      return;
+    }
+
+    if (e.target.matches("#stmb-sloth-precise-review")) {
+      settings.moduleSettings.slothPreciseReviewEnabled = e.target.checked;
       saveSettingsDebounced();
       return;
     }

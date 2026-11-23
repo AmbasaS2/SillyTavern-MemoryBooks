@@ -35,3 +35,15 @@ test('Sloth visual rules use scoped theme variables, not forced fonts', () => {
     assert.doesNotMatch(block,/@font-face|https?:\/\//i);
     assert.match(block,/@media \(max-width: 620px\)/);
 });
+
+
+test('manual collector entry point is wired and gated on both ready roles',()=>{
+    const source=file('./index.js');
+    assert.match(source,/runNexusCollector\(\{/);
+    assert.match(source,/getCurrentNexusRoleResolution\(role, settings\)\.state === 'ready'/);
+    assert.match(source,/STMemoryBooks_SlothCollectButton/);
+    const html=file('./templates.js');
+    assert.match(html,/STMemoryBooks_SlothManualHelp/);
+    const css=file('./style.css');
+    assert.match(css,/\.popup\.stmb-popup \.stmb-sloth-review/);
+});

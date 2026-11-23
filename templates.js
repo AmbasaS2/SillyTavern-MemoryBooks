@@ -114,6 +114,17 @@ export const settingsTemplate = Handlebars.compile(`
           {{/if}}
         </section>
         {{/unless}}
+        {{#if slothRoleActive}}
+        <div class="info-block hint">
+          <strong data-i18n="STMemoryBooks_SlothCollectButton">🦥 Collect completed events</strong>
+          <p data-i18n="STMemoryBooks_SlothManualHelp">Manual collection only. The AI will propose complete events and their exact source messages before writing. After review, both Memory and Nexus drafts need another explicit approval. Auto-hide is never used.</p>
+          <label class="checkbox_label">
+            <input id="stmb-sloth-precise-review" type="checkbox" {{#if slothPreciseReviewEnabled}}checked{{/if}}>
+            <span data-i18n="STMemoryBooks_SlothPreciseReview">Optional extra omission audit</span>
+          </label>
+          <small data-i18n="STMemoryBooks_SlothPreciseReviewHelp">Runs an additional AI check before saving; may use more tokens. If issues are found, nothing is saved.</small>
+        </div>
+        {{/if}}
 
         <h3 class="stmb-section-title" data-i18n="STMemoryBooks_CurrentLorebookConfig">Current Lorebook Configuration</h3>
 

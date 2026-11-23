@@ -36,12 +36,29 @@ This branch is **unfinished development**, not a released or verified SillyTaver
 - Labels follow the 🦥 naming convention; short mode and 3-Scene setting use 🦥 게으름뱅이.
 - Translated new controls/explanations in Korean and supported non-English locale JSON; en*.json untouched per upstream AGENTS.md.
 
-## Not implemented yet
+## Manual AI collector — development implementation (2026-11-23)
 
-- The central AI pipeline: manually analyze a long accumulated chat, decide the number of complete causal events/Scenes, preview suggested **titles/message ranges** and seek approval, then write Scene bodies.
-- Automated Nexus **Core Memory**, **Current Continuity** (Scene Continuity + Status), LT and NPC edit/new-entry plan and safe two-book commit/rollback.
-- AI-assisted merging of previously split Scene memories, optional expensive omission verification, per-chat role overrides for separate AUs, branch-copy isolation.
-- Whole-extension clean UI redesign, performance/screenshot/device QA, runtime checks inside user's SillyTavern desktop/mobile environment and STLO/lore-manager integration.
+- In the main Memory Books popup, **🦥 Collect completed events** appears when this character has valid Nexus and Memory role assignments. It runs **only after a user click**. No background or automatic token-count trigger.
+- nexusCollectorRuntime.js reads original, currently visible chat messages and determines the uncollected set from per-chat ledger, legacy checkpoint and already saved Memory source IDs; originating avatar, linked roles and source message fingerprint are checked after asynchronous AI operations and before writes.
+- nexusCollectionAI.js reuses the existing Memory Books completion profile and ST provider, dividing large sources into evidence-only windows before the AI causal event plan. nexusCollectionPolicy.js checks **complete coverage**: each original source message belongs once to a completed event or a deferred unfinished incident. Noncontiguous causal source segments stay distinct from intervening independent events.
+- First review offers editable Scene titles and exact source ranges, then validates the changed plan. After approval, Scene bodies are composed in Timeline → Scene → Result format. Existing Nexus is compared for exact-span changes, append-only additions or newly grounded entries. Kinks, PanelAssets, disabled items, custom Outlets and unrelated World Info are protected.
+- Optional third AI omission audit is OFF by default. Enabling it uses an extra request and blocks storage on reported omissions or misattributions. Actual model calls and token cost may exceed the two logical phases.
+- nexusCollectionPolicy.js stages isolated clones of both World Info JSONs, adds only completed Scenes, retains exact source segments without inventing one continuous STMB_start/end for discontiguous events, and rotates the latest three completed Scene entries.
+- Second review displays the full Scene body and the before/after text of every Nexus edit. A combined JSON pre-commit backup download must be triggered as part of explicit final save approval. No automatic Hide. When all source is complete, only a candidate manual Hide endpoint is shown.
+- nexusCollectionCommit.js acquires existing STMB lorebook write lanes, rereads both books from the SillyTavern server (optimistic conflict check), saves and rereads each, attempts reverse-order compensation on failure, repairs client cache where needed. **This is best-effort compensating rollback, NOT an atomic two-book server transaction**. Partial recovery is reported as unsafe rather than claiming success. Per-chat collected ledger changes only after verified success for both books.
+- This is developer code, **not tested inside running SillyTavern**. AI model quality, actual browser popup flow, legacy data and STLO/lore-manager coexistence require live integration QA before any release.
+- New modules: nexusCollectionPolicy.js, nexusCollectionAI.js, nexusCollectionCommit.js, nexusCollectorRuntime.js and their test files. Existing index.js, templates.js, style.css, localization, bundle and CSS build updated. No edits to manifest.json, main or installed user lorebooks.
+- Baseline rollback point: feature branch commit 7e6b0ecd (before this collector slice).
+
+## Still missing / blocked / unverified
+
+- Evidence-preserving migration of legacy Long-Term Memory / Scene Continuity / Status to separate Core Memory and sectioned Current Continuity. The new collector intentionally blocks unreviewed legacy input to prevent destructive replacement.
+- AI-assisted merge or split of already saved Scene memories, preserving UID/source references.
+- Per-chat AU lorebook role override and full branch-copy policies; character role defaults are inherited but two chats can still share the same selected lorebook.
+- Truly atomic two-book writes are not available over two independent SillyTavern World Info endpoints; compensation is best effort, not a database transaction.
+- Long-chat provider quality evaluation and token handling, original user PC/mobile SillyTavern UI tests, STLO vector recall and lore-manager synchronization, whole-extension clean digital UI redesign.
+- User-approved install/release and version/manifest adjustment or main merge.
+
 
 ## Testing and release safety
 

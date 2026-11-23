@@ -963,3 +963,34 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup .stmb-sloth-roles { padding: 12px; }
 }
+
+/* Sloth collector previews: scoped to STMB popups, never global ST styles. */
+.popup.stmb-popup .stmb-sloth-review {
+    display:flex;flex-direction:column;gap:10px;min-width:0;
+    color:var(--SmartThemeBodyColor);
+}
+.popup.stmb-popup .stmb-sloth-review h3,
+.popup.stmb-popup .stmb-sloth-review h4 {margin:4px 0;}
+.popup.stmb-popup .stmb-sloth-plan-item {
+    display:flex;flex-direction:column;gap:7px;padding:12px;
+    border:1px solid var(--SmartThemeBorderColor);border-radius:10px;
+    background:var(--SmartThemeBlurTintColor);min-width:0;
+}
+.popup.stmb-popup .stmb-sloth-plan-item input {width:100%;box-sizing:border-box;min-width:0;}
+.popup.stmb-popup .stmb-sloth-plan-item small {opacity:.82;line-height:1.5;}
+.popup.stmb-popup .stmb-sloth-detail {
+    border:1px solid var(--SmartThemeBorderColor);border-radius:10px;
+    background:var(--SmartThemeBlurTintColor);padding:10px 12px;
+    min-width:0;max-width:100%;
+}
+.popup.stmb-popup .stmb-sloth-detail summary {cursor:pointer;font-weight:600;overflow-wrap:anywhere;}
+.popup.stmb-popup .stmb-sloth-detail pre {
+    white-space:pre-wrap;overflow-wrap:anywhere;max-height:35vh;overflow:auto;
+    font:inherit;line-height:1.5;margin:8px 0;padding:8px;
+    border-radius:6px;border:1px solid var(--SmartThemeBorderColor);
+}
+@media (max-width:620px) {
+    .popup.stmb-popup .stmb-sloth-review{gap:8px;}
+    .popup.stmb-popup .stmb-sloth-plan-item,
+    .popup.stmb-popup .stmb-sloth-detail{padding:10px;}
+}
