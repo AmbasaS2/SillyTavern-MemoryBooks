@@ -25,9 +25,13 @@ function verifyEvidence(items,source,label) {
             entry.quote.length>=8 && entry.quote.length<=400,
             label+' evidence '+(index+1)+' needs an exact, short source quote and message ID.');
         const message=source.get(entry.messageId);
-        assert(message && message.mes.includes(entry.quote),
+        // Models sometimes end a verbatim excerpt with their own punctuation.
+        // Keep only text that exists verbatim in the claimed source message.
+        const literal = message?.mes.includes(entry.quote)
+            ? entry.quote : entry.quote.replace(/[.,!?;:…，。！？；：]+$/u, '').trimEnd();
+        assert(literal.length>=8 && message?.mes.includes(literal),
             label+' cites a quote missing from original message #'+entry.messageId+'.');
-        return {messageId:entry.messageId,quote:entry.quote};
+        return {messageId:entry.messageId,quote:literal};
     });
 }
 
@@ -63,10 +67,12 @@ export function validateSlothEventWindowEvidence(raw, messages) {
         assert(isRecord(event) && ['complete', 'open', 'uncertain'].includes(event.closure) &&
             [event.topic, event.cause, event.development, event.result].every(text => typeof text === 'string' && text.trim() && text.length <= 1400),
         'Event evidence needs a topic, cause, development, result and closure state.');
-        assert(Array.isArray(event.sourceRanges) && event.sourceRanges.length && event.sourceRanges.length <= source.size,
+        const sourceSpans = Array.isArray(event.sourceRanges) && event.sourceRanges.length === 2 &&
+            event.sourceRanges.every(Number.isSafeInteger) ? [event.sourceRanges] : event.sourceRanges;
+        assert(Array.isArray(sourceSpans) && sourceSpans.length && sourceSpans.length <= source.size,
             'Event evidence must name its original window ranges.');
         const eventIds = new Set();
-        for (const pair of event.sourceRanges) {
+        for (const pair of sourceSpans) {
             assert(Array.isArray(pair) && pair.length === 2 && pair.every(Number.isSafeInteger) &&
                 pair[0] >= 0 && pair[1] >= pair[0] && pair[1] - pair[0] < source.size,
             'Event evidence has an invalid source range.');
@@ -81,8 +87,8 @@ export function validateSlothEventWindowEvidence(raw, messages) {
         // These are intermediate evidence ranges, never saved Scene ranges.
         const citedOutsideRanges = new Set(evidence.map(item => item.messageId).filter(id => !eventIds.has(id)));
         const sourceRanges = citedOutsideRanges.size
-            ? [...event.sourceRanges, ...Array.from(citedOutsideRanges, id => [id, id])].sort((a, b) => a[0] - b[0])
-            : event.sourceRanges;
+            ? [...sourceSpans, ...Array.from(citedOutsideRanges, id => [id, id])].sort((a, b) => a[0] - b[0])
+            : sourceSpans;
         return { topic: event.topic, cause: event.cause, development: event.development,
             result: event.result, closure: event.closure, sourceRanges, evidence };
     });

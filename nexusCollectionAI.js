@@ -5,6 +5,8 @@ import { requestCompletion } from './stmemory.js';
 import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
 import { oai_settings } from '../../../openai.js';
+import { getMaxContextSize } from '../../../../script.js';
+import { getTokenCountAsync } from '../../../tokenizers.js';
 import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan } from './nexusCollectionPolicy.js';
 import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
@@ -23,7 +25,9 @@ function parseStrictJSON(raw,phase) {
     const fenced=text.match(/^\x60{3,}(?:json)?\s*\n([\s\S]*?)\n\x60{3,}\s*$/i);
     let parsed;
     try {parsed=JSON.parse(fenced?fenced[1]:text);}
-    catch {throw new Error(phase+': AI returned malformed or incomplete JSON. No data saved.');}
+    catch {throw Object.assign(new Error(phase+': AI returned malformed or incomplete JSON. No data saved.'), {
+        code:'STMB_SLOTH_MALFORMED_JSON',
+    });}
     if(!parsed || typeof parsed!=='object' || Array.isArray(parsed))throw new Error(phase+': JSON object required.');
     return parsed;
 }
@@ -46,6 +50,10 @@ function requester(profile,settings,signal) {
     const extra={},max=Number.parseInt(settings?.moduleSettings?.maxTokens,10);
     if(Number.isFinite(max)&&max>0)extra.max_tokens=max;
     else if(oai_settings?.openai_max_tokens)extra.max_tokens=oai_settings.openai_max_tokens;
+    if (connection.api === 'nanogpt') {
+        const { nanogpt_provider, nanogpt_payg_override, reasoning_effort } = oai_settings;
+        Object.assign(extra, { nanogpt_provider, nanogpt_payg_override, reasoning_effort });
+    }
     return async (prompt,phase)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
         const {text}=await requestCompletion({...connection,prompt,extra,signal});
@@ -55,6 +63,20 @@ function requester(profile,settings,signal) {
 }
 const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
+async function requestWindowEvidence(prompt, phase, ask, validate) {
+    let received = false;
+    try {
+        const raw = await ask(prompt, phase);
+        received = true;
+        return validate(raw);
+    } catch (error) {
+        if (!received && error.code !== 'STMB_SLOTH_MALFORMED_JSON') throw error;
+        const retry = await ask(prompt + '\n\nThe previous response failed source validation. ' +
+            error.message + ' Regenerate this window using the source above. Use short, exact quotations ' +
+            'from the cited message and nested inclusive ID ranges. Return JSON only.', phase + ' correction');
+        return validate(retry);
+    }
+}
 async function windowEvidence(window,ask) {
     const a=window[0].id,b=window.at(-1).id;
     const prompt=[
@@ -66,17 +88,36 @@ async function windowEvidence(window,ask) {
         '"cause":"...","development":"...","result":"... or unresolved",',
         '"closure":"complete|open|uncertain","evidence":[{"messageId":0,"quote":"exact source wording"}]}]}.',
         'Write compact JSON. Normally cite one to three distinct quotes per thread. Use more only for a separate consequential detail, up to eight.',
-        'Quote the shortest exact phrase that proves the detail (8–400 characters). Do not copy whole messages or cite repeated wording twice. Include the words that carry the joke, promise or correction.',
+        'Quote the shortest exact phrase that proves the detail (prefer 12–100 characters; allowed 8–400). Copy a continuous substring without adding punctuation or ellipses. Include the words that carry the joke, promise or correction.',
         'Use inclusive source ranges that cover the beginning, development and ending in this window. Every evidence.messageId must be inside its own event’s sourceRanges. Check the bounds against the evidence IDs before responding.',
         'Only cite IDs present in this window. Use separate ranges when IDs skip a message.',
         'Window '+a+'-'+b,compact(window)
     ].join('\n\n');
-    const raw=await ask(prompt,'Window evidence '+a+'-'+b);
-    return {window:[a,b],events:validateSlothEventWindowEvidence(raw,window)};
+    const events=await requestWindowEvidence(prompt,'Window evidence '+a+'-'+b,ask,
+        raw=>validateSlothEventWindowEvidence(raw,window));
+    return {window:[a,b],events};
 }
-async function evidenceFor(messages,ask) {
+async function canUseOriginalSource(prompt, settings, profile) {
+    const contextSize = getMaxContextSize();
+    if (!Number.isFinite(contextSize) || contextSize <= 0) return false;
+    const selected = resolveConnection(profile);
+    const active = getCurrentApiInfo();
+    const activeApi = normalizeCompletionSource(active.completionSource || active.api || 'openai');
+    const activeModel = activeApi === 'nanogpt' ? oai_settings.nanogpt_model : getUIModelSettings().model;
+    if (!activeModel || selected.api !== activeApi || selected.model !== activeModel) return false;
+    const completion = Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 0;
+    try {
+        const input = await getTokenCountAsync(prompt);
+        return Number.isFinite(input) && input > 0 && input + completion + 2048 < Math.floor(contextSize * 0.9);
+    } catch {
+        return false;
+    }
+}
+async function evidenceFor(messages,ask,prefix,settings,profile) {
+    const original=compact(messages);
+    if (original.length <= 18000 || await canUseOriginalSource(prefix + original, settings, profile)) return original;
     const windows=groupSlothSourceWindows(messages,18000);
-    if(windows.length===1)return compact(messages);
+    if(windows.length===1)return original;
     const evidence=[];
     for(const window of windows)evidence.push(await windowEvidence(window,ask));
     const payload=JSON.stringify(evidence);
@@ -84,7 +125,7 @@ async function evidenceFor(messages,ask) {
     return payload;
 }
 export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
-    const ask=requester(profile,settings,signal),source=await evidenceFor(messages,ask);
+    const ask=requester(profile,settings,signal);
     const ids=messages.map(m=>m.id);
     const prompt=[
         'Roleplay Memory Books event planner. STRICT JSON only.',
@@ -99,14 +140,14 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
         'No quota for event count. All indices must be original message IDs and inclusive.',
         'Exact source index spans: '+JSON.stringify(slothSourceRanges(ids)),
         'Character context (do not treat as source event): '+characterContext,
-        'Original source or detailed window evidence:',source
-    ].join('\n\n');
-    return validateNexusEventPlan(await ask(prompt,'Event plan'),ids,{deferUnclassified:true});
+        'Original source or detailed window evidence:',
+    ].join('\n\n')+'\n\n';
+    const source=await evidenceFor(messages,ask,prompt,settings,profile);
+    return validateNexusEventPlan(await ask(prompt+source,'Event plan'),ids,{deferUnclassified:true});
 }
 export async function composeSlothScene({event,messages,profile,settings,signal=null,characterContext=''}) {
     const ask=requester(profile,settings,signal);
     const idSet=new Set(event.messageIds),source=messages.filter(m=>idSet.has(m.id));
-    const evidence=await evidenceFor(source,ask);
     const prompt=[
         SLOTH_SCENE_PROMPT_V13,
         'Fork workflow: the user-approved source spans form ONE independently recallable causal event, even when noncontiguous. Do not use intervening messages outside the approved spans.',
@@ -114,9 +155,10 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
         'The approved title and closure guide the output; evidence controls factual details. The character card is reference only, never evidence of an event.',
         'Approved title: '+event.title,
         'Closure: '+event.result,'Source spans: '+JSON.stringify(event.segments),
-        'Character context: '+characterContext,'Evidence:',evidence
-    ].join('\n\n');
-    const response=await ask(prompt,'Scene '+event.id);
+        'Character context: '+characterContext,'Evidence:',
+    ].join('\n\n')+'\n\n';
+    const evidence=await evidenceFor(source,ask,prompt,settings,profile);
+    const response=await ask(prompt+evidence,'Scene '+event.id);
     return {...event,...validateSlothSceneResponse(response),title:event.title};
 }
 
@@ -131,7 +173,7 @@ async function nexusStateEvidenceFor(messages, ask) {
     const evidence=[];
     for(const window of windows) {
         const a=window[0].id,b=window.at(-1).id;
-        const raw=await ask([
+        const prompt=[
             'Extract ONLY durable character/world changes and currently live or completed conditions.',
             'Use direct text evidence, not narrative extrapolation. Include explicitly resolved',
             'injuries, promises, secrecy, knowledge changes, relationship changes, NPC details,',
@@ -139,13 +181,14 @@ async function nexusStateEvidenceFor(messages, ask) {
             'Return STRICT JSON {"evidence":[{"messageId":NUMBER,"quote":"exact substring of',
             'the original message, 8-400 chars","meaning":"grounded observation or report"}]}.',
             'Each quote MUST occur VERBATIM in the message with that exact ID.',
-            'Quote only the shortest useful exact phrase and cite the same observation once, even when repeated in several messages.',
+            'Quote only the shortest useful continuous substring (ideally 12–100 characters) with its original punctuation. Cite each observation once.',
             'Maximum 40 items. If none are material, return {"evidence":[]}.',
             'Do not infer a merged event ending from a window boundary.',
             'Original messages in window '+a+'-'+b+':',compact(window),
-        ].join('\n\n'),'Nexus state evidence '+a+'-'+b);
-        evidence.push({window:[a,b],
-            evidence:validateSlothNexusWindowEvidence(raw,window)});
+        ].join('\n\n');
+        const citations=await requestWindowEvidence(prompt,'Nexus state evidence '+a+'-'+b,ask,
+            raw=>validateSlothNexusWindowEvidence(raw,window));
+        evidence.push({window:[a,b],evidence:citations});
     }
     const payload=JSON.stringify(evidence);
     if(payload.length>85000) {
@@ -157,7 +200,6 @@ async function nexusStateEvidenceFor(messages, ask) {
 export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null,
     initial=false,characterContext=''}) {
     const ask=requester(profile,settings,signal);
-    const groundedSource=await nexusStateEvidenceFor(messages,ask);
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const protectedEntry=!!e.disable || Number(e.position)===7 ||
             !!String(e.outletName||'').trim() ||
@@ -228,10 +270,13 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         }),
         'Deferred source is still visible; use it to assess ongoing state without',
         'claiming a deferred or uncertain incident is complete.',
-        'Current-chat original grounded evidence (exact message IDs):',groundedSource,
-        'Current Nexus entries (exact UIDs):',source
-    ].join('\n\n');
-    const response=await ask(prompt,'Nexus delta');
+        'Current Nexus entries (exact UIDs):',source,
+        'Current-chat original grounded evidence (exact message IDs):',
+    ].join('\n\n')+'\n\n';
+    const original = compact(messages);
+    const groundedSource = original.length <= 18000 || await canUseOriginalSource(prompt + original, settings, profile)
+        ? original : await nexusStateEvidenceFor(messages,ask);
+    const response=await ask(prompt + groundedSource,'Nexus delta');
     try {
         if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
         const edits=validateGroundedNexusEdits(response.edits,messages);

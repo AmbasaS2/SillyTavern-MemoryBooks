@@ -12695,11 +12695,13 @@ async function refreshPopupContent() {
     const content = popup.content;
     const originalActions = [...content.querySelectorAll('.stmb-original-action')];
     const drawers = [...content.querySelectorAll('details[id]')].map(drawer => [drawer.id, drawer.open]);
+    const wasSlothWorkspace = content.querySelector('.stmb-workspace')?.dataset.slothWorkspace === 'true';
     const focusedId = content.contains(document.activeElement) ? document.activeElement.id : '';
     const scrollTop = content.scrollTop;
     currentPopupInstance.content.innerHTML = newHtml;
     content.querySelector('#stmb-original-actions')?.append(...originalActions);
     for (const [id, open] of drawers) {
+      if (id === 'stmb-workspace-advanced' && wasSlothWorkspace !== Boolean(templateData.slothWorkspaceActive)) continue;
       const drawer = content.querySelector('#' + CSS.escape(id));
       if (drawer) drawer.open = open;
     }

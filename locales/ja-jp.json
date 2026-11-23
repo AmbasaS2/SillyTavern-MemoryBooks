@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "原因・結末・元メッセージ番号を確認してください。タイトルと範囲は編集できます。",
   "STMemoryBooks_SlothUnclassifiedSource": "AIはこれらのメッセージを分類しませんでした。メッセージはチャットに残ります。",
   "STMemoryBooks_SlothEditDeferredGuide": "メッセージをSceneに含めるには両方の範囲を更新してください。保留範囲の全メッセージを移す場合は、その範囲を空欄にします。",
+  "STMemoryBooks_SlothCombinePlanRanges": "候補を統合するには、すべての元メッセージ範囲を一つのSceneにまとめます。他の候補の範囲を空欄にし、選択を解除します。",
+  "STMemoryBooks_SlothIncludeScene": "このSceneを収集",
   "STMemoryBooks_SlothDeferred": "未完了・保留",
   "STMemoryBooks_SlothApprovePlan": "出来事の計画を承認",
   "STMemoryBooks_SlothReviewDraft": "MemoryとNexusの変更を確認",

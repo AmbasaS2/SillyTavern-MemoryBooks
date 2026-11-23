@@ -24,8 +24,32 @@ test('collector limits Nexus source and hides protected Outlet content from the 
     assert.match(source,/source\.length\+draft\.length>68000/);
 });
 
+test('long original source requires the active model context and a successful token count', async () => {
+    const start=source.indexOf('async function canUseOriginalSource(');
+    const end=source.indexOf('async function evidenceFor(',start);
+    const state={context:120000,tokens:48000};
+    const canUse=vm.runInNewContext(source.slice(start,end)+'\ncanUseOriginalSource',{
+        getMaxContextSize:()=>state.context,
+        getTokenCountAsync:async ()=>state.tokens,
+        resolveConnection:profile=>profile,
+        getCurrentApiInfo:()=>({completionSource:'nanogpt'}),
+        normalizeCompletionSource:value=>value,
+        oai_settings:{nanogpt_model:'active-model',openai_max_tokens:12000},
+    });
+    const profile={api:'nanogpt',model:'active-model'};
+    assert.equal(await canUse('original',{},profile),true);
+    assert.equal(await canUse('original',{}, {...profile,model:'other-model'}),false);
+    state.tokens=0;
+    assert.equal(await canUse('original',{},profile),false);
+    state.tokens=100000;
+    assert.equal(await canUse('original',{},profile),false);
+    state.context=8192;
+    state.tokens=1200;
+    assert.equal(await canUse('original',{},profile),false);
+});
+
 test('window extraction keeps a verified quote from a source ID omitted from the proposed range', async () => {
-    const start = source.indexOf('async function windowEvidence(');
+    const start = source.indexOf('async function requestWindowEvidence(');
     const end = source.indexOf('async function evidenceFor(', start);
     const collectEvidence = vm.runInNewContext(source.slice(start, end) + '\nwindowEvidence', {
         compact: JSON.stringify, validateSlothEventWindowEvidence,
@@ -45,5 +69,5 @@ test('window extraction keeps a verified quote from a source ID omitted from the
         attempts++;
         return { events: [{ ...event, evidence: [{ messageId: 0, quote: 'An invented bell quote' }] }] };
     }), /missing from original/);
-    assert.equal(attempts, 1);
+    assert.equal(attempts, 2);
 });

@@ -63,6 +63,16 @@ test('window evidence summaries cannot forge source text',()=>{
     assert.throws(()=>validateSlothNexusWindowEvidence({
         evidence:[{...input.evidence[0],meaning:''}]},source),/meaning/);
 });
+test('added terminal punctuation is removed only when the exact remaining quote exists',()=>{
+    const messages=[{id:9,mes:'She left the unopened letter on the table, then returned.'}];
+    const raw={evidence:[{messageId:9,quote:'She left the unopened letter on the table.',meaning:'The letter remained unopened.'}]};
+    assert.deepEqual(validateSlothNexusWindowEvidence(raw,messages),[
+        {...raw.evidence[0],quote:'She left the unopened letter on the table'},
+    ]);
+    assert.throws(()=>validateSlothNexusWindowEvidence({
+        evidence:[{...raw.evidence[0],quote:'She left the opened letter on the table.'}],
+    },messages),/missing from original/);
+});
 test('duplicate or malformed input IDs fail before any edits',()=>{
     assert.throws(()=>validateGroundedNexusEdits([change],[...source,source[0]]),/repeated/);
     assert.throws(()=>validateGroundedNexusEdits([change],[]),/original chat/);

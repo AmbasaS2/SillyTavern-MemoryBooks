@@ -7,16 +7,19 @@ import { Handlebars } from '../../../../lib.js';
  * Main settings template
  */
 export const settingsTemplate = Handlebars.compile(`
-    <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books</h2>
-
-    <div class="stmb-workspace">
+    <div class="stmb-workspace" data-sloth-workspace="{{slothWorkspaceActive}}">
+        <header class="stmb-workspace-header">
+          <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books</h2>
+          {{#if slothCharacterAvailable}}
+          <span class="stmb-current-character">{{slothCharacterName}}</span>
+          {{/if}}
+        </header>
         {{#unless isGroupChat}}
         <section class="stmb-sloth-roles stmb-box" aria-labelledby="stmb-sloth-roles-title">
           <h3 id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">🦥 Sloth System · Lorebook roles</h3>
-          {{#if slothCharacterAvailable}}
-          <p class="stmb-current-character"><i class="fa-solid fa-user" aria-hidden="true"></i> {{slothCharacterName}}</p>
-          {{/if}}
-          <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the function of each lorebook already linked to this character. These roles also apply in new chats; collection progress remains separate for each chat.</p>
+          {{#unless slothRoleActive}}
+          <p data-i18n="STMemoryBooks_SlothRolesDescription">Assign a role to each connected lorebook. New chats inherit the roles and keep separate collection progress.</p>
+          {{/unless}}
           {{#if slothCharacterAvailable}}
             {{#if slothChatOverrideAvailable}}
             <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
@@ -138,16 +141,22 @@ export const settingsTemplate = Handlebars.compile(`
           <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
+              <div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="migrate" data-i18n="STMemoryBooks_SlothLegacyMigrationButton">Review legacy Nexus migration</button>
               <small data-i18n="STMemoryBooks_SlothLegacyMigrationHelp">For older Nexus entries, first use the review-and-migrate button. Original text and history are archived before collection; no automatic migration.</small>
+              </div><div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="continuity" data-i18n="STMemoryBooks_SlothLegacySemanticButton">Review old Current Continuity</button>
               <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
+              </div><div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button>
               <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
+              </div><div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button>
               <small data-i18n="STMemoryBooks_SlothSplitHelp">Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
+              </div><div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Review a Side Prompt</button>
               <small data-i18n="STMemoryBooks_SlothSidePromptHelp">Write a Side Prompt such as a diary from a saved Scene's original messages. Review it before saving to Nexus or its configured lorebook.</small>
+              </div>
             </div>
           </details>
         {{/if}}

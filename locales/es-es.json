@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Comprueba causa, desenlace y rangos originales. Puedes editar títulos y rangos.",
   "STMemoryBooks_SlothUnclassifiedSource": "La IA no clasificó estos mensajes. Se conservarán en el chat.",
   "STMemoryBooks_SlothEditDeferredGuide": "Para mover mensajes a una Scene, cambia ambos rangos. Vacía el rango aplazado si mueves todos sus mensajes.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Para combinar propuestas, reúne todos los rangos en una Scene. Borra los rangos y desmarca las demás propuestas.",
+  "STMemoryBooks_SlothIncludeScene": "Recopilar esta Scene",
   "STMemoryBooks_SlothDeferred": "Pendientes o aplazados",
   "STMemoryBooks_SlothApprovePlan": "Aprobar plan de eventos",
   "STMemoryBooks_SlothReviewDraft": "Revisar cambios de Memory y Nexus",

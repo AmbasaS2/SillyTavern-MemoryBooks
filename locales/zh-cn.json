@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "请核对事件起因、结局和原始消息编号；可修改标题与范围。",
   "STMemoryBooks_SlothUnclassifiedSource": "AI 未对这些消息分类。消息将保留在聊天中。",
   "STMemoryBooks_SlothEditDeferredGuide": "若要把消息移入 Scene，请更新两个范围。如果该待处理范围中的消息全部移走，请将该范围留空。",
+  "STMemoryBooks_SlothCombinePlanRanges": "要合并提案，请将所有原始消息范围移到一个 Scene 中。清空其他提案的范围并取消勾选。",
+  "STMemoryBooks_SlothIncludeScene": "收集此 Scene",
   "STMemoryBooks_SlothDeferred": "未完成或暂缓",
   "STMemoryBooks_SlothApprovePlan": "批准事件计划",
   "STMemoryBooks_SlothReviewDraft": "审核 Memory 与 Nexus 修改",

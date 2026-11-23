@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Проверьте причины, исходы и исходные сообщения. Названия и диапазоны можно изменить.",
   "STMemoryBooks_SlothUnclassifiedSource": "ИИ не классифицировал эти сообщения. Они останутся в чате.",
   "STMemoryBooks_SlothEditDeferredGuide": "Чтобы перенести сообщения в Scene, обновите оба диапазона. Очистите отложенный диапазон, если переносите все его сообщения.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Чтобы объединить предложения, поместите все диапазоны в одну Scene. Очистите диапазоны остальных предложений и снимите их отметки.",
+  "STMemoryBooks_SlothIncludeScene": "Собрать эту Scene",
   "STMemoryBooks_SlothDeferred": "Незавершённые и отложенные",
   "STMemoryBooks_SlothApprovePlan": "Утвердить план событий",
   "STMemoryBooks_SlothReviewDraft": "Проверить изменения Memory и Nexus",

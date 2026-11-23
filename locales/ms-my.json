@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Semak sebab, keputusan dan julat mesej asal. Tajuk dan julat boleh disunting.",
   "STMemoryBooks_SlothUnclassifiedSource": "AI belum mengelaskan mesej ini. Mesej akan kekal dalam sembang.",
   "STMemoryBooks_SlothEditDeferredGuide": "Untuk memindahkan mesej ke Scene, kemas kini kedua-dua julat. Kosongkan julat tertunda jika semua mesej dipindahkan.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Untuk menggabungkan cadangan, letakkan semua julat dalam satu Scene. Kosongkan julat dan nyahpilih cadangan lain.",
+  "STMemoryBooks_SlothIncludeScene": "Kumpul Scene ini",
   "STMemoryBooks_SlothDeferred": "Belum selesai atau ditangguhkan",
   "STMemoryBooks_SlothApprovePlan": "Luluskan rancangan peristiwa",
   "STMemoryBooks_SlothReviewDraft": "Semak perubahan Memory dan Nexus",

@@ -343,6 +343,8 @@ export async function runNexusSidePromptFollowup({ profileIndex } = {}) {
 async function planApproval(plan) {
     const rows=plan.events.map((item,i)=>{
         return '<section class="stmb-sloth-plan-item">'+
+            '<label class="checkbox_label"><input type="checkbox" data-sloth-plan-include="'+i+'" checked> '+
+            html(t('Collect this Scene','STMemoryBooks_SlothIncludeScene'))+'</label>'+
             '<small>'+html(item.reason)+'</small>'+
             '<span>'+html(item.result)+'</span>'+
             '<label class="stmb-sloth-edit">'+html(t('Memory title','STMemoryBooks_MemoryTitle'))+
@@ -361,6 +363,8 @@ async function planApproval(plan) {
     const body='<div class="stmb-sloth-review">'+
         '<h3>'+html(t('Review proposed complete events','STMemoryBooks_SlothReviewPlan'))+'</h3>'+
         '<p>'+html(t('Check causal closure and original message ranges before writing. Titles and ranges can be edited.','STMemoryBooks_SlothPlanGuide'))+'</p>'+
+        (plan.events.length>1?'<p>'+html(t('To combine proposals, put all source ranges in one Scene. Clear the ranges and uncheck the other proposals.',
+            'STMemoryBooks_SlothCombinePlanRanges'))+'</p>':'')+
         rows+(deferred?'<h4>'+html(t('Unfinished / deferred','STMemoryBooks_SlothDeferred'))+
             '</h4><p>'+html(t('To move messages into a Scene, update both ranges. Clear a deferred range when moving all its messages.',
                 'STMemoryBooks_SlothEditDeferredGuide'))+'</p><ul>'+deferred+'</ul>':'')+'</div>';
@@ -377,14 +381,23 @@ async function planApproval(plan) {
                     if(!field)throw new Error('An original-message range field is missing.');
                     return field.value.trim();
                 };
-                const events=plan.events.map((event,index)=>({
-                    ...event,complete:true,title:value('.stmb-sloth-title-edit',index),
-                    segments:parseReviewedSegments(value('.stmb-sloth-range-edit',index),plan.sourceIds),
-                }));
                 const deferred=plan.deferred.flatMap((item,index)=>{
                     const reviewed=value('.stmb-sloth-deferred-range',index);
                     return reviewed?[{reason:item.reason,segments:parseReviewedSegments(reviewed,plan.sourceIds)}]:[];
                 });
+                const events=[];
+                for (const [index,event] of plan.events.entries()) {
+                    const inclusion=closing.dlg.querySelector('[data-sloth-plan-include="'+index+'"]');
+                    if (!inclusion) throw new Error('A Scene inclusion control is missing.');
+                    const range=value('.stmb-sloth-range-edit',index);
+                    if (!inclusion.checked && !range) continue;
+                    const segments=parseReviewedSegments(range,plan.sourceIds);
+                    if (inclusion.checked) {
+                        events.push({...event,complete:true,title:value('.stmb-sloth-title-edit',index),segments});
+                    } else {
+                        deferred.push({reason:'The reviewer deferred this proposed Scene.',segments});
+                    }
+                }
                 approvedPlan=validateNexusEventPlan({events,deferred},plan.sourceIds);
                 return true;
             }catch(error){
@@ -534,8 +547,9 @@ async function draftApproval({scenes,changes,plan,states,ref,initial=false,scene
         ':</strong></p><ul>'+
         (change.evidence||[]).map(item=>'<li>#'+html(item.messageId)+
             ' · '+html(item.quote)+'</li>').join('')+'</ul>'+
-        (change.before?'<p>'+beforeLabel+'</p><pre>'+html(change.before)+'</pre>':'')+
-        '<p>'+afterLabel+'</p><pre>'+html(change.after)+'</pre>'+
+        '<div class="stmb-sloth-comparison'+(change.before?' has-before':'')+'">'+
+        (change.before?'<div><p>'+beforeLabel+'</p><pre>'+html(change.before)+'</pre></div>':'')+
+        '<div><p>'+afterLabel+'</p><pre>'+html(change.after)+'</pre></div></div>'+
         '<label class="stmb-sloth-edit">'+html(t('Edit only the proposed text','STMemoryBooks_SlothEditNexusText'))+
         '<textarea class="text_pole" rows="4" data-sloth-nexus-body="'+index+'">'+
         html(edits[index].action==='create'?edits[index].content:edits[index].text)+'</textarea></label>'+
@@ -897,8 +911,15 @@ export async function runNexusCollector({profileIndex}={}) {
             await listNexusSetupBooks(ref.avatarUrl);
         }
         checkOrigin();
-        if(characterContext.length>16000){
-            throw new Error('Character data is too large for a safe initial analysis; no content was truncated.');
+        if (characterContext.length > 16000) {
+            const contextLimit = getMaxContextSize();
+            const outputLimit = Number(settings.moduleSettings?.maxTokens) || 0;
+            const characterTokens = await getTokenCountAsync(characterContext);
+            checkOrigin();
+            if (!Number.isFinite(contextLimit) || !Number.isFinite(characterTokens) ||
+                characterTokens + outputLimit + 2048 >= contextLimit) {
+                throw new Error('The character card cannot fit with the selected context and completion settings. No content was truncated.');
+            }
         }
         // Legacy data must be migrated explicitly, with an independent backup
         // and review, before the regular AI collector touches Nexus.
@@ -971,6 +992,11 @@ export async function runNexusCollector({profileIndex}={}) {
         }
         const approved=await planApproval(plan);
         if(!approved)return {saved:false,reason:'plan-cancelled'};
+        if(plan.events.length&&!approved.events.length) {
+            toastr.info(t('There are no completed events to collect yet. Nothing was changed.',
+                'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
+            return {saved:false,reason:'all-events-deferred'};
+        }
         checkOrigin();
         toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
         let scenes=[];

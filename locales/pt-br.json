@@ -1658,6 +1658,8 @@
   "STMemoryBooks_SlothPlanGuide": "Confira causas, desfechos e mensagens originais. Títulos e intervalos podem ser editados.",
   "STMemoryBooks_SlothUnclassifiedSource": "A IA não classificou estas mensagens. Elas permanecerão no chat.",
   "STMemoryBooks_SlothEditDeferredGuide": "Para mover mensagens para uma Scene, altere os dois intervalos. Limpe o intervalo adiado ao mover todas as mensagens dele.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Para juntar propostas, reúna todos os intervalos em uma Scene. Limpe os outros intervalos e desmarque as demais propostas.",
+  "STMemoryBooks_SlothIncludeScene": "Coletar esta Scene",
   "STMemoryBooks_SlothDeferred": "Pendentes ou adiados",
   "STMemoryBooks_SlothApprovePlan": "Aprovar plano de eventos",
   "STMemoryBooks_SlothReviewDraft": "Revisar Memory e Nexus",

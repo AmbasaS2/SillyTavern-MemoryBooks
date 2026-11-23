@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Vérifiez les causes, les résultats et les plages de messages. Titres et plages modifiables.",
   "STMemoryBooks_SlothUnclassifiedSource": "L’IA n’a pas classé ces messages. Ils restent dans la discussion.",
   "STMemoryBooks_SlothEditDeferredGuide": "Pour déplacer des messages vers une Scene, modifiez les deux plages. Laissez la plage reportée vide si vous déplacez tous ses messages.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Pour regrouper les propositions, réunissez toutes les plages dans une Scene. Videz les autres plages et décochez leurs propositions.",
+  "STMemoryBooks_SlothIncludeScene": "Collecter cette Scene",
   "STMemoryBooks_SlothDeferred": "En cours ou reportés",
   "STMemoryBooks_SlothApprovePlan": "Valider le plan",
   "STMemoryBooks_SlothReviewDraft": "Examiner Memory et Nexus",

@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Prüfen Sie Ursache, Abschluss und ursprüngliche Nachrichtenbereiche. Titel und Bereiche sind bearbeitbar.",
   "STMemoryBooks_SlothUnclassifiedSource": "Die KI hat diese Nachrichten nicht zugeordnet. Sie bleiben im Chat.",
   "STMemoryBooks_SlothEditDeferredGuide": "Passe beide Bereiche an, um Nachrichten einer Scene zuzuordnen. Leere den zurückgestellten Bereich, wenn du alle Nachrichten verschiebst.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Fasse alle Quellenbereiche in einer Scene zusammen. Leere die Bereiche der übrigen Vorschläge und wähle sie ab.",
+  "STMemoryBooks_SlothIncludeScene": "Diese Scene sammeln",
   "STMemoryBooks_SlothDeferred": "Offen oder zurückgestellt",
   "STMemoryBooks_SlothApprovePlan": "Ereignisplan bestätigen",
   "STMemoryBooks_SlothReviewDraft": "Änderungen an Memory und Nexus prüfen",

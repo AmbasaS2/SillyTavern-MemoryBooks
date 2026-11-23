@@ -1661,6 +1661,8 @@
   "STMemoryBooks_SlothPlanGuide": "Periksa penyebab, hasil akhir, dan rentang pesan. Judul dan rentang dapat disunting.",
   "STMemoryBooks_SlothUnclassifiedSource": "AI belum mengelompokkan pesan ini. Pesan akan tetap di obrolan.",
   "STMemoryBooks_SlothEditDeferredGuide": "Untuk memindahkan pesan ke Scene, ubah kedua rentang. Kosongkan rentang yang ditunda jika semua pesannya dipindahkan.",
+  "STMemoryBooks_SlothCombinePlanRanges": "Untuk menggabungkan usulan, kumpulkan semua rentang dalam satu Scene. Kosongkan rentang dan hapus centang usulan lain.",
+  "STMemoryBooks_SlothIncludeScene": "Kumpulkan Scene ini",
   "STMemoryBooks_SlothDeferred": "Belum selesai atau ditunda",
   "STMemoryBooks_SlothApprovePlan": "Setujui rencana peristiwa",
   "STMemoryBooks_SlothReviewDraft": "Tinjau perubahan Memory dan Nexus",
