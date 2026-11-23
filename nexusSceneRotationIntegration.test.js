@@ -116,3 +116,8 @@ test('Nexus target does not rotate or restrict other lorebook entries', async ()
     assert.equal(book.entries[1].constant, true);
     assert.equal(book.entries[4].constant, false);
 });
+test('Nexus mode forces a memory preview in both direct and queued generation', () => {
+    const index = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
+    assert.match(index, /settings\.moduleSettings\.showMemoryPreviews \|\| settings\.moduleSettings\.nexusSceneRotationEnabled === true/);
+    assert.match(index, /settings\.moduleSettings\?\.showMemoryPreviews \|\| settings\.moduleSettings\?\.nexusSceneRotationEnabled === true/);
+});
