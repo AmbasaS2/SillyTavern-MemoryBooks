@@ -175,10 +175,14 @@ export const settingsTemplate = Handlebars.compile(`
               </div><div class="stmb-management-action">
               <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button>
               <small data-i18n="STMemoryBooks_SlothSplitHelp">Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
-              </div><div class="stmb-management-action">
-              <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Review a Side Prompt</button>
-              <small data-i18n="STMemoryBooks_SlothSidePromptHelp">Write a Side Prompt such as a diary from a saved Scene's original messages. Review it before saving to Nexus or its configured lorebook.</small>
               </div>
+            </div>
+          </details>
+          <details id="stmb-side-prompt-tools" class="stmb-workspace-drawer">
+            <summary data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
+            <div class="stmb-management-action">
+              <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Review a Side Prompt</button>
+              <small data-i18n="STMemoryBooks_SlothSidePromptHelp">Write a Side Prompt such as a diary from a saved Scene's original messages.</small>
             </div>
           </details>
         {{/if}}

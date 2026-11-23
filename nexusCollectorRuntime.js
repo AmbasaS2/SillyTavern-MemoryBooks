@@ -22,11 +22,11 @@ import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, InvalidS
     suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity,
     suggestSlothSceneSplit } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
-import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
+import { inspectNexusLegacyMigration, listNexusMigrationCandidates, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
 import { stageNexusSceneMerge } from './nexusSceneMerge.js';
-import {inspectNexusSceneSplit,listNexusSceneSplitSources,validateNexusSceneSplitProposal,
+import {inspectNexusSceneSplit,inspectNexusSceneSplitAvailability,validateNexusSceneSplitProposal,
     stageNexusSceneSplit} from './nexusSceneSplit.js';
 import { inspectSlothLegacyContinuity, stageSlothLegacyContinuity } from './nexusLegacySemantic.js';
 import { markStmbPopup } from './utils.js';
@@ -679,36 +679,32 @@ function assertLegacyMigrationOrigin(ref, roles) {
     }
 }
 
-function downloadNexusMigrationBackup(name,original,ref) {
-    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+function downloadNexusMigrationBackup(name,original,ref,timestamp,filename) {
     const payload={type:'Sloth Nexus migration: FULL ORIGINAL World Info backup',
-        timestamp:new Date().toISOString(),
+        timestamp,
         lorebook:name,chatRef:ref,original};
     const blob=new Blob([JSON.stringify(payload)],{type:'application/json;charset=utf-8'});
     const url=URL.createObjectURL(blob),anchor=document.createElement('a');
-    anchor.href=url;anchor.download='Sloth_Nexus_PreMigration_'+stamp+'.json';
+    anchor.href=url;anchor.download=filename;
     document.body.appendChild(anchor);
     try{anchor.click();}finally{anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 }
 
 async function approveNexusLegacyMigration({state,changes,ref,plan}) {
     const created=changes.filter(x=>x.action==='create');
-    const archived=changes.filter(x=>x.action==='archive');
+    const timestamp=new Date().toISOString();
+    const filename='Sloth_Nexus_PreMigration_'+timestamp.replace(/[:.]/g,'-')+'.json';
     const details=created.map(change=>'<details class="stmb-sloth-detail"><summary>'+
-        html(change.title)+' · '+html(change.after.length)+' chars</summary><pre>'+
+        html(change.from.map(source=>source.title).join(' + '))+' → '+html(change.title)+'</summary><pre>'+
         html(change.after)+'</pre></details>').join('');
-    const originals=archived.map(change=>'<details class="stmb-sloth-detail"><summary>'+
-        html(change.title)+' · UID '+html(change.uid)+'</summary><pre>'+
-        html(change.before)+'</pre></details>').join('');
     const body='<div class="stmb-sloth-review"><h3>'+
         html(t('Review legacy Nexus migration','STMemoryBooks_SlothLegacyReview'))+
-        '</h3><p>'+
-        html(t('The old entries and their history will be kept as disabled archives. New Core Memory and Current Continuity entries contain the original text without AI rewriting. Review both copies. A full JSON backup is downloaded before any save. Memory Scenes are not changed.',
+        '</h3><p><strong>'+html(state.name)+'</strong></p><p>'+
+        html(t('The entries on the right become active. The previous entries on the left stay in this lorebook, switched off, with their history.',
             'STMemoryBooks_SlothLegacyGuide'))+
-        '</p><p>'+html(plan.sourceUids.length)+' entries · '+html(plan.totalCharacters)+' characters</p>'+
-        '<h4>'+html(t('New always-on entries','STMemoryBooks_SlothLegacyNew'))+'</h4>'+details+
-        '<h4>'+html(t('Preserved original entries (archived, not deleted)',
-            'STMemoryBooks_SlothLegacyOld'))+'</h4>'+originals+
+        '</p>'+details+
+        '<p>'+html(t('On approval, the original book is saved to your browser’s downloads. Open the download list to find the file.',
+            'STMemoryBooks_SlothLegacyBackupLocation'))+'<br><code>'+html(filename)+'</code></p>'+
         (plan.hasHistory?'<p class="stmb-sloth-warning">'+
         html(t('Existing Side Prompt history is preserved; old templates will be blocked from rewriting archived entries.',
             'STMemoryBooks_SlothLegacyHistory'))+'</p>':'')+
@@ -718,13 +714,37 @@ async function approveNexusLegacyMigration({state,changes,ref,plan}) {
         wide:true,large:true,allowVerticalScrolling:true,
         okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
         customButtons:[{
-            text:t('Download original backup and approve migration','STMemoryBooks_SlothLegacyApprove'),
+            text:t('Approve migration','STMemoryBooks_SlothLegacyApprove'),
             result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
-            action:()=>{downloadNexusMigrationBackup(state.name,state.original,ref);downloaded=true;}
+            action:()=>{downloadNexusMigrationBackup(state.name,state.original,ref,timestamp,filename);downloaded=true;}
         }],
     });
     markStmbPopup(popup);
     return await popup.show()===POPUP_RESULT.CUSTOM1 && downloaded;
+}
+
+async function chooseNexusMigrationSources(book,candidates) {
+    const titles=new Set(Object.values(book.entries).map(entry=>String(entry.comment||'').trim()));
+    const options='<option value="">'+html(t('Leave empty','STMemoryBooks_SlothLegacyLeaveEmpty'))+'</option>'+
+        candidates.map(entry=>'<option value="'+html(entry.uid)+'">'+html(entry.title||'#'+entry.uid)+'</option>').join('');
+    const field=(kind,label)=>'<label class="stmb-sloth-edit">'+html(label)+
+        '<select class="text_pole" data-sloth-migration-role="'+kind+'">'+options+'</select></label>';
+    const body='<div class="stmb-sloth-review"><h3>'+html(t('Choose existing Nexus entries','STMemoryBooks_SlothLegacyChoose'))+'</h3><p>'+
+        html(t('Choose entries by what they contain. Leave a role empty if you do not want to move anything into it.',
+            'STMemoryBooks_SlothLegacyChooseHelp'))+'</p>'+
+        (titles.has('Core Memory')?'':field('core',t('Core Memory · lasting settings','STMemoryBooks_SlothLegacyCoreRole')))+
+        (titles.has('Current Continuity')?'':field('continuity',t('Current Continuity · current state','STMemoryBooks_SlothLegacyCurrentRole'))+
+            field('status',t('Additional current-state entry','STMemoryBooks_SlothLegacyAdditionalState')))+
+        '</div>';
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+        wide:true,allowVerticalScrolling:true,
+        okButton:t('Review migration','STMemoryBooks_SlothLegacyReview'),
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+    });
+    markStmbPopup(popup);
+    if(await popup.show()!==POPUP_RESULT.AFFIRMATIVE)return null;
+    return Object.fromEntries([...popup.dlg.querySelectorAll('[data-sloth-migration-role]')]
+        .filter(select=>select.value!=='').map(select=>[select.dataset.slothMigrationRole,Number(select.value)]));
 }
 
 /** Explicit, reviewed migration of the existing Nexus book only.
@@ -814,14 +834,23 @@ export async function runNexusLegacyMigration() {
                 'STMemoryBooks_SlothUnifiedSaved'),'STMemoryBooks');
             return {saved:true,split:true,moved:staged.mapping.length,result:outcome};
         }
-        const plan=inspectNexusLegacyMigration(nexus);
-        if(!plan.required){
-            toastr.info(t('No unmigrated legacy entries in the assigned Nexus.',
+        const candidates=listNexusMigrationCandidates(nexus);
+        const alreadyHasBothTargets=['Core Memory','Current Continuity'].every(title=>
+            Object.values(nexus.entries).some(entry=>String(entry.comment||'').trim()===title));
+        if(!candidates.length || alreadyHasBothTargets){
+            toastr.info(t('No entries are available to move into a new Core Memory or Current Continuity.',
                 'STMemoryBooks_SlothLegacyNone'),'STMemoryBooks');
             return {saved:false,reason:'no-legacy'};
         }
+        const selection=await chooseNexusMigrationSources(nexus,candidates);
+        if(!selection||!Object.keys(selection).length)return {saved:false,reason:'cancelled'};
+        if(new Set(Object.values(selection)).size!==Object.keys(selection).length){
+            toastr.info(t('Choose a different existing entry for each field.','STMemoryBooks_SlothLegacyDifferentEntries'),'STMemoryBooks');
+            return {saved:false,reason:'duplicate-migration-selection'};
+        }
+        assertLegacyMigrationOrigin(ref,roleNames);
         const staged=stageNexusLegacyMigration(nexus,
-            book=>createWorldInfoEntry(roleNames.nexus,book));
+            book=>createWorldInfoEntry(roleNames.nexus,book),selection);
         const state={name:roleNames.nexus,original:nexus,staged:staged.staged};
         const accepted=await approveNexusLegacyMigration({
             state,changes:staged.changes,plan:staged.plan,ref,
@@ -840,7 +869,7 @@ export async function runNexusLegacyMigration() {
         catch(error){console.warn('Sloth Nexus migration editor refresh failed',error);}
         toastr.success(t('Legacy Nexus memories migrated. Original entries remain archived.',
             'STMemoryBooks_SlothLegacySaved'),'STMemoryBooks');
-        return {saved:true,sourceUids:plan.sourceUids,result};
+        return {saved:true,sourceUids:staged.plan.sourceUids,result};
     }finally{
         collectorBusy=false;
     }
@@ -1336,6 +1365,11 @@ export async function runNexusLegacyContinuityReview({profileIndex, stConnection
         const original=await loadServerWorld(names.nexus);
         assertLegacyMigrationOrigin(ref,names);
         const plan=inspectSlothLegacyContinuity(original);
+        if(plan.reason==='needs-migration'){
+            toastr.info(t('Use “Review legacy Nexus migration” first. This tool checks which migrated facts still apply.',
+                'STMemoryBooks_SlothLegacySemanticNeedsMigration'),'STMemoryBooks');
+            return {saved:false,reason:plan.reason};
+        }
         if(!plan.required){
             toastr.info(t('No untouched legacy Current Continuity is available for review.',
                 'STMemoryBooks_SlothLegacySemanticNone'),'🦥 STMemoryBooks');
@@ -1502,10 +1536,15 @@ export async function runNexusSceneSplit({profileIndex, stConnectionProfileId}={
         const original=await loadServerWorld(names.memory);
         assertLegacyMigrationOrigin(ref,names);
         const chatIds=[String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean);
-        const sources=listNexusSceneSplitSources(original,chatIds,isVisibleSceneMessage);
+        const {sources,reason}=inspectNexusSceneSplitAvailability(original,chatIds,isVisibleSceneMessage);
         if(!sources.length){
-            toastr.info(t('No active Scene with visible original messages and verifiable completion order can be split in this chat.',
-                'STMemoryBooks_SlothSplitNoSource'),'🦥 STMemoryBooks');
+            const messages={
+                'empty-memory': ['Memory has no saved Scenes to split.','STMemoryBooks_SlothSplitEmptyMemory'],
+                'unavailable-messages': ['The original messages for the saved Scene are hidden or missing. Open the original chat and make those messages visible to split it.', 'STMemoryBooks_SlothSplitUnavailableMessages'],
+                'other-chat': ['No saved Scene in this book is linked to the open chat. Open the Scene’s original chat to split it.', 'STMemoryBooks_SlothSplitOtherChat'],
+                'unverified-source': ['The original range or completion order of the saved Scenes could not be verified.', 'STMemoryBooks_SlothSplitNoSource'],
+            };
+            toastr.info(t(...messages[reason]),'STMemoryBooks');
             return {saved:false,reason:'no-eligible-source'};
         }
         const selected=await chooseSlothSplitSource(sources);

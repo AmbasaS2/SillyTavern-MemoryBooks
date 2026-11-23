@@ -112,7 +112,7 @@ test('any existing manual edits, broken archives and prior review block destruct
     assert.throws(()=>inspectSlothLegacyContinuity(badHistory),/modified/);
 });
 test('pre-migration and independent non-legacy Continuity are not silently converted',()=>{
-    assert.throws(()=>inspectSlothLegacyContinuity(base()),/original reviewed migration/);
+    assert.deepEqual(inspectSlothLegacyContinuity(base()),{required:false,reason:'needs-migration'});
     const empty={entries:{1:entry(1,'Current Continuity','## Active Threads\nManual state.')}};
     assert.equal(inspectSlothLegacyContinuity(empty).required,false);
 });

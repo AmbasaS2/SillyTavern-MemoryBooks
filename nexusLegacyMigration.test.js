@@ -96,6 +96,22 @@ test('only old Long-Term Memory produces a Core, no invented current state or in
     assert.equal(Object.values(staged.entries).filter(e=>e.comment.startsWith('NPC ')).length,1);
 });
 
+test('explicit selection can migrate custom titles and protects the previous Side Prompt destination',()=>{
+    const data=book();
+    data.entries[115].comment='My character notes';
+    data.entries[116].comment='Previously on this story';
+    delete data.entries[117];
+    const {staged,changes}=stageNexusLegacyMigration(data,createEntry,{core:115,continuity:116});
+    assert.deepEqual(changes.filter(x=>x.action==='create').map(x=>x.title),['Core Memory','Current Continuity']);
+    assert.equal(data.entries[115].disable,false);
+    assert.equal(staged.entries[115].disable,true);
+    assert.equal(staged.entries[115].STMB_slothLegacyArchive.explicitRole,true);
+    assert.equal(inspectNexusLegacyMigration(staged).required,false);
+    assert.throws(()=>guardArchivedNexusSidePromptWrite(staged,'My character notes'),/archived/);
+    assert.throws(()=>stageNexusLegacyMigration(data,createEntry,{core:115,continuity:115}),/different/);
+    assert.throws(()=>stageNexusLegacyMigration(data,createEntry,{core:40}),/eligible/);
+});
+
 test('ambiguous, conflicting, disabled, Outlet and invalid sources fail before mutation',()=>{
     const cases=[
         data=>{data.entries[190]=makeEntry(190,'Long-Term Memory','duplicate');},

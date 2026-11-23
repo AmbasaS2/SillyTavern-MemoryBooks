@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inspectNexusSceneSplit,listNexusSceneSplitSources,validateNexusSceneSplitProposal,
+import {inspectNexusSceneSplit,inspectNexusSceneSplitAvailability,validateNexusSceneSplitProposal,
     stageNexusSceneSplit} from './nexusSceneSplit.js';
 import {planNexusSceneRotation} from './nexusSceneRotation.js';
 import {stageMemoryScenes} from './nexusCollectionPolicy.js';
@@ -115,8 +115,8 @@ test('splitting an earlier Scene preserves its occurrence order and existing num
     const earlier=book();
     earlier.entries[10]=make(10,4,[[39,41]]);
     earlier.entries[11]=make(11,5,[[42,44]]);
-    assert.deepEqual(listNexusSceneSplitSources(earlier,['chat-1'],
-        id=>messages.some(message=>message.id===id)),[{uid:9,title:earlier.entries[9].comment}]);
+    assert.deepEqual(inspectNexusSceneSplitAvailability(earlier,['chat-1'],
+        id=>messages.some(message=>message.id===id)).sources,[{uid:9,title:earlier.entries[9].comment}]);
     const {proposedMemory}=stageNexusSceneSplit(earlier,{sourceUid:9,
         parts:drafts(),messages,createEntry:maker});
     for(const uid of [4,7,10,11])assert.equal(proposedMemory.entries[uid].comment,earlier.entries[uid].comment);
@@ -128,6 +128,12 @@ test('splitting an earlier Scene preserves its occurrence order and existing num
         segments:[[45,46]],messageIds:[45,46],keywords:['later']}],maker,{chatId:'chat-1'});
     assert.deepEqual(planNexusSceneRotation(result.staged).recentUids,[10,11,14]);
     assert.equal(result.staged.entries[14].comment,'008 - Later');
+});
+
+test('split readiness distinguishes missing memories, source chats, and hidden source messages',()=>{
+    assert.equal(inspectNexusSceneSplitAvailability({entries:{}},['chat-1'],()=>false).reason,'empty-memory');
+    assert.equal(inspectNexusSceneSplitAvailability(book(),['another-chat'],()=>false).reason,'other-chat');
+    assert.equal(inspectNexusSceneSplitAvailability(book(),['chat-1'],()=>false).reason,'unavailable-messages');
 });
 test('uncertain earlier Scene order, incomplete or custom reference structures are refused',()=>{
     const crossChat=book();crossChat.entries[9].STMB_chatId='another-AU';

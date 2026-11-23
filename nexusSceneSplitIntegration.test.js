@@ -83,7 +83,7 @@ test('runtime is manual and requires all three reviews plus original JSON backup
     assert.ok(start>0);
     const part=runtime.slice(start);
     for(const name of [
-        'collectorBusy','inspectNexusSceneSplit','listNexusSceneSplitSources','suggestSlothSceneSplit',
+        'collectorBusy','inspectNexusSceneSplit','inspectNexusSceneSplitAvailability','suggestSlothSceneSplit',
         'validateNexusSceneSplitProposal','composeSlothScene','stageNexusSceneSplit',
         'sourceUid:sourcePlan.sourceUid','originalMemory:original',
         'POPUP_RESULT.CUSTOM1 && downloaded','commitSlothNexusMigration',
@@ -106,7 +106,7 @@ test('model prompt is read-only, independent events are not split by date or tok
 test('all non-English locales carry the new translated split controls',()=>{
     const codes=file('./nexusCollectorRuntime.js')+file('./templates.js')+file('./index.js');
     const names=[...new Set([...codes.matchAll(/STMemoryBooks_(SlothSplit\w+)/g)].map(m=>m[1]))];
-    assert.equal(names.length,19);
+    assert.equal(names.length,22);
     for(const lang of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr',
         'ms-my','pt-br','ru-ru','zh-cn','zh-tw']){
         const data=JSON.parse(file('./locales/'+lang+'.json'));

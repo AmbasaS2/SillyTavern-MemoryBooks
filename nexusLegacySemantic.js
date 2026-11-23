@@ -3,7 +3,7 @@
 // One-time, reviewed semantic replacement of a verbatim legacy Continuity
 // wrapper. This module never edits source World Info or performs network I/O.
 
-import { classifyNexusLegacyTitle, inspectNexusLegacyMigration }
+import { archivedNexusLegacyKind, inspectNexusLegacyMigration }
     from './nexusLegacyMigration.js';
 import { CONTINUITY_SECTIONS, guardNewContinuityContent }
     from './nexusContinuitySections.js';
@@ -26,8 +26,7 @@ function archiveBlock(source,kind) {
  */
 export function inspectSlothLegacyContinuity(book) {
     const migration=inspectNexusLegacyMigration(book);
-    requireSafe(!migration.required,
-        'Move active legacy Nexus entries through the original reviewed migration first.');
+    if (migration.required) return {required:false,reason:'needs-migration'};
     const all=Object.values(book.entries);
     const current=all.filter(e=>e?.comment==='Current Continuity');
     requireSafe(current.length<=1,'Ambiguous Current Continuity targets.');
@@ -47,7 +46,7 @@ export function inspectSlothLegacyContinuity(book) {
         'Current Continuity has unsupported injection/Outlet settings.');
     const sources=sourceUids.map(uid=>{
         const source=all.find(e=>e?.uid===uid);
-        const kind=classifyNexusLegacyTitle(source?.comment);
+        const kind=archivedNexusLegacyKind(source);
         requireSafe(source && (kind==='continuity'||kind==='status') &&
             source.disable===true && source[ARCHIVE]?.version===1 &&
             source[ARCHIVE].kind===kind &&

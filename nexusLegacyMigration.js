@@ -23,8 +23,26 @@ export function classifyNexusLegacyTitle(title) {
     return Object.keys(TYPE_PATTERN).find(kind => TYPE_PATTERN[kind].test(name)) || '';
 }
 
+export function archivedNexusLegacyKind(entry) {
+    const archive=entry?.[LEGACY_ARCHIVE];
+    return archive?.explicitRole===true && Object.hasOwn(TYPE_PATTERN,archive.kind)
+        ? archive.kind : classifyNexusLegacyTitle(entry?.comment);
+}
+
+export function listNexusMigrationCandidates(book) {
+    requireSafe(hasEntries(book), 'Nexus must be a valid World Info JSON object.');
+    return Object.values(book.entries).filter(entry=>
+        entry && Number.isSafeInteger(entry.uid) && entry.uid>=0 &&
+        entry.disable!==true && !entry[LEGACY_ARCHIVE] &&
+        canonical(entry.content) && Number(entry.position)!==7 && !canonical(entry.outletName) &&
+        ![TARGET.core,TARGET.continuity].includes(canonical(entry.comment)) &&
+        !/^(?:Kinks|PanelAssets)(?:\b|$)/i.test(canonical(entry.comment)) &&
+        !entry.stmemorybooks && !entry.stmbSummary && !entry.stmbArc
+    ).map(entry=>({uid:entry.uid,title:canonical(entry.comment)}));
+}
+
 /** Inspect without making or persisting any changes. */
-export function inspectNexusLegacyMigration(book) {
+export function inspectNexusLegacyMigration(book,selection) {
     requireSafe(hasEntries(book), 'Nexus must be a valid World Info JSON object.');
     const entries = Object.values(book.entries);
     const uids = new Set();
@@ -36,8 +54,18 @@ export function inspectNexusLegacyMigration(book) {
     }
     const sources={core:[],continuity:[],status:[]};
     const targets={core:[],continuity:[]};
+    let selected;
+    if(selection!==undefined){
+        requireSafe(selection && typeof selection==='object' && !Array.isArray(selection), 'Invalid Nexus migration selection.');
+        const eligible=new Set(listNexusMigrationCandidates(book).map(entry=>entry.uid));
+        const chosen=Object.entries(selection);
+        requireSafe(chosen.every(([kind,uid])=>Object.hasOwn(TYPE_PATTERN,kind)&&eligible.has(uid)) &&
+            new Set(chosen.map(([,uid])=>uid)).size===chosen.length,
+            'The selected entries must be different eligible Nexus entries.');
+        selected=new Map(chosen.map(([kind,uid])=>[uid,kind]));
+    }
     for (const e of entries) {
-        const title=canonical(e.comment), kind=classifyNexusLegacyTitle(title);
+        const title=canonical(e.comment), kind=selected?selected.get(e.uid):classifyNexusLegacyTitle(title);
         if (title===TARGET.core) targets.core.push(e);
         if (title===TARGET.continuity) targets.continuity.push(e);
         if (kind && !e[LEGACY_ARCHIVE]) sources[kind].push(e);
@@ -45,7 +73,7 @@ export function inspectNexusLegacyMigration(book) {
             const archive=e[LEGACY_ARCHIVE];
             const target=entries.find(item=>item.uid===archive?.targetUid);
             requireSafe(archive?.version===1 && e.disable===true &&
-                kind===archive.kind && target?.comment===archive.targetTitle &&
+                archivedNexusLegacyKind(e)===archive.kind && target?.comment===archive.targetTitle &&
                 Array.isArray(target.STMB_slothLegacySources) &&
                 target.STMB_slothLegacySources.includes(e.uid),
             'An archived legacy entry has a missing or inconsistent migration target.');
@@ -110,12 +138,13 @@ function rawBlock(kind,source) {
         '\n=== END ORIGINAL '+label+' (UID '+source.uid+') ===';
 }
 
-export function stageNexusLegacyMigration(book, createEntry) {
-    const plan=inspectNexusLegacyMigration(book);
+export function stageNexusLegacyMigration(book, createEntry, selection) {
+    const plan=inspectNexusLegacyMigration(book,selection);
     if (!plan.required) return {staged:structuredClone(book),changes:[],plan,alreadyCurrent:true};
     requireSafe(typeof createEntry==='function','World Info entry creator is required.');
     const staged=structuredClone(book),changes=[];
     const sourceById=uid=>Object.values(staged.entries).find(e=>e.uid===uid);
+    const sourceKinds=new Map(Object.entries(plan.sources).flatMap(([kind,entries])=>entries.map(entry=>[entry.uid,kind])));
     function add(kind, sources, content) {
         const anchor=sources[0], entry=createEntry(staged);
         requireSafe(entry && Number.isSafeInteger(entry.uid) &&
@@ -126,10 +155,12 @@ export function stageNexusLegacyMigration(book, createEntry) {
             after:content,before:'',active:true});
         for (const original of sources) {
             const preserved=sourceById(original.uid);
+            const originalKind=sourceKinds.get(original.uid);
             // Deactivate but KEEP the original entry and ALL original metadata.
             // A versioned annotation is the only additional metadata.
             preserved.disable=true;
-            preserved[LEGACY_ARCHIVE]={version:1,kind:classifyNexusLegacyTitle(original.comment),
+            preserved[LEGACY_ARCHIVE]={version:1,kind:originalKind,
+                ...(originalKind!==classifyNexusLegacyTitle(original.comment)?{explicitRole:true}:{}),
                 targetUid:entry.uid,targetTitle:entry.comment};
             changes.push({action:'archive',title:preserved.comment,uid:preserved.uid,
                 before:preserved.content,after:preserved.content,active:false,
@@ -143,7 +174,7 @@ export function stageNexusLegacyMigration(book, createEntry) {
     const contextSources=[...plan.sources.continuity,...plan.sources.status];
     if (contextSources.length) {
         add('continuity',contextSources,contextSources.map(source=>
-            rawBlock(classifyNexusLegacyTitle(source.comment),source)).join('\n\n'));
+            rawBlock(sourceKinds.get(source.uid),source)).join('\n\n'));
     }
     // Strong structural proof: every original entry remains in the same slot
     // with the same body and every metadata field, except disable+archive mark.
@@ -173,12 +204,10 @@ export function stageNexusLegacyMigration(book, createEntry) {
  */
 export function guardArchivedNexusSidePromptWrite(book,title,historyTitle='') {
     if (!hasEntries(book)) return;
-    const requested=[title,historyTitle].map(classifyNexusLegacyTitle).filter(Boolean);
-    if (!requested.length) return;
-    const archivedKinds=new Set(Object.values(book.entries)
-        .filter(e=>e?.[LEGACY_ARCHIVE]?.version===1)
-        .map(e=>e[LEGACY_ARCHIVE].kind));
-    if (requested.some(kind=>archivedKinds.has(kind))) {
+    const requested=[title,historyTitle].map(value=>canonical(value).toLowerCase()).filter(Boolean);
+    const archived=Object.values(book.entries).filter(e=>e?.[LEGACY_ARCHIVE]?.version===1);
+    if (requested.some(name=>archived.some(e=>canonical(e.comment).toLowerCase()===name ||
+        (e[LEGACY_ARCHIVE].explicitRole!==true && e[LEGACY_ARCHIVE].kind===classifyNexusLegacyTitle(name))))) {
         throw new Error('Legacy Side Prompt is archived by Sloth migration. Use the new Core Memory / Current Continuity update flow instead. No write performed.');
     }
 }

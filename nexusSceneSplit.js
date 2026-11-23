@@ -63,22 +63,32 @@ function inspectSplitSource(ordered,index,chatIds) {
     return ranges;
 }
 
-export function listNexusSceneSplitSources(memory,chatIds,isVisible) {
+export function inspectNexusSceneSplitAvailability(memory,chatIds,isVisible) {
+    if(record(memory?.entries) && !Object.keys(memory.entries).length) {
+        return {sources:[],reason:'empty-memory'};
+    }
     const {ordered}=orderedSplitEntries(memory,chatIds);
     const sources=[];
+    let unavailableMessages=false;
     for(let index=ordered.length-1;index>=0;index--){
         try{
             const ranges=inspectSplitSource(ordered,index,chatIds);
             const ids=expandSplitRanges(ranges);
-            if(ids.length>=2&&ids.every(isVisible)) {
+            if(ids.length<2||ids.length>5000) continue;
+            if(ids.every(isVisible)) {
                 sources.push({uid:ordered[index].uid,title:ordered[index].comment});
+            } else {
+                unavailableMessages=true;
             }
         }catch{
             // Per-entry provenance problems are excluded from the choice.
             // Shared book/archive errors abort in orderedSplitEntries above.
         }
     }
-    return sources;
+    if(sources.length)return {sources};
+    if(unavailableMessages)return {sources,reason:'unavailable-messages'};
+    const sameChat=ordered.some(entry=>entry.disable!==true&&chatIds.includes(entry.STMB_chatId));
+    return {sources,reason:sameChat?'unverified-source':'other-chat'};
 }
 
 export function inspectNexusSceneSplit(memory,chatIds,sourceUid) {
