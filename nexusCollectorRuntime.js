@@ -16,11 +16,13 @@ import { getSceneMarkers, saveMetadataForCurrentContext } from './sceneManager.j
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
-import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft } from './nexusCollectionAI.js';
+import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft,
+    suggestSlothSceneMerges, composeSlothMergedScene } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
+import { stageNexusSceneMerge } from './nexusSceneMerge.js';
 import { markStmbPopup } from './utils.js';
 
 const t=(source,key)=>translate(source,key);
@@ -496,6 +498,192 @@ export async function runNexusCollector({profileIndex}={}) {
         return {saved:true,scenes:scenes.length,nexusEdits:nexus.changes.length,
             deferred:approved.deferred.length,result:outcome};
     }finally{
+        collectorBusy=false;
+    }
+}
+
+
+/** Select a suggested causal pair without changing any World Info or chat state. */
+async function chooseSlothMergeCandidate(candidates) {
+    const descriptions=candidates.map((candidate,index)=>
+        '<details class="stmb-sloth-detail"><summary>'+
+        html(String(index+1)+'. '+candidate.titles.join(' + '))+
+        '</summary><p>'+html(candidate.reason)+'</p><ul>'+
+        candidate.evidence.map(line=>'<li>'+html(line)+'</li>').join('')+
+        '</ul><small>UID '+html(candidate.sourceUids.join(' + '))+
+        ' · '+html(readableSegments(candidate.plan.sourceRanges))+'</small></details>').join('');
+    const choices=candidates.map((candidate,index)=>
+        '<option value="'+index+'">'+html(String(index+1)+'. '+candidate.titles.join(' + '))+'</option>').join('');
+    const body='<div class="stmb-sloth-review"><h3>'+
+        html(t('Review causal Scene merge candidates','STMemoryBooks_SlothMergeChoose'))+
+        '</h3><p>'+html(t('Only two records of the same resolved event should be merged. Independent Scenes remain separate. Review the evidence and choose one pair. Nothing has been saved.',
+            'STMemoryBooks_SlothMergeChooseHelp'))+'</p>'+descriptions+
+        '<label for="stmb-sloth-merge-choice"><strong>'+
+        html(t('Pair to inspect','STMemoryBooks_SlothMergeSelect'))+'</strong>'+
+        '<select class="text_pole" id="stmb-sloth-merge-choice">'+choices+'</select></label></div>';
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+        wide:true,large:true,allowVerticalScrolling:true,
+        okButton:t('Review this pair','STMemoryBooks_SlothMergeReviewPair'),
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+    });
+    markStmbPopup(popup);
+    const showing=popup.show();
+    let selected=0;
+    popup.dlg?.querySelector('#stmb-sloth-merge-choice')?.addEventListener('change',event=>{
+        const index=Number(event.target.value);
+        if(Number.isSafeInteger(index)&&index>=0&&index<candidates.length)selected=index;
+    });
+    return await showing===POPUP_RESULT.AFFIRMATIVE?candidates[selected]:null;
+}
+
+/** Human correction of AI's proposed combined prose, before any save or backup. */
+async function reviewSlothMergeDraft(candidate,draft) {
+    let edited={...draft};
+    const body='<div class="stmb-sloth-review"><h3>'+
+        html(t('Review combined Scene text','STMemoryBooks_SlothMergeDraft'))+
+        '</h3><p>'+html(candidate.reason)+'</p><p>'+
+        html(t('Check the actual causal connection, individual voices, knowledge boundaries and completed ending. You can edit the title or prose. The original two records are not deleted.',
+            'STMemoryBooks_SlothMergeDraftHelp'))+'</p>'+
+        '<label><strong>'+html(t('Scene title','STMemoryBooks_SlothMergeTitle'))+'</strong>'+
+        '<input class="text_pole" id="stmb-sloth-merge-title" value="'+html(draft.title)+'" /></label>'+
+        '<label><strong>'+html(t('Combined Scene','STMemoryBooks_SlothMergeContent'))+'</strong>'+
+        '<textarea class="text_pole" id="stmb-sloth-merge-content" rows="14">'+
+        html(draft.content)+'</textarea></label></div>';
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+        wide:true,large:true,allowVerticalScrolling:true,
+        okButton:t('Review merge and backup','STMemoryBooks_SlothMergeReviewDraft'),
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+    });
+    markStmbPopup(popup);
+    const showing=popup.show();
+    popup.dlg?.querySelector('#stmb-sloth-merge-title')?.addEventListener('input',event=>{
+        edited.title=event.target.value.trim();
+    });
+    popup.dlg?.querySelector('#stmb-sloth-merge-content')?.addEventListener('input',event=>{
+        edited.content=event.target.value;
+    });
+    return await showing===POPUP_RESULT.AFFIRMATIVE?edited:null;
+}
+
+function downloadSlothMergeBackup(name,memory,ref,plan) {
+    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+    const data={type:'Sloth reviewed Scene merge: FULL ORIGINAL Memory World Info backup',
+        timestamp:new Date().toISOString(),lorebook:name,chatRef:ref,
+        sourceUids:plan.sourceUids,sourceRanges:plan.sourceRanges,original:memory};
+    const blob=new Blob([stringify(data)],{type:'application/json;charset=utf-8'});
+    const url=URL.createObjectURL(blob),anchor=document.createElement('a');
+    anchor.href=url;anchor.download='Sloth_Memory_PreMerge_'+stamp+'.json';
+    document.body.appendChild(anchor);
+    try {anchor.click();}
+    finally {anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+}
+
+/** Last approval downloads a complete original JSON. NO automatic Hide or Nexus edits. */
+async function approveSlothSceneMerge({name,original,staged,candidate,ref}) {
+    const changes=staged.changes;
+    const snapshots=staged.originalSnapshots.map(entry=>
+        '<details class="stmb-sloth-detail"><summary>'+
+        html(entry.comment)+' · UID '+html(entry.uid)+'</summary>'+
+        '<pre>'+html(entry.content)+'</pre></details>').join('');
+    const body='<div class="stmb-sloth-review"><h3>'+
+        html(t('Final Scene merge and backup','STMemoryBooks_SlothMergeFinal'))+
+        '</h3><p>'+html(t('Only the selected Memory lorebook will be changed. The earlier Scene remains as a disabled full-history archive, the later UID contains the combined text, and unrelated Scenes stay intact. Verify both originals and download the complete JSON before saving.',
+            'STMemoryBooks_SlothMergeFinalHelp'))+'</p><p>'+
+        html(candidate.reason)+'</p><h4>'+
+        html(t('Original Scenes','STMemoryBooks_SlothMergeOriginals'))+'</h4>'+
+        snapshots+'<h4>'+html(t('Proposed combined Scene','STMemoryBooks_SlothMergeCombined'))+
+        '</h4><pre>'+html(staged.proposedMemory.entries[
+            Object.keys(staged.proposedMemory.entries).find(key=>
+                staged.proposedMemory.entries[key].uid===staged.plan.survivorUid)
+        ]?.content)+'</pre><small>'+
+        html('UID '+staged.plan.retiredUid+' → disabled archive; UID '+
+            staged.plan.survivorUid+' → combined; rotation updates: '+staged.rotation.length)+
+        '</small></div>';
+    let downloaded=false;
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.TEXT,'',{
+        wide:true,large:true,allowVerticalScrolling:true,
+        okButton:false,cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        customButtons:[{
+            text:t('Download Memory JSON and approve save','STMemoryBooks_SlothMergeApprove'),
+            result:POPUP_RESULT.CUSTOM1,classes:['menu_button'],
+            action:()=>{downloadSlothMergeBackup(name,original,ref,staged.plan);downloaded=true;},
+        }],
+    });
+    markStmbPopup(popup);
+    return await popup.show()===POPUP_RESULT.CUSTOM1 && downloaded;
+}
+
+/** Explicit, three-review operation on one Memory book, never an automatic repair. */
+export async function runNexusSceneMerge({profileIndex}={}) {
+    if(collectorBusy)throw new Error('A Sloth collection or migration is already in progress.');
+    collectorBusy=true;
+    try {
+        const settings=extension_settings.STMemoryBooks;
+        const ref=structuredClone(getCurrentStmbChatRef());
+        if(ref.type!=='character' || !String(ref.fileName||'').trim()) {
+            throw new Error('Choose a saved individual-character chat before reviewing Scene merges.');
+        }
+        const roles={
+            nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings),
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
+        };
+        if(roles.nexus.state!=='ready'||roles.memory.state!=='ready'||
+            roles.nexus.name===roles.memory.name) {
+            throw new Error('Connect two existing, different Nexus and Memory books first.');
+        }
+        const names={nexus:roles.nexus.name,memory:roles.memory.name};
+        const original=await loadServerWorld(names.memory);
+        assertLegacyMigrationOrigin(ref,names);
+        const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
+            ||settings.profiles?.[settings.defaultProfile];
+        if(!profile)throw new Error('Choose an AI profile before reviewing Scene merges.');
+        toastr.info(t('Looking for previously split causal Scenes...',
+            'STMemoryBooks_SlothMergeScanning'),'🦥 STMemoryBooks');
+        const chatIds=[String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean);
+        const candidates=await suggestSlothSceneMerges({
+            memory:original,chatIds,profile,settings,
+        });
+        assertLegacyMigrationOrigin(ref,names);
+        if(!candidates.length){
+            toastr.info(t('No sufficiently evidenced Scene merge pairs were proposed. No books changed.',
+                'STMemoryBooks_SlothMergeNone'),'🦥 STMemoryBooks');
+            return {saved:false,reason:'no-candidates'};
+        }
+        const candidate=await chooseSlothMergeCandidate(candidates);
+        if(!candidate)return {saved:false,reason:'pair-cancelled'};
+        assertLegacyMigrationOrigin(ref,names);
+        const drafted=await composeSlothMergedScene({candidate,profile,settings});
+        assertLegacyMigrationOrigin(ref,names);
+        const edited=await reviewSlothMergeDraft(candidate,drafted);
+        if(!edited)return {saved:false,reason:'draft-cancelled'};
+        assertLegacyMigrationOrigin(ref,names);
+        const staged=stageNexusSceneMerge(original,{
+            sourceUids:candidate.sourceUids,title:edited.title,
+            content:edited.content,keywords:edited.keywords,
+            sameCausalIncident:true,
+            olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
+        });
+        const accepted=await approveSlothSceneMerge({
+            name:names.memory,original,staged,candidate,ref,
+        });
+        if(!accepted)return {saved:false,reason:'save-cancelled'};
+        assertLegacyMigrationOrigin(ref,names);
+        const result=await commitSlothNexusMigration({
+            name:names.memory,original,staged:staged.proposedMemory,
+        },{
+            loadFresh:loadServerWorld,
+            save:(name,book)=>saveWorldInfo(name,book,true),
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            verifyOrigin:()=>assertLegacyMigrationOrigin(ref,names),
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+            operation:'Memory Scene merge',
+        });
+        try {await Promise.resolve(reloadEditor(names.memory));}
+        catch(error){console.warn('Sloth Memory Scene merge editor refresh failed',error);}
+        toastr.success(t('Reviewed Scene merge saved in Memory. The original is archived; no chat messages were hidden.',
+            'STMemoryBooks_SlothMergeSaved'),'🦥 STMemoryBooks');
+        return {saved:true,sourceUids:staged.plan.sourceUids,result};
+    }finally {
         collectorBusy=false;
     }
 }

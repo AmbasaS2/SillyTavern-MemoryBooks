@@ -6,6 +6,7 @@ import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
 import { oai_settings } from '../../../openai.js';
 import { groupSlothSourceWindows, validateNexusEventPlan } from './nexusCollectionPolicy.js';
+import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 
 function parseStrictJSON(raw,phase) {
     const text=String(raw||'').replace(/<think>[\s\S]*?<\/think>/gi,'').trim();
@@ -186,4 +187,72 @@ export async function auditSlothDraft({messages,scenes,edits,profile,settings,si
         throw new Error('Omission audit found issues; nothing saved. '+report);
     }
     return review;
+}
+
+
+/**
+ * Optional, explicitly invoked repair of ALREADY SAVED completed Scenes.
+ * No model output can save data or authorize a causal merge on its own.
+ */
+export async function suggestSlothSceneMerges({memory,chatIds,profile,settings,signal=null}) {
+    const catalog=buildNexusSceneMergeCatalog(memory,chatIds);
+    if(catalog.length<2)return [];
+    const ask=requester(profile,settings,signal);
+    const prompt=[
+        'Inspect ALREADY SAVED SillyTavern Scene memories. This is a read-only causal merge suggestion.',
+        'Find at most four PAIRS where the same causal incident was split: its original cause',
+        'is in one completed Scene and its actual resolution in another. Source messages can be',
+        'discontiguous; unrelated Scenes in between must remain separate and unchanged.',
+        'Require specific evidence in BOTH saved Scene bodies. Shared characters, location, dates,',
+        'similar emotions or vague themes alone are not evidence of one causal incident.',
+        'Do not invent missing original messages or assert that uncertain outcomes were completed.',
+        'If evidence is insufficient or sources are independent, return an empty candidates list.',
+        'STRICT JSON {"candidates":[{"uids":[EARLIER_UID,LATER_UID],',
+        '"reason":"specific shared cause and confirmed resolution",',
+        '"evidence":["fact directly supported by first saved Scene","fact directly supported by second saved Scene"]}]}.',
+        'Only use exact UID numbers and text in these source records. Do not propose edits or perform saves.',
+        'Current chat Scene catalog:',JSON.stringify(catalog),
+    ].join('\n\n');
+    return validateNexusSceneMergeCandidates(memory,catalog,await ask(prompt,'Existing Scene merge candidates'));
+}
+
+export async function composeSlothMergedScene({candidate,profile,settings,signal=null}) {
+    if(!candidate?.plan?.sourceEntries || candidate.plan.sourceEntries.length!==2 ||
+        !candidate?.reason || !Array.isArray(candidate.evidence)) {
+        throw new Error('A verified Scene pair and causal evidence are required before drafting.');
+    }
+    const originals=candidate.plan.sourceEntries.map(entry=>({
+        uid:entry.uid,title:entry.comment,content:entry.content,chatId:entry.STMB_chatId,
+        sourceRanges:entry.STMB_sourceRanges || (
+            Number.isSafeInteger(entry.STMB_start) && Number.isSafeInteger(entry.STMB_end)
+                ? [[entry.STMB_start,entry.STMB_end]] : []),
+        keywords:entry.key,
+    }));
+    if(JSON.stringify(originals).length>60000) {
+        throw new Error('Selected Scene texts exceed the safe merge draft context. No data saved.');
+    }
+    const ask=requester(profile,settings,signal);
+    const prompt=[
+        'Draft ONE coherent, independently recallable completed causal Scene based ONLY on the',
+        'two already-saved Scene texts. Their original full JSON snapshots will be archived separately.',
+        'Preserve the actual sequence, characters, voice, specific dialogue, emotional intensity,',
+        'secrets, who knew what, misunderstandings and confirmed final state without inventing facts.',
+        'The two source ranges may be noncontiguous: do not imply intervening independent events',
+        'were part of this incident or manufacture exact time transitions.',
+        'If the text is insufficient to establish the proposed merge, return {"possible":false}.',
+        'Otherwise return STRICT JSON {"possible":true,"title":"short unnumbered causal event title",',
+        '"content":"**Timeline**\\n...\\n\\n**Scene**\\n...\\n\\n**Result**\\n...",' +
+        '"keywords":["..."]}. Result must state an observed completed outcome, not a plan.',
+        'Verified source ranges:',JSON.stringify(candidate.plan.sourceRanges),
+        'Proposed causal reason:',candidate.reason,
+        'Evidence citations (saved Scene text, not raw chat):',JSON.stringify(candidate.evidence),
+        'Complete original Scene texts:',JSON.stringify(originals),
+    ].join('\n\n');
+    const result=await ask(prompt,'Combined Scene draft');
+    if(result.possible!==true || typeof result.title!=='string' ||
+        typeof result.content!=='string' || !Array.isArray(result.keywords) ||
+        !result.keywords.every(word=>typeof word==='string')) {
+        throw new Error('AI could not establish a safe, completed causal Scene. No data saved.');
+    }
+    return {title:result.title,content:result.content,keywords:result.keywords};
 }

@@ -8,8 +8,9 @@
 const equal=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 
 export async function commitSlothNexusMigration(state,{
-    loadFresh,save,withLock,verifyOrigin,resetCache,
+    loadFresh,save,withLock,verifyOrigin,resetCache,operation='Nexus migration',
 }) {
+    const subject=operation==='Memory Scene merge'?'Memory':'Nexus';
     if (!state?.name || !state.original?.entries || !state.staged?.entries ||
         [loadFresh,save,withLock,verifyOrigin].some(fn=>typeof fn!=='function')) {
         throw new Error('A complete Nexus migration snapshot and save dependencies are required.');
@@ -18,14 +19,14 @@ export async function commitSlothNexusMigration(state,{
         verifyOrigin();
         const current=await loadFresh(state.name);
         if (!equal(current,state.original)) {
-            throw new Error('Nexus changed while migration was being reviewed. Nothing saved.');
+            throw new Error(subject+' changed while '+(subject==='Memory'?'merge':'migration')+' was being reviewed. Nothing saved.');
         }
         try {
             verifyOrigin();
             await save(state.name,state.staged);
             const readBack=await loadFresh(state.name);
             if (!equal(readBack,state.staged)) {
-                throw new Error('Nexus migration read-back mismatch.');
+                throw new Error(operation+' read-back mismatch.');
             }
             return {success:true,name:state.name};
         }catch(error){
@@ -40,16 +41,16 @@ export async function commitSlothNexusMigration(state,{
                     const restored=await loadFresh(state.name);
                     if(!equal(restored,state.original)) recoveryIssue='Rollback could not be verified.';
                     else if(typeof resetCache==='function') await resetCache(state.name,state.original);
-                } else recoveryIssue='Another writer changed Nexus; automatic rollback is unsafe.';
+                } else recoveryIssue='Another writer changed '+subject+'; automatic rollback is unsafe.';
             }catch(e){
                 recoveryIssue='Rollback failed: '+(e?.message||String(e));
             }
             if(recoveryIssue){
-                const failure=new Error('Nexus migration may be partially saved. Restore the downloaded original backup manually. '+recoveryIssue);
+                const failure=new Error(operation+' may be partially saved. Restore the downloaded original backup manually. '+recoveryIssue);
                 failure.partialRecovery=true;failure.cause=error;
                 throw failure;
             }
-            throw new Error('Nexus migration was not saved, or the original was restored. '+(error?.message||String(error)));
+            throw new Error(operation+' was not saved, or the original was restored. '+(error?.message||String(error)));
         }
     });
 }

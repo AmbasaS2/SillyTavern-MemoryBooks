@@ -67,7 +67,7 @@ import {
   getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides, canChangeNexusChatRolePair,
 } from './nexusChatRoleOverrides.js';
-import { runNexusCollector, runNexusLegacyMigration } from './nexusCollectorRuntime.js';
+import { runNexusCollector, runNexusLegacyMigration, runNexusSceneMerge } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -11282,6 +11282,23 @@ async function showSettingsPopup() {
         catch (error) {
           console.error('Sloth legacy migration blocked:',error);
           toastr.error(error?.message || String(error),'🦥 STMemoryBooks',{timeOut:10000});
+        }
+      },
+    });
+    customButtons.push({
+      text: '🦥 ' + translate('Review existing Scene merges',
+        'STMemoryBooks_SlothMergeButton'),
+      classes: ['menu_button'],
+      action: async () => {
+        const selected = currentPopupInstance?.dlg?.querySelector('#stmb-profile-select')?.value;
+        const parsed = Number.parseInt(selected ?? settings.defaultProfile, 10);
+        try {
+          await runNexusSceneMerge({
+            profileIndex: Number.isSafeInteger(parsed) ? parsed : settings.defaultProfile,
+          });
+        } catch (error) {
+          console.error('Sloth Scene merge cancelled or blocked safely:', error);
+          toastr.error(error?.message || String(error), '🦥 STMemoryBooks', { timeOut: 10000 });
         }
       },
     });
