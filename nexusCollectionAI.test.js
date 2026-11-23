@@ -8,6 +8,16 @@ const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf
 const from=source.indexOf('function parseStrictJSON('),to=source.indexOf('\nfunction resolveConnection(',from);
 assert.ok(from>=0&&to>from);
 const parse=vm.runInNewContext(source.slice(from,to)+'\nparseStrictJSON');
+test('a provider error inside an HTTP success response is not treated as AI JSON',async()=>{
+    const start=source.indexOf('function requester(');
+    const end=source.indexOf('\nconst compact=',start);
+    const makeRequest=vm.runInNewContext(source.slice(start,end)+'\nrequester',{
+        resolveConnection:()=>({api:'nanogpt',model:'active-model'}),
+        oai_settings:{},
+        requestCompletion:async()=>({text:'',full:{error:{message:'Bad Request'}}}),
+    });
+    await assert.rejects(makeRequest({},{})('original','Scene'),/selected provider returned an error/);
+});
 test('strict JSON parser accepts exact JSON and a JSON fence without rewriting malformed values',()=>{
     assert.equal(parse('{"events":[]}', 'plan').events.length,0);
     const fenced=String.fromCharCode(96).repeat(3)+'json\n{"edits":[]}\n'+String.fromCharCode(96).repeat(3);

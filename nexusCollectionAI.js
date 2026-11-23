@@ -56,8 +56,9 @@ function requester(profile,settings,signal) {
     }
     return async (prompt,phase)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
-        const {text}=await requestCompletion({...connection,prompt,extra,signal});
+        const {text,full}=await requestCompletion({...connection,prompt,extra,signal});
         if(signal?.aborted)throw new Error('Collection cancelled.');
+        if(full?.error)throw new Error(phase+': the selected provider returned an error instead of a draft.');
         return parseStrictJSON(text,phase);
     };
 }
@@ -276,7 +277,13 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
     const original = compact(messages);
     const groundedSource = original.length <= 18000 || await canUseOriginalSource(prompt + original, settings, profile)
         ? original : await nexusStateEvidenceFor(messages,ask);
-    const response=await ask(prompt + groundedSource,'Nexus delta');
+    let response;
+    try {
+        response=await ask(prompt + groundedSource,'Nexus delta');
+    } catch (error) {
+        if (error.code==='STMB_SLOTH_MALFORMED_JSON') throw new InvalidSlothNexusProposal(error);
+        throw error;
+    }
     try {
         if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
         const edits=validateGroundedNexusEdits(response.edits,messages);
