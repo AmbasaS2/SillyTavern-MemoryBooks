@@ -86,6 +86,21 @@ test('accepts an empty first-run side-prompt prior and rejects malformed snapsho
     });
 });
 
+test('a Side Prompt from a separated Scene retains exact message selection for regeneration', () => {
+    const ids = [2, 3, 7, 8];
+    const snapshot = buildSidePromptRegenerationSnapshot({
+        templateKey: 'diary', writtenEntry: { uid: 1, content: 'Recalled voice' },
+        compiledScene: { metadata: { sceneStart: 2, sceneEnd: 8, chatId: 'chat-1',
+            sourceMode: 'selection', messageIndices: ids } },
+    });
+    const entry = { STMB_sidePromptRegeneration: snapshot };
+    assert.deepEqual(getSidePromptRegenerationSnapshot(entry)?.messageIndices, [2, 3, 7, 8]);
+    ids.push(9);
+    assert.deepEqual(snapshot.messageIndices, [2, 3, 7, 8]);
+    snapshot.messageIndices = [2, 7, 7, 8];
+    assert.equal(getSidePromptRegenerationSnapshot(entry), null);
+});
+
 test('retains version-1 Side Prompt snapshots for regeneration compatibility', () => {
     const snapshot = {
         version: 1,

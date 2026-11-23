@@ -387,16 +387,16 @@ export async function proposeSlothLegacyContinuity({
 
 
 /**
- * Explicit latest-Scene split proposal. Only original, still-visible source
+ * Explicit Scene split proposal. Only original, still-visible source
  * messages may support an independent event and its completed Result.
  * This function NEVER changes a World Info or chat.
  */
-export async function suggestSlothLatestSceneSplit({
+export async function suggestSlothSceneSplit({
     plan,messages,profile,settings,signal=null,
 }) {
     if(!Number.isSafeInteger(plan?.sourceUid) || plan.sourceUid < 0 || !Array.isArray(plan.sourceIds) ||
         !Array.isArray(messages) || !messages.length) {
-        throw new Error('A verified latest Scene and visible source messages are required.');
+        throw new Error('A verified Scene and visible source messages are required.');
     }
     const originalText=compact(messages);
     if(originalText.length>66000 || plan.sourceContent.length>45000) {
@@ -425,7 +425,7 @@ export async function suggestSlothLatestSceneSplit({
         'Existing Scene title:',plan.sourceTitle,
         'Full previous Scene body (context, not independent proof):',plan.sourceContent,
         'Verifiable original chat messages:',originalText,
-    ].join('\n\n'),'Latest Scene causal split plan');
+    ].join('\n\n'),'Scene causal split plan');
     if(!Array.isArray(answer.parts))throw new Error('Split plan response has no parts array.');
     if(!answer.parts.length)return null;
     return validateNexusSceneSplitProposal(plan,answer,messages);

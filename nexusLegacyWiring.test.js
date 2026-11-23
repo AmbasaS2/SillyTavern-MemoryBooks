@@ -19,7 +19,7 @@ test('legacy migration is an explicitly approved UI command, independent of AI c
 
 test('old Side Prompt upserts are checked for migrated titles before in-memory mutation or save',()=>{
     const source=file('./addlore.js');
-    const begin=source.indexOf('export async function upsertLorebookEntriesBatch(');
+    const begin=source.indexOf('export function stageLorebookEntriesBatch(');
     const middle=source.indexOf('export async function upsertLorebookEntryByTitle(',begin);
     assert.ok(begin>0&&middle>begin);
     const batch=source.slice(begin,middle);
@@ -27,6 +27,8 @@ test('old Side Prompt upserts are checked for migrated titles before in-memory m
     assert.ok(batch.indexOf('guardArchivedNexusSidePromptWrite(')>=0);
     assert.ok(batch.indexOf('guardArchivedNexusSidePromptWrite(') <
         batch.indexOf('const results = []'));
+    assert.match(batch, /const \{ lorebookData: staged, results \} = stageLorebookEntriesBatch/);
+    assert.match(batch, /saveSidePromptLorebookChecked\(lorebookName, staged\)/);
     assert.ok(single.indexOf('guardArchivedNexusSidePromptWrite(') <
         single.indexOf('let entry ='));
 });

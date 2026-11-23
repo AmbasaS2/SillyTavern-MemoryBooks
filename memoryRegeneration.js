@@ -55,6 +55,8 @@ export function buildSidePromptRegenerationSnapshot({
         writtenFingerprint: writtenState ? fingerprintRegenerationValue(writtenState) : '',
         sceneStart: Number(metadata.sceneStart),
         sceneEnd: Number(metadata.sceneEnd),
+        ...(metadata.sourceMode === 'selection' && Array.isArray(metadata.messageIndices)
+            ? { messageIndices: [...metadata.messageIndices] } : {}),
         chatId: String(metadata.chatId || ''),
         runtimeMacros: structuredClone(normalizedRuntimeMacros),
     };
@@ -71,6 +73,12 @@ export function getSidePromptRegenerationSnapshot(entry) {
     if (typeof snapshot.priorContent !== 'string') return null;
     if (!Number.isInteger(snapshot.sceneStart) || snapshot.sceneStart < 0) return null;
     if (!Number.isInteger(snapshot.sceneEnd) || snapshot.sceneEnd < snapshot.sceneStart) return null;
+    if (Object.hasOwn(snapshot, 'messageIndices')) {
+        const indices = snapshot.messageIndices;
+        if (!Array.isArray(indices) || !indices.length || indices[0] !== snapshot.sceneStart ||
+            indices.at(-1) !== snapshot.sceneEnd || indices.some((id, index) =>
+                !Number.isSafeInteger(id) || (index > 0 && id <= indices[index - 1]))) return null;
+    }
     if (typeof snapshot.chatId !== 'string' || !snapshot.chatId.trim()) return null;
     if (!snapshot.runtimeMacros || typeof snapshot.runtimeMacros !== 'object' || Array.isArray(snapshot.runtimeMacros)) return null;
     if (Object.values(snapshot.runtimeMacros).some(value => typeof value !== 'string')) return null;

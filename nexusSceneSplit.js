@@ -1,7 +1,7 @@
 // Copyright (C) 2026 AmbasaS2
 // SPDX-License-Identifier: AGPL-3.0-only
-// Reviewed split of ONLY the latest completed Scene with directly visible
-// original-chat messages. Preserves its original UID/body/metadata as archive.
+// Reviewed split backed by visible original-chat messages and proven order.
+// The original UID, body and metadata survive in the disabled archive.
 
 import {isCompletedSceneEntry,planNexusSceneRotation,sceneNumberFromTitle}
     from './nexusSceneRotation.js';
@@ -21,7 +21,7 @@ const references=[
     'stmbSummary','stmbArc','stmbSummaryTier','STMB_sidePromptHistory',
 ];
 
-export function inspectNexusSceneSplit(memory,chatIds) {
+function orderedSplitEntries(memory,chatIds) {
     assert(record(memory?.entries),'Memory World Info must have entries.');
     assert(hasRecognizedNexusStloSettings(memory.stlo),
         'Advanced STLO root references need separate split review.');
@@ -32,36 +32,74 @@ export function inspectNexusSceneSplit(memory,chatIds) {
     // All histories, UID/sequence collisions and disabled recent Scenes must
     // pass the existing rotation validation before even reading a candidate.
     const rotation=planNexusSceneRotation(memory);
-    const numbers=new Set(),uids=new Set();
     for(const e of entries){
-        const n=sceneNumberFromTitle(e?.comment);
-        assert(integer(e?.uid)&&!uids.has(e.uid) && n!==null&&!numbers.has(n) &&
-            isCompletedSceneEntry(e),
-            'Memory contains invalid UID, numbering or an incomplete Scene.');
-        uids.add(e.uid);numbers.add(n);
+        assert(integer(e?.uid),'Memory contains an invalid UID.');
         assert(!references.some(key=>present(e[key]))&&
             !present(e.outletName)&&Number(e.position)!==7&&!present(e.group),
             'Memory contains custom Outlet or unresolved canonical/group references.');
     }
-    const latest=entries.find(e=>e.uid===rotation.recentUids.at(-1));
-    assert(latest && latest.disable!==true,'Latest Scene is not active.');
-    assert(!latest[SPLIT_FROM]&&!latest.STMB_slothSceneMerge,
+    const byUid=new Map(entries.map(entry=>[entry.uid,entry]));
+    const ordered=[...rotation.olderUids,...rotation.recentUids].map(uid=>byUid.get(uid));
+    return {entries,ordered};
+}
+
+function inspectSplitSource(ordered,index,chatIds) {
+    const source=ordered[index];
+    assert(source && source.disable!==true,'Selected Scene is not active.');
+    assert(!source[SPLIT_FROM]&&!source.STMB_slothSceneMerge,
         'Nested or previously repaired Scene histories need manual review.');
-    assert(chatIds.includes(latest.STMB_chatId),
-        'Latest completed Scene belongs to another chat/AU. Split blocked.');
-    const ranges=sourceRangesForSplit(latest),ids=expandSplitRanges(ranges);
+    assert(chatIds.includes(source.STMB_chatId),
+        'Selected Scene belongs to another chat/AU. Split blocked.');
+    const ranges=sourceRangesForSplit(source);
+    const next=ordered[index+1],previous=ordered[index-1];
+    if(next){
+        assert(next.STMB_chatId===source.STMB_chatId &&
+            (!previous || previous.STMB_chatId===source.STMB_chatId),
+            'Earlier Scene order cannot be established across different chats/AUs.');
+        assert((!previous || sourceRangesForSplit(previous).at(-1)[1]<ranges[0][0]) &&
+            ranges.at(-1)[1]<sourceRangesForSplit(next).at(-1)[1],
+            'Earlier Scene overlaps a neighboring completion boundary.');
+    }
+    return ranges;
+}
+
+export function listNexusSceneSplitSources(memory,chatIds,isVisible) {
+    const {ordered}=orderedSplitEntries(memory,chatIds);
+    const sources=[];
+    for(let index=ordered.length-1;index>=0;index--){
+        try{
+            const ranges=inspectSplitSource(ordered,index,chatIds);
+            const ids=expandSplitRanges(ranges);
+            if(ids.length>=2&&ids.every(isVisible)) {
+                sources.push({uid:ordered[index].uid,title:ordered[index].comment});
+            }
+        }catch{
+            // Per-entry provenance problems are excluded from the choice.
+            // Shared book/archive errors abort in orderedSplitEntries above.
+        }
+    }
+    return sources;
+}
+
+export function inspectNexusSceneSplit(memory,chatIds,sourceUid) {
+    const {entries,ordered}=orderedSplitEntries(memory,chatIds);
+    const index=sourceUid===undefined ? ordered.length-1
+        : ordered.findIndex(entry=>entry.uid===sourceUid);
+    const ranges=inspectSplitSource(ordered,index,chatIds),ids=expandSplitRanges(ranges);
+    const source=ordered[index];
     assert(ids.length>=2 && ids.length<=5000,'Scene needs a limited, verifiable source range.');
     const seen=new Set(ids);
     for(const e of entries){
-        if(e.uid===latest.uid||e.STMB_chatId!==latest.STMB_chatId||e[SPLIT_ARCHIVE]||e.STMB_slothSceneMergedInto)continue;
+        if(e.uid===source.uid||e.STMB_chatId!==source.STMB_chatId||e[SPLIT_ARCHIVE]||e.STMB_slothSceneMergedInto)continue;
         for(const id of expandSplitRanges(sourceRangesForSplit(e))) {
             assert(!seen.has(id),'Another Scene overlaps the selected Scene source range.');
         }
     }
-    return {sourceUid:latest.uid,sourceNumber:sceneNumberFromTitle(latest.comment),
-        sourceTitle:latest.comment,sourceContent:latest.content,
-        sourceChatId:latest.STMB_chatId,sourceRanges:ranges,sourceIds:ids,
-        sourceSnapshot:structuredClone(latest)};
+    return {sourceUid:source.uid,sourceNumber:sceneNumberFromTitle(source.comment),
+        highestSceneNumber:entries.reduce((max,entry)=>Math.max(max,sceneNumberFromTitle(entry.comment)),0),
+        sourceTitle:source.comment,sourceContent:source.content,
+        sourceChatId:source.STMB_chatId,sourceRanges:ranges,sourceIds:ids,
+        sourceSnapshot:structuredClone(source)};
 }
 
 function sourceMap(messages) {
@@ -129,8 +167,7 @@ export function stageNexusSceneSplit(memory,{
     assert(typeof createEntry==='function','Scene split entry creator is missing.');
     const source=Object.values(memory?.entries||{}).find(e=>e.uid===sourceUid);
     assert(source,'Split source Scene missing.');
-    const plan=inspectNexusSceneSplit(memory,[source.STMB_chatId]);
-    assert(plan.sourceUid===sourceUid,'Only the latest completed Scene can be split.');
+    const plan=inspectNexusSceneSplit(memory,[source.STMB_chatId],sourceUid);
     const verified=validateNexusSceneSplitProposal(plan,{
         parts:parts?.map(item=>({
             title:item.title,reason:item.reason,result:item.result,
@@ -144,8 +181,10 @@ export function stageNexusSceneSplit(memory,{
     archived.disable=true;archived.constant=false;
     archived.vectorized=false;archived.selective=false;
     const snapshots=structuredClone(plan.sourceSnapshot);
-    archived[SPLIT_ARCHIVE]={version:1,sourceNumber:plan.sourceNumber,
+    archived[SPLIT_ARCHIVE]={version:1,sourceNumber:plan.sourceNumber,completionOrder:'original',
         source:snapshots,children:[]};
+    assert(Number.isSafeInteger(plan.highestSceneNumber+verified.parts.length),
+        'Scene numbering is too large to allocate distinct replacement Scenes.');
     const seen=new Set(Object.values(staged.entries).map(e=>e.uid));
     const writes=[];
     for(const [index,event] of verified.parts.entries()){
@@ -162,7 +201,7 @@ export function stageNexusSceneSplit(memory,{
         assert(record(newEntry)&&integer(newEntry.uid)&&!seen.has(newEntry.uid),
             'Split entry constructor produced duplicate or invalid UID.');
         seen.add(newEntry.uid);
-        newEntry.comment=String(plan.sourceNumber+index+1).padStart(3,'0')+
+        newEntry.comment=String(plan.highestSceneNumber+index+1).padStart(3,'0')+
             ' - '+event.title;
         newEntry.content=draft.content;newEntry.stmemorybooks=true;
         newEntry.key=[...new Set(draft.keywords.map(x=>x.trim()).filter(Boolean))].slice(0,16);
@@ -179,7 +218,7 @@ export function stageNexusSceneSplit(memory,{
             newEntry.STMB_discontiguous=true;
         }
         newEntry[SPLIT_FROM]={version:1,sourceUid,
-            sourceNumber:plan.sourceNumber,partIndex:index,
+            sourceNumber:plan.sourceNumber,completionOrder:'original',partIndex:index,
             partsTotal:verified.parts.length};
         archived[SPLIT_ARCHIVE].children.push(newEntry.uid);
         writes.push({uid:newEntry.uid,title:newEntry.comment,

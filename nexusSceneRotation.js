@@ -86,8 +86,8 @@ function requireKeywords(entry, uid) {
 /**
  * Plan the smallest World Info edit for a dedicated Memory book.
  *
- * Scene labels (001, 002, ...) are an explicit collector-maintained completion
- * sequence, NOT World Info UIDs, array order or in-world calendar dates.
+ * Scene labels ordinarily record collector completion order. Reviewed split
+ * children can inherit the original Scene position via a verified archive.
  * Ambiguous/un-numbered entries fail closed until the user fixes their titles.
  *
  * Important: this is a pure staging operation. A caller must review/save
@@ -106,7 +106,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
 
     const entries = Object.values(memory.entries);
     validateMergedArchives(entries);
-    validateSplitArchives(entries);
+    const splitOrder=validateSplitArchives(entries,sceneNumberFromTitle);
     const numbered = [];
     const usedUids = new Set();
     const usedNumbers = new Set();
@@ -122,10 +122,12 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
         usedUids.add(uid);
         usedNumbers.add(sequence);
         if (!Object.prototype.hasOwnProperty.call(entry, MERGED_INTO) &&
-            !Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) numbered.push({ uid, sequence });
+            !Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) {
+            numbered.push({ uid, ...(splitOrder.get(uid) ?? { sequence, part: 0 }) });
+        }
     }
 
-    numbered.sort((a, b) => a.sequence - b.sequence);
+    numbered.sort((a, b) => a.sequence - b.sequence || a.part - b.part);
     const recentUids = numbered.slice(-keepRecent).map(x => x.uid);
     const recent = new Set(recentUids);
     const staged = structuredClone(memory);

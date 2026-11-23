@@ -20,13 +20,13 @@ import { validateNexusEventPlan, parseReviewedSegments, fingerprintSlothChat,
     stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, auditSlothDraft,
     suggestSlothSceneMerges, composeSlothMergedScene, proposeSlothLegacyContinuity,
-    suggestSlothLatestSceneSplit } from './nexusCollectionAI.js';
+    suggestSlothSceneSplit } from './nexusCollectionAI.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { inspectNexusLegacyMigration, stageNexusLegacyMigration } from './nexusLegacyMigration.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
 import { inspectUnifiedMemorySplit, stageUnifiedMemorySplit } from './nexusUnifiedMigration.js';
 import { stageNexusSceneMerge } from './nexusSceneMerge.js';
-import {inspectNexusSceneSplit,validateNexusSceneSplitProposal,
+import {inspectNexusSceneSplit,listNexusSceneSplitSources,validateNexusSceneSplitProposal,
     stageNexusSceneSplit} from './nexusSceneSplit.js';
 import { inspectSlothLegacyContinuity, stageSlothLegacyContinuity } from './nexusLegacySemantic.js';
 import { markStmbPopup } from './utils.js';
@@ -35,6 +35,11 @@ import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames,
     commitInitialNexusBooks } from './nexusInitialSetup.js';
 import { reviewSlothSceneDrafts, reviewSlothNexusDrafts } from './nexusCollectionReview.js';
 import { validateGroundedNexusEdits } from './nexusEditEvidence.js';
+import { compileScene, createSceneRequest } from './chatcompile.js';
+import { listReviewedSidePromptOptions, proposeReviewedSidePrompt } from './sidePrompts.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
+import { isCompletedSceneEntry } from './nexusSceneRotation.js';
+import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -208,6 +213,131 @@ function activeSource(ref, memoryBook, roleNames = null) {
 function readableSegments(segments) {
     return (segments||[]).map(pair=>pair[0]===pair[1]
         ? String(pair[0]):pair[0]+'-'+pair[1]).join(', ');
+}
+
+export async function runNexusSidePromptFollowup({ profileIndex } = {}) {
+    if (collectorBusy) throw new Error('A Sloth operation is already in progress.');
+    collectorBusy = true;
+    try {
+        const settings = extension_settings.STMemoryBooks;
+        const ref = structuredClone(getCurrentStmbChatRef());
+        const roles = Object.fromEntries(['nexus', 'memory'].map(role =>
+            [role, getNexusRoleResolutionForChatRef(role, ref, settings).name]));
+        assertLegacyMigrationOrigin(ref, roles);
+        const isAllowedBook = name => name === roles.nexus ||
+            (name !== roles.memory && !isManagedNexusWorld(settings, name));
+        const options = await listReviewedSidePromptOptions(roles.nexus, isAllowedBook);
+        assertLegacyMigrationOrigin(ref, roles);
+        if (!options.length) {
+            toastr.info(t('No after-memory Side Prompt has an available destination in this chat.',
+                'STMemoryBooks_SlothSidePromptEmpty'), 'STMemoryBooks');
+            return { saved: false };
+        }
+        const memory = await loadServerWorld(roles.memory);
+        assertLegacyMigrationOrigin(ref, roles);
+        const scenes = Object.values(memory.entries).flatMap(entry => {
+            if (entry.disable || !isCompletedSceneEntry(entry) || entry.STMB_chatId !== ref.fileName) return [];
+            try {
+                const ranges = sourceRangesForSplit(entry);
+                const ids = expandSplitRanges(ranges);
+                if (ids.some(id => !isVisibleSceneMessage(id))) return [];
+                return [{ entry, ranges, ids, fingerprint: fingerprintSlothChat(chat, ids) }];
+            } catch {
+                return [];
+            }
+        }).sort((left, right) => right.ids.at(-1) - left.ids.at(-1));
+        if (!scenes.length) {
+            toastr.info(t('No saved Scene in this chat has all of its original messages visible.',
+                'STMemoryBooks_SlothSidePromptNoSource'), 'STMemoryBooks');
+            return { saved: false };
+        }
+        const choose = (label, id, values) => '<label class="stmb-sloth-edit">' + html(label) +
+            '<select class="text_pole" id="' + id + '">' + values.map((value, index) =>
+                '<option value="' + index + '">' + html(value) + '</option>').join('') + '</select></label>';
+        const title = t('Review a Side Prompt', 'STMemoryBooks_SlothSidePromptAction');
+        const selection = new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>' + html(title) + '</h3>' +
+            choose(t('Saved Scene', 'STMemoryBooks_SlothSidePromptSource'), 'stmb-sideprompt-source', scenes.map(({ entry, ranges }) =>
+                entry.comment + ' · ' + readableSegments(ranges))) +
+            choose(t('Side Prompt', 'STMemoryBooks_SidePrompt'), 'stmb-sideprompt-template', options.map(item =>
+                item.name + ' · ' + item.lorebookName)) + '</div>'), POPUP_TYPE.CONFIRM, '', {
+            wide: true, allowVerticalScrolling: true,
+            okButton: t('Generate preview', 'STMemoryBooks_SlothSidePromptGenerate'),
+            cancelButton: t('Cancel', 'STMemoryBooks_Cancel'),
+        });
+        markStmbPopup(selection);
+        const selectionResult = selection.show();
+        const selected = { source: 0, template: 0 };
+        for (const key of Object.keys(selected)) {
+            selection.dlg.querySelector('#stmb-sideprompt-' + key).addEventListener('change', event => {
+                selected[key] = Number(event.target.value);
+            });
+        }
+        if (await selectionResult !== POPUP_RESULT.AFFIRMATIVE) return { saved: false };
+        const scene = scenes[selected.source];
+        const option = options[selected.template];
+        assertLegacyMigrationOrigin(ref, roles);
+        if (!scene || !option || !isAllowedBook(option.lorebookName)) throw new Error('The reviewed selection changed.');
+        const fingerprint = scene.fingerprint;
+        const verifyOrigin = () => {
+            assertOrigin(ref, roles, scene.ids, fingerprint);
+            if (!isAllowedBook(option.lorebookName)) throw new Error('The Side Prompt destination is no longer available for this chat.');
+        };
+        const compiled = compileScene(createSceneRequest(scene.ids[0], scene.ids.at(-1)), { messageIndices: scene.ids });
+        const profiles = settings.profiles || [];
+        const profile = profiles[profileIndex] || profiles[settings.defaultProfile];
+        verifyOrigin();
+        const original = await loadServerWorld(option.lorebookName);
+        verifyOrigin();
+        const draft = await proposeReviewedSidePrompt(option, original, compiled, profile);
+        verifyOrigin();
+        const contents = '<div class="stmb-sloth-review"><h3>' + html(draft.title) + '</h3><p>' +
+            html(option.lorebookName + ' · ' + readableSegments(scene.ranges)) + '</p>' +
+            (draft.before ? '<details class="stmb-sloth-detail"><summary>' +
+                html(t('Before', 'STMemoryBooks_Regeneration_Before')) + '</summary><pre>' + html(draft.before) + '</pre></details>' : '') +
+            '<label class="stmb-sloth-edit">' + html(t('Memory content', 'STMemoryBooks_MemoryContent')) +
+            '<textarea id="stmb-sideprompt-draft" class="text_pole" rows="12">' + html(draft.text) + '</textarea></label></div>';
+        let staged;
+        const approval = new Popup(DOMPurify.sanitize(contents), POPUP_TYPE.TEXT, '', {
+            wide: true, large: true, allowVerticalScrolling: true, okButton: false,
+            cancelButton: t('Cancel', 'STMemoryBooks_Cancel'), customButtons: [{
+                text: t('Download backup and approve save', 'STMemoryBooks_SlothBackupApprove'),
+                result: POPUP_RESULT.CUSTOM1,
+                action(event) {
+                    try {
+                        verifyOrigin();
+                        const content = approval.dlg.querySelector('#stmb-sideprompt-draft')?.value.trim();
+                        if (!content) throw new Error('The reviewed Side Prompt is blank.');
+                        const candidate = draft.stage(content);
+                        downloadNexusSetupBackup({ type: 'Sloth Side Prompt pre-save backup', chatRef: ref,
+                            sourceRanges: scene.ranges, originals: { [option.lorebookName]: original } });
+                        staged = candidate;
+                    } catch (error) {
+                        event.stopImmediatePropagation();
+                        toastr.error(error.message, 'STMemoryBooks');
+                    }
+                },
+            }],
+        });
+        markStmbPopup(approval);
+        if (await approval.show() !== POPUP_RESULT.CUSTOM1 || !staged) return { saved: false };
+        await readReviewedChat(ref, scene.ids, fingerprint);
+        const storedMemory = await loadServerWorld(roles.memory);
+        if (!Object.values(storedMemory.entries).some(entry => entry.uid === scene.entry.uid && stringify(entry) === stringify(scene.entry))) {
+            throw new Error('The source Scene changed while the Side Prompt was being reviewed.');
+        }
+        const result = await commitSlothNexusMigration({ name: option.lorebookName, original, staged }, {
+            loadFresh: loadServerWorld, save: (name, book) => saveWorldInfo(name, book, true),
+            withLock: (name, task) => withStmbWriteLane({ type: 'lorebook', name }, task), verifyOrigin,
+            verifyBeforeWrite: assertReviewedCache, operation: 'Side Prompt update',
+            resetCache: (name, book) => worldInfoCache.set(name, structuredClone(book)),
+        });
+        try { await Promise.resolve(reloadEditor(option.lorebookName)); }
+        catch (error) { console.warn('Sloth Side Prompt editor refresh failed', error); }
+        toastr.success(t('The reviewed Side Prompt was saved.', 'STMemoryBooks_SlothSidePromptSaved'), 'STMemoryBooks');
+        return { saved: true, result };
+    } finally {
+        collectorBusy = false;
+    }
 }
 
 async function planApproval(plan) {
@@ -1239,8 +1369,33 @@ export async function runNexusLegacyContinuityReview({profileIndex}={}) {
 }
 
 
-/** Explicit newest-Scene split, limited to verified visible original messages. */
-export async function runNexusLatestSceneSplit({profileIndex}={}) {
+function isVisibleSceneMessage(id) {
+    const message=chat[id];
+    return !!message && !message.is_system && typeof message.mes==='string' && !!message.mes.trim();
+}
+
+async function chooseSlothSplitSource(sources) {
+    if(sources.length===1)return sources[0];
+    const body='<div class="stmb-sloth-review"><label class="stmb-sloth-edit">'+
+        html(t('Completed Scene to split','STMemoryBooks_SlothSplitChoose'))+
+        '<select class="text_pole" id="stmb-sloth-split-source">'+sources.map((source,index)=>
+            '<option value="'+index+'">'+html(source.title)+'</option>').join('')+
+        '</select></label></div>';
+    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+        wide:true,allowVerticalScrolling:true,
+        okButton:t('Analyze selected Scene','STMemoryBooks_SlothSplitChooseApprove'),
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+    });
+    markStmbPopup(popup);
+    const showing=popup.show();
+    const choice=popup.dlg.querySelector('#stmb-sloth-split-source');
+    let selected=0;
+    choice.addEventListener('change',()=>{selected=Number(choice.value);});
+    return await showing===POPUP_RESULT.AFFIRMATIVE?sources[selected]:null;
+}
+
+/** Explicit split, limited to verified visible messages and completion order. */
+export async function runNexusSceneSplit({profileIndex}={}) {
     if(collectorBusy)throw new Error('A Sloth collection or repair is already in progress.');
     collectorBusy=true;
     try{
@@ -1261,11 +1416,19 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
         const original=await loadServerWorld(names.memory);
         assertLegacyMigrationOrigin(ref,names);
         const chatIds=[String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean);
-        const sourcePlan=inspectNexusSceneSplit(original,chatIds);
+        const sources=listNexusSceneSplitSources(original,chatIds,isVisibleSceneMessage);
+        if(!sources.length){
+            toastr.info(t('No active Scene with visible original messages and verifiable completion order can be split in this chat.',
+                'STMemoryBooks_SlothSplitNoSource'),'🦥 STMemoryBooks');
+            return {saved:false,reason:'no-eligible-source'};
+        }
+        const selected=await chooseSlothSplitSource(sources);
+        if(!selected)return {saved:false,reason:'source-cancelled'};
+        assertLegacyMigrationOrigin(ref,names);
+        const sourcePlan=inspectNexusSceneSplit(original,chatIds,selected.uid);
         const messages=sourcePlan.sourceIds.map(id=>{
             const message=chat[id];
-            if(!message||message.is_system||typeof message.mes!=='string'||
-                !message.mes.trim()){
+            if(!isVisibleSceneMessage(id)){
                 throw new Error('Original message #'+id+
                     ' is hidden, missing or blank. Split requires the visible original chat.');
             }
@@ -1284,9 +1447,9 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
         const profile=settings.profiles?.[profileIndex??settings.defaultProfile]
             ||settings.profiles?.[settings.defaultProfile];
         if(!profile)throw new Error('Choose an AI profile before reviewing a Scene split.');
-        toastr.info(t('Checking the newest Scene for independent completed events...',
+        toastr.info(t('Checking the selected Scene for independent completed events...',
             'STMemoryBooks_SlothSplitAnalyzing'),'🦥 STMemoryBooks');
-        const candidate=await suggestSlothLatestSceneSplit({
+        const candidate=await suggestSlothSceneSplit({
             plan:sourcePlan,messages,profile,settings,
         });
         verifyOrigin();
@@ -1307,7 +1470,7 @@ export async function runNexusLatestSceneSplit({profileIndex}={}) {
             '</label>').join('');
         const planBody='<div class="stmb-sloth-review"><h3>'+
             html(t('Review independent Scene events','STMemoryBooks_SlothSplitPlanTitle'))+
-            '</h3><p>'+html(t('Only the newest completed Scene can be split safely without renumbering older memories. Check the independent causes, endings and exact message ranges. Missing or repeated source messages block the change.',
+            '</h3><p>'+html(t('Check the independent causes, endings and exact message ranges. Replacement Scenes keep their original place in completion order and receive new numbers. Missing or repeated messages block the change.',
                 'STMemoryBooks_SlothSplitPlanHelp'))+'</p>'+
             '<details class="stmb-sloth-detail"><summary>'+html(sourcePlan.sourceTitle)+
             ' · UID '+html(sourcePlan.sourceUid)+'</summary><pre>'+

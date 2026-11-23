@@ -9,7 +9,7 @@ import { compileMessageRange } from './messageRange.js';
 import { getCurrentApiInfo, getUIModelSettings, getCurrentMemoryBooksContext, normalizeCompletionSource, resolveEffectiveConnectionFromProfile, clampInt, createStmbInFlightTask, isStmbStopError, getStmbStopEpoch, throwIfStmbStopped } from './utils.js';
 import { appendAdditionalContextSection, applySelectedRegex, assertProviderDidNotTruncate, requestCompletion } from './stmemory.js';
 import { findSetByName, getTemplate, listByTrigger, findTemplateByName, resolveSetItemsForRun } from './sidePromptsManager.js';
-import { upsertLorebookEntryByTitle, upsertLorebookEntriesBatch } from './addlore.js';
+import { stageLorebookEntriesBatch, upsertLorebookEntryByTitle, upsertLorebookEntriesBatch } from './addlore.js';
 import { fetchPreviousSummaries, showMemoryPreviewPopup } from './confirmationPopup.js';
 import { t as __st_t_tag, translate } from '../../../i18n.js';
 import { oai_settings } from '../../../openai.js';
@@ -37,6 +37,7 @@ import {
     SIDE_PROMPT_REGENERATION_METADATA_KEY,
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
+import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 
 
 import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -1506,6 +1507,89 @@ export async function evaluateTrackers() {
  * Run plotpoints and auto scoreboards after a memory run using the same compiled scene
  * @param {Object} compiledScene
  */
+async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContext) {
+    const { setKey } = resolveAutomaticSidePromptSet(sceneMarkers, moduleSettings, sceneContext);
+    if (!setKey) {
+        return (await listByTrigger('onAfterMemory') || []).map(tpl => ({
+            tpl, baseTpl: tpl, runtimeMacros: {}, name: tpl.name, set: null, item: null,
+        }));
+    }
+    const resolvedSet = await resolveSetItemsForRun(setKey, {}, { allowUnresolved: false });
+    const skipped = getAutomaticSetSkippedItems(resolvedSet.skipped, 'onAfterMemory');
+    logSkippedSetItems(skipped, 'onAfterMemory');
+    if (!resolvedSet.set) {
+        toastr.warning(translate('Selected side prompt set was not found. No after-memory side prompts were run.', 'STMemoryBooks_SidePromptSetMissingNoFallback'), 'STMemoryBooks');
+        return [];
+    }
+    const missingMacros = summarizeMissingSetMacros(skipped);
+    if (missingMacros.length) {
+        toastr.warning(tr('STMemoryBooks_SidePromptSetSkippedUnresolvedMacros',
+            'Skipped side prompt set items with unresolved macros: {{macros}}.',
+            { macros: missingMacros.join(', ') }), 'STMemoryBooks');
+    }
+    return filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
+}
+
+export async function listReviewedSidePromptOptions(nexusName, isAllowedBook) {
+    const markers = getSceneMarkers() || {};
+    const overrides = getSidePromptChatLorebookOverrides();
+    const items = await resolveAfterMemoryItems(markers,
+        extension_settings.STMemoryBooks?.moduleSettings || {}, getCurrentMemoryBooksContext());
+    return items.flatMap(item => {
+        const templateTarget = String(item.tpl.settings?.lorebook?.targetLorebookName || '').trim();
+        const name = Object.hasOwn(overrides, item.tpl.key)
+            ? String(overrides[item.tpl.key] || '').trim() : (templateTarget || nexusName);
+        return name !== '__memory__' && isExistingLorebookName(name) && isAllowedBook(name)
+            ? [{ ...item, lorebookName: name, inNexus: name === nexusName }] : [];
+    });
+}
+
+/** Prepare a supplemental record using the original template, connection and history policy. */
+export async function proposeReviewedSidePrompt(item, original, compiledScene, profile) {
+    const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
+    const { tpl, runtimeMacros, lorebookName } = item;
+    try {
+        const prepared = await prepareSidePromptRun({ tpl, loreData: original, compiledScene,
+            defaultOverrides: resolveSidePromptConnection(profile),
+            fallbackKinds: ['plotpoints', 'scoreboard'], runtimeMacros });
+        if (item.inNexus) {
+            const { titleBase, legacyTitles, chatId } = prepared.sidePromptHistory;
+            const reserved = [titleBase, ...legacyTitles].some(title =>
+                /^(?:Core Memory|Current Continuity|LT|NPC|Kinks|PanelAssets)(?:\b|$)/i.test(title.trim()) ||
+                classifyNexusLegacyTitle(title));
+            const existing = prepared.existing;
+            const snapshot = existing?.STMB_sidePromptRegeneration;
+            const ownsExisting = existing?.STMB_sidePromptHistory ||
+                (snapshot?.templateKey === tpl.key && snapshot?.chatId === chatId);
+            if (reserved || (existing && (!ownsExisting || Number(existing.position) === 7 || existing.outletName))) {
+                throw new Error('This Side Prompt title matches a protected or unverified Nexus entry. Choose a separate entry title or lorebook.');
+            }
+        }
+        const text = await runSidePromptAttempt({ taskLabel: 'SidePrompts:reviewedSloth:' + tpl.key,
+            finalPrompt: prepared.finalPrompt, conn: prepared.conn, runEpoch: task.epoch });
+        if (!ensureSidePromptTextNotBlank(text, tpl, 'reviewedSloth')) {
+            throw new Error('The Side Prompt returned empty content.');
+        }
+        const { defaults, entryOverrides } = makeUpsertParamsFromLorebook(
+            getEffectiveLorebookSettingsForTemplate(tpl), runtimeMacros);
+        return {
+            title: prepared.unifiedTitle, before: prepared.prior, text,
+            stage(content) {
+                const item = {
+                    title: prepared.unifiedTitle, content,
+                    defaults, entryOverrides, sidePromptHistory: prepared.sidePromptHistory,
+                    metadataUpdates: { [`STMB_sp_${tpl.key}_lastRunAt`]: new Date().toISOString() },
+                    metadataFactory: createSidePromptRegenerationMetadataFactory(
+                        tpl, prepared.prior, compiledScene, runtimeMacros),
+                };
+                return stageLorebookEntriesBatch(lorebookName, structuredClone(original), [item]).lorebookData;
+            },
+        };
+    } finally {
+        task.finish();
+    }
+}
+
 export async function runAfterMemory(compiledScene, profile = null, options = {}) {
     const parentTask = createStmbInFlightTask('SidePrompts:onAfterMemory');
     const runEpoch = parentTask.epoch;
@@ -1541,43 +1625,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
         const moduleSettings = options.settings?.moduleSettings
             || extension_settings?.STMemoryBooks?.moduleSettings
             || {};
-        const { setKey: selectedSetKey } = resolveAutomaticSidePromptSet(
-            sceneMarkers,
-            moduleSettings,
-            sceneContext,
-        );
-        let runItems = [];
-        if (selectedSetKey) {
-            const resolvedSet = await resolveSetItemsForRun(selectedSetKey, {}, { allowUnresolved: false });
-            const skipped = getAutomaticSetSkippedItems(resolvedSet.skipped, 'onAfterMemory');
-            logSkippedSetItems(skipped, 'onAfterMemory');
-            if (!resolvedSet.set) {
-                toastr.warning(translate('Selected side prompt set was not found. No after-memory side prompts were run.', 'STMemoryBooks_SidePromptSetMissingNoFallback'), 'STMemoryBooks');
-                return;
-            }
-            const missingMacros = summarizeMissingSetMacros(skipped);
-            if (missingMacros.length > 0) {
-                toastr.warning(
-                    tr(
-                        'STMemoryBooks_SidePromptSetSkippedUnresolvedMacros',
-                        'Skipped side prompt set items with unresolved macros: {{macros}}.',
-                        { macros: missingMacros.join(', ') },
-                    ),
-                    'STMemoryBooks',
-                );
-            }
-            runItems = filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
-        } else {
-            const enabledAfter = await listByTrigger('onAfterMemory');
-            runItems = (enabledAfter || []).map(tpl => ({
-                tpl,
-                baseTpl: tpl,
-                runtimeMacros: {},
-                name: tpl.name,
-                set: null,
-                item: null,
-            }));
-        }
+        const runItems = await resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContext);
 
         if (!runItems || runItems.length === 0) return;
 

@@ -1339,22 +1339,14 @@ export function getEntryByTitle(lorebookData, title) {
 }
 
 /**
- * Batch upsert lorebook entries with a single save (and optional single reload).
- * Each item is staged into the provided lorebookData in-memory object; then
- * saveWorldInfo is called exactly once for the whole batch.
+ * Stage a batch of updates in memory, including Side Prompt history and metadata.
  *
  * @param {string} lorebookName
  * @param {Object} lorebookData
  * @param {Array<{title: string, content: string, defaults?: Object, metadataUpdates?: Object, entryOverrides?: Object, metadataFactory?: Function}>} items
- * @param {Object} [options]
- * @param {boolean} [options.refreshEditor=true]
- * @returns {Promise<Array<{title:string, uid:number, created:boolean}>>}
+ * @returns {{lorebookData:Object,results:Array<{title:string, uid:number, created:boolean}>}}
  */
-export async function upsertLorebookEntriesBatch(lorebookName, lorebookData, items, options = {}) {
-    const {
-        refreshEditor = true,
-    } = options;
-
+export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
     if (!lorebookName || !lorebookData || !Array.isArray(items)) {
         throw new Error(i18n('addlore.upsert.errors.invalidArgs', 'Invalid arguments to upsertLorebookEntriesBatch'));
     }
@@ -1451,9 +1443,13 @@ export async function upsertLorebookEntriesBatch(lorebookName, lorebookData, ite
         results.push({ title, uid: entry.uid, created });
     }
 
-    // Single save for the whole batch
-    if (items.some(item => item?.sidePromptHistory)) await saveSidePromptLorebookChecked(lorebookName, lorebookData);
-    else await saveWorldInfo(lorebookName, lorebookData, true);
+    return { lorebookData, results };
+}
+
+export async function upsertLorebookEntriesBatch(lorebookName, lorebookData, items, { refreshEditor = true } = {}) {
+    const { lorebookData: staged, results } = stageLorebookEntriesBatch(lorebookName, lorebookData, items);
+    if (items.some(item => item?.sidePromptHistory)) await saveSidePromptLorebookChecked(lorebookName, staged);
+    else await saveWorldInfo(lorebookName, staged, true);
 
     if (refreshEditor) {
         await Promise.resolve(reloadEditor(lorebookName));

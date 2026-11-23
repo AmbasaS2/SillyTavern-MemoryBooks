@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {inspectNexusSceneSplit,validateNexusSceneSplitProposal,
+import {inspectNexusSceneSplit,listNexusSceneSplitSources,validateNexusSceneSplitProposal,
     stageNexusSceneSplit} from './nexusSceneSplit.js';
 import {planNexusSceneRotation} from './nexusSceneRotation.js';
 import {stageMemoryScenes} from './nexusCollectionPolicy.js';
@@ -44,7 +44,7 @@ const drafts=()=>raw.parts.map(item=>({...item,content:body(item.title),keywords
 const maker=b=>{const uid=Math.max(...Object.values(b.entries).map(e=>e.uid))+1;
     return b.entries[uid]={uid,comment:'',content:'',disable:false};};
 
-test('the newest completed Scene alone is eligible, with exact original source IDs',()=>{
+test('the newest completed Scene is the default with exact original source IDs',()=>{
     const b=book(),snap=structuredClone(b);
     const plan=inspectNexusSceneSplit(b,['chat-1']);
     assert.equal(plan.sourceUid,9);assert.equal(plan.sourceNumber,3);
@@ -111,9 +111,29 @@ test('missing, repeated, stolen, cross-AU or invented sources cannot be split',(
     const hidden=messages.filter(m=>m.id!==37);
     assert.throws(()=>validateNexusSceneSplitProposal(plan,raw,hidden),/hidden or absent/);
 });
-test('earlier Scene, incomplete or custom reference structures are refused',()=>{
-    assert.throws(()=>stageNexusSceneSplit(book(),{sourceUid:7,parts:drafts(),
-        messages,createEntry:maker}),/latest completed/);
+test('splitting an earlier Scene preserves its occurrence order and existing numbers',()=>{
+    const earlier=book();
+    earlier.entries[10]=make(10,4,[[39,41]]);
+    earlier.entries[11]=make(11,5,[[42,44]]);
+    assert.deepEqual(listNexusSceneSplitSources(earlier,['chat-1'],
+        id=>messages.some(message=>message.id===id)),[{uid:9,title:earlier.entries[9].comment}]);
+    const {proposedMemory}=stageNexusSceneSplit(earlier,{sourceUid:9,
+        parts:drafts(),messages,createEntry:maker});
+    for(const uid of [4,7,10,11])assert.equal(proposedMemory.entries[uid].comment,earlier.entries[uid].comment);
+    assert.equal(proposedMemory.entries[12].comment,'006 - Hike through the mountains');
+    assert.equal(proposedMemory.entries[13].comment,'007 - Cafe reunion with a friend');
+    assert.deepEqual(planNexusSceneRotation(proposedMemory).olderUids,[4,7,12]);
+    assert.deepEqual(planNexusSceneRotation(proposedMemory).recentUids,[13,10,11]);
+    const result=stageMemoryScenes(proposedMemory,[{title:'Later',content:body('Later'),
+        segments:[[45,46]],messageIds:[45,46],keywords:['later']}],maker,{chatId:'chat-1'});
+    assert.deepEqual(planNexusSceneRotation(result.staged).recentUids,[10,11,14]);
+    assert.equal(result.staged.entries[14].comment,'008 - Later');
+});
+test('uncertain earlier Scene order, incomplete or custom reference structures are refused',()=>{
+    const crossChat=book();crossChat.entries[9].STMB_chatId='another-AU';
+    assert.throws(()=>inspectNexusSceneSplit(crossChat,['chat-1'],7),/different chats\/AUs/);
+    const outOfOrder=book();outOfOrder.entries[4].STMB_sourceRanges=[[13,14]];
+    assert.throws(()=>inspectNexusSceneSplit(outOfOrder,['chat-1'],7),/completion boundary/);
     const stlo=book();stlo.stlo={entries:[9]};
     assert.throws(()=>inspectNexusSceneSplit(stlo,['chat-1']),/STLO root/);
     const outlet=book();outlet.entries[9].position=7;
@@ -135,11 +155,19 @@ test('tampering or re-enabling archived originals and orphaning children fails d
         b=>{b.entries[9].STMB_slothSceneSplitArchive.children=[10,99];},
         b=>{b.entries[10].STMB_sourceRanges=[[30,30]];},
         b=>{b.entries[11].STMB_slothSceneSplitFrom.sourceUid=100;},
+        b=>{delete b.entries[9].STMB_slothSceneSplitArchive.completionOrder;},
     ]){
         const mutated=structuredClone(valid);change(mutated);
         assert.throws(()=>planNexusSceneRotation(mutated),/split|source bounds/);
     }
     assert.throws(()=>inspectNexusSceneSplit(valid,['chat-1']),/previously repaired/);
+});
+test('existing latest-only split receipts still rotate after loading',()=>{
+    const previous=stageNexusSceneSplit(book(),{sourceUid:9,
+        parts:drafts(),messages,createEntry:maker}).proposedMemory;
+    delete previous.entries[9].STMB_slothSceneSplitArchive.completionOrder;
+    for(const uid of [10,11])delete previous.entries[uid].STMB_slothSceneSplitFrom.completionOrder;
+    assert.deepEqual(planNexusSceneRotation(previous).recentUids,[7,10,11]);
 });
 test('keyword recall never resurrects an archived original',()=>{
     const out=stageNexusSceneSplit(book(),{sourceUid:9,parts:drafts(),

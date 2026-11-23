@@ -1,6 +1,6 @@
 // Copyright (C) 2026 AmbasaS2
 // SPDX-License-Identifier: AGPL-3.0-only
-// Verify full-history archives of an explicitly reviewed latest-Scene split.
+// Verify full-history archives of explicitly reviewed Scene splits.
 // Pure validation. This module intentionally imports no collection/runtime code.
 export const SPLIT_ARCHIVE='STMB_slothSceneSplitArchive';
 export const SPLIT_FROM='STMB_slothSceneSplitFrom';
@@ -45,8 +45,9 @@ export function expandSplitRanges(ranges) {
 }
 
 /** Called by rotation BEFORE it considers any active/archived Scene flags. */
-export function validateSplitArchives(entries) {
+export function validateSplitArchives(entries,sceneNumberFromTitle) {
     const byUid=new Map(entries.map(entry=>[entry?.uid,entry]));
+    const completionOrder=new Map();
     for(const entry of entries){
         const archived=has(entry,SPLIT_ARCHIVE),child=has(entry,SPLIT_FROM);
         if(!archived&&!child)continue;
@@ -54,6 +55,8 @@ export function validateSplitArchives(entries) {
         if(archived){
             const m=entry[SPLIT_ARCHIVE],original=m?.source;
             assert(m?.version===1&&record(original)&&original.uid===entry.uid&&
+                m.sourceNumber===sceneNumberFromTitle(original.comment)&&
+                (m.completionOrder===undefined||m.completionOrder==='original')&&
                 Array.isArray(m.children)&&m.children.length>=2&&m.children.length<=4 &&
                 new Set(m.children).size===m.children.length&&
                 entry.disable===true&&entry.constant===false&&
@@ -69,17 +72,26 @@ export function validateSplitArchives(entries) {
                 'Scene split archive original body or metadata was altered UID '+entry.uid+'.');
             const sourceIds=expandSplitRanges(sourceRangesForSplit(original));
             const union=[];
+            let lastEnd=-1;
             for(const [index,uid] of m.children.entries()){
                 const part=byUid.get(uid),marker=part?.[SPLIT_FROM];
                 assert(record(marker)&&marker.version===1 &&
                     marker.sourceUid===entry.uid && marker.partIndex===index &&
                     marker.partsTotal===m.children.length &&
                     marker.sourceNumber===m.sourceNumber &&
+                    marker.completionOrder===m.completionOrder &&
                     part.STMB_chatId===original.STMB_chatId &&
                     part.disable!==true && typeof part.content==='string' &&
                     part.content.trim(),
                     'Scene split child or provenance is missing/corrupt UID '+uid+'.');
-                union.push(...expandSplitRanges(sourceRangesForSplit(part)));
+                const ids=expandSplitRanges(sourceRangesForSplit(part));
+                if(m.completionOrder==='original'){
+                    assert(ids.at(-1)>lastEnd&&sceneNumberFromTitle(part.comment)>m.sourceNumber,
+                        'Invalid Scene split completion order UID '+uid+'.');
+                    completionOrder.set(uid,{sequence:m.sourceNumber,part:index+1});
+                }
+                lastEnd=ids.at(-1);
+                union.push(...ids);
             }
             const unique=[...new Set(union)].sort((a,b)=>a-b);
             assert(unique.length===union.length&&
@@ -91,4 +103,5 @@ export function validateSplitArchives(entries) {
                 'Orphaned Scene split child UID '+entry.uid+'.');
         }
     }
+    return completionOrder;
 }

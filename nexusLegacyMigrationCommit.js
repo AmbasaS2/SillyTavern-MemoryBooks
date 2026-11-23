@@ -10,10 +10,10 @@ const equal=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 export async function commitSlothNexusMigration(state,{
     loadFresh,save,withLock,verifyOrigin,resetCache,verifyBeforeWrite,operation='Nexus migration',
 }) {
-    const subject=['Memory Scene merge','Memory Scene split'].includes(operation)
-        ?'Memory':'Nexus';
+    const subject=operation==='Side Prompt update'?state?.name:
+        ['Memory Scene merge','Memory Scene split'].includes(operation)?'Memory':'Nexus';
     const reviewAction=operation==='Memory Scene split'?'split':
-        subject==='Memory'?'merge':'migration';
+        operation==='Side Prompt update'?'the Side Prompt update':subject==='Memory'?'merge':'migration';
     if (!state?.name || !state.original?.entries || !state.staged?.entries ||
         [loadFresh,save,withLock,verifyOrigin].some(fn=>typeof fn!=='function')) {
         throw new Error('A complete Nexus migration snapshot and save dependencies are required.');

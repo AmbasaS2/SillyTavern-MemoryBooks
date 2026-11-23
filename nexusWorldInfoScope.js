@@ -6,6 +6,12 @@ import { getCharacterNexusRoles } from './nexusCharacterRoles.js';
 
 const names = roles => [roles?.nexus, roles?.memory].filter(name => typeof name === 'string' && name.trim());
 
+export function isManagedNexusWorld(settings, book) {
+    return [settings?.nexusCharacterRoles, settings?.nexusChatRoleOverrides]
+        .some(store => Object.values(store || {}).some(roles => names(roles).includes(book))) ||
+        Object.values(settings?.nexusChatScopedWorlds || {}).some(books => Array.isArray(books) && books.includes(book));
+}
+
 export function isAssignedToAnotherNexusCharacter(settings, avatar, book) {
     if (!book) return false;
     return Object.entries(settings?.nexusCharacterRoles || {}).some(([owner, roles]) => owner !== avatar && names(roles).includes(book)) ||

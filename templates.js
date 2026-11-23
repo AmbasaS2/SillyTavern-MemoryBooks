@@ -144,8 +144,10 @@ export const settingsTemplate = Handlebars.compile(`
               <small data-i18n="STMemoryBooks_SlothLegacySemanticHelp">After migration, the separate old-state review can replace obsolete active Continuity with currently corroborated facts. Full original records remain archived and a backup is required.</small>
               <button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button>
               <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
-              <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting newest Scene</button>
-              <small data-i18n="STMemoryBooks_SlothSplitHelp">The newest complete Scene can be reviewed for independent incidents when its original chat messages remain visible. Every source message is accounted for and the original is archived before approved saving.</small>
+              <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button>
+              <small data-i18n="STMemoryBooks_SlothSplitHelp">Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
+              <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Review a Side Prompt</button>
+              <small data-i18n="STMemoryBooks_SlothSidePromptHelp">Write a Side Prompt such as a diary from a saved Scene's original messages. Review it before saving to Nexus or its configured lorebook.</small>
             </div>
           </details>
         {{/if}}

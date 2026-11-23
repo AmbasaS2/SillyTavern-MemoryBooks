@@ -77,13 +77,13 @@ test('post-persistence network failure is compensated without losing original',a
 });
 test('runtime is manual and requires all three reviews plus original JSON backup',()=>{
     const index=file('./index.js'),runtime=file('./nexusCollectorRuntime.js');
-    assert.match(index,/runNexusLatestSceneSplit\(\{\s*profileIndex/);
+    assert.match(index,/runNexusSceneSplit\(\{\s*profileIndex/);
     assert.match(file('./templates.js'),/data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton"/);
-    const start=runtime.indexOf('export async function runNexusLatestSceneSplit');
+    const start=runtime.indexOf('export async function runNexusSceneSplit');
     assert.ok(start>0);
     const part=runtime.slice(start);
     for(const name of [
-        'collectorBusy','inspectNexusSceneSplit','suggestSlothLatestSceneSplit',
+        'collectorBusy','inspectNexusSceneSplit','listNexusSceneSplitSources','suggestSlothSceneSplit',
         'validateNexusSceneSplitProposal','composeSlothScene','stageNexusSceneSplit',
         'sourceUid:sourcePlan.sourceUid','originalMemory:original',
         'POPUP_RESULT.CUSTOM1 && downloaded','commitSlothNexusMigration',
@@ -97,7 +97,7 @@ test('runtime is manual and requires all three reviews plus original JSON backup
 });
 test('model prompt is read-only, independent events are not split by date or token',()=>{
     const source=file('./nexusCollectionAI.js');
-    const last=source.slice(source.indexOf('export async function suggestSlothLatestSceneSplit'));
+    const last=source.slice(source.indexOf('export async function suggestSlothSceneSplit'));
     assert.match(last,/return exactly \{"parts":\[\]\}/);
     assert.match(last,/do not split merely because/i);
     assert.match(last,/validateNexusSceneSplitProposal/);
@@ -106,7 +106,7 @@ test('model prompt is read-only, independent events are not split by date or tok
 test('all non-English locales carry the new translated split controls',()=>{
     const codes=file('./nexusCollectorRuntime.js')+file('./templates.js')+file('./index.js');
     const names=[...new Set([...codes.matchAll(/STMemoryBooks_(SlothSplit\w+)/g)].map(m=>m[1]))];
-    assert.equal(names.length,16);
+    assert.equal(names.length,19);
     for(const lang of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr',
         'ms-my','pt-br','ru-ru','zh-cn','zh-tw']){
         const data=JSON.parse(file('./locales/'+lang+'.json'));

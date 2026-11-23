@@ -71,7 +71,7 @@ import {
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, canPrepareNexusCompanion, runNexusCompanionSetup,
   runNexusCollector, runNexusLegacyMigration, runNexusSceneMerge,
-  runNexusLegacyContinuityReview, runNexusLatestSceneSplit } from './nexusCollectorRuntime.js';
+  runNexusLegacyContinuityReview, runNexusSceneSplit, runNexusSidePromptFollowup } from './nexusCollectorRuntime.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -4865,15 +4865,17 @@ async function prepareSidePromptRegenerationDraft(entry, eligibility, options = 
   }
   if (!validateSceneMemoryRange(eligibility.sceneStart, eligibility.sceneEnd)) return null;
 
-  const visibility = await preflightRegenerationVisibility({
-    messages: chat,
-    start: eligibility.sceneStart,
-    end: eligibility.sceneEnd,
-    unhideBeforeMemory: !!settings.moduleSettings?.unhideBeforeMemory,
-    executeUnhide: async (start, end) => {
-      await executeSlashCommands(`/unhide ${start}-${end}`);
-    },
-  });
+  const messageIndices = eligibility.snapshot.messageIndices;
+  const visibility = messageIndices ? { ok: messageIndices.every(id => chat[id] && !chat[id].is_system) }
+    : await preflightRegenerationVisibility({
+      messages: chat,
+      start: eligibility.sceneStart,
+      end: eligibility.sceneEnd,
+      unhideBeforeMemory: !!settings.moduleSettings?.unhideBeforeMemory,
+      executeUnhide: async (start, end) => {
+        await executeSlashCommands(`/unhide ${start}-${end}`);
+      },
+    });
   if (!visibility.ok) {
     if (visibility.error) {
       console.warn("STMemoryBooks: side-prompt regeneration /unhide failed:", visibility.error);
@@ -4886,7 +4888,7 @@ async function prepareSidePromptRegenerationDraft(entry, eligibility, options = 
     return null;
   }
 
-  const compiledScene = compileScene(currentSceneRequest);
+  const compiledScene = compileScene(currentSceneRequest, { messageIndices: messageIndices || null });
   const sceneValidation = validateCompiledScene(compiledScene);
   if (!sceneValidation.valid) {
     throw new Error(`Scene compilation failed: ${sceneValidation.errors.join(", ")}`);
@@ -11472,7 +11474,8 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     migrate: () => runNexusLegacyMigration(),
     continuity: () => runNexusLegacyContinuityReview({ profileIndex }),
     merge: () => runNexusSceneMerge({ profileIndex }),
-    split: () => runNexusLatestSceneSplit({ profileIndex }),
+    split: () => runNexusSceneSplit({ profileIndex }),
+    followup: () => runNexusSidePromptFollowup({ profileIndex }),
   };
   const action = button.dataset.stmbSlothAction;
   if (!Object.hasOwn(actions, action)) return;
