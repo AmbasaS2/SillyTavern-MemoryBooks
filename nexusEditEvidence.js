@@ -144,6 +144,14 @@ export function validateGroundedNexusEdits(edits, messages) {
         const evidence=verifyEvidence(op.evidence,source,label,{recoverUniqueMessage:true});
         assert(typeof op.reason==='string' && op.reason.trim().length>=12 &&
             op.reason.length<=600, label+' needs a specific reason backed by chat evidence.');
+        if (String(op.action).trim().toLowerCase() === 'create' && String(op.kind).trim().toLowerCase() === 'npc') {
+            assert(['durable_relationship','separate_future_encounter'].includes(op.continuingRole?.basis),
+                label+' needs explicit evidence of the NPC’s role beyond the current episode.');
+            const futureRole = verifyEvidence([op.continuingRole.evidence],source,label+' continuing role',
+                {recoverUniqueMessage:true});
+            return {...op, reason:op.reason.trim(), evidence,
+                continuingRole:{basis:op.continuingRole.basis,evidence:futureRole[0]}};
+        }
         if(op.action==='replace_exact' && op.kind==='continuity'){
             assert(['observed_resolution','observed_correction','explicit_retraction',
                 'new_confirmed_information'].includes(op.supersession),

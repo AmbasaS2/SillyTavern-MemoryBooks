@@ -22,6 +22,19 @@ test('exact source receipts allow scoped updates without changing user inputs',(
     assert.deepEqual(edits,[change]);assert.deepEqual(change,original);
     assert.equal(edits[0].evidence[0].messageId,10);
 });
+test('new NPC needs exact evidence of a role beyond the current encounter', () => {
+    const op = {kind:'npc',action:'create',title:'NPC 03 | The courier',content:'A reusable contact.',
+        reason:'The courier is a confirmed regular contact.',
+        evidence:quote(10,'I sent the letter to B and received a reply.')};
+    assert.throws(()=>validateGroundedNexusEdits([op],source),/role beyond the current episode/);
+    assert.throws(()=>validateGroundedNexusEdits([{
+        ...op,continuingRole:{basis:'separate_future_encounter',
+            evidence:{messageId:10,quote:'I am coming back next week.'}},
+    }],source),/quote missing from original/);
+    const more = [...source,{id:22,name:'A',mes:'I will be your regular courier every week.'}];
+    const continuingRole={basis:'durable_relationship',evidence:{messageId:22,quote:more.at(-1).mes}};
+    assert.deepEqual(validateGroundedNexusEdits([{...op,continuingRole}],more)[0].continuingRole,continuingRole);
+});
 test('the model cannot cite invented quotes, other chat IDs or uncertain fragments',()=>{
     for(const evidence of [
         quote(11,'I sent the letter to B and received a reply.'),

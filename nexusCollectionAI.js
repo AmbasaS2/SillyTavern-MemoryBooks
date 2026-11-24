@@ -7,11 +7,11 @@ import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
 import { oai_settings } from '../../../openai.js';
 import { getMaxContextSize } from '../../../../script.js';
 import { getTokenCountAsync } from '../../../tokenizers.js';
-import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, stageNexusEdits } from './nexusCollectionPolicy.js';
+import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, stageNexusEdits,
+    describeNexusCollectionEntry, npcNexusSubjectIsGrounded } from './nexusCollectionPolicy.js';
 import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
-import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
@@ -206,7 +206,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         '- append: uid and text (one grounded addition). For core, lt, npc and npc-index.',
         '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
         '- create: unique title, content, and optional keywords array.',
-        'Core Memory and Current Continuity are separate always-on entries.',
+        'Match the existing entry by role or subject before choosing an action. Reuse its UID for the update. An existing entry can hold both core and continuity: update only the relevant part. Only create Core Memory, Current Continuity or NPC Index if that role has no existing active entry.',
         'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues.',
         'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
         'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
@@ -214,7 +214,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'For existing ones patch only verified changes; keep unrelated paragraphs and sections.',
         'Current Continuity sections: Present Handoff, Active Threads, Knowledge Boundaries, Active Conditions.',
         'When creating Current Continuity, place each supported section on its own Markdown heading line, for example "## Present Handoff". Omit unsupported sections. Each active obligation appears only until it is explicitly resolved, corrected, or retracted.',
-        'Present Handoff preserves the actual next-response position, contact or release, hidden reactions, final utterance and remaining choice.',
+        'Present Handoff preserves the actual next-response position, contact or release, hidden reactions, final utterance and remaining choice. Read the last supplied turn and ground the handoff in its actual answer or action, never in the preceding question alone.',
         'Active Threads need a responsible actor, unfinished condition and concrete completion check. A question alone belongs in Handoff.',
         'Keep direct observation, named relay, suspicion, false belief, inability to know and deliberate concealment distinct for each person.',
         'Example only: if the book says "Only the scout knows the trail." and message #5 says "I showed the trail to the guide.", a valid edit is:',
@@ -227,7 +227,8 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
         'If the old Continuity has only legacy source blocks, add a grounded named section',
         'instead of rewriting or interpreting the original archive without an explicit review.',
-        'LT and NPC existing matching topics should be patched; create only when truly new and durable.'
+        'Match LT to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. An existing NPC update needs an exact quote naming that person (full name or uniquely identifying name). Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new LT needs a distinct lasting subject with no existing home.',
+        'For new NPCs include continuingRole: {"basis":"durable_relationship|separate_future_encounter","evidence":{"messageId":integer,"quote":"exact source wording naming the NPC and the continuing relationship or separate encounter"}}. One visit or expected follow-up during the same visit is insufficient. Record relevant immediate follow-up or knowledge boundaries in continuity.',
     ].join('\n\n'),
 });
 
@@ -396,13 +397,9 @@ async function nexusStateEvidenceFor(messages, ask) {
 
 function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext}) {
     const entries=Object.values(nexus.entries||{}).map(e=>{
-        const protectedEntry=!!e.disable || Number(e.position)===7 ||
-            !!String(e.outletName||'').trim() ||
-            /^(Kinks|PanelAssets)(?:\b|$)/i.test(String(e.comment||'')) ||
-            !!classifyNexusLegacyTitle(e.comment) ||
-            !!e.STMB_sidePromptHistory;
+        const {roles,legacyLayout,protected:protectedEntry}=describeNexusCollectionEntry(e);
         return {uid:e.uid,title:e.comment,body:protectedEntry?'[protected; not included]':e.content,
-            protected:protectedEntry,constant:e.constant,disabled:e.disable,
+            roles,legacyLayout,protected:protectedEntry,constant:e.constant,disabled:e.disable,
             position:e.position,outletName:e.outletName};
     });
     const source=JSON.stringify(entries);
@@ -412,7 +409,7 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
         ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
             ['Supply specific literal recall keywords for every new LT or NPC detail. Never overwrite existing entry activation settings.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
-        'Do not add a one-scene NPC without a continuing tie, repeated function or explicit unfinished duty. A temporary duty can close without erasing an independent enduring role.',
+        'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
@@ -421,7 +418,7 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
-        'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
+        'Reuse any active in-place legacy slot listed with the requested role. Never migrate, rename or disable it. On a combined legacy entry, Core edits stay in the durable preamble. Continuity edits stay in the current sections; use "Active Threads" for [Active threads — still unconfirmed] and "Active Conditions" for [Physical carryover]. Add or edit Present Handoff on the same UID.',
         ...(scenes ? ['Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
             title:s.title,result:s.result,content:s.content,segments:s.segments})))] : []),
         'Approved event classifications:',JSON.stringify({
@@ -439,8 +436,20 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
 
 function readSlothNexusEdits(response, {messages,nexus,settings,initial}) {
     try {
-        if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
-        const edits=validateGroundedNexusEdits(canonicalizeNewNexusTitles(response.edits),messages);
+        if(!Array.isArray(response.edits) || response.edits.length > 80)throw new Error('Nexus delta must contain a valid edits list.');
+        const candidates=canonicalizeNewNexusTitles(response.edits);
+        const isNpc = op => String(op?.kind).trim().toLowerCase() === 'npc';
+        const required = validateGroundedNexusEdits(candidates.filter(op => !isNpc(op)),messages);
+        const edits=candidates.flatMap(op => {
+            if (!isNpc(op)) return [required.shift()];
+            try {
+                const [npc] = validateGroundedNexusEdits([op],messages);
+                return npcNexusSubjectIsGrounded(npc,nexus) ? [npc] : [];
+            } catch {
+                // An optional NPC note must not block otherwise grounded updates.
+                return [];
+            }
+        });
         if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
             throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
         }
@@ -472,7 +481,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
                 (error, rejected) => [prompt+groundedSource,
                     'The first draft was rejected: '+error.message,
                     ...(rejected ? ['Rejected draft for repair only; verify everything with the original messages:',JSON.stringify(rejected)] : []),
-                    'Return compact JSON {"edits":[...]}. Keep independent edits that can be verified, and correct or drop the invalid edit. Every retained edit needs its own short reason and evidence array of one to eight {"messageId":integer,"quote":"verbatim excerpt"} objects. A create needs these fields too. For LT and NPC additions use append; only Current Continuity uses append_section. Omit protected UIDs. Return {"edits":[]} if no edits are supported.',
+                    'Return compact JSON {"edits":[...]}. Keep independent edits that can be verified, and correct or drop the invalid edit. Every retained edit needs its own short reason and evidence array of one to eight {"messageId":integer,"quote":"verbatim excerpt"} objects. Reuse existing matching UIDs. On NPC creation, verify evidence of the continuing role or omit the entry. For LT and NPC additions use append; only continuity uses append_section. Omit protected UIDs. Return {"edits":[]} if no edits are supported.',
                 ].join('\n\n')),
             () => nexusStateEvidenceFor(messages,ask));
     } catch (error) {

@@ -1,7 +1,71 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateNexusEventPlan,parseReviewedSegments,groupSlothSourceWindows,
-  fingerprintSlothChat,stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
+  fingerprintSlothChat,describeNexusCollectionEntry,npcNexusSubjectIsGrounded,
+  stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
+
+test('legacy mixed Nexus updates the same active core and continuity UID in place', () => {
+  const content = [
+    '=== LONG-TERM MEMORY — A & B ===', '', '[Essential facts / ongoing world state]',
+    'A and B share a house.', '', '[Enduring relationship / shared priorities]',
+    'They trust one another.', '', '[Active threads — still unconfirmed]',
+    '[Thread — The letter]', 'The letter has not arrived.', '',
+    '[Physical carryover]', "A's wrist still hurts.", '', '=== END LONG-TERM MEMORY — A & B ===',
+  ].join('\n');
+  const entry = {uid:15,comment:'Long-Term Memory (Always-On Story Memory)',constant:true,
+    content,position:1,order:6500,key:[],STMB_sidePromptRegeneration:{keep:'snapshot'}};
+  const book = {entries:{15:entry}};
+  assert.deepEqual(describeNexusCollectionEntry(entry).roles,['core','continuity']);
+  const maker = () => assert.fail('must reuse the existing UID');
+  const {staged} = stageNexusEdits(book,[
+    {kind:'continuity',action:'append_section',uid:15,section:'Present Handoff',text:'A is waiting by the fire.'},
+    {kind:'continuity',action:'append_section',uid:15,section:'Active Threads',text:'[Thread — A visit]\nA plans to see B later.'},
+    {kind:'core',action:'append',uid:15,text:'They share the same house by choice.'},
+  ],maker);
+  assert.deepEqual(Object.keys(staged.entries),['15']);
+  const {content:body,...metadata} = staged.entries[15];
+  const {content:oldBody,...oldMetadata} = entry;
+  assert.deepEqual(metadata,oldMetadata);
+  assert.equal(oldBody,content);
+  assert.match(body,/house by choice\.\n\n\[Active threads/);
+  assert.match(body,/plans to see B later\.[\s\n]+\[Thread — The letter\]/);
+  assert.match(body,/\*\*Thread — A visit:\*\* A plans/);
+  assert.match(body,/## Present Handoff\nA is waiting by the fire\.\n\n=== END LONG-TERM MEMORY/);
+  assert.throws(() => stageNexusEdits(book,[
+    {kind:'continuity',action:'create',title:'Current Continuity',content:'## Present Handoff\nSame situation.'},
+  ],maker),/Use existing UID 15/);
+  assert.throws(() => stageNexusEdits(book,[
+    {kind:'core',action:'replace_exact',uid:15,find:'The letter has not arrived.',text:'The letter arrived.'},
+  ],maker),/does not match uniquely/);
+  assert.deepEqual(describeNexusCollectionEntry({...entry,position:7}).protected,true);
+});
+
+test('a new numbered detail cannot duplicate an existing person or topic', () => {
+  const entries = {
+    3:{uid:3,comment:'NPC 02 | Mme. Émilie Duval',content:'Known person.'},
+    4:{uid:4,comment:'LT 01 | The missing letter',content:'Already recorded.'},
+  };
+  const maker = () => assert.fail('must reuse the existing UID');
+  assert.throws(() => stageNexusEdits({entries},[
+    {kind:'npc',action:'create',title:'NPC 27 | Madame Emilie Duval',content:'Same person.'},
+  ],maker),/Use existing UID 3/);
+  assert.throws(() => stageNexusEdits({entries},[
+    {kind:'lt',action:'create',title:'LT 20 | The missing letter',content:'Same topic.'},
+  ],maker),/Use existing UID 4/);
+});
+
+test('only quotes naming the right NPC can update their entry or support a new one', () => {
+  const entries = {
+    3:{uid:3,comment:'NPC 02 | Madame Vasseur'},
+    4:{uid:4,comment:'NPC 03 | Madame Thérèse Vidal'},
+  };
+  const update = quote => ({action:'append',uid:3,evidence:[{quote}]});
+  assert.equal(npcNexusSubjectIsGrounded(update('Madame Bachir showed us the old books.'),{entries}),false);
+  assert.equal(npcNexusSubjectIsGrounded(update('Mme. Vasseur wrote to me yesterday.'),{entries}),true);
+  const create = quote => ({action:'create',title:'NPC 04 | Madame Thérèse Vidal',continuingRole:{evidence:{quote}}});
+  assert.equal(npcNexusSubjectIsGrounded(create('The madame was going to keep them there after the tour.'),{entries}),false);
+  assert.equal(npcNexusSubjectIsGrounded(create('Thérèse Vidal promised to visit every January.'),{entries}),true);
+});
 
 const messages=Array.from({length:10},(_,id)=>({id,name:'A',mes:'message '+id}));
 test('one owner per listed message produces disjoint source ranges across gaps',()=>{

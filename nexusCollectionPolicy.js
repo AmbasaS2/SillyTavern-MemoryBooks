@@ -3,7 +3,7 @@
 // Pure, loss-averse event validation and World Info staging.
 
 import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
-import { appendContinuitySection, guardContinuityChange,
+import { appendContinuitySection, guardContinuityChange, legacyContinuitySectionStart,
     guardNewContinuityContent } from './nexusContinuitySections.js';
 import { isGroundedContinuityRetirement } from './nexusEditEvidence.js';
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
@@ -160,14 +160,64 @@ export function fingerprintSlothChat(chat,ids,{allowHidden=false}={}) {
     })});
 }
 
-const protectedEntry = entry => entry?.disable || Number(entry?.position)===7 ||
-    str(entry?.outletName) || /^(?:Kinks|PanelAssets)(?:\b|$)/i.test(str(entry?.comment)) ||
-    !!classifyNexusLegacyTitle(entry?.comment) ||
-    !!entry?.STMB_sidePromptHistory;
+const SINGLETON_ROLES = new Map([
+    ['core memory', 'core'], ['current continuity', 'continuity'], ['npc index', 'npc-index'],
+]);
+const DETAIL_TITLE = /^(lt|npc)\s*\d*\s*[|:–—-]\s*(.+)$/iu;
+const LEGACY_FOOTER = /(?:\r?\n)+=== END (?:LONG-TERM MEMORY|SCENE CONTINUITY|STATUS)\b[^\r\n]*===\s*$/iu;
+const normalizedTitle = title => str(title).normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ');
+const detailIdentity = title => normalizedTitle(title).replace(DETAIL_TITLE, '$2')
+    .normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+    .replace(/^mme\s/u, 'madame ');
+const npcName = title => detailIdentity(title).replace(/^(?:madame|madam|mrs|miss|ms|mr|monsieur|dr|professor)\s+/u, '');
+const quoteNames = (quote, names) => names.some(name =>
+    name && (' ' + detailIdentity(quote) + ' ').includes(' ' + name + ' '));
+
+export function describeNexusCollectionEntry(entry) {
+    const title = str(entry?.comment);
+    const content = str(entry?.content);
+    const singleton = SINGLETON_ROLES.get(normalizedTitle(title));
+    const legacy = classifyNexusLegacyTitle(title);
+    const recognizedState = /^\[(?:Active threads [–—-] still unconfirmed|Physical carryover)\][ \t]*\r?$/imu.test(content);
+    const recognizedCore = /^\[Essential facts \/ ongoing world state\][ \t]*\r?$/imu.test(content) &&
+        /^\[Enduring relationship \/ shared priorities\][ \t]*\r?$/imu.test(content);
+    const roles = [];
+    if (singleton) roles.push(singleton);
+    else if (entry?.constant === true && (legacy || recognizedCore)) {
+        if (legacy === 'core' || recognizedCore) roles.push('core');
+        if (legacy === 'continuity' || recognizedState) roles.push('continuity');
+    }
+    if (!roles.length && !legacy) {
+        const kind = title.match(DETAIL_TITLE)?.[1].toLowerCase() || entry?.STMB_slothNexusKind;
+        if (kind === 'lt' || kind === 'npc') roles.push(kind);
+    }
+    const legacyLayout = !singleton && roles.some(role => role === 'core' || role === 'continuity');
+    const protectedEntry = !!(entry?.disable || Number(entry?.position) === 7 || str(entry?.outletName) ||
+        /^(?:Kinks|PanelAssets)(?:\b|$)/iu.test(title) || entry?.STMB_sidePromptHistory ||
+        entry?.STMB_slothLegacyArchive || (legacy && !roles.length) ||
+        entry?.stmemorybooks || entry?.stmbSummary || entry?.stmbArc);
+    return {roles, legacyLayout, protected: protectedEntry};
+}
+
+export function npcNexusSubjectIsGrounded(op, book) {
+    if (str(op.action).toLowerCase() === 'create') {
+        const name = npcName(op.title);
+        return quoteNames(op.continuingRole?.evidence?.quote, [name]);
+    }
+    const entries = Object.values(book.entries || {});
+    const target = entries.find(entry => intUid(entry?.uid) === intUid(op.uid));
+    const name = npcName(target?.comment);
+    if (!name) return false;
+    const otherNames = entries.filter(entry => entry !== target &&
+        describeNexusCollectionEntry(entry).roles.includes('npc')).map(entry => npcName(entry.comment));
+    const shortNames = name.split(' ').filter(word => word.length >= 3 &&
+        !otherNames.some(other => other.split(' ').includes(word)));
+    return op.evidence.some(({quote}) => quoteNames(quote, [name, ...shortNames]));
+}
+
 function getUidEntry(book,uid){
     const matches=Object.values(book.entries||{}).filter(e=>intUid(e?.uid)===uid);
     requireThat(matches.length===1,'Nexus UID '+uid+' is ambiguous/missing.');
-    requireThat(!protectedEntry(matches[0]),'Special/disabled Nexus entry cannot be edited.');
     return matches[0];
 }
 export function stageNexusEdits(original, edits, createEntry, {detailRecallMode='vector'}={}) {
@@ -187,16 +237,29 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
             requireThat(title && title.length<=180 && content && !titles.has(title.toLowerCase()),
                 'Duplicate, missing or empty new Nexus entry.');
             requireThat(!/^(Kinks|PanelAssets)(?:\b|$)/i.test(title),'Cannot create special Outlet.');
+            requireThat(!classifyNexusLegacyTitle(title), 'A new Nexus entry cannot reuse a legacy role title.');
             if(kind==='core')requireThat(title==='Core Memory','Core Memory title mismatch.');
             if(kind==='continuity')requireThat(title==='Current Continuity','Continuity title mismatch.');
             if(title==='Core Memory')requireThat(kind==='core','Core Memory must use core kind.');
             if(title==='Current Continuity')requireThat(kind==='continuity','Continuity must use continuity kind.');
+            const identity = detailIdentity(title);
+            const target = Object.values(staged.entries).find(entry => {
+                if (!entry || entry.disable || entry.STMB_slothLegacyArchive) return false;
+                const {roles} = describeNexusCollectionEntry(entry);
+                if (kind === 'core' || kind === 'continuity' || kind === 'npc-index') return roles.includes(kind);
+                return identity && detailIdentity(entry.comment) === identity &&
+                    (roles.includes(kind) || !roles.length);
+            });
+            requireThat(!target, `Duplicate Nexus role or detail. Use existing UID ${target?.uid ?? ''}.`);
+            const newRoles = describeNexusCollectionEntry({comment:title}).roles;
+            requireThat(!newRoles.length || newRoles.includes(kind), 'New Nexus title does not match its role.');
             if(kind==='continuity')guardNewContinuityContent(content);
             const entry=createEntry(staged);
             requireThat(entry && intUid(entry.uid)!==null,'World Info entry constructor failed.');
             entry.comment=title;entry.content=content;entry.disable=false;entry.position=0;
             entry.constant=['core','continuity','npc-index'].includes(kind);
             const detail=['lt','npc'].includes(kind);
+            if (detail) entry.STMB_slothNexusKind=kind;
             entry.vectorized=detail && detailRecallMode==='vector';
             entry.selective=detail;
             entry.key=Array.isArray(op.keywords)?[...new Set(op.keywords.map(str).filter(Boolean))].slice(0,16):[];
@@ -209,16 +272,24 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
         }
         const uid=intUid(op?.uid);
         requireThat(uid!==null,'Nexus edit needs existing numeric UID.');
-        const entry=getUidEntry(staged,uid), title=str(entry.comment), before=String(entry.content||'');
-        if(kind==='core')requireThat(title==='Core Memory','Core Memory UID mismatch.');
-        if(kind==='continuity')requireThat(title==='Current Continuity','Continuity UID mismatch.');
-        if(title==='Core Memory')requireThat(kind==='core','Core Memory kind mismatch.');
-        if(title==='Current Continuity')requireThat(kind==='continuity','Continuity kind mismatch.');
+        const entry=getUidEntry(staged,uid), title=str(entry.comment);
+        const {roles,legacyLayout,protected:isProtected} = describeNexusCollectionEntry(entry);
+        requireThat(!isProtected,'Special/disabled Nexus entry cannot be edited.');
+        requireThat(roles.includes(kind) || (!roles.length && (kind === 'lt' || kind === 'npc')),
+            'Nexus UID does not match the requested role: '+title);
+        const originalText = String(entry.content || '');
+        const footer = (legacyLayout && originalText.match(LEGACY_FOOTER)?.[0]) || '';
+        const body = footer ? originalText.slice(0, -footer.length) : originalText;
+        const coreBoundary = legacyLayout && kind === 'core' && roles.includes('continuity') ?
+            legacyContinuitySectionStart(body) : -1;
+        const before = coreBoundary < 0 ? body : body.slice(0, coreBoundary);
+        const remainder = coreBoundary < 0 ? '' : body.slice(coreBoundary);
         const text=str(op.text);
         const retirement=isGroundedContinuityRetirement(op);
         requireThat(text||retirement,'Nexus edit has empty text.');
-        if(action!=='replace_exact')requireThat(!before.includes(text),
+        if(action!=='replace_exact')requireThat(!originalText.includes(text),
             'Nexus addition already exists; refusing a repeated append.');
+        let after;
         if(action==='replace_exact'){
             const find=str(op.find);
             requireThat(find && before.split(find).length===2,'Nexus exact text does not match uniquely: '+title);
@@ -228,18 +299,21 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
                     (end===before.length||/^[\r\n]/.test(before.slice(end))),
                     'Clean up only one whole, explicitly ended Continuity line at a time.');
             }
-            entry.content=before.replace(find,()=>text);
+            after=before.replace(find,()=>text);
         }else if(action==='append_section'){
-            entry.content=appendContinuitySection(before,op.section,text);
+            after=appendContinuitySection(before,op.section,text,{legacyHeadings:legacyLayout});
         }else{
             requireThat(kind!=='continuity',
                 'Current Continuity append must specify a section using append_section.');
-            entry.content=before+(before.endsWith('\n')?'\n':'\n\n')+text;
+            after=before+(before.endsWith('\n')?'\n':'\n\n')+text+(remainder?'\n\n':'');
         }
-        if(kind==='continuity')guardContinuityChange(before,entry.content,
-            {action,section:op.section});
-        requireThat(entry.content!==before,'Nexus edit made no change; refusing a no-op save.');
-        changes.push({action,kind,title,uid,before,after:entry.content});
+        if(kind==='continuity')guardContinuityChange(before,after,
+            {action,section:op.section,legacyHeadings:legacyLayout});
+        if (coreBoundary >= 0) requireThat(legacyContinuitySectionStart(after) < 0,
+            'A Core update cannot introduce a current-state section.');
+        entry.content=after+remainder+footer;
+        requireThat(entry.content!==originalText,'Nexus edit made no change; refusing a no-op save.');
+        changes.push({action,kind,title,uid,before:originalText,after:entry.content});
     }
     return {staged,changes};
 }
