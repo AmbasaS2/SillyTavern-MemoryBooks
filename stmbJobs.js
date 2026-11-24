@@ -66,6 +66,8 @@ let jobsSummary = null;
 let jobsRows = null;
 let jobsActions = null;
 let missingTopInfoBarNoticeShown = false;
+let slothCollectionProgress = null;
+let legacyJobsSummary = '';
 
 function placeJobsTopBarButton(topBar, wrapper) {
     const chatName = document.getElementById(TOP_INFO_BAR_CHAT_NAME_ID);
@@ -812,6 +814,24 @@ function getCurrentStoreRows() {
     ].map(cloneJobForView);
 }
 
+function renderJobsSummary() {
+    if (!jobsPanel || !topBarButton || !jobsSummary) return;
+    const progress = slothCollectionProgress && slothCollectionProgress.chatKey === getStmbChatKey()
+        ? slothCollectionProgress.text : '';
+    const summary = progress || legacyJobsSummary;
+    if (jobsSummary.textContent !== summary) jobsSummary.textContent = summary;
+    topBarButton.title = summary;
+    topBarButton.setAttribute('aria-label', `${tr('STMemoryBooks_Jobs_Title', 'Memory Books Jobs')}. ${summary}`);
+    topBarButton.classList.toggle('stmb-jobs-sloth-active', Boolean(progress));
+    jobsPanel.classList.toggle('stmb-jobs-sloth-active', Boolean(progress));
+}
+
+export function setSlothCollectionProgress(chatKey, text) {
+    if (!jobsUiInitialized || (!text && slothCollectionProgress?.chatKey !== chatKey)) return;
+    slothCollectionProgress = text ? { chatKey, text } : null;
+    renderJobsSummary();
+}
+
 function renderStmbJobsUi() {
     if (!jobsUiInitialized || !jobsRows || !jobsSummary || !topBarButton || !topBarBadge || !jobsActions) {
         return;
@@ -822,15 +842,13 @@ function renderStmbJobsUi() {
     const reviewCount = rows.filter(row => row.state === 'needs_review' || row.state === 'awaiting_approval').length;
     const failureCount = rows.filter(row => ['failed', 'blocked'].includes(String(row.state))).length;
     const totalBadge = activeCount + reviewCount + failureCount;
-    const summary = activeCount > 0
+    legacyJobsSummary = activeCount > 0
         ? tr('STMemoryBooks_Jobs_ActiveSummary', '{{count}} active job(s)', { count: activeCount })
         : reviewCount > 0
             ? tr('STMemoryBooks_Jobs_ReviewSummary', '{{count}} need review', { count: reviewCount })
             : tr('STMemoryBooks_Jobs_NoActive', 'No active jobs');
 
-    jobsSummary.textContent = summary;
-    topBarButton.title = summary;
-    topBarButton.setAttribute('aria-label', `${tr('STMemoryBooks_Jobs_Title', 'Memory Books Jobs')}. ${summary}`);
+    renderJobsSummary();
     topBarBadge.style.display = totalBadge > 0 ? 'inline-flex' : 'none';
     topBarBadge.textContent = totalBadge > 99 ? '99+' : String(totalBadge);
     topBarBadge.classList.toggle('stmb-jobs-badge-failed', activeCount === 0 && failureCount > 0);
@@ -1005,7 +1023,7 @@ function ensureJobsUiElements() {
         drawer.innerHTML = `
             <div class="stmb-jobs-panel-header">
                 <div class="stmb-jobs-drawer-title"><strong>${escapeHtml(tr('STMemoryBooks_Jobs_Title', 'Memory Books Jobs'))}</strong></div>
-                <div id="stmb-jobs-summary" class="stmb-jobs-summary">${escapeHtml(tr('STMemoryBooks_Jobs_NoActive', 'No active jobs'))}</div>
+                <div id="stmb-jobs-summary" class="stmb-jobs-summary" role="status">${escapeHtml(tr('STMemoryBooks_Jobs_NoActive', 'No active jobs'))}</div>
             </div>
             <div id="stmb-jobs-actions" class="stmb-jobs-actions"></div>
             <div id="stmb-jobs-rows" class="stmb-jobs-rows"></div>`;

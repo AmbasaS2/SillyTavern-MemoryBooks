@@ -11554,7 +11554,7 @@ function getSlothProfileConfiguration(settings) {
   };
 }
 
-async function runSlothCollectionEntryPoint() {
+async function runSlothCollectionEntryPoint({ signal, onSaveStart } = {}) {
   const settings = initializeSettings();
   const ref = getCurrentStmbChatRef();
   if (!ref?.fileName || (!canStartNexusSetup(ref,settings) && !['nexus','memory'].every(role=>
@@ -11564,23 +11564,87 @@ async function runSlothCollectionEntryPoint() {
     return '';
   }
   try {
-    const result = await runNexusCollector(getSlothProfileConfiguration(settings));
+    const result = await runNexusCollector({ ...getSlothProfileConfiguration(settings), signal, onSaveStart });
     if (result?.saved) await refreshPopupContent();
   } catch (error) {
+    if (signal?.aborted) throw error;
     console.error('Sloth operation stopped:', error);
     toastr.error(error.message, 'STMemoryBooks', {timeOut:8500});
   }
   return '';
 }
 
+let activeSlothCollectionButton = null;
+
+function cancelSlothCollectionFrom(button) {
+  const active = activeSlothCollectionButton;
+  if (active?.button !== button) return false;
+  if (!active.saving && !active.controller.signal.aborted) {
+    button.disabled = true;
+    active.controller.abort();
+  }
+  return true;
+}
+
+async function runCancellableSlothButton(button, start) {
+  if (cancelSlothCollectionFrom(button) || activeSlothCollectionButton) return;
+  const controller = new AbortController();
+  const run = {button,controller,saving:false};
+  activeSlothCollectionButton = run;
+  const glyph = button.querySelector('i');
+  const previous = {title:button.getAttribute('title'),label:button.getAttribute('aria-label'),
+    text:button.textContent,icon:glyph?.className};
+  const updateLabel = label => {
+    button.title = label;
+    button.setAttribute('aria-label',label);
+    if (!glyph) button.textContent = label;
+  };
+  if (glyph) glyph.className = 'fa-solid fa-xmark';
+  updateLabel(translate('Cancel memory collection','STMemoryBooks_SlothCancelCollection'));
+  button.setAttribute('aria-busy','true');
+  try {
+    return await start({
+      signal:controller.signal,
+      onSaveStart:()=>{
+        run.saving = true;
+        button.disabled = true;
+        if (glyph) glyph.className = previous.icon;
+        updateLabel(translate('Saving','STMemoryBooks_Jobs_Saving'));
+      },
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      toastr.info(translate('Memory collection canceled.','STMemoryBooks_SlothCollectionCanceled'),
+        'STMemoryBooks',{timeOut:2500});
+    } else {
+      console.error('Sloth operation stopped:',error);
+      toastr.error(error?.message || String(error),'STMemoryBooks',{timeOut:8500});
+    }
+  } finally {
+    activeSlothCollectionButton = null;
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    if (previous.title === null) button.removeAttribute('title');
+    else button.setAttribute('title',previous.title);
+    if (previous.label === null) button.removeAttribute('aria-label');
+    else button.setAttribute('aria-label',previous.label);
+    if (glyph) glyph.className = previous.icon;
+    else button.textContent = previous.text;
+  }
+}
+
 function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
-  const existing = document.getElementById('stmb-sloth-composer');
+  const existingSlot = document.getElementById('stmb-sloth-composer-slot');
   const ref = getCurrentStmbChatRef();
   const extensionsMenu = document.querySelector('#leftSendForm #extensionsMenuButton');
   if (!extensionsMenu || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
-    existing?.remove();
+    existingSlot?.remove();
     return;
   }
+  // Match the native toolbar's direct div slots so custom themes apply to the icon.
+  const slot = existingSlot ?? document.createElement('div');
+  slot.id = 'stmb-sloth-composer-slot';
+  const existing = slot.firstElementChild;
   const button = existing ?? document.createElement('button');
   if (!existing) {
     button.type = 'button';
@@ -11591,27 +11655,28 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
     const glyph = document.createElement('i');
     glyph.setAttribute('aria-hidden','true');
     button.append(glyph);
-    button.addEventListener('click', async () => {
-      button.disabled = true;
-      try { await runSlothCollectionEntryPoint(); }
-      finally { button.disabled = false; }
-    });
+    slot.append(button);
+    button.addEventListener('click', () => runCancellableSlothButton(button, runSlothCollectionEntryPoint));
   }
-  button.firstElementChild.className = 'fa-solid fa-' + getSlothComposerIcon(settings);
+  if (activeSlothCollectionButton?.button !== button) {
+    button.firstElementChild.className = 'fa-solid fa-' + getSlothComposerIcon(settings);
+  }
   button.style.setProperty('--stmb-collect-size', getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px');
   // Flex items with the same order are laid out in DOM order.
-  button.style.order = getComputedStyle(extensionsMenu).order;
-  if (extensionsMenu.nextElementSibling !== button) extensionsMenu.after(button);
+  slot.style.order = getComputedStyle(extensionsMenu).order;
+  if (extensionsMenu.nextElementSibling !== slot) extensionsMenu.after(slot);
 }
 
 async function runSlothSettingsAction(button, popupElement, settings) {
+  if (cancelSlothCollectionFrom(button) || activeSlothCollectionButton) return;
   if (popupElement.querySelector('button[data-stmb-sloth-action]:disabled')) return;
   const choice = popupElement.querySelector('#stmb-sloth-profile-select')?.value || '';
   const stConnectionProfileId = choice.startsWith('st:') ? choice.slice(3) : '';
   const selected = Number.parseInt(choice, 10);
   const profileIndex = Number.isSafeInteger(selected) ? selected : settings.defaultProfile;
   const actions = {
-    collect: () => runNexusCollector({ profileIndex, stConnectionProfileId }),
+    collect: () => runCancellableSlothButton(button, controls =>
+      runNexusCollector({ profileIndex, stConnectionProfileId, ...controls })),
     companion: () => createSlothCompanion(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
@@ -11622,7 +11687,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
   const action = button.dataset.stmbSlothAction;
   if (!Object.hasOwn(actions, action)) return;
   const buttons = popupElement.querySelectorAll('button[data-stmb-sloth-action]');
-  for (const item of buttons) item.disabled = true;
+  for (const item of buttons) item.disabled = action !== 'collect' || item !== button;
   try {
     const result = await actions[action]();
     if (result?.saved) {

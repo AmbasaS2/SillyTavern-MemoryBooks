@@ -582,7 +582,7 @@ export async function composeApprovedSlothCollection(options) {
         skippedScenes: events.length - scenes.length, reviewFailed };
 }
 
-export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext=''}) {
+export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext='',signal=null}) {
     const selectedIds = new Set(events.flatMap(event=>event.messageIds));
     const source = messages.filter(message=>selectedIds.has(message.id));
     const prompt = [
@@ -590,7 +590,7 @@ export async function retryApprovedSlothScenes({events,messages,profile,settings
         slothSceneBatchGuidance(events,settings,characterContext),
         'Original messages for these Scenes:',compact(source),
     ].join('\n\n');
-    const response = await requester(profile,settings,null,true)(prompt,'Retry requested Memory Scenes');
+    const response = await requester(profile,settings,signal,true)(prompt,'Retry requested Memory Scenes');
     return [...readSlothBatchScenes(response,events).values()];
 }
 

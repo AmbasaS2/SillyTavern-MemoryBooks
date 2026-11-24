@@ -124,13 +124,13 @@ export const settingsTemplate = Handlebars.compile(`
             </select>
         </label>
         <label for="stmb-sloth-memory-recall" class="stmb-sloth-select-row">
-          <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory recall</span>
+          <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory conversion</span>
           <select id="stmb-sloth-memory-recall" class="text_pole">
             <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
             <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
           </select>
         </label>
-        <small id="stmb-sloth-native-recall-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp">Older memories use the selected Vector or Keywords mode starting with the next collection. The latest 3 scenes stay always on.</small>
+        <small id="stmb-sloth-native-recall-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The next collection converts older memories to the selected type. The latest three stay always on.</small>
         <label class="checkbox_label">
           <input id="stmb-sloth-summary-review" type="checkbox" aria-describedby="stmb-sloth-summary-review-help" {{#if slothSummaryReview}}checked{{/if}}>
           <span data-i18n="STMemoryBooks_SlothSummaryReview">Review and retry summaries</span>

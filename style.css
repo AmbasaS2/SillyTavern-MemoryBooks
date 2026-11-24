@@ -671,6 +671,21 @@ p.stmb-help-drawer-copy {
     background: var(--SmartThemeRedColor, #ff6b6b);
 }
 
+.stmb-jobs-topbar.stmb-jobs-sloth-active::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--SmartThemeQuoteColor, currentColor);
+}
+
+.stmb-jobs-sloth-active .stmb-jobs-empty {
+    display: none;
+}
+
 .stmb-jobs-panel-header,
 .stmb-jobs-actions,
 .stmb-jobs-row-header,
@@ -1146,6 +1161,9 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin: 0;
 }
 .popup.stmb-popup .stmb-sloth-select-row > select { text-overflow: ellipsis; }
+.popup.stmb-popup #stmb-sloth-collection-settings .stmb-sloth-select-row + .stmb-sloth-select-row {
+    margin-block-start: 5px;
+}
 .popup.stmb-popup .stmb-sloth-auto-fields { display: grid; gap: 5px; }
 .popup.stmb-popup #stmb-sloth-auto-interval { max-width: 8em; }
 .popup.stmb-popup .stmb-sloth-advanced-fields select { width: auto; margin: 0; }
@@ -1199,23 +1217,30 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-management-action small { line-height: 1.28; }
 
-#leftSendForm #stmb-sloth-composer {
-    display: grid;
-    place-items: center;
+#leftSendForm #stmb-sloth-composer-slot {
     flex: 0 0 auto;
     align-self: stretch;
     min-width: 24px;
+    width: auto;
+    height: auto;
+}
+
+#leftSendForm #stmb-sloth-composer {
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    width: 100%;
     border: 0;
+    margin: 0;
     padding: 0 3px;
     background: transparent;
     color: inherit;
     font: inherit;
     font-size: var(--stmb-collect-size, 16px);
     white-space: nowrap;
-    opacity: .72;
     cursor: pointer;
 }
-#leftSendForm #stmb-sloth-composer:is(:hover,:focus-visible) { opacity: 1; }
+#leftSendForm #stmb-sloth-composer-slot:focus-within { opacity: 1; }
 #leftSendForm #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
 
 .popup.stmb-popup .stmb-prompt-library { display:grid; gap:5px; text-align:start; margin-block:7px; }

@@ -13,7 +13,7 @@ import { getTokenCountAsync } from '../../../tokenizers.js';
 import { DOMPurify } from '../../../../lib.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
-import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, withStmbWriteLane } from './stmbJobs.js';
+import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, setSlothCollectionProgress, withStmbWriteLane } from './stmbJobs.js';
 import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
@@ -347,7 +347,20 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
     }
 }
 
-async function planApproval(plan,initial,keepRecent,remaining) {
+async function showCollectionPopup(popup, signal) {
+    signal?.throwIfAborted();
+    const close = () => { void popup.completeCancelled(); };
+    signal?.addEventListener('abort', close, { once: true });
+    try {
+        const result = await popup.show();
+        signal?.throwIfAborted();
+        return result;
+    } finally {
+        signal?.removeEventListener('abort', close);
+    }
+}
+
+async function planApproval(plan,initial,keepRecent,remaining,signal) {
     const collectedIds = plan.events.flatMap(event => event.messageIds).sort((a, b) => a - b);
     const collectedRanges = readableSegments(slothSourceRanges(collectedIds));
     const analyzedRange = readableSegments(slothSourceRanges(plan.sourceIds));
@@ -401,11 +414,11 @@ async function planApproval(plan,initial,keepRecent,remaining) {
         keep.addEventListener('input',update);
         update();
     }
-    const approved=await popup.show();
+    const approved=await showCollectionPopup(popup,signal);
     return !noCompletedInChunk && approved===POPUP_RESULT.AFFIRMATIVE ? {hideRanges,keepRecent:keep?.value ?? keepRecent} : null;
 }
 
-async function showSlothRetryPrompt(missingScenes, hasSavableDraft) {
+async function showSlothRetryPrompt(missingScenes, hasSavableDraft, signal) {
     const rows = missingScenes.map(event=>'<li><strong>'+html(event.title)+'</strong><small> #'+
         html(readableSegments(event.segments))+'</small></li>').join('');
     const body = '<div class="stmb-sloth-review"><h3 id="stmb-sloth-retry-title">'+
@@ -418,13 +431,13 @@ async function showSlothRetryPrompt(missingScenes, hasSavableDraft) {
         cancelButton:hasSavableDraft ? t('Save completed work only','STMemoryBooks_SlothRetrySaveCompleted') :
             t('Close','STMemoryBooks_Close'),
     }));
-    return await popup.show();
+    return await showCollectionPopup(popup, signal);
 }
 
-async function loadServerWorld(name) {
+async function loadServerWorld(name, signal) {
     // Never trust stale worldInfoCache for optimistic locking or read-back.
     const response=await fetch('/api/worldinfo/get',{
-        method:'POST',headers:getRequestHeaders(),body:JSON.stringify({name})});
+        method:'POST',headers:getRequestHeaders(),body:JSON.stringify({name}),signal});
     if(!response.ok)throw new Error('World Info server read failed for '+name+': '+response.status);
     const book=await response.json();
     if(!book?.entries || typeof book.entries!=='object')throw new Error('World Info returned invalid data for '+name);
@@ -496,13 +509,15 @@ function collectionProfile(settings, profileIndex, stConnectionProfileId) {
         settings.profiles?.[profileIndex ?? settings.defaultProfile] || settings.profiles?.[settings.defaultProfile];
 }
 
-export async function runNexusCollector({profileIndex, stConnectionProfileId, automaticChatKey=''}={}) {
+export async function runNexusCollector({profileIndex, stConnectionProfileId, automaticChatKey='', signal, onSaveStart}={}) {
     if(collectorBusy) {
         if (automaticChatKey) return {saved:false,reason:'busy'};
         throw new Error('A Sloth collection is already in progress.');
     }
     collectorBusy=true;
+    let progressChatKey = '';
     try {
+        signal?.throwIfAborted();
         const settings=extension_settings.STMemoryBooks;
         const ref=structuredClone(getCurrentStmbChatRef());
         const automatic=automaticChatKey ? getSlothAutomaticSettings(settings) : null;
@@ -537,8 +552,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const pending = automatic ? activeSource(ref,null,roleNames).source : null;
         if (automatic && !await thresholdMet(pending)) return {saved:false,reason:'below-threshold'};
         const originalBooks=initial?{nexus:{entries:{}},memory:{entries:{}}}:{
-            nexus:await loadServerWorld(roleNames.nexus),
-            memory:await loadServerWorld(roleNames.memory),
+            nexus:await loadServerWorld(roleNames.nexus,signal),
+            memory:await loadServerWorld(roleNames.memory,signal),
         };
         if(getStmbChatKey()!==getStmbChatKey(ref)) {
             throw new Error('The chat changed while its lorebooks were loading. Start collection from the original chat.');
@@ -568,12 +583,16 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 throw new Error('The original chat, character or lorebook setup changed. Verify it before retrying.');
             }
         };
+        const checkBeforeSave=()=>{
+            signal?.throwIfAborted();
+            checkOrigin();
+        };
         if(initial){
             await listNexusSetupBooks(ref.avatarUrl);
         }
-        checkOrigin();
+        checkBeforeSave();
         const [currentChunk,...laterChunks]=await splitSlothCollectionSource(source,getTokenCountAsync);
-        checkOrigin();
+        checkBeforeSave();
         const partialSource=laterChunks.length>0;
         const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames} : null;
         const autoWindow=autoAttempt && partialSource ? {attempt:autoAttempt,through:currentChunk.at(-1).id} : null;
@@ -590,17 +609,22 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         } else {
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
-        const plan=await analyzeSlothEvents({messages:currentChunk,profile,settings,characterContext});
-        checkOrigin();
+        progressChatKey = getStmbChatKey(ref);
+        const showProgress = (source, key) => setSlothCollectionProgress(progressChatKey, t(source, key));
+        showProgress('Analyzing events', 'STMemoryBooks_SlothProgressAnalyzing');
+        const plan=await analyzeSlothEvents({messages:currentChunk,profile,settings,characterContext,signal});
+        checkBeforeSave();
         if (automatic && !plan.events.length) return {saved:false,reason:'no-completed-events'};
+        if (!automatic) showProgress('Awaiting approval', 'STMemoryBooks_Jobs_AwaitingApproval');
         const approval=automatic ? {hideRanges:[]} :
-            await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent),laterChunks.flat());
+            await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent),laterChunks.flat(),signal);
         if(!approval)return {saved:false,reason:'plan-cancelled'};
-        checkOrigin();
+        checkBeforeSave();
 
+        showProgress('Writing memories', 'STMemoryBooks_SlothProgressWriting');
         if (!automatic) toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
         const requestDraft=review=>composeApprovedSlothCollection({nexus:originalBooks.nexus,messages:currentChunk,
-            plan,profile,settings,initial,characterContext,partialSource,reviewSummaries:review,verifyOrigin:checkOrigin});
+            plan,profile,settings,initial,characterContext,partialSource,signal,reviewSummaries:review,verifyOrigin:checkBeforeSave});
         let collection={scenes:[],edits:[],skippedNexusEdits:0,reviewFailed:false};
         let incompleteError;
         try {
@@ -609,14 +633,16 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             if(error.code!=='STMB_SLOTH_MALFORMED_JSON')throw error;
             incompleteError=error;
         }
-        checkOrigin();
+        checkBeforeSave();
         const drafts=new Map(collection.scenes.map(scene=>[scene.id,scene]));
         let missingScenes=plan.events.filter(event=>!drafts.has(event.id));
         while (!automatic && missingScenes.length) {
-            const decision=await showSlothRetryPrompt(missingScenes,drafts.size>0 || collection.edits.length>0);
+            showProgress('Needs review', 'STMemoryBooks_Jobs_NeedsReview');
+            const decision=await showSlothRetryPrompt(missingScenes,drafts.size>0 || collection.edits.length>0,signal);
             if (decision===POPUP_RESULT.CANCELLED) return {saved:false,reason:'retry-cancelled'};
-            checkOrigin();
+            checkBeforeSave();
             if (decision!==POPUP_RESULT.AFFIRMATIVE) break;
+            showProgress('Writing memories', 'STMemoryBooks_SlothProgressWriting');
             toastr.info(t('Retrying the incomplete memories…','STMemoryBooks_SlothRetrying'),'STMemoryBooks');
             try {
                 let recovered;
@@ -625,13 +651,14 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     incompleteError=undefined;
                     recovered=collection.scenes;
                 } else {
-                    recovered=await retryApprovedSlothScenes({events:missingScenes,messages:currentChunk,profile,settings,characterContext});
+                    recovered=await retryApprovedSlothScenes({events:missingScenes,messages:currentChunk,profile,settings,characterContext,signal});
                 }
                 for (const scene of recovered) drafts.set(scene.id,scene);
             } catch (error) {
+                signal?.throwIfAborted();
                 console.warn('Requested memory retry did not complete.',error);
             }
-            checkOrigin();
+            checkBeforeSave();
             missingScenes=plan.events.filter(event=>!drafts.has(event.id));
         }
         if (incompleteError) throw new Error(t('The AI returned an incomplete or unreadable response. No memories were saved.',
@@ -677,6 +704,9 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             }
         }
         await readReviewedChat(ref,sourceIds,fingerprint);
+        signal?.throwIfAborted();
+        onSaveStart?.();
+        showProgress('Saving', 'STMemoryBooks_Jobs_Saving');
         const commitOptions={
             loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
             verifyBeforeWrite:assertReviewedCache,
@@ -730,6 +760,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         return {saved:true,scenes:scenes.length,nexusEdits:edits.length,skippedScenes,skippedNexusEdits,receiptVerified,result:outcome};
     }finally{
         collectorBusy=false;
+        if (progressChatKey) setSlothCollectionProgress(progressChatKey, '');
     }
 }
 
