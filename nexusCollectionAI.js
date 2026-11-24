@@ -107,7 +107,7 @@ async function windowEvidence(window,ask) {
     const prompt=[
         'Extract grounded roleplay evidence from ONE window; events can span earlier or later windows.',
         'Use one record per causal thread. Collect repeated actions and observations into that record, even if the thread recurs in several messages.',
-        'Treat related conversational and physical beats as parts of the shared objective or exchange. A single movement, gesture, or bill settled on the way is seldom its own resolved thread if it only advances the same situation.',
+        'Group preparation, travel, arrivals, introductions, repeated actions and later reactions with the larger incident they serve. Retain what happened as details inside that incident; only a durable, independently completed consequence warrants its own thread.',
         'Preserve exact actors, causal turns, quotes, habits, knowledge access, rumors vs observations,',
         'unresolved promises and what was actually completed. Never invent closure at window boundary.',
         'Output JSON {"events":[{"topic":"...","sourceRanges":[[a,b]],',
@@ -174,11 +174,12 @@ async function evidenceFor(messages,ask,prefix,settings,profile,forceWindows=fal
 const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
     plan:[
         'Roleplay Memory Books event planner. STRICT JSON only.',
-        'One causal incident = one complete Scene even across discontiguous source messages.',
-        'Do not split at arbitrary date, token boundary, place or window. Independent incidents stay separate.',
-        'Before choosing boundaries, identify the independently recallable changes in what people did, learned, agreed to, or actually resolved. A boundary must leave one complete cause → response → consequence on each side. If one side is just a setup, response, interruption, gesture, joke or follow-through whose meaning depends on the other side, keep both together.',
+        'Use the fewest complete, independently useful scenes that preserve the story. One Scene can span several locations, activities or separated source ranges. A Scene is a whole incident with a durable consequence future play might rely on.',
+        'Group preparation, transit, arrival, introductions and routine steps with the event they enable. A new task, successful intermediate step, joke, moment of relief, change of room or handoff is insufficient to end a memory. Recallable dialogue, promises, habits, objects and actions can live inside the larger memory.',
+        'For each proposed cut, ask what independently completed, lasting change each side records. Keep the cut only if both sides have distinct initiating situations and consequential outcomes, and a future recall would use either without needing the other to explain its cause or significance. If the distinction is merely a new activity in the same incident or the later material answers, escalates or pays off the earlier material, omit the cut.',
         'Keep one continuous disagreement and its attempts at repair, explanation, and final answer together. A pause, location change, apology, new speaker, or later reveal that answers that same exchange does not create a separate memory. Preserve the separate facts within that memory. Do not mark hurt forgiven unless the affected person explicitly shows it.',
-        'Separate a genuinely independent new obligation, revelation or outcome when it can be recalled on its own. Check each interval from first to last: every assigned turn must belong to the cause, response or consequence named in that event. If a new encounter has a different immediate goal and its own payoff, start a new event, even during the same outing or after the same earlier disagreement. An interval must not conceal a completed second incident. A single-turn scene must have its own independent cause and consequence, not merely the last reply.',
+        'Example only: getting ready, travelling, meeting the host and learning what the surprise outing was for can be one memory. A disagreement during the outing, its escalation, and a candid answer after leaving the activity can be another. A separate, consequential bargain with a third person during the same outing can be its own memory. Use only the actual source for your plan.',
+        'In each reason, name the consequence that makes this a distinct complete memory. Keep consequential separate facts within a shared incident and keep genuinely unrelated incidents separate, even if they happen in one location. Never split by message count, time, location, token count or evidence window.',
         'Window records are partial evidence, not candidate Scenes to copy. If an early problem and a later action resolve the same goal, join the setup, attempts and resolution into one event. Trust an exact quote over a conflicting paraphrase in a window record.',
         'When a window contains originalMessages, those are complete original turns. Use them directly alongside the compact evidence from other windows.',
         'Never mark a future, uncertain, or ongoing outcome as completed.',
