@@ -37,7 +37,7 @@ export const settingsTemplate = Handlebars.compile(`
             {{#if slothRoleChoicesAvailable}}
               <div class="stmb-sloth-role-grid">
                 <label for="stmb-sloth-role-nexus">
-                  <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · what the story needs now</strong>
+                  <strong data-i18n="STMemoryBooks_SlothNexusRole">Nexus · key facts and current state</strong>
                   <select id="stmb-sloth-role-nexus" class="text_pole">
                     <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothNexusMissing}}
@@ -54,7 +54,7 @@ export const settingsTemplate = Handlebars.compile(`
                   </select>
                 </label>
                 <label for="stmb-sloth-role-memory">
-                  <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · what happened</strong>
+                  <strong data-i18n="STMemoryBooks_SlothMemoryRole">Memory · scenes to remember</strong>
                   <select id="stmb-sloth-role-memory" class="text_pole">
                     <option value="" data-i18n="STMemoryBooks_SlothUnassigned">Choose a lorebook</option>
                     {{#if slothMemoryMissing}}
@@ -134,14 +134,19 @@ export const settingsTemplate = Handlebars.compile(`
         <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
           <div class="stmb-collection-action">
             <h3 id="stmb-collection-title" data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</h3>
-            <p data-i18n="STMemoryBooks_SlothManualHelp">The AI proposes a cutoff and an event count. Confirm to save Memory and update Nexus.</p>
+            <p data-i18n="STMemoryBooks_SlothManualHelp">The AI finds events to summarize in messages you have not collected yet.</p>
+            <ol class="stmb-collection-steps">
+              <li data-i18n="STMemoryBooks_SlothCollectStepRange">Check the collection range and number of memories.</li>
+              <li data-i18n="STMemoryBooks_SlothCollectStepHide">Choose whether to hide the saved messages.</li>
+              <li data-i18n="STMemoryBooks_SlothCollectStepSave">Confirm to start writing and saving the summaries.</li>
+            </ol>
             <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Start collection</button>
           </div>
         </section>
         {{/if}}
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Choose a saved event and a Side Prompt when you want to update it.</p>
+          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Save small details from a scene for reference. These notes stay out of the AI's chat context.</p>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}
@@ -174,22 +179,34 @@ export const settingsTemplate = Handlebars.compile(`
               <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
               <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to Send</span>
             </label>
-            <label for="stmb-sloth-composer-icon" class="stmb-sloth-inline-field">
-              <span data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
-              <select id="stmb-sloth-composer-icon" class="text_pole">
-                {{#each slothComposerIcons}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>{{/each}}
+            <div class="stmb-sloth-inline-field">
+              <span id="stmb-sloth-composer-icon-label" data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
+              <details class="stmb-sloth-icon-picker">
+                <summary class="menu_button" aria-labelledby="stmb-sloth-composer-icon-label" title="{{slothComposerIcon.title}}">
+                  <i class="fa-solid fa-{{slothComposerIcon.id}}" aria-hidden="true"></i>
+                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </summary>
+                <div class="stmb-sloth-icon-options" role="group" aria-labelledby="stmb-sloth-composer-icon-label">
+                  {{#each slothComposerIcons}}
+                  <label title="{{title}}">
+                    <input type="radio" name="stmb-sloth-composer-icon" value="{{id}}" aria-label="{{title}}" {{#if selected}}checked{{/if}}>
+                    <i class="fa-solid fa-{{id}}" aria-hidden="true"></i>
+                  </label>
+                  {{/each}}
+                </div>
+              </details>
+            </div>
+            <label for="stmb-sloth-composer-size" class="stmb-sloth-inline-field">
+              <span data-i18n="STMemoryBooks_SlothComposerSize">Collect button size</span>
+              <select id="stmb-sloth-composer-size" class="text_pole">
+                {{#each slothComposerSizes}}<option value="{{size}}" {{#if selected}}selected{{/if}}>{{size}}%</option>{{/each}}
               </select>
             </label>
+            <hr class="stmb-sloth-settings-rule">
             <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
               <span data-i18n="STMemoryBooks_SlothHideRecent">Recent messages to keep visible</span>
               <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
             </label>
-            <small><code>/sloth-collect</code> <span data-i18n="STMemoryBooks_SlothCommandHelp">Opens the same collection plan.</span></small>
-            <div class="stmb-sloth-controls">
-              <button type="button" class="menu_button" data-stmb-sloth-action="side-prompt-advanced" data-i18n="STMemoryBooks_SlothSideAdvanced">Advanced Side Prompt settings</button>
-              <button type="button" class="menu_button" data-stmb-sloth-action="new-profile" data-i18n="STMemoryBooks_SlothCustomProfile">Create a custom AI profile</button>
-              <button type="button" class="menu_button" data-stmb-sloth-action="edit-profile" data-i18n="STMemoryBooks_EditProfile" {{#unless slothProfileEditable}}hidden{{/unless}}>Edit profile</button>
-            </div>
           </div>
         </details>
 

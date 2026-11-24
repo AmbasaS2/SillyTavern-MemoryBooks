@@ -47,10 +47,13 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     const html=file('./templates.js');
     const sloth=html.slice(0,html.indexOf('id="stmb-original-panel" class='));
     assert.match(sloth,/STMemoryBooks_SlothNoBooksYet/);
-    for(const action of ['companion','new-profile','edit-profile','followup','merge','split']) {
+    for(const action of ['companion','followup','merge','split']) {
         assert.ok(sloth.includes('data-stmb-sloth-action="'+action+'"'),action);
     }
     for(const slot of ['summary','side']) assert.ok(sloth.includes('data-stmb-prompt-library-slot="'+slot+'"'));
+    const advanced=sloth.slice(sloth.indexOf('id="stmb-sloth-advanced"'));
+    assert.doesNotMatch(advanced,/\/sloth-collect|new-profile|edit-profile|side-prompt-advanced/);
+    assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-picker[\s\S]+stmb-sloth-composer-size[\s\S]+stmb-sloth-settings-rule[\s\S]+stmb-sloth-hide-recent/);
     assert.match(sloth,/id="stmb-sloth-linked-books-only"/);
     assert.match(source,/slothLinkedBooksOnly \? \[\] : sloth\.worldNames\.filter/);
     assert.match(html,/data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton"/);

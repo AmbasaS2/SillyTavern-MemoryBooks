@@ -8,7 +8,7 @@ import { translate } from '../../../i18n.js';
 import { escapeHtml } from '../../../utils.js';
 import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
 import { SLOTH_DEFAULT_SUMMARY_PROMPT } from './nexusSlothScenePrompt.js';
-import { listTemplates, upsertTemplate, removeTemplate } from './sidePromptsManager.js';
+import { getSlothSidePresets } from './slothSidePrompts.js';
 import { markStmbPopup } from './utils.js';
 
 const t = (source, key) => translate(source, 'STMemoryBooks_' + key);
@@ -67,7 +67,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     let busy=false;
     const drafts=new Map();
     const value=()=>({...current,text:editor.value,responseFormat:response?.value||''});
-    const readOnly=()=>current.id===SLOTH_BUILTIN_PROMPT_ID;
+    const readOnly=()=>current.builtin===true;
     const dirty=()=>editor.value!==current.text||(response?.value||'')!==(current.responseFormat||'');
     const setStatus=(message='')=>{find('status').textContent=message;};
     const sync=()=>{
@@ -89,7 +89,10 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         editor.value=draft.text;
         editor.scrollTop=0;
         editor.readOnly=readOnly();
-        if(response) response.value=draft.responseFormat||'';
+        if(response) {
+            response.value=draft.responseFormat||'';
+            response.readOnly=readOnly();
+        }
         sync();
     };
     const run=async task=>{
@@ -108,9 +111,9 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const saveRecord=async (draft,activate=true)=>{
         if(!draft.text.trim())return;
         const id=await save(draft,activate);
-        const stored={...draft,id};
-        if(id!==SLOTH_BUILTIN_PROMPT_ID) {
-            const index=records.findIndex(record=>record.id===id);
+        const stored={id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat||''};
+        const index=records.findIndex(record=>record.id===id);
+        if(!records[index]?.builtin) {
             if(index<0) records.push(stored);
             else records[index]=stored;
         }
@@ -152,7 +155,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         await remove(id);
         records.splice(records.findIndex(record=>record.id===id),1);
         drafts.delete(id);
-        if(appliedId===id)appliedId=SLOTH_BUILTIN_PROMPT_ID;
+        if(appliedId===id)appliedId=records.find(record=>record.builtin)?.id||'';
         current=records.find(record=>record.id===appliedId)||records[0]||empty;
         render();
     }));
@@ -160,15 +163,23 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     button('expand').addEventListener('click',()=>void run(async()=>{
         const readOnlyPrompt=readOnly();
         const overlay=markStmbPopup(new Popup(DOMPurify.sanitize(`<div class="stmb-prompt-expanded">
-            <h3>${html(current.name)}</h3><textarea rows="20" class="text_pole" spellcheck="false" aria-label="${html(current.name)}"></textarea></div>`),
+            <h3>${html(current.name)}</h3><textarea rows="5" class="text_pole" spellcheck="false" aria-label="${html(current.name)}"></textarea></div>`),
             readOnlyPrompt?POPUP_TYPE.TEXT:POPUP_TYPE.CONFIRM,'',{
-                wide:true,large:true,allowVerticalScrolling:true,okButton:readOnlyPrompt?false:t('Apply','Apply'),
+                wide:true,allowVerticalScrolling:true,okButton:readOnlyPrompt?false:t('Apply','Apply'),
                 cancelButton:t(readOnlyPrompt?'Close':'Cancel',readOnlyPrompt?'Close':'Cancel'),
             }));
         const expanded=overlay.dlg.querySelector('.stmb-prompt-expanded textarea');
         expanded.value=editor.value;
         expanded.readOnly=readOnlyPrompt;
-        if(await overlay.show()===POPUP_RESULT.AFFIRMATIVE&&!readOnlyPrompt) editor.value=expanded.value;
+        const fitEditor=()=>{
+            expanded.style.height='';
+            const border=expanded.offsetHeight-expanded.clientHeight;
+            expanded.style.height=(expanded.scrollHeight+border)+'px';
+        };
+        expanded.addEventListener('input',fitEditor);
+        const result=overlay.show();
+        requestAnimationFrame(fitEditor);
+        if(await result===POPUP_RESULT.AFFIRMATIVE&&!readOnlyPrompt) editor.value=expanded.value;
     }));
     button('import').addEventListener('click',()=>file.click());
     file.addEventListener('change',()=>void run(async()=>{
@@ -197,7 +208,7 @@ const randomId=()=>Array.from(crypto.getRandomValues(new Uint32Array(4)),value=>
 export function mountSlothCollectionPrompts(target,settings) {
     const params=settings.moduleSettings;
     const active=getActiveSlothSummaryPreset(settings);
-    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('Default prompt','SlothPromptDefault'),text:SLOTH_DEFAULT_SUMMARY_PROMPT},
+    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('🦥 Prompt (Default)','SlothPromptDefault'),text:SLOTH_DEFAULT_SUMMARY_PROMPT,builtin:true},
         ...getSlothSummaryPresets(settings).map(preset=>({...preset}))];
     if(active.id==='previous'&&!records.some(preset=>preset.id===active.id)) {
         records.push({...active,name:t('Previous instructions','SlothPromptPrevious')});
@@ -221,13 +232,25 @@ export function mountSlothCollectionPrompts(target,settings) {
     });
 }
 
-export async function mountSlothSidePromptSettings(target) {
-    const records=(await listTemplates()).filter(template=>!template.specialKind).map(template=>
-        ({id:template.key,name:template.name,text:template.prompt,responseFormat:template.responseFormat||''}));
-    if(!target.isConnected)return;
-    mountPromptLibrary({target,title:t('Side Prompt settings','SlothSidePromptSettings'),heading:t('Prompt','SlothPromptText'),records,format:'sloth-side-prompt',
-        save:draft=>upsertTemplate({key:draft.id||undefined,name:draft.name,prompt:draft.text,responseFormat:draft.responseFormat,
-            ...(!draft.id?{triggers:{commands:['sideprompt']}}:{})}),
-        remove:removeTemplate,
+export function mountSlothSidePromptSettings(target,settings) {
+    const params=settings.moduleSettings;
+    const records=getSlothSidePresets(settings).map(record=>({...record,
+        name:record.builtin?t('Little Things','SlothLittleThings'):record.name}));
+    const write=async (presets,selected)=>{
+        params.slothSidePresets=presets;
+        params.slothSidePresetId=selected;
+        await saveSettings();
+    };
+    mountPromptLibrary({target,title:t('Side Prompt settings','SlothSidePromptSettings'),heading:t('Prompt','SlothPromptText'),records,
+        appliedId:params.slothSidePresetId,format:'sloth-side-prompt',
+        save:async (draft,activate)=>{
+            const id=draft.id||'sloth-'+randomId();
+            const entries=records.filter(record=>!record.builtin&&record.id!==id);
+            entries.push({id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat});
+            await write(entries,activate?id:params.slothSidePresetId);
+            return id;
+        },
+        remove:async id=>write(records.filter(record=>!record.builtin&&record.id!==id),
+            params.slothSidePresetId===id?'':params.slothSidePresetId),
     });
 }

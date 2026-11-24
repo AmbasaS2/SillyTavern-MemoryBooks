@@ -46,20 +46,32 @@ export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = fal
     const allowed = new Set(sourceIds), assigned = new Map(), events = [], deferred = [];
     requireThat(allowed.size === sourceIds.length && sourceIds.every(Number.isSafeInteger), 'Invalid source IDs.');
     let eventRows=raw.events, deferredRows=raw.deferred||[];
-    if (Object.hasOwn(raw,'owners')) {
-        requireThat(Array.isArray(deferredRows) && Array.isArray(raw.owners) && raw.owners.length===sourceIds.length,
+    const hasOwners = Object.hasOwn(raw,'owners');
+    const hasAssignments = Object.hasOwn(raw,'assignments');
+    if (hasOwners || hasAssignments) {
+        requireThat(Array.isArray(deferredRows) && !(hasAssignments && hasOwners),'Invalid owner assignment format.');
+        if (hasOwners) requireThat(Array.isArray(raw.owners) && raw.owners.length===sourceIds.length,
             'Return exactly one owner for every original message in order.');
         const byOwner=new Map([
             ...eventRows.map((_,index)=>['e'+(index+1),[]]),
             ...deferredRows.map((_,index)=>['d'+(index+1),[]]),
         ]);
-        for (const [index,owner] of raw.owners.entries()) {
-            requireThat(byOwner.has(owner),'Unknown scene owner at original message #'+sourceIds[index]+'.');
-            byOwner.get(owner).push(sourceIds[index]);
+        const rows = hasAssignments ? raw.assignments : raw.owners.map((owner,index)=>[sourceIds[index],owner]);
+        requireThat(Array.isArray(rows),'Return each original ID with exactly one owner.');
+        const handled = new Set();
+        for (const row of rows) {
+            requireThat(Array.isArray(row) && row.length===2 && allowed.has(row[0]),'Owner assignment contains an unknown source ID.');
+            const [id,owner] = row;
+            requireThat(!handled.has(id),'Original message #'+id+' has more than one owner.');
+            requireThat(byOwner.has(owner),'Unknown scene owner at original message #'+id+'.');
+            handled.add(id);
+            byOwner.get(owner).push(id);
         }
+        const missing = sourceIds.find(id=>!handled.has(id));
+        requireThat(missing===undefined,'Missing an owner for original message #'+missing+'.');
         const withRanges=(rows,prefix)=>rows.flatMap((row,index)=>{
             const ids=byOwner.get(prefix+(index+1));
-            return ids.length ? [{...row,segments:slothSourceRanges(ids)}] : [];
+            return ids.length ? [{...row,segments:slothSourceRanges(ids.sort((a,b)=>a-b))}] : [];
         });
         eventRows=withRanges(eventRows,'e');
         deferredRows=withRanges(deferredRows,'d');

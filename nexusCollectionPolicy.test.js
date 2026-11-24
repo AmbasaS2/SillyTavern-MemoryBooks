@@ -13,6 +13,17 @@ test('one owner per listed message produces disjoint source ranges across gaps',
   assert.throws(()=>validateNexusEventPlan({...payload,owners:['e1','d1']},[4,5,7,8]),/exactly one owner/);
   assert.throws(()=>validateNexusEventPlan({...payload,owners:['e1','d1','d2','e1']},[4,5,7,8]),/Unknown scene owner/);
 });
+test('corrective assignments bind explicit original IDs and reject duplicates, missing IDs and synthetic IDs',()=>{
+  const payload={events:[{title:'Lantern returned',reason:'The keeper received it',result:'It was returned',complete:true}],
+    deferred:[{reason:'The spare is still missing'}],assignments:[[8,'e1'],[5,'d1'],[4,'e1'],[7,'e1']]};
+  const ids=[4,5,7,8];
+  const result=validateNexusEventPlan(payload,ids);
+  assert.deepEqual(result.events[0].segments,[[4,4],[7,8]]);
+  assert.deepEqual(result.deferred[0].segments,[[5,5]]);
+  assert.throws(()=>validateNexusEventPlan({...payload,assignments:[[8,'e1'],[8,'d1'],[4,'e1'],[7,'e1']]},ids),/more than one owner/);
+  assert.throws(()=>validateNexusEventPlan({...payload,assignments:payload.assignments.slice(1)},ids),/Missing an owner/);
+  assert.throws(()=>validateNexusEventPlan({...payload,assignments:[[108,'e1'],...payload.assignments]},ids),/unknown source ID/);
+});
 const plan={
   events:[{title:'Argument and repair',complete:true,reason:'same cause and reconciliation',
     result:'The two apologized',segments:[[0,2],[5,7]]},

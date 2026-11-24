@@ -600,6 +600,8 @@ const SLOTH_COMPOSER_ICONS = Object.freeze({
 });
 const getSlothComposerIcon = settings => Object.hasOwn(SLOTH_COMPOSER_ICONS,settings?.moduleSettings?.slothComposerIcon)
   ? settings.moduleSettings.slothComposerIcon : 'otter';
+const SLOTH_COMPOSER_SIZES = [80, 90, 100, 110, 125];
+const getSlothComposerSize = value => SLOTH_COMPOSER_SIZES.includes(Number(value)) ? Number(value) : 100;
 const MEMORY_BOUNDARY_MODES = Object.freeze({
   OFF: "",
   DIVIDER: "divider",
@@ -11042,6 +11044,11 @@ function buildSlothTemplateData(settings) {
   const {stConnectionProfileId,profileIndex:slothProfileIndex} = getSlothProfileConfiguration(settings);
   const slothConnectionProfiles = listChatCompletionProfiles(globalThis.SillyTavern?.getContext?.())
     .map(({ id, name, model }) => ({ id, name, model, selected: id === stConnectionProfileId }));
+  const slothComposerIconId = getSlothComposerIcon(settings);
+  const slothComposerIcons = Object.entries(SLOTH_COMPOSER_ICONS).map(([id,[label,key]]) => ({
+    id, title:translate(label,'STMemoryBooks_'+key), selected:id===slothComposerIconId,
+  }));
+  const slothComposerSize = getSlothComposerSize(settings.moduleSettings.slothComposerSize);
   const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
   const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
@@ -11062,12 +11069,11 @@ function buildSlothTemplateData(settings) {
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
-    slothComposerIcons: Object.entries(SLOTH_COMPOSER_ICONS).map(([id,[label,key]])=>({
-      id,title:translate(label,'STMemoryBooks_'+key),selected:id===getSlothComposerIcon(settings),
-    })),
+    slothComposerIcon: slothComposerIcons.find(icon => icon.selected),
+    slothComposerIcons,
+    slothComposerSizes: SLOTH_COMPOSER_SIZES.map(size => ({size,selected:size===slothComposerSize})),
     slothHideRecent: normalizeSlothVisibleTail(settings.moduleSettings.slothHideRecent),
     slothMissingCompanion: getSlothCompanion(slothChatRef, settings)?.missingRole,
-    slothProfileEditable: !stConnectionProfileId && !!settings.profiles[slothProfileIndex] && !settings.profiles[slothProfileIndex].isBuiltinCurrentST,
     slothConnectionProfileMissing: !!stConnectionProfileId && !slothConnectionProfiles.some(profile => profile.selected),
     slothSharedBook: [slothRoleMemory.state, slothRoleNexus.state].includes('shared'),
     slothCharacterAvailable: !!sloth.character,
@@ -11508,12 +11514,7 @@ function mountSlothPromptLibraries(content,settings) {
   const summary=content.querySelector('[data-stmb-prompt-library-slot="summary"]');
   if(summary&&!summary.firstElementChild) mountSlothCollectionPrompts(summary,settings);
   const side=content.querySelector('[data-stmb-prompt-library-slot="side"]');
-  if(!side||side.firstElementChild||side.dataset.stmbMounting) return;
-  side.dataset.stmbMounting='true';
-  void mountSlothSidePromptSettings(side).catch(error=>{
-    console.warn('STMemoryBooks: Could not open Side Prompt presets.',error);
-    side.textContent=translate('Settings could not load. Close and reopen Memory Books.','STMemoryBooks_SlothLoadingFailed');
-  }).finally(()=>{delete side.dataset.stmbMounting;});
+  if(side&&!side.firstElementChild) mountSlothSidePromptSettings(side,settings);
 }
 
 function getSlothProfileConfiguration(settings) {
@@ -11552,13 +11553,16 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
     return;
   }
   const icon = getSlothComposerIcon(settings);
+  const scale = getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) / 100;
   if (existing) {
     existing.firstElementChild.className = 'fa-solid fa-'+icon;
+    existing.style.setProperty('--stmb-collect-scale',String(scale));
     return;
   }
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'stmb-sloth-composer';
+  button.style.setProperty('--stmb-collect-scale',String(scale));
   const label = translate('Collect memories','STMemoryBooks_SlothCollectionTitle');
   button.title = label;
   button.setAttribute('aria-label', label);
@@ -11585,25 +11589,9 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     companion: () => createSlothCompanion(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
-    followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
+    followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId,
+      presetId:popupElement.querySelector('#stmb-side-prompt-choice')?.value }),
     compress: () => runSlothSceneCompression({ profileIndex, stConnectionProfileId }),
-    'side-prompt-advanced': () => showSidePromptsPopup({slothNexusName:getCurrentNexusRoleResolution('nexus',settings).name}),
-    'new-profile': async () => {
-      const count = settings.profiles.length;
-      await newProfile(settings);
-      if (settings.profiles.length === count) return;
-      settings.moduleSettings.slothConnectionProfileId = '';
-      settings.moduleSettings.slothProfileName = settings.profiles.at(-1).name;
-      return { saved: true };
-    },
-    'edit-profile': async () => {
-      const profile = settings.profiles[profileIndex];
-      if (stConnectionProfileId || !profile || profile.isBuiltinCurrentST) return;
-      await editProfile(settings, profileIndex);
-      if (settings.profiles[profileIndex] === profile) return;
-      settings.moduleSettings.slothProfileName = settings.profiles[profileIndex].name;
-      return { saved: true };
-    },
   };
   const action = button.dataset.stmbSlothAction;
   if (!Object.hasOwn(actions, action)) return;
@@ -11612,7 +11600,6 @@ async function runSlothSettingsAction(button, popupElement, settings) {
   try {
     const result = await actions[action]();
     if (result?.saved) {
-      if (action === 'new-profile' || action === 'edit-profile') await saveSettings();
       if (currentPopupInstance?.dlg === popupElement) await refreshPopupContent();
     }
   } catch (error) {
@@ -11812,9 +11799,18 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       await saveSettings();
       return;
     }
-    if (e.target.matches('#stmb-sloth-composer-icon')) {
+    if (e.target.matches('input[name="stmb-sloth-composer-icon"]')) {
       if (!Object.hasOwn(SLOTH_COMPOSER_ICONS,e.target.value)) return;
       settings.moduleSettings.slothComposerIcon=e.target.value;
+      const picker = e.target.closest('.stmb-sloth-icon-picker');
+      picker.querySelector('summary i').className='fa-solid fa-'+e.target.value;
+      picker.querySelector('summary').title=e.target.getAttribute('aria-label');
+      syncSlothComposerButton(settings);
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('#stmb-sloth-composer-size')) {
+      settings.moduleSettings.slothComposerSize=getSlothComposerSize(e.target.value);
       syncSlothComposerButton(settings);
       await saveSettings();
       return;

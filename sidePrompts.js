@@ -37,7 +37,7 @@ import {
     SIDE_PROMPT_REGENERATION_METADATA_KEY,
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
-import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
+import { buildSlothSideReference, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
 
 
 import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -1533,70 +1533,34 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
     return filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
 }
 
-export async function listReviewedSidePromptOptions(nexusName, isAllowedBook) {
-    const markers = getSceneMarkers() || {};
-    const overrides = getSidePromptChatLorebookOverrides();
-    const items = await resolveAfterMemoryItems(markers,
-        extension_settings.STMemoryBooks?.moduleSettings || {}, getCurrentMemoryBooksContext());
-    const included = new Set(items.map(item => item.tpl.key));
-    for (const tpl of await listByTrigger('command:sideprompt')) {
-        if (included.has(tpl.key) || tpl.specialKind || collectTemplateRuntimeMacros(tpl).length) continue;
-        items.push({ tpl, baseTpl: tpl, runtimeMacros: {}, name: tpl.name, set: null, item: null });
-    }
-    return items.flatMap(item => {
-        const templateTarget = String(item.tpl.settings?.lorebook?.targetLorebookName || '').trim();
-        const target = Object.hasOwn(overrides, item.tpl.key)
-            ? String(overrides[item.tpl.key] || '').trim() : (templateTarget || nexusName);
-        // The shared editor's default destination follows the active workspace.
-        const name = target === '__memory__' ? nexusName : target;
-        return isExistingLorebookName(name) && isAllowedBook(name)
-            ? [{ ...item, lorebookName: name, inNexus: name === nexusName }] : [];
-    });
-}
-
-/** Prepare a supplemental record using the original template, connection and history policy. */
-export async function proposeReviewedSidePrompt(item, original, compiledScene, profile, savedSceneText = null) {
+/** Prepare a manual, chat-scoped Sloth note for disabled storage in Nexus. */
+export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene) {
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
-    const { tpl, runtimeMacros, lorebookName } = item;
     try {
-        const prepared = await prepareSidePromptRun({ tpl, loreData: original, compiledScene,
-            defaultOverrides: resolveSidePromptConnection(profile),
-            fallbackKinds: ['plotpoints', 'scoreboard'], runtimeMacros, savedSceneText });
-        if (item.inNexus) {
-            const { titleBase, legacyTitles, chatId } = prepared.sidePromptHistory;
-            const reserved = [titleBase, ...legacyTitles].some(title =>
-                /^(?:Core Memory|Current Continuity|LT|NPC|Kinks|PanelAssets)(?:\b|$)/i.test(title.trim()) ||
-                classifyNexusLegacyTitle(title));
-            const existing = prepared.existing;
-            const snapshot = existing?.STMB_sidePromptRegeneration;
-            const ownsExisting = existing?.STMB_sidePromptHistory ||
-                (snapshot?.templateKey === tpl.key && snapshot?.chatId === chatId);
-            if (reserved || (existing && (!ownsExisting || Number(existing.position) === 7 || existing.outletName))) {
-                throw new Error('This Side Prompt title matches a protected or unverified Nexus entry. Choose a separate entry title or lorebook.');
-            }
-        }
-        const text = await runSidePromptAttempt({ taskLabel: 'SidePrompts:reviewedSloth:' + tpl.key,
-            finalPrompt: prepared.finalPrompt, conn: prepared.conn, runEpoch: task.epoch });
-        if (!ensureSidePromptTextNotBlank(text, tpl, 'reviewedSloth')) {
+        const tpl = {key: preset.id, name: '🦥 '+preset.name};
+        const sidePromptHistory = getSidePromptHistory(tpl);
+        sidePromptHistory.legacyTitles = [];
+        const prior = resolveSidePromptHistory(original, sidePromptHistory).latest?.content || '';
+        const reference = buildSlothSideReference(savedScene, original);
+        const prompt = [preset.text, '\n=== REFERENCE TO AVOID DUPLICATES (NOT NEW EVIDENCE) ===', reference,
+            '=== END REFERENCE ==='].join('\n');
+        const finalPrompt = buildPrompt(prompt, prior, compiledScene, preset.responseFormat, [], {}, [],
+            compiledScene ? null : savedScene.content);
+        const conn = resolveSidePromptConnection(profile);
+        const text = await runSidePromptAttempt({taskLabel:'SidePrompts:reviewedSloth:'+tpl.key,
+            finalPrompt,conn,runEpoch:task.epoch});
+        if (!ensureSidePromptTextNotBlank(text,tpl,'reviewedSloth')) {
             throw new Error('The Side Prompt returned empty content.');
         }
-        const { defaults, entryOverrides } = makeUpsertParamsFromLorebook(
-            getEffectiveLorebookSettingsForTemplate(tpl), runtimeMacros);
+        if (text.trim() === SLOTH_NO_SIDE_DETAILS) return null;
+        const title = getUnifiedSidePromptTitle(tpl);
         return {
-            title: prepared.unifiedTitle, before: prepared.prior, text,
-            stage(content) {
-                const item = {
-                    title: prepared.unifiedTitle, content,
-                    defaults, entryOverrides, sidePromptHistory: prepared.sidePromptHistory,
-                    metadataUpdates: {
-                        [`STMB_sp_${tpl.key}_lastRunAt`]: new Date().toISOString(),
-                        ...(compiledScene ? {} : { [SIDE_PROMPT_REGENERATION_METADATA_KEY]: null }),
-                    },
-                    metadataFactory: compiledScene ? createSidePromptRegenerationMetadataFactory(
-                        tpl, prepared.prior, compiledScene, runtimeMacros) : undefined,
-                };
-                return stageLorebookEntriesBatch(lorebookName, structuredClone(original), [item]).lorebookData;
-            },
+            text,
+            stage: content => stageLorebookEntriesBatch(lorebookName, original, [{
+                title,content,sidePromptHistory,archiveOnly:true,
+                entryOverrides:{position:0,outletName:'',ignoreBudget:false},
+                metadataUpdates:{STMB_slothSideArchive:true,[`STMB_sp_${tpl.key}_lastRunAt`]:new Date().toISOString()},
+            }]).lorebookData,
         };
     } finally {
         task.finish();

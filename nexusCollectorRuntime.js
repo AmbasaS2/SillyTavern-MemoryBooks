@@ -31,8 +31,8 @@ import { getLinkedCharacterWorlds, getCharacterNexusRoles, setCharacterNexusRole
 import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames,
     commitInitialNexusBooks } from './nexusInitialSetup.js';
 import { compileScene, createSceneRequest } from './chatcompile.js';
-import { listReviewedSidePromptOptions, proposeReviewedSidePrompt } from './sidePrompts.js';
-import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
+import { proposeReviewedSidePrompt } from './sidePrompts.js';
+import { getSlothSidePresets } from './slothSidePrompts.js';
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 
@@ -230,7 +230,7 @@ function readableSegments(segments) {
         ? String(pair[0]):pair[0]+'-'+pair[1]).join(', ');
 }
 
-export async function runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId } = {}) {
+export async function runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId, presetId } = {}) {
     if (collectorBusy) throw new Error('A Sloth operation is already in progress.');
     collectorBusy = true;
     try {
@@ -239,12 +239,9 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         const roles = Object.fromEntries(['nexus', 'memory'].map(role =>
             [role, getNexusRoleResolutionForChatRef(role, ref, settings).name]));
         assertSlothBookRoles(ref, roles);
-        const isAllowedBook = name => name !== roles.memory &&
-            (name === roles.nexus || !isManagedNexusWorld(settings, name));
-        const options = await listReviewedSidePromptOptions(roles.nexus, isAllowedBook);
-        assertSlothBookRoles(ref, roles);
-        if (!options.length) {
-            toastr.info(t('Create a Side Prompt in Side Prompt settings before updating.',
+        const preset = getSlothSidePresets(settings).find(item => item.id === presetId);
+        if (!preset) {
+            toastr.info(t('Choose or save a Side Prompt before updating.',
                 'STMemoryBooks_SlothSidePromptEmpty'), 'STMemoryBooks');
             return { saved: false };
         }
@@ -272,56 +269,60 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         const choose = (label, id, values) => '<label class="stmb-sloth-edit">' + html(label) +
             '<select class="text_pole" id="' + id + '">' + values.map((value, index) =>
                 '<option value="' + index + '">' + html(value) + '</option>').join('') + '</select></label>';
-        const title = t('Review a Side Prompt', 'STMemoryBooks_SlothSidePromptAction');
+        const title = t('Update Side Prompt', 'STMemoryBooks_SlothSidePromptAction');
         const selection = new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>' + html(title) + '</h3>' +
             choose(t('Saved Scene', 'STMemoryBooks_SlothSidePromptSource'), 'stmb-sideprompt-source', scenes.map(({ entry, ranges }) =>
-                entry.comment + ' · ' + (ranges ? '#'+readableSegments(ranges) : t('Saved text', 'STMemoryBooks_SlothSideSavedText')))) +
-            choose(t('Side Prompt', 'STMemoryBooks_SidePrompt'), 'stmb-sideprompt-template', options.map(item =>
-                item.name + ' · ' + item.lorebookName)) + '</div>'), POPUP_TYPE.CONFIRM, '', {
+                entry.comment + ' · ' + (ranges ? '#'+readableSegments(ranges) : t('Saved text', 'STMemoryBooks_SlothSideSavedText')))) + '</div>'), POPUP_TYPE.CONFIRM, '', {
             wide: true, allowVerticalScrolling: true,
             okButton: t('Update Side Prompt', 'STMemoryBooks_SlothSidePromptGenerate'),
             cancelButton: t('Cancel', 'STMemoryBooks_Cancel'),
         });
         markStmbPopup(selection);
-        const selectionResult = selection.show();
-        const selected = { source: 0, template: 0 };
-        for (const key of Object.keys(selected)) {
-            selection.dlg.querySelector('#stmb-sideprompt-' + key).addEventListener('change', event => {
-                selected[key] = Number(event.target.value);
-            });
-        }
-        if (await selectionResult !== POPUP_RESULT.AFFIRMATIVE) return { saved: false };
-        const scene = scenes[selected.source];
-        const option = options[selected.template];
+        const sceneSelect = selection.dlg.querySelector('#stmb-sideprompt-source');
+        if (await selection.show() !== POPUP_RESULT.AFFIRMATIVE) return { saved: false };
+        const scene = scenes[Number(sceneSelect.value)];
         assertSlothBookRoles(ref, roles);
-        if (!scene || !option || !isAllowedBook(option.lorebookName)) throw new Error('The reviewed selection changed.');
+        if (!scene) throw new Error('The reviewed selection changed.');
         const fingerprint = scene.fingerprint;
         const verifyOrigin = () => {
             if (scene.ids) assertOrigin(ref, roles, scene.ids, fingerprint, fingerprintOptions);
             else assertSlothBookRoles(ref,roles);
-            if (!isAllowedBook(option.lorebookName)) throw new Error('The Side Prompt destination is no longer available for this chat.');
         };
         const compiled = scene.ids ? compileScene(createSceneRequest(scene.ids[0], scene.ids.at(-1)),
             { messageIndices: scene.ids, includeHiddenMessages: true }) : null;
         const profile = collectionProfile(settings, profileIndex, stConnectionProfileId);
         verifyOrigin();
-        const original = await loadServerWorld(option.lorebookName);
+        const original = await loadServerWorld(roles.nexus);
         verifyOrigin();
-        const draft = await proposeReviewedSidePrompt(option, original, compiled, profile, compiled ? null : scene.entry.content);
+        const draft = await proposeReviewedSidePrompt(preset, roles.nexus, original, compiled, profile, scene.entry);
         verifyOrigin();
-        const staged = draft.stage(draft.text);
+        if (!draft) {
+            toastr.info(t('No new details to save.', 'STMemoryBooks_SlothSideNoDetails'), 'STMemoryBooks');
+            return { saved: false };
+        }
+        const review = markStmbPopup(new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>' +
+            html(preset.builtin ? t('Little Things', 'STMemoryBooks_SlothLittleThings') : preset.name) + '</h3><p>' +
+            html(t('Saved to Nexus for reference and kept out of the AI chat context.', 'STMemoryBooks_SlothSideArchiveHelp')) +
+            '</p><textarea class="text_pole stmb-sloth-side-review" rows="8" aria-label="' + html(title) + '"></textarea></div>'),
+        POPUP_TYPE.CONFIRM, '', {wide:true,allowVerticalScrolling:true,okButton:t('Save','STMemoryBooks_Save'),
+            cancelButton:t('Cancel','STMemoryBooks_Cancel')}));
+        const editor = review.dlg.querySelector('.stmb-sloth-side-review');
+        editor.value = draft.text;
+        if (await review.show() !== POPUP_RESULT.AFFIRMATIVE || !editor.value.trim()) return { saved: false };
+        verifyOrigin();
+        const staged = draft.stage(editor.value.trim());
         if (scene.ids) await readReviewedChat(ref, scene.ids, fingerprint, fingerprintOptions);
         const storedMemory = await loadServerWorld(roles.memory);
         if (!Object.values(storedMemory.entries).some(entry => entry.uid === scene.entry.uid && stringify(entry) === stringify(scene.entry))) {
             throw new Error('The source Scene changed while the Side Prompt was being written.');
         }
-        const result = await commitSlothNexusMigration({ name: option.lorebookName, original, staged }, {
+        const result = await commitSlothNexusMigration({ name: roles.nexus, original, staged }, {
             loadFresh: loadServerWorld, save: (name, book) => saveWorldInfo(name, book, true),
             withLock: (name, task) => withStmbWriteLane({ type: 'lorebook', name }, task), verifyOrigin,
             verifyBeforeWrite: assertReviewedCache, operation: 'Side Prompt update',
             resetCache: (name, book) => worldInfoCache.set(name, structuredClone(book)),
         });
-        try { await Promise.resolve(reloadEditor(option.lorebookName)); }
+        try { await Promise.resolve(reloadEditor(roles.nexus)); }
         catch (error) { console.warn('Sloth Side Prompt editor refresh failed', error); }
         toastr.success(t('The reviewed Side Prompt was saved.', 'STMemoryBooks_SlothSidePromptSaved'), 'STMemoryBooks');
         return { saved: true, result };

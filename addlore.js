@@ -40,7 +40,7 @@ async function saveSidePromptLorebookChecked(name, data) {
     await eventSource.emit(event_types.WORLDINFO_UPDATED, name, data);
 }
 
-function applySidePromptHistory(data, title, history, entry, createEntry) {
+function applySidePromptHistory(data, title, history, entry, createEntry, archiveOnly = false) {
     validateSidePromptHistoryRequest(history);
     const resolved = resolveSidePromptHistory(data, history);
     const group = resolved.versions[0]?.group || history.group;
@@ -76,6 +76,7 @@ function applySidePromptHistory(data, title, history, entry, createEntry) {
     const next = createEntry();
     if (!next) throw new Error(i18n('addlore.upsert.errors.createFailed', 'Failed to create lorebook entry'));
     next.comment = title;
+    if (archiveOnly) stamp(next, 1);
     return { entry: next, created: true };
 }
 
@@ -1343,7 +1344,7 @@ export function getEntryByTitle(lorebookData, title) {
  *
  * @param {string} lorebookName
  * @param {Object} lorebookData
- * @param {Array<{title: string, content: string, defaults?: Object, metadataUpdates?: Object, entryOverrides?: Object, metadataFactory?: Function}>} items
+ * @param {Array<{title: string, content: string, defaults?: Object, metadataUpdates?: Object, entryOverrides?: Object, metadataFactory?: Function, archiveOnly?: boolean}>} items
  * @returns {{lorebookData:Object,results:Array<{title:string, uid:number, created:boolean}>}}
  */
 export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
@@ -1376,7 +1377,8 @@ export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
         let historyCreated = false;
         let historyPriorEntry = undefined;
         if (sidePromptHistory) {
-            const resolved = applySidePromptHistory(lorebookData, title, sidePromptHistory, entry, () => createWorldInfoEntry(lorebookName, lorebookData));
+            const resolved = applySidePromptHistory(lorebookData, title, sidePromptHistory, entry,
+                () => createWorldInfoEntry(lorebookName, lorebookData), it.archiveOnly === true);
             entry = resolved.entry;
             historyCreated = resolved.created;
             historyPriorEntry = resolved.priorEntry;
@@ -1426,6 +1428,14 @@ export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
             entry[k] = v;
         }
 
+        if (it.archiveOnly === true) {
+            entry.disable = true;
+            entry.constant = false;
+            entry.vectorized = false;
+            entry.key = [];
+            entry.keysecondary = [];
+        }
+
         if (typeof it.metadataFactory === 'function') {
             const generatedMetadata = it.metadataFactory({ entry, priorEntry, created }) || {};
             for (const [k, v] of Object.entries(generatedMetadata)) {
@@ -1437,7 +1447,7 @@ export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
             entry[SIDE_PROMPT_HISTORY_KEY] = protectedHistory;
             entry.comment = formatSidePromptVersionTitle(sidePromptHistory.titleBase, protectedHistory.sequence);
             entry.group = protectedGroup;
-            entry.disable = false;
+            entry.disable = it.archiveOnly === true;
         }
 
         results.push({ title, uid: entry.uid, created });

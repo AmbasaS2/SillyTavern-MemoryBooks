@@ -217,9 +217,10 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
         raw=>validateNexusEventPlan(raw,ids,{deferUnclassified:true}),
         error=>[DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
             'The first event plan was rejected: '+error.message,
-            'Use an ownership list to prevent overlaps. Return three arrays: events, deferred, owners. An event has title, complete:true, reason and result. A deferred record only has reason. Do not use ranges.',
-            'The owners array has exactly one string for each of the '+ids.length+' listed IDs in order. e1 means first event, e2 means second event, d1 means first deferred record. The same label can recur for separated source turns. Put all incomplete outcomes in deferred.',
-            'Example for original IDs [10,12,13]: {"events":[{"title":"Recovered key","complete":true,"reason":"The owner got the key back.","result":"The owner recovered the key."}],"deferred":[{"reason":"A separate search has not started."}],"owners":["e1","d1","e1"]}.',
+            'Return three arrays: events, deferred, assignments. An event has title, complete:true, reason and result. A deferred record only has reason. Do not use ranges in this response.',
+            'In assignments, include one pair [originalMessageId, ownerLabel] for each exact ID below. e1 means first event, e2 means second event, d1 means first deferred record. Each original ID appears once; the same label can recur for separated source turns. Never assign new IDs to individual actions inside one message.',
+            'Exact original IDs: '+JSON.stringify(ids),
+            'Example for original IDs [10,12,13]: {"events":[{"title":"Recovered key","complete":true,"reason":"The owner got the key back.","result":"The owner recovered the key."}],"deferred":[{"reason":"A separate search has not started."}],"assignments":[[10,"e1"],[12,"d1"],[13,"e1"]]}.',
             evidenceHeader+source,
         ].join('\n\n'));
 }
