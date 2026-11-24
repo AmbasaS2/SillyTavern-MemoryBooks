@@ -33,13 +33,11 @@ test('reviewed Scene title, text and five keywords persist while source segments
     assert.deepEqual(staged.staged.entries[0].STMB_sourceRanges,[[2,3],[7,8]]);
 });
 
-test('reviewed Scene rejects missing fields, broken JSON layout and duplicate/absent keys',()=>{
+test('reviewed Scene rejects missing fields and broken body layout',()=>{
     for(const forms of [
         [], [{title:'',content:text,keywords:scene.keywords}],
         [{title:'A\nB',content:text,keywords:scene.keywords}],
         [{title:'Valid',content:'A private correction without Result',keywords:scene.keywords}],
-        [{title:'Valid',content:text,keywords:['repeat','repeat','paper','night','ink']}],
-        [{title:'Valid',content:text,keywords:['repeat']}],
     ])assert.throws(()=>reviewSlothSceneDrafts([scene],forms));
 });
 

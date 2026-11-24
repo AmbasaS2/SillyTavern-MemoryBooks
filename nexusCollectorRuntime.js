@@ -19,7 +19,7 @@ import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './n
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
     getSlothHideRanges, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, composeSlothScenes, proposeSlothNexusEdits, InvalidSlothNexusProposal,
-    auditSlothDraft, suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
+    suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
@@ -1065,10 +1065,6 @@ export async function runNexusSceneSplit({profileIndex, stConnectionProfileId}={
             createEntry:book=>createWorldInfoEntry(names.memory,book),
             olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
         });
-        if(settings.moduleSettings?.slothPreciseReviewEnabled===true){
-            await auditSlothDraft({messages,scenes:drafts,edits:[],profile,settings});
-            verifyOrigin();
-        }
         const preview='<div class="stmb-sloth-review"><h3>'+
             html(t('Final split, original backup and save','STMemoryBooks_SlothSplitFinalTitle'))+
             '</h3><p>'+html(t('The entire original Memory JSON must be backed up before saving. The original Scene will remain as a disabled full-history archive. Separate completed Scenes receive new UIDs. All other lorebooks and chat messages remain unchanged.',

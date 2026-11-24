@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames, commitInitialNexusBooks } from './nexusInitialSetup.js';
-import { validateSlothSceneResponse, validateSlothSceneKeywords } from './nexusSlothScenePrompt.js';
+import { validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
 const avatar='Mira.png';
 const ref={type:'character',avatarUrl:avatar,fileName:'first'};
@@ -98,7 +98,7 @@ test('a lorebook changed while writing character links is never reported as veri
     assert.equal(h.books.get(h.names.nexus).entries[1].content,'Other writer');
 });
 
-test('the original Scene schema and five editable retrieval keywords are enforced',()=>{
+test('the original Scene schema is checked and retrieval keywords are cleaned locally',()=>{
     const response={
         title:'Unknown | The pledge',
         content:'**Timeline**: Unknown\n\n**Scene**\nShe folded the note and accepted the task.\n\n**Result**\nShe accepted the task.',
@@ -107,6 +107,6 @@ test('the original Scene schema and five editable retrieval keywords are enforce
     assert.deepEqual(validateSlothSceneResponse(response).keywords,response.keywords);
     assert.throws(()=>validateSlothSceneResponse({...response,extra:''}),/format/);
     assert.throws(()=>validateSlothSceneResponse({...response,content:response.content.replace('**Timeline**:','**Timeline**')}),/format/);
-    assert.throws(()=>validateSlothSceneKeywords([...response.keywords.slice(0,4),'SEALED NOTE']),/five distinct/);
-    assert.throws(()=>validateSlothSceneKeywords(response.keywords.slice(1)),/five distinct/);
+    const keywords = ['  sealed note  ', 'SEALED NOTE', 3, '', 'broken\nphrase', 'pocket watch'];
+    assert.deepEqual(validateSlothSceneResponse({...response, keywords}).keywords, ['sealed note', 'pocket watch']);
 });

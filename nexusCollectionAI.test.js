@@ -3,15 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
-import { selectSlothRepairKeywords, validateSlothSceneBody, validateSlothSceneKeywords, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
-
-test('keyword-only repair keeps five usable candidates in model order', () => {
-    const candidates = [' door ', 'DOOR', 'one two three four five six seven',
-        'promise', 'empty cup', 'the crossing', 'ribbon', 'gate', 'letter', 'bell'];
-    assert.deepEqual(selectSlothRepairKeywords(candidates),
-        ['door', 'promise', 'empty cup', 'the crossing', 'ribbon']);
-    assert.throws(() => selectSlothRepairKeywords(candidates.slice(0, 5)), /five distinct/);
-});
+import { validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
 const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
 const from=source.indexOf('function parseStrictJSON('),to=source.indexOf('\nfunction resolveConnection(',from);
@@ -39,8 +31,7 @@ test('collector limits Nexus source and hides protected Outlet content from the 
     assert.match(source,/protectedEntry/);
     assert.match(source,/\[protected; not included\]/);
     assert.match(source,/source\.length>60000/);
-    assert.match(source,/auditSlothDraft/);
-    assert.match(source,/source\.length\+draft\.length>68000/);
+    assert.doesNotMatch(source,/auditSlothDraft|keywords correction/);
 });
 
 test('long original source requires the active model context and a successful token count', async () => {
@@ -122,20 +113,21 @@ test('a draft with overlapping message ownership gets one corrective request, pr
     assert.equal(attempts,1);
 });
 
-test('an overlong Scene is retried from the approved original with a lower target and its endpoint', async () => {
+test('a usable single Scene keeps its keywords locally after recovering from an overlong draft', async () => {
     const draftStart = source.indexOf('async function requestValidatedDraft(');
     const draftEnd = source.indexOf('\nasync function windowEvidence(', draftStart);
     const sceneStart = source.indexOf('async function composeSlothScene(');
     const sceneEnd = source.indexOf('\nexport async function composeSlothScenes(', sceneStart);
     const makeDraft = prose => ({title: 'The letter', keywords: ['bell', 'gate', 'letter', 'palm', 'answer'],
         content: `**Timeline**: Unknown\n\n**Scene**\n${prose}\n\n**Result**\nShe gave him the letter.`});
-    const corrected = makeDraft('She handed him the letter and kept her palm against his shoulder.');
+    const corrected = {...makeDraft('She handed him the letter and kept her palm against his shoulder.'),
+        keywords:[' bell ', 'Bell', 'the letter tucked underneath the faded green ribbon']};
     const requests = [];
     const compose = vm.runInNewContext(source.slice(draftStart, draftEnd) + '\n' + source.slice(sceneStart, sceneEnd) + '\ncomposeSlothScene', {
         SLOTH_SCENE_OUTPUT_CONTRACT: 'Required shape', getActiveSlothSummaryPreset: () => ({text: 'Writing guidance'}),
         oai_settings:{},
         withFullSlothSource: async (messages,_prompt,_settings,_profile,run) => run(messages.map(message => message.mes).join('\n')),
-        validateSlothSceneBody, validateSlothSceneKeywords,
+        validateSlothSceneResponse, SCENE_KEYWORD_GUIDANCE: 'Writing guidance for keywords',
         requester: () => async prompt => {
             requests.push(prompt);
             return requests.length === 1 ? makeDraft('word '.repeat(651)) : corrected;
@@ -145,6 +137,7 @@ test('an overlong Scene is retried from the approved original with a lower targe
     const messages = [{id: 1, mes: 'Outside the approved range'}, {id: 2, mes: 'Her palm stayed on his shoulder.'}];
     const result = await compose({event, messages});
     assert.equal(result.content, corrected.content);
+    assert.deepEqual(result.keywords, ['bell', 'the letter tucked underneath the faded green ribbon']);
     assert.equal(requests.length, 2);
     assert.match(requests[1], /Her palm stayed on his shoulder\.[\s\S]*about 400 words[\s\S]*final physical state/);
     assert.doesNotMatch(requests[1], /Outside the approved range/);
@@ -170,16 +163,16 @@ test('long source falls back only for a provider input-capacity error', async ()
         async()=>assert.fail('Unrelated provider errors must propagate')),/Rate limit/);
 });
 
-test('scene batch sets a per-memory target and retains the drafts that passed review', async () => {
+test('scene batch reuses valid prose even with missing keywords and only recovers incomplete scenes', async () => {
     const begin=source.indexOf('async function composeSlothScenes(');
     const end=source.indexOf('\n/**',begin);
-    const valid={id:'event-1',timeline:'Unknown',scene:'She opened the door.',result:'The door opened.',
-        keywords:['door','ribbon','lantern','key','handle']};
+    const valid={id:'event-1',timeline:'Unknown',scene:'She opened the door.',result:'The door opened.'};
     const calls=[];
     const compose=vm.runInNewContext(source.slice(begin,end)+'\ncomposeSlothScenes',{
         requester:()=>async prompt=>{calls.push({prompt});return {scenes:[valid,{id:'event-2',title:'Invalid'}]};},
         SLOTH_SCENE_OUTPUT_CONTRACT:'single entry contract',getActiveSlothSummaryPreset:()=>({text:'Writing guidance'}),
         compact:JSON.stringify,oai_settings:{},validateSlothSceneResponse,
+        SCENE_KEYWORD_GUIDANCE:'Writing guidance for keywords',
         composeSlothScene:async ({event})=>{calls.push({recovered:event.id});return event;},
     });
     const events=[{id:'event-1',title:'Approved first memory',result:'Opened',messageIds:[1]},
@@ -192,6 +185,7 @@ test('scene batch sets a per-memory target and retains the drafts that passed re
     assert.equal(calls[1].recovered,'event-2');
     assert.equal(result[0].content,'**Timeline**: Unknown\n\n**Scene**\nShe opened the door.\n\n**Result**\nThe door opened.');
     assert.equal(result[0].title,events[0].title);
+    assert.deepEqual(result[0].keywords,[events[0].title]);
 });
 
 test('only a newly created reserved Nexus entry can lose a decorative title suffix', () => {

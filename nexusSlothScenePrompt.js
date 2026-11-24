@@ -89,10 +89,9 @@ export const SLOTH_DEFAULT_SUMMARY_PROMPT = [
     "Commitments and relationship. Retain each material promise, request, refusal, boundary, precondition, counterterm, limited offer or chooser-owned exception with its actor, addressee and actual response. Keep proposed, permitted, accepted, committed and enacted distinct. A promise remains open until the source shows it done. Attribute an onlooker's opinion to the onlooker. Keep characteristic voice with one to three short, exact English quotes, focusing on a joke, decision or final words. Paraphrase longer exchanges and attribute translated dialogue accurately.",
     "Care and contact. Distinguish what was offered, supplied, applied or consumed, still prescribed and finished. Preserve consequential touch in order, including initiator, body part or object, and release if shown. End Scene with the last visible arrangement and meaningful utterance or action. If touch matters, write one concrete clause naming who held or touched what, exactly where, and whether it continued or ended. Keep meaningful positions, held objects or doors, and the supported answer or unanswered choice. Keep the prose in the story: “Her palm stayed on his cheek as he answered.”",
     "Result. One past-tense sentence stating who did, said, decided or disclosed the defining completed thing. For a difficult exchange, “A apologized and B took A's hand” records the outcome; “they resolved the hurt” requires explicit evidence from both. Use the concrete steps when a character's response was unspoken, indirect or absent. Leave open concerns in Scene.",
-    "Keywords. Five distinct literal English cues of 1–6 words each. Choose phrases a character might use to recall this event; at most two short dialogue fragments.",
 ].join("\n\n");
 
-export function validateSlothSceneBody(response) {
+function validateSlothSceneBody(response) {
     const keys = Object.keys(response);
     const parts = typeof response.content === 'string' && response.content.trim().match(
         /^\*\*Timeline\*\*:\s*([^\n]+)\r?\n\s*\*\*Scene\*\*\s*\r?\n([\s\S]+?)\r?\n\s*\*\*Result\*\*\s*\r?\n([^\n]+)$/,
@@ -109,28 +108,16 @@ export function validateSlothSceneBody(response) {
     return response.content.trim();
 }
 
-export function validateSlothSceneResponse(response) {
-    return {content: validateSlothSceneBody(response), keywords: validateSlothSceneKeywords(response.keywords)};
-}
-
-const isRecallPhrase = key => typeof key === 'string' && key.trim() && key.trim().split(/\s+/u).length <= 6;
-
-export function selectSlothRepairKeywords(candidates) {
-    const picked=new Map();
-    for (const candidate of Array.isArray(candidates)?candidates:[]) {
-        if (!isRecallPhrase(candidate)) continue;
-        const text=candidate.trim();
-        if (!picked.has(text.toLowerCase())) picked.set(text.toLowerCase(),text);
-        if (picked.size===5) break;
+export function validateSlothSceneResponse(response, fallbackKeyword = '') {
+    const content = validateSlothSceneBody(response);
+    const keywords = new Map();
+    for (const candidate of Array.isArray(response.keywords) ? response.keywords : []) {
+        if (typeof candidate !== 'string') continue;
+        const phrase = candidate.trim();
+        if (!phrase || /[\r\n]/u.test(phrase)) continue;
+        const key = phrase.toLowerCase();
+        if (!keywords.has(key)) keywords.set(key, phrase);
+        if (keywords.size === 16) break;
     }
-    return validateSlothSceneKeywords([...picked.values()]);
-}
-
-export function validateSlothSceneKeywords(value) {
-    const keywords = Array.isArray(value) ? value : [];
-    if (keywords.length !== 5 || keywords.some(key => !isRecallPhrase(key)) ||
-        new Set(keywords.map(key => key.trim().toLowerCase())).size !== 5) {
-        throw new Error('Scene needs five distinct recall keywords, each one to six words. Nothing saved.');
-    }
-    return keywords.map(key => key.trim());
+    return {content, keywords: !keywords.size && fallbackKeyword ? [fallbackKeyword] : [...keywords.values()]};
 }

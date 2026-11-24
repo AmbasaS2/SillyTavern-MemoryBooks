@@ -13,8 +13,7 @@ import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from '
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
-import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneBody, validateSlothSceneKeywords,
-    selectSlothRepairKeywords, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
+import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
 import { getCompressibleScene, getSlothCompressionInstructions, stageSlothSceneCompression } from './nexusSceneCompression.js';
 
@@ -80,6 +79,7 @@ function requester(profile,settings,signal) {
 }
 const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
+const SCENE_KEYWORD_GUIDANCE = 'Include up to five distinct, short recall keywords. Prefer specific names, objects, actions or quoted phrases that might recur in dialogue. Avoid full sentences.';
 async function requestValidatedDraft(prompt, phase, ask, validate, correction, fallback) {
     let received = false;
     let draft;
@@ -267,7 +267,7 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
         'Create one retrievable scene memory from the selected roleplay range, using only that range as evidence.',
         SLOTH_SCENE_OUTPUT_CONTRACT,
         getActiveSlothSummaryPreset(settings).text,
-        'Required response: strict JSON with title, content (Timeline, Scene and Result), and exactly five keywords.',
+        SCENE_KEYWORD_GUIDANCE,
         'Fork workflow: the user-approved source spans form ONE independently recallable causal event, even when noncontiguous. Do not use intervening messages outside the approved spans.',
         'Keep person-specific voice, humor and distinctive phrasing along with all of the original preservation rules.',
         'The approved title and closure guide the output; evidence controls factual details. The character card is reference only, never evidence of an event.',
@@ -277,31 +277,18 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
         'Closure: '+event.result,'Source spans: '+JSON.stringify(event.segments),
         'Character context: '+characterContext,'Evidence:',
     ].join('\n\n')+'\n\n';
-    const run = evidence => requestValidatedDraft(prompt+evidence,'Scene '+event.id,ask,raw=>{
-        validateSlothSceneBody(raw);
-        return raw;
-    }, error=>{
-        const format='Return only JSON with exactly title, content and keywords. Inside content use "**Timeline**: …", then a separate line "**Scene**" and its prose, then a separate line "**Result**" and a single plain result line. Give five distinct one-to-six-word keywords.';
-        const revision=error.code==='STMB_SLOTH_SCENE_TOO_LONG'
-            ? 'The Scene exceeded 650 words. Rewrite it from the original source in about 400 words. Condense long exchanges and repeated reactions before cutting any causal action, promise, change in knowledge or final physical state. Keep the final meaningful utterance and its actual answer or lack of one.'
-            : 'The previous response failed validation: '+error.message+' Rewrite the same supported event in the required format.';
-        return [prompt+evidence,revision,format].join('\n\n');
-    });
+    const run = evidence => requestValidatedDraft(prompt+evidence,'Scene '+event.id,ask,
+        raw => validateSlothSceneResponse({title:event.title, content:raw.content, keywords:raw.keywords}, event.title),
+        error => {
+            const format='Return only JSON with title, content and keywords. Inside content use "**Timeline**: …", then a separate line "**Scene**" and its prose, then a separate line "**Result**" and a single plain result line.';
+            const revision=error.code==='STMB_SLOTH_SCENE_TOO_LONG'
+                ? 'The Scene exceeded 650 words. Rewrite it from the original source in about 400 words. Condense long exchanges and repeated reactions before cutting any causal action, promise, change in knowledge or final physical state. Keep the final meaningful utterance and its actual answer or lack of one.'
+                : 'The previous response failed validation: '+error.message+' Rewrite the same supported event in the required format.';
+            return [prompt+evidence,revision,format].join('\n\n');
+        });
     const draft=await withFullSlothSource(source,prompt,settings,profile,run,
         () => evidenceFor(source,ask,prompt,settings,profile,true));
-    let keywords;
-    try { keywords=validateSlothSceneKeywords(draft.keywords); }
-    catch {
-        // A formatting error in the retrieval cues should never force a good
-        // summary to be rewritten. Repair only the cue list against that draft.
-        const repaired=await ask([
-            'Return ranked replacement retrieval candidates for one saved Sloth Scene. Strict JSON {"keywords":["...", "..."]}, with 5–10 candidates ordered by recall usefulness.',
-            'Choose distinct, literal phrases from the Scene below. Each must be one to SIX whitespace-separated words. Pick concrete cues that could recur. Avoid full clauses: use "blue lantern" instead of "he told her where he hid the blue lantern". Do not return the scene, title or explanations.',
-            draft.content,
-        ].join('\n\n'),'Scene '+event.id+' keywords correction');
-        keywords=selectSlothRepairKeywords(repaired.keywords);
-    }
-    return {...event,content:draft.content.trim(),keywords,title:event.title};
+    return {...event,...draft};
 }
 
 export async function composeSlothScenes({events,messages,profile,settings,signal=null,characterContext='',verifyOrigin=()=>{}}) {
@@ -321,7 +308,7 @@ export async function composeSlothScenes({events,messages,profile,settings,signa
                 getActiveSlothSummaryPreset(settings).text,
                 'Output length per memory: 325–650 tokens of Scene prose, roughly 210–400 English words, or shorter for a simple event. The remaining fields have their own short allowance. Use indirect speech for long exchanges and keep only short distinctive or consequential quotations. Give the full ending of every event within its own budget.',
                 'Keep an independent memory for each ID. Use only that event’s own approved message IDs from the source below. Never mix events or fill gaps. The event titles, outcomes and character context are guides; only the assigned source supports facts.',
-                'Exactly five distinct recall cues per scene. Each cue is a specific name or phrase of one to six words, not a full sentence.',
+                SCENE_KEYWORD_GUIDANCE,
                 'Character context: '+characterContext,
                 'Approved events: '+JSON.stringify(batch.map(({id,title,result,messageIds})=>({id,title,result,messageIds}))),
                 'Original source messages: ',
@@ -337,7 +324,7 @@ export async function composeSlothScenes({events,messages,profile,settings,signa
                         if (![timeline,scene,result].every(value=>typeof value==='string' && value.trim())) continue;
                         const content = `**Timeline**: ${timeline.trim()}\n\n**Scene**\n${scene.trim()}\n\n**Result**\n${result.trim()}`;
                         try {
-                            const draft=validateSlothSceneResponse({title:event.title,content,keywords});
+                            const draft=validateSlothSceneResponse({title:event.title,content,keywords}, event.title);
                             accepted.set(event.id,{...event,...draft,title:event.title});
                         } catch { /* Only this entry needs the existing single-scene path. */ }
                     }
@@ -493,42 +480,6 @@ export async function compressSlothScene({entry,amount,focus,profile,settings,ve
             'Combine related clauses and remove repeated or routine details. If an exact selected quote was lost, replace a less useful clause with it. Retain named knowledge limits, exact meaningful release, unused options, final physical state, and the last utterance and its speaker.');
     }
 }
-
-/**
- * Optional additional AI call: flags omissions without silently rewriting drafts.
- * Source must fit in a single review context or this phase fails closed.
- */
-export async function auditSlothDraft({messages,scenes,edits,plan,profile,settings,signal=null}) {
-    const ask=requester(profile,settings,signal);
-    const source=compact(messages);
-    const draft=JSON.stringify({scenes:scenes.map(x=>({
-        title:x.title,segments:x.segments,content:x.content})),edits,
-        deferred:plan?.deferred?.map(({reason,segments})=>({reason,segments})) || []});
-    if(source.length+draft.length>68000) {
-        throw new Error('Optional omission audit requires a smaller source range; nothing saved.');
-    }
-    const prompt=[
-        'Independent evidence audit for roleplay Memory Books. DO NOT rewrite the approved draft.',
-        'Check whether EVERY meaningful fact in source messages is represented in a complete Scene',
-        'or intentionally deferred. Check causes, consequences, quotes, who knew what, uncertainty,',
-        'and whether proposed Nexus edits contradict pre-existing roleplay states.',
-        'Return STRICT JSON {"passed":true|false,"issues":[{"messageIds":[1,2],',
-        '"kind":"omission|misattribution|false_closure|Nexus_conflict","detail":"..."}]}.',
-        'Report only material source-backed problems; no speculative issues.',
-        'Original messages:',source,'Approved drafts:',draft
-    ].join('\n\n');
-    const review=await ask(prompt,'Optional omission audit');
-    if(typeof review.passed!=='boolean'||!Array.isArray(review.issues)){
-        throw new Error('Omission audit returned an invalid verdict. No changes saved.');
-    }
-    if(!review.passed||review.issues.length){
-        const report=review.issues.slice(0,5).map(x=>String(x?.kind||'issue')+
-            ': '+String(x?.detail||'').slice(0,240)).join('; ');
-        throw new Error('Omission audit found issues; nothing saved. '+report);
-    }
-    return review;
-}
-
 
 /**
  * Optional, explicitly invoked repair of ALREADY SAVED completed Scenes.

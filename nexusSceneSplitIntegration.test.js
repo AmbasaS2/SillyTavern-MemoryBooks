@@ -91,8 +91,7 @@ test('runtime is manual and requires all three reviews plus original JSON backup
         'fingerprintSlothChat','reloadEditor(names.memory)',
     ])assert.ok(part.includes(name),name);
     assert.match(part,/name:names\.memory,original,staged:staged\.proposedMemory/);
-    assert.match(part,/slothPreciseReviewEnabled===true/);
-    assert.match(part,/auditSlothDraft\(\{messages,scenes:drafts,edits:\[\],profile,settings\}\)/);
+    assert.doesNotMatch(part,/slothPreciseReviewEnabled|auditSlothDraft/);
     assert.doesNotMatch(part,/updateCollectedLedger|saveWorldInfo\(names\.nexus|hideChat/);
 });
 test('model prompt is read-only, independent events are not split by date or token',()=>{
