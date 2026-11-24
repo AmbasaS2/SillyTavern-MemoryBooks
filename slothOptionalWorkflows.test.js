@@ -45,7 +45,8 @@ test('Jev submits scoped old memory candidates once and injects only selected co
             return {ok:true,json:async()=>response};
         },
     });
-    applySlothJevRecall(lists,'Memory-A',selected);
+    const applied=applySlothJevRecall(lists,'Memory-A',new Set([...selected,2,3,4,999]));
+    assert.deepEqual([...applied],[1]);
     assert.deepEqual(lists.globalLore,[{...chosenSource,constant:true,vectorized:false},recent,archived]);
     assert.deepEqual(lists.characterLore,[otherWorld]);
     assert.equal(chosenSource.constant,false);
