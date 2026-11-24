@@ -14157,7 +14157,11 @@ function setupEventListeners() {
     const chosen = await run.recall;
     if (chosen && run === slothGeneration && run.key === getStmbChatKey() && run.recallSignature === signature &&
         extension_settings.STMemoryBooks?.moduleSettings?.slothJevRecallEnabled === true) {
-      applySlothJevRecall(lists,memory.name,chosen);
+      const applied=applySlothJevRecall(lists,memory.name,chosen);
+      // Optional WorldInfo Info display receipt; never add fields to WI entries.
+      // SillyTavern hashes those entries for timed effects, so provenance stays out of them.
+      try { window.STWII?.recordJevRecall?.(lists,memory.name,applied); }
+      catch { /* Optional display integration must not interfere with recall. */ }
     }
   });
   eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED, async ({ globalLore, characterLore, chatLore, personaLore }) => {
