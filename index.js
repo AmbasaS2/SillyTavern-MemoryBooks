@@ -872,22 +872,18 @@ function getRenderedMessageElement(messageId) {
   return document.querySelector(`#chat .mes[mesid="${messageId}"]`);
 }
 
-function clearMemoryBoundaryDivider() {
-  document.querySelectorAll(".stmb_memory_boundary_divider").forEach((element) => element.remove());
-  document.querySelectorAll(".stmb_memory_boundary_target").forEach((element) => {
-    element.classList.remove("stmb_memory_boundary_target");
-  });
-}
+let memoryBoundaryDivider = null;
+let memoryBoundaryElement = null;
 
 function refreshMemoryBoundaryDivider() {
-  clearMemoryBoundaryDivider();
+  const targetElement = isMemoryBoundaryDividerEnabled()
+    ? getRenderedMessageElement(getMemoryBoundaryTargetId()) : null;
+  if (targetElement && targetElement === memoryBoundaryElement && memoryBoundaryDivider?.parentElement === targetElement) return;
 
-  if (!isMemoryBoundaryDividerEnabled()) {
-    return;
-  }
-
-  const targetId = getMemoryBoundaryTargetId();
-  const targetElement = getRenderedMessageElement(targetId);
+  memoryBoundaryDivider?.remove();
+  memoryBoundaryElement?.classList.remove("stmb_memory_boundary_target");
+  memoryBoundaryDivider = null;
+  memoryBoundaryElement = targetElement;
   if (!targetElement) {
     return;
   }
@@ -898,6 +894,7 @@ function refreshMemoryBoundaryDivider() {
   divider.textContent = translate("Memory Books boundary", "STMemoryBooks_MemoryBoundaryLabel");
   targetElement.classList.add("stmb_memory_boundary_target");
   targetElement.prepend(divider);
+  memoryBoundaryDivider = divider;
 }
 
 function clampMemoryBoundaryButtonPosition(position = {}) {
@@ -1375,6 +1372,7 @@ let cachedSettings = null;
 // MutationObserver for chat message monitoring
 let chatObserver = null;
 let updateTimeout = null;
+const pendingSceneButtons = new Set();
 
 /**
  * Process messages and return processed elements
@@ -1430,15 +1428,13 @@ function initializeChatObserver() {
   }
 
   chatObserver = new MutationObserver((mutations) => {
-    const newlyProcessedMessages = [];
-
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
         if (node.nodeType === Node.ELEMENT_NODE) {
           try {
             // Collect all newly processed messages
             const processed = processNodeForMessages(node);
-            newlyProcessedMessages.push(...processed);
+            for (const message of processed) pendingSceneButtons.add(message);
           } catch (error) {
             console.error(
               translate(
@@ -1452,13 +1448,15 @@ function initializeChatObserver() {
       }
     }
 
-    if (newlyProcessedMessages.length > 0) {
-      // Debounce the state update to prevent excessive calls
-      clearTimeout(updateTimeout);
+    if (pendingSceneButtons.size && updateTimeout === null) {
       updateTimeout = setTimeout(() => {
+        updateTimeout = null;
+        const messages = [...pendingSceneButtons].filter(message => chatContainer.contains(message));
+        pendingSceneButtons.clear();
+        if (!messages.length) return;
         try {
           // Use partial update for new messages only
-          updateNewMessageButtonStates(newlyProcessedMessages);
+          updateNewMessageButtonStates(messages);
           refreshMemoryBoundaryUi();
         } catch (error) {
           console.error(
@@ -1473,10 +1471,10 @@ function initializeChatObserver() {
     }
   });
 
-  // Start observing the chat container
+  // SillyTavern appends/prepends message roots to #chat. Text streaming
+  // mutates their descendants and does not add scene buttons.
   chatObserver.observe(chatContainer, {
     childList: true,
-    subtree: true,
   });
 
   console.log(
@@ -1506,6 +1504,7 @@ function cleanupChatObserver() {
     clearTimeout(updateTimeout);
     updateTimeout = null;
   }
+  pendingSceneButtons.clear();
 }
 
 let lastContextPromptChatKey = null;
@@ -4475,7 +4474,16 @@ function initializeLorebookRegenerationObserver() {
   if (lorebookRegenerationObserver) return;
   const observerRoot = document.querySelector("#world_popup_entries_list");
   if (!observerRoot) return;
-  lorebookRegenerationObserver = new MutationObserver(scheduleLorebookRegenerationActionsRefresh);
+  lorebookRegenerationObserver = new MutationObserver(records => {
+    for (const { addedNodes } of records) {
+      for (const node of addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE && (node.matches(".world_entry") || node.querySelector(".world_entry"))) {
+          scheduleLorebookRegenerationActionsRefresh();
+          return;
+        }
+      }
+    }
+  });
   lorebookRegenerationObserver.observe(observerRoot, { childList: true, subtree: true });
   $("#world_editor_select").on("change.stmb-regeneration", scheduleLorebookRegenerationActionsRefresh);
   scheduleLorebookRegenerationActionsRefresh();
@@ -13053,12 +13061,7 @@ function processExistingMessages() {
   const messageElements = document.querySelectorAll("#chat .mes[mesid]");
 
   if (messageElements.length > 0) {
-    let buttonsAdded = 0;
-    messageElements.forEach((messageElement) => {
-      if (createSceneButtons(messageElement)) {
-        buttonsAdded++;
-      }
-    });
+    messageElements.forEach(createSceneButtons);
 
     // Full update needed for chat loads
     updateAllButtonStates();

@@ -58,7 +58,7 @@ const jobListeners = new Set();
 
 let jobsUiInitialized = false;
 let jobsEnabled = false;
-let jobsRenderTimer = null;
+let jobsElapsedTimer = null;
 let topBarButton = null;
 let topBarBadge = null;
 let jobsPanel = null;
@@ -767,6 +767,25 @@ function formatElapsed(job = {}) {
     return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
+function syncJobsElapsedTimer(rows) {
+    const hasVisibleClock = jobsPanel.classList.contains('visible') &&
+        rows.some(job => !TERMINAL_STATES.has(String(job.state || '')) && (job.startedAt || job.createdAt));
+    if (!hasVisibleClock) {
+        clearInterval(jobsElapsedTimer);
+        jobsElapsedTimer = null;
+        return;
+    }
+    jobsElapsedTimer ??= setInterval(() => {
+        if (document.hidden) return;
+        const jobs = new Map(getCurrentStoreRows().map(job => [job.id, job]));
+        for (const label of jobsRows.querySelectorAll('[data-stmb-job-clock]')) {
+            const job = jobs.get(label.dataset.stmbJobClock);
+            const elapsed = job && formatElapsed(job);
+            if (elapsed && label.textContent !== elapsed) label.textContent = elapsed;
+        }
+    }, 1000);
+}
+
 function formatMessageRange(job = {}) {
     const rawStart = job.range?.sceneStart;
     const rawEnd = job.range?.sceneEnd;
@@ -798,6 +817,7 @@ function renderStmbJobsUi() {
         return;
     }
     const rows = getCurrentStoreRows();
+    syncJobsElapsedTimer(rows);
     const activeCount = rows.filter(row => ACTIVE_STATES.has(String(row.state))).length;
     const reviewCount = rows.filter(row => row.state === 'needs_review' || row.state === 'awaiting_approval').length;
     const failureCount = rows.filter(row => ['failed', 'blocked'].includes(String(row.state))).length;
@@ -841,6 +861,7 @@ function renderStmbJobsUi() {
                     : `<button type="button" class="menu_button stmb-jobs-row-action" data-action="retry-job" data-job-id="${escapeHtml(job.id)}">${escapeHtml(tr('STMemoryBooks_Jobs_Retry', 'Retry'))}</button>`
                 : '';
         const messageRange = formatMessageRange(job);
+        const elapsed = formatElapsed(job);
         return `
             <div class="stmb-jobs-row ${getStateToneClass(job)}"${attrs}>
                 <div class="stmb-jobs-row-main">
@@ -852,7 +873,7 @@ function renderStmbJobsUi() {
                     ${job.detail ? `<div class="stmb-jobs-row-detail">${escapeHtml(job.detail)}</div>` : ''}
                     ${job.lorebookName ? `<div class="stmb-jobs-row-meta">${escapeHtml(tr('STMemoryBooks_Jobs_Lorebook', 'Lorebook'))}: ${escapeHtml(job.lorebookName)}</div>` : ''}
                     ${messageRange ? `<div class="stmb-jobs-row-meta">${escapeHtml(messageRange)}</div>` : ''}
-                    ${formatElapsed(job) ? `<div class="stmb-jobs-row-meta">${escapeHtml(formatElapsed(job))}</div>` : ''}
+                    ${elapsed ? `<div class="stmb-jobs-row-meta" data-stmb-job-clock="${escapeHtml(job.id)}">${escapeHtml(elapsed)}</div>` : ''}
                     ${job.error?.message ? `<div class="stmb-jobs-row-error">${escapeHtml(job.error.message)}</div>` : ''}
                 </div>
                 ${action ? `<div class="stmb-jobs-row-actions">${action}</div>` : ''}
@@ -1039,7 +1060,6 @@ export function initStmbJobsIfTopInfoBarEnabled() {
         jobsPanel.dataset.stmbJobsBound = '1';
     }
     eventSource.on(event_types.CHAT_CHANGED, renderStmbJobsUi);
-    jobsRenderTimer = jobsRenderTimer || setInterval(renderStmbJobsUi, 1000);
     jobsUiInitialized = true;
     jobsEnabled = true;
     renderStmbJobsUi();
