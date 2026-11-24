@@ -17,7 +17,7 @@ import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, wit
 import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
-    getSlothHideRanges, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
+    getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges } from './nexusCollectionPolicy.js';
 import { analyzeSlothEvents, composeSlothScene, composeApprovedSlothCollection, InvalidSlothNexusProposal,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
@@ -347,22 +347,25 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
 }
 
 async function planApproval(plan,initial,keepRecent) {
-    const lastScene=plan.events.at(-1)?.end;
+    const collectedIds = plan.events.flatMap(event => event.messageIds).sort((a, b) => a - b);
+    const collectedRanges = readableSegments(slothSourceRanges(collectedIds));
+    const analyzedRange = readableSegments([[plan.start, plan.end]]);
     const pending=plan.deferred.reduce((count,item)=>count+item.messageIds.length,0);
     const eventCount=t('{{count}} events','STMemoryBooks_SlothPlanEvents').replace('{{count}}',String(plan.events.length));
     const rows=plan.events.map(item=>'<li><strong>'+html(item.title)+'</strong><small> #'+
         html(readableSegments(item.segments))+'</small></li>').join('');
     const body='<div class="stmb-sloth-review"><h3>'+
         html(t('Collection plan','STMemoryBooks_SlothReviewPlan'))+'</h3><dl class="stmb-sloth-plan-summary">'+
+        '<dt>'+html(t('Analyzed range','STMemoryBooks_SlothPlanAnalyzed'))+'</dt><dd>#'+html(analyzedRange)+'</dd>'+
         '<dt>Memory</dt><dd>'+html(eventCount)+
-        (lastScene===undefined?'':' · '+html(t('through message','STMemoryBooks_SlothPlanThrough'))+' #'+html(lastScene))+'</dd>'+
+        (collectedRanges?' · #'+html(collectedRanges):'')+'</dd>'+
         '<dt>Nexus</dt><dd>'+html(t('Review through message','STMemoryBooks_SlothPlanNexusThrough'))+' #'+html(plan.end)+'</dd>'+
         (pending?'<dt>'+html(t('Held for later','STMemoryBooks_SlothPlanPending'))+'</dt><dd>'+html(pending)+'</dd>':'')+
         '</dl>'+(rows?'<ol class="stmb-sloth-plan-list">'+rows+'</ol>':'')+
         (rows?'<div class="stmb-sloth-plan-hide"><label class="checkbox_label"><input id="stmb-sloth-plan-hide" type="checkbox"> '+
             html(t('Hide saved chat messages after collection','STMemoryBooks_SlothHideAfter'))+'</label>'+
             '<label class="stmb-sloth-inline-field" for="stmb-sloth-plan-keep">'+
-            html(t('Recent messages to keep visible','STMemoryBooks_SlothHideRecent'))+
+            html(t('Recent collected messages to keep visible','STMemoryBooks_SlothHideRecent'))+
             '<input id="stmb-sloth-plan-keep" class="text_pole" type="number" min="0" max="9999" value="'+html(keepRecent)+'"></label>'+
             '<small id="stmb-sloth-plan-hide-summary" aria-live="polite"></small></div>':'')+
         (initial?'<p>'+html(t('New Nexus and Memory lorebooks will be connected to this character.',

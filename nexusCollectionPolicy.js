@@ -32,12 +32,11 @@ export function normalizeSlothVisibleTail(value) {
 }
 
 export function getSlothHideRanges(events, messages, keepRecent) {
-    const visible = messages.flatMap((message,id) =>
-        message && !message.is_system && typeof message.mes === 'string' && message.mes.trim() ? [id] : []);
-    const count = normalizeSlothVisibleTail(keepRecent);
-    const cutoff = count > 0 ? (visible.at(-count) ?? 0) : messages.length;
     const collected = new Set(events.flatMap(event => event.messageIds));
-    return slothSourceRanges(visible.filter(id => id < cutoff && collected.has(id)));
+    const visible = messages.flatMap((message, id) =>
+        collected.has(id) && message && !message.is_system && typeof message.mes === 'string' && message.mes.trim() ? [id] : []);
+    const hideCount = Math.max(0, visible.length - normalizeSlothVisibleTail(keepRecent));
+    return slothSourceRanges(visible.slice(0, hideCount));
 }
 
 export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = false } = {}) {

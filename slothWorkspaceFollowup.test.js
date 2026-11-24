@@ -20,6 +20,14 @@ test('approved Hide excludes visible recent turns, deferred turns and previously
     assert.equal(normalizeSlothVisibleTail(''),6);
 });
 
+test('approved Hide keeps the last six collected messages even when a newer event is deferred', () => {
+    const chat = Array.from({length: 201}, (_, id) => ({mes: `Turn ${id}`}));
+    const events = [{messageIds: Array.from({length: 171}, (_, id) => id)}];
+    assert.deepEqual(getSlothHideRanges(events, chat, 6), [[0, 164]]);
+    events[0].messageIds.splice(163, 1);
+    assert.deepEqual(getSlothHideRanges(events, chat, 6), [[0, 162], [164, 164]]);
+});
+
 test('summary presets keep the built-in summary and preserve old instructions only as a summary preset',()=>{
     const builtin=getActiveSlothSummaryPreset();
     assert.equal(builtin.id,'builtin');

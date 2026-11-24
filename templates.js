@@ -109,8 +109,8 @@ export const settingsTemplate = Handlebars.compile(`
         {{#if slothCharacterAvailable}}
         <details id="stmb-sloth-collection-settings" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
           <summary id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</summary>
-        <div class="world_entry_form_control">
-            <label for="stmb-sloth-profile-select" data-i18n="STMemoryBooks_SlothAIModule">Memory collection AI</label>
+        <label for="stmb-sloth-profile-select" class="stmb-sloth-select-row">
+            <span data-i18n="STMemoryBooks_SlothAIModule">Memory collection AI</span>
             <select id="stmb-sloth-profile-select" class="text_pole">
                 {{#if slothConnectionProfileMissing}}
                 <option value="st:{{slothConnectionProfileId}}" selected disabled data-i18n="STMemoryBooks_MissingConnectionProfile">Missing connection profile</option>
@@ -118,16 +118,12 @@ export const settingsTemplate = Handlebars.compile(`
                 {{#each slothProfiles}}
                 <option value="{{@index}}" {{#unless @root.slothConnectionProfileId}}{{#if isSlothProfile}}selected{{/if}}{{/unless}}>{{name}}</option>
                 {{/each}}
-                {{#if slothConnectionProfiles}}
-                <optgroup label="SillyTavern connection profiles" data-i18n="[label]STMemoryBooks_ConnectionProfile">
-                  {{#each slothConnectionProfiles}}
-                  <option value="st:{{id}}" {{#if selected}}selected{{/if}} title="{{model}}">{{name}}</option>
-                  {{/each}}
-                </optgroup>
-                {{/if}}
+                {{#each slothConnectionProfiles}}
+                <option value="st:{{id}}" {{#if selected}}selected{{/if}} title="{{model}}">{{name}}</option>
+                {{/each}}
             </select>
-        </div>
-        <label for="stmb-sloth-memory-recall" class="stmb-sloth-inline-field">
+        </label>
+        <label for="stmb-sloth-memory-recall" class="stmb-sloth-select-row">
           <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory recall</span>
           <select id="stmb-sloth-memory-recall" class="text_pole">
             <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
@@ -156,23 +152,23 @@ export const settingsTemplate = Handlebars.compile(`
         {{/if}}
         <details id="stmb-sloth-auto" class="stmb-workspace-panel stmb-workspace-drawer">
           <summary data-i18n="STMemoryBooks_SlothAutoTitle">Automatic collection</summary>
-          <div class="stmb-sloth-advanced-fields">
+          <div class="stmb-sloth-auto-fields">
             <label class="checkbox_label">
               <input id="stmb-sloth-auto-enabled" type="checkbox" {{#if slothAutoEnabled}}checked{{/if}}>
               <span data-i18n="STMemoryBooks_SlothAutoEnable">Collect memories automatically</span>
             </label>
-            <label class="stmb-sloth-inline-field" for="stmb-sloth-auto-mode">
+            <label class="stmb-sloth-select-row" for="stmb-sloth-auto-mode">
               <span data-i18n="STMemoryBooks_SlothAutoIntervalUnit">Interval unit</span>
               <select class="text_pole" id="stmb-sloth-auto-mode">
                 <option value="tokens" {{#if slothAutoUsesTokens}}selected{{/if}} data-i18n="STMemoryBooks_Tokens">Tokens</option>
-                <option value="messages" {{#unless slothAutoUsesTokens}}selected{{/unless}} data-i18n="STMemoryBooks_Messages">Messages</option>
+                <option value="messages" {{#unless slothAutoUsesTokens}}selected{{/unless}} data-i18n="STMemoryBooks_SlothAutoMessageUnit">Messages</option>
               </select>
             </label>
-            <label class="stmb-sloth-inline-field" for="stmb-sloth-auto-interval">
+            <label class="stmb-sloth-select-row" for="stmb-sloth-auto-interval">
               <span data-i18n="STMemoryBooks_SlothAutoInterval">Collect every</span>
               <input id="stmb-sloth-auto-interval" type="number" min="1" max="{{slothAutoIntervalMax}}" class="text_pole" value="{{slothAutoInterval}}">
             </label>
-            <small data-i18n="STMemoryBooks_SlothAutoHelp">After a new reply, saves completed events once the interval is reached in chats with both lorebooks connected. Messages stay visible.</small>
+            <small data-i18n="STMemoryBooks_SlothAutoHelp">In chats with Nexus and Memory linked, completed events are saved after a reply once enough unsaved messages accumulate. Messages stay visible.</small>
           </div>
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
@@ -236,7 +232,7 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
             <hr class="stmb-sloth-settings-rule">
             <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
-              <span data-i18n="STMemoryBooks_SlothHideRecent">Recent messages to keep visible</span>
+              <span data-i18n="STMemoryBooks_SlothHideRecent">Recent collected messages to keep visible</span>
               <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
             </label>
           </div>

@@ -612,7 +612,7 @@ const SLOTH_COMPOSER_SIZES = [14, 16, 18, 20, 22, 25, 28];
 const getSlothComposerSize = value => {
   const size = Number(value);
   if (SLOTH_COMPOSER_SIZES.includes(size)) return size;
-  return [80, 90, 100, 110, 125].includes(size) ? size / 5 : 20;
+  return [80, 90, 110, 125].includes(size) ? size / 5 : 16;
 };
 const MEMORY_BOUNDARY_MODES = Object.freeze({
   OFF: "",
@@ -11574,31 +11574,27 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
     existing?.remove();
     return;
   }
-  const icon = getSlothComposerIcon(settings);
-  const size = getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px';
-  if (existing) {
-    existing.firstElementChild.className = 'fa-solid fa-'+icon;
-    existing.style.setProperty('--stmb-collect-size',size);
-    if (extensionsMenu.nextElementSibling !== existing) extensionsMenu.after(existing);
-    return;
+  const button = existing ?? document.createElement('button');
+  if (!existing) {
+    button.type = 'button';
+    button.id = 'stmb-sloth-composer';
+    const label = translate('Collect memories','STMemoryBooks_SlothCollectionTitle');
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    const glyph = document.createElement('i');
+    glyph.setAttribute('aria-hidden','true');
+    button.append(glyph);
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      try { await runSlothCollectionEntryPoint(); }
+      finally { button.disabled = false; }
+    });
   }
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.id = 'stmb-sloth-composer';
-  button.style.setProperty('--stmb-collect-size',size);
-  const label = translate('Collect memories','STMemoryBooks_SlothCollectionTitle');
-  button.title = label;
-  button.setAttribute('aria-label', label);
-  const glyph = document.createElement('i');
-  glyph.className = 'fa-solid fa-'+icon;
-  glyph.setAttribute('aria-hidden','true');
-  button.append(glyph);
-  button.addEventListener('click', async () => {
-    button.disabled = true;
-    try { await runSlothCollectionEntryPoint(); }
-    finally { button.disabled = false; }
-  });
-  extensionsMenu.after(button);
+  button.firstElementChild.className = 'fa-solid fa-' + getSlothComposerIcon(settings);
+  button.style.setProperty('--stmb-collect-size', getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px');
+  // Flex items with the same order are laid out in DOM order.
+  button.style.order = getComputedStyle(extensionsMenu).order;
+  if (extensionsMenu.nextElementSibling !== button) extensionsMenu.after(button);
 }
 
 async function runSlothSettingsAction(button, popupElement, settings) {
@@ -11661,12 +11657,20 @@ function showSlothIconPicker(menu, trigger) {
     trigger.setAttribute('popovertarget',menu.id);
     menu.showPopover();
     const anchor = trigger.getBoundingClientRect();
+    const margin = 8, gap = 6;
+    const viewportWidth = document.documentElement.clientWidth;
+    const rightSpace = viewportWidth - margin - anchor.right - gap;
+    // Leave room for at least three icons before placing the picker below the trigger.
+    menu.style.maxWidth = rightSpace >= 105 ? rightSpace + 'px' : '';
     const {width,height} = menu.getBoundingClientRect();
-    const left = Math.min(window.innerWidth - width - 8, anchor.right - width);
-    const above = anchor.top - height - 6;
-    const top = anchor.bottom + height + 14 > window.innerHeight && above >= 8 ? above : anchor.bottom + 6;
-    menu.style.left = Math.max(8,left)+'px';
-    menu.style.top = Math.max(8,Math.min(top,window.innerHeight-height-8))+'px';
+    const maxLeft = viewportWidth - width - margin;
+    const maxTop = document.documentElement.clientHeight - height - margin;
+    const beside = anchor.right + gap <= maxLeft;
+    const left = beside ? anchor.right + gap : anchor.left;
+    const below = anchor.bottom + gap;
+    const top = beside ? anchor.top : below <= maxTop ? below : anchor.top - height - gap;
+    menu.style.left = Math.max(margin, Math.min(left, maxLeft)) + 'px';
+    menu.style.top = Math.max(margin, Math.min(top, maxTop)) + 'px';
   }
   trigger.setAttribute('aria-expanded','true');
   menu.querySelector('input:checked')?.focus({preventScroll:true});
