@@ -84,4 +84,6 @@ export function applySlothJevRecall(lists, world, chosen) {
         }
         entries.length=write;
     }
+    // Only the entries actually promoted in this scan, not every Jev candidate.
+    return used;
 }
