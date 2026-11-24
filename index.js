@@ -13341,7 +13341,7 @@ function createUI() {
         `,
   );
 
-  const extensionsMenu = $("#extensionsMenu");
+  const extensionsMenu = $(SELECTORS.extensionsMenu);
   if (extensionsMenu.length > 0) {
     extensionsMenu.append(menuItem);
     applyLocale(menuItem[0]);

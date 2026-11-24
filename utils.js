@@ -68,7 +68,7 @@ export function withGoBackButton(options = {}) {
 
 // Centralized DOM selectors - single source of truth
 export const SELECTORS = {
-    extensionsMenu: '#extensionsMenu .list-group',
+    extensionsMenu: '#extensionsMenu',
     menuItem: '#stmb-menu-item',
     chatContainer: '#chat',
     // API and model selectors for profile settings
