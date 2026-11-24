@@ -1372,7 +1372,8 @@ let cachedSettings = null;
 // MutationObserver for chat message monitoring
 let chatObserver = null;
 let updateTimeout = null;
-const pendingSceneButtons = new Set();
+let refreshAllSceneButtons = false;
+const pendingChatElements = new Set();
 
 /**
  * Process messages and return processed elements
@@ -1399,6 +1400,34 @@ function processNodeForMessages(node) {
   }
 
   return processedMessages;
+}
+
+function scheduleSceneButtonRefresh(full = false) {
+  refreshAllSceneButtons ||= full;
+  if (updateTimeout !== null) return;
+  updateTimeout = setTimeout(() => {
+    updateTimeout = null;
+    const fullRefresh = refreshAllSceneButtons;
+    const nodes = [...pendingChatElements];
+    refreshAllSceneButtons = false;
+    pendingChatElements.clear();
+    try {
+      if (fullRefresh) {
+        processExistingMessages();
+        return;
+      }
+      const chatContainer = document.getElementById("chat");
+      const messages = nodes.filter(node => chatContainer?.contains(node)).flatMap(processNodeForMessages);
+      if (!messages.length) return;
+      updateNewMessageButtonStates(messages);
+      refreshMemoryBoundaryUi();
+    } catch (error) {
+      console.error(translate(
+        "STMemoryBooks: Error updating button states:",
+        "index.error.updatingButtonStates",
+      ), error);
+    }
+  }, UI_SETTINGS.CHAT_OBSERVER_DEBOUNCE_MS);
 }
 
 /**
@@ -1430,45 +1459,11 @@ function initializeChatObserver() {
   chatObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          try {
-            // Collect all newly processed messages
-            const processed = processNodeForMessages(node);
-            for (const message of processed) pendingSceneButtons.add(message);
-          } catch (error) {
-            console.error(
-              translate(
-                "STMemoryBooks: Error processing new chat elements:",
-                "index.error.processingChatElements",
-              ),
-              error,
-            );
-          }
-        }
+        if (node.nodeType === Node.ELEMENT_NODE) pendingChatElements.add(node);
       }
     }
 
-    if (pendingSceneButtons.size && updateTimeout === null) {
-      updateTimeout = setTimeout(() => {
-        updateTimeout = null;
-        const messages = [...pendingSceneButtons].filter(message => chatContainer.contains(message));
-        pendingSceneButtons.clear();
-        if (!messages.length) return;
-        try {
-          // Use partial update for new messages only
-          updateNewMessageButtonStates(messages);
-          refreshMemoryBoundaryUi();
-        } catch (error) {
-          console.error(
-            translate(
-              "STMemoryBooks: Error updating button states:",
-              "index.error.updatingButtonStates",
-            ),
-            error,
-          );
-        }
-      }, UI_SETTINGS.CHAT_OBSERVER_DEBOUNCE_MS);
-    }
+    if (pendingChatElements.size) scheduleSceneButtonRefresh();
   });
 
   // SillyTavern appends/prepends message roots to #chat. Text streaming
@@ -1504,7 +1499,8 @@ function cleanupChatObserver() {
     clearTimeout(updateTimeout);
     updateTimeout = null;
   }
-  pendingSceneButtons.clear();
+  refreshAllSceneButtons = false;
+  pendingChatElements.clear();
 }
 
 let lastContextPromptChatKey = null;
@@ -1572,22 +1568,13 @@ async function handleChatChanged(chatId) {
   void refreshMemoryTierMacroCache();
   void maybePromptContextSettingForChatOpen();
 
+  scheduleSceneButtonRefresh(true);
+  const originChatKey = getStmbChatKey();
   setTimeout(() => {
-    try {
-      // Full update needed for chat changes
-      processExistingMessages();
-      flushDeferredQueuedAutoHideRanges().catch((error) => {
-        console.warn("STMemoryBooks: deferred auto-hide flush failed:", error);
-      });
-    } catch (error) {
-      console.error(
-        translate(
-          "STMemoryBooks: Error processing messages after chat change:",
-          "index.error.processingMessagesAfterChange",
-        ),
-        error,
-      );
-    }
+    if (getStmbChatKey() !== originChatKey) return;
+    flushDeferredQueuedAutoHideRanges().catch((error) => {
+      console.warn("STMemoryBooks: deferred auto-hide flush failed:", error);
+    });
   }, UI_SETTINGS.CHAT_OBSERVER_DEBOUNCE_MS);
 }
 
