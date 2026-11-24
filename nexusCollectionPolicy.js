@@ -39,13 +39,6 @@ export function getSlothHideRanges(events, messages, keepRecent) {
     return slothSourceRanges(visible.slice(0, hideCount));
 }
 
-function describesPendingSlothOutcome(result) {
-    return /\b(?:unresolved|unanswered|unfinished)(?=\s*(?:[,.;:!?]|$))/iu.test(result) ||
-        /\b(?:has not|have not|had not|hasn't|haven't|hadn't) (?:yet )?(?:replied|answered|responded)\b/iu.test(result) ||
-        /\bno (?:reply|answer|response) (?:yet|follows?|followed|was (?:given|received))\b/iu.test(result) ||
-        /\b(?:awaits|awaiting|waits for|waiting for) (?:a |an |the )?(?:reply|answer|response|decision|outcome)\b/iu.test(result);
-}
-
 export function includeDeepSeekTailEvent(draft, sourceIds, messages = []) {
     if (!Array.isArray(draft?.events)) return draft;
     // The events array declares completed candidates. Keep the normal
@@ -123,7 +116,7 @@ export function fitDeepSeekSceneBatch(plan, outputTokens) {
 }
 
 export function validateNexusEventPlan(raw, sourceIds, {
-    deferUnclassified = false, originalMessages, deferClosingConversationRequest = false,
+    deferUnclassified = false, originalMessages,
 } = {}) {
     requireThat(plain(raw) && Array.isArray(sourceIds) && sourceIds.length, 'Missing analysis or source.');
     requireThat(Array.isArray(raw.events), 'Analysis events must be an array.');
@@ -187,26 +180,15 @@ export function validateNexusEventPlan(raw, sourceIds, {
         requireThat(title && title.length<=180 && reason && result && item.complete === true,
             'Event '+(i+1)+' must have title, causal boundary reason and completed result.');
         const data = ranges(item.segments, 'event '+(i+1));
-        // Checking the quote can establish what happened, but an exact quote
-        // of an unanswered question does not turn a pending result into closure.
         const closure = item.closure;
-        const closingRequest = deferClosingConversationRequest && closure?.messageId===data.messageIds.at(-1) &&
-            /^["'“‘]?(?:please,? )?(?:talk to me|can we talk|could we talk|would you talk to me|can we speak|could we speak)\b/iu
-                .test(str(closure.quote));
-        if (originals && (describesPendingSlothOutcome(result) || closingRequest)) {
-            deferred.push({reason:'The proposed result says the incident is still open.',...data});
-            continue;
-        }
         const ending = originals?.get(closure?.messageId);
-        if (originals && !(data.messageIds.includes(closure?.messageId) &&
+        // Use verified quotes as writing context without making them a save condition.
+        const groundedClosure = typeof ending === 'string' && data.messageIds.includes(closure?.messageId) &&
             typeof closure.quote === 'string' && closure.quote.trim() &&
-            ending?.includes(closure.quote) && (closure.quote.trim().length >= 8 || closure.quote.trim() === ending.trim()))) {
-            deferred.push({reason:'The ending could not be matched to the original messages.',...data});
-            continue;
-        }
+            ending.includes(closure.quote) && (closure.quote.trim().length >= 8 || closure.quote.trim() === ending.trim());
         events.push({ id:'event-'+(i+1), title, reason, result,
-            ...(originals ? {closure:{messageId:closure.messageId,quote:closure.quote}} : {}),...data,
-            ...(originals && deferClosingConversationRequest && item.closingExchange===true ? {closingExchange:true} : {}),
+            ...(groundedClosure ? {closure:{messageId:closure.messageId,quote:closure.quote}} : {}),...data,
+            ...(item.closingExchange===true ? {closingExchange:true} : {}),
             start:data.messageIds[0],end:data.messageIds.at(-1) });
     }
     for (const [i,item] of deferredRows.entries()) {

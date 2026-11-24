@@ -4,7 +4,7 @@ import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,pa
   fingerprintSlothChat,describeNexusCollectionEntry,npcNexusSubjectIsGrounded,
   stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
 
-test('a collection saves only events with an exact ending in their own original messages', () => {
+test('a collection keeps proposed events while forwarding only verified ending quotes', () => {
   const originalMessages=[
     {id:4,mes:'They opened the parcel.'},
     {id:5,mes:'They could finally read the letter.'},
@@ -22,17 +22,22 @@ test('a collection saves only events with an exact ending in their own original 
   const validate=rows=>validateNexusEventPlan({events:rows},originalMessages.map(m=>m.id),
     {deferUnclassified:true,originalMessages});
   const plan=validate(events);
-  assert.deepEqual(plan.events.map(event=>event.closure.messageId),[5,10]);
-  assert.deepEqual(plan.deferred.map(row=>row.messageIds),[[7,8]]);
+  assert.deepEqual(plan.events.map(event=>event.closure?.messageId),[5,undefined,10]);
+  assert.deepEqual(plan.events.map(event=>event.messageIds),[[4,5],[7,8],[9,10]]);
+  assert.deepEqual(plan.deferred,[]);
   const invented=validate([{...events[0],closure:{messageId:5,quote:'The parcel was empty.'}},...events.slice(1)]);
-  assert.deepEqual(invented.events.map(event=>event.closure.messageId),[10]);
-  assert.deepEqual(invented.deferred.map(row=>row.messageIds),[[4,5],[7,8]]);
+  assert.deepEqual(invented.events.map(event=>event.closure?.messageId),[undefined,undefined,10]);
+  assert.deepEqual(invented.deferred,[]);
+  const optional=validate([{...events[0],closure:{messageId:5,quote:'Finally read the letter'}},
+    {...events[1],closure:undefined},events[2]]);
+  assert.deepEqual(optional.events.map(event=>event.closure?.messageId),[undefined,undefined,10]);
+  assert.deepEqual(optional.deferred,[]);
   originalMessages[1].mes += ' The letter listed their travel plans.'.repeat(16);
   const longQuote=validate([{...events[0],closure:{messageId:5,quote:originalMessages[1].mes}},...events.slice(1)]);
-  assert.deepEqual(longQuote.events.map(event=>event.closure.messageId),[5,10]);
+  assert.deepEqual(longQuote.events.map(event=>event.closure?.messageId),[5,undefined,10]);
 });
 
-test('an exact quote of a request cannot save an incident whose result still awaits a reply', () => {
+test('the collection respects events the model explicitly classifies as incomplete', () => {
   const originalMessages=[
     {id:4,mes:'She withdrew from the conversation.'},
     {id:5,mes:'He asked her to talk when she was ready.'},
@@ -40,7 +45,7 @@ test('an exact quote of a request cannot save an incident whose result still awa
   ];
   const complete={title:'Event',reason:'Observed action',complete:true};
   const events=[
-    {...complete,result:'He asks her to talk, but she has not responded.',segments:[[4,5]],
+    {...complete,complete:false,result:'He asks her to talk, but she has not responded.',segments:[[4,5]],
       closure:{messageId:5,quote:'He asked her to talk'}},
     {...complete,result:'The host resolved the previously unanswered security question by locking the gates.',
       segments:[[6,6]],closure:{messageId:6,quote:'The host locked the gates'}},
@@ -86,14 +91,14 @@ test('DeepSeek carries forward complete events beyond the writing budget and ret
   assert.equal(plan.events.length,20);
 });
 
-test('a final request to talk does not qualify as DeepSeek closure even if labeled complete', () => {
+test('the approval plan keeps a completed proposal with request-like wording', () => {
   const originalMessages=[{id:0,mes:'She pulled away upset.'},{id:1,mes:'"Talk to me," he said.'}];
   const event={title:'They spoke',complete:true,reason:'He tried to make amends',result:'He attempted to reassure her.',
     closure:{messageId:1,quote:'Talk to me'},segments:[[0,1]]};
-  const plan=validateNexusEventPlan({events:[event]},[0,1],{deferUnclassified:true,originalMessages,
-    deferClosingConversationRequest:true});
-  assert.equal(plan.events.length,0);
-  assert.deepEqual(plan.deferred[0].messageIds,[0,1]);
+  const plan=validateNexusEventPlan({events:[event]},[0,1],{deferUnclassified:true,originalMessages});
+  assert.equal(plan.events.length,1);
+  assert.deepEqual(plan.events[0].messageIds,[0,1]);
+  assert.deepEqual(plan.deferred,[]);
 });
 
 test('legacy mixed Nexus updates the same active core and continuity UID in place', () => {

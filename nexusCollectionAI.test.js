@@ -285,10 +285,15 @@ test('approved collection uses one request and retains the valid scenes even ove
     calls.length=0;
     const closing=[events[0],{...events[1],closingExchange:true,closure:{messageId:2,quote:'He closed the door.'}}];
     const deepOptions={...options,profile:{model:'deepseek/deepseek-v4.1-flash-1017'},plan:{events:closing}};
-    draft={scenes:[first,{...second,scene:'She stood by the window.',result:'He closed the door.'}],edits};
-    const wrongSource=await run(deepOptions);
-    assert.deepEqual(Array.from(wrongSource.scenes,scene=>scene.id),['first']);
+    draft={scenes:[first,{...second,scene:'He shut the door.',result:'He closed the door.'}],edits};
+    const paraphrased=await run(deepOptions);
+    assert.deepEqual(Array.from(paraphrased.scenes,scene=>scene.id),['first','second']);
     assert.match(calls[0].prompt,/closingExcerpt":"He closed the door\./);
+    calls.length=0;
+    const noQuote=await run({...deepOptions,plan:{events:[events[0],{...closing[1],closure:undefined}]}});
+    assert.equal(calls.length,1);
+    assert.deepEqual(Array.from(noQuote.scenes,scene=>scene.id),['first','second']);
+    assert.doesNotMatch(calls[0].prompt,/closingExcerpt/);
     draft={scenes:[first,second],edits};
     const grounded=await run(deepOptions);
     assert.deepEqual(Array.from(grounded.scenes,scene=>scene.id),['first','second']);

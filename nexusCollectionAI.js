@@ -269,8 +269,7 @@ export async function analyzeSlothEvents({messages,profile,settings,characterCon
     const draft=await ask(slothPlanPrompt(messages,characterContext,deepSeekFlash),'Event plan');
     const ids=messages.map(m=>m.id);
     const plan=deepSeekFlash ? includeDeepSeekTailEvent(draft,ids,messages) : draft;
-    const validated=validateNexusEventPlan(plan,ids,{deferUnclassified:true,originalMessages:messages,
-        deferClosingConversationRequest:deepSeekFlash});
+    const validated=validateNexusEventPlan(plan,ids,{deferUnclassified:true,originalMessages:messages});
     return deepSeekFlash ? fitDeepSeekSceneBatch(validated,slothCollectionOutputLimit(settings)) : validated;
 }
 export async function composeSlothScene({event,messages,profile,settings,signal=null,characterContext=''}) {
@@ -310,7 +309,8 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
 const SCENE_LIST_SCHEMA = '{"scenes":[{"id":"given ID","timeline":"YYYY/MM/DD or Unknown","scene":"prose without headings","result":"one sentence","keywords":["cue"]}]}';
 
 function sceneEndingExcerpt(event) {
-    return event.closingExchange ? event.closure.quote.trim().split(/\s+/u).slice(0,12).join(' ') : '';
+    return event.closingExchange && event.closure?.quote
+        ? event.closure.quote.trim().split(/\s+/u).slice(0,12).join(' ') : '';
 }
 
 function slothSceneBatchGuidance(events, settings, characterContext) {
@@ -319,14 +319,15 @@ function slothSceneBatchGuidance(events, settings, characterContext) {
         'Return one complete Scene for every approved ID, using each exact ID once. Never add a placeholder. Give its Timeline in YYYY/MM/DD, YYYY/MM/DD–YYYY/MM/DD, or Unknown. Use English.',
         'Fit the complete JSON within the overall response limit. Write concise prose for simple events and give complex outcomes enough space. Condense repeated dialogue and routine movements first; preserve each event’s actual ending.',
         'Use only the assigned messages for that Scene, even when other approved events or deferred messages share this request. Stop at the last assigned action or utterance. Treat thoughts and suspicions as attributed; do not infer forgiveness, an answer or a new physical action.',
-        ...(events.some(event=>event.closingExchange) ? [
+        ...(events.some(sceneEndingExcerpt) ? [
             'When an approved event includes closingExcerpt, weave that actual reply into the Scene prose verbatim. Explain how the original conflict led to this reply within the same Scene. The Result field alone is insufficient.',
         ] : []),
         SCENE_KEYWORD_GUIDANCE,
         'Character context: '+characterContext,
         'Approved events: '+JSON.stringify(events.map(event=>{
             const {id,title,result,messageIds,closure}=event;
-            return {id,title,result,messageIds,closure,...(event.closingExchange ? {closingExcerpt:sceneEndingExcerpt(event)} : {})};
+            const closingExcerpt=sceneEndingExcerpt(event);
+            return {id,title,result,messageIds,closure,...(closingExcerpt ? {closingExcerpt} : {})};
         })),
     ].join('\n\n');
 }
@@ -339,10 +340,6 @@ function readSlothBatchScenes(response, events) {
         if (matches.length !== 1) continue;
         const {timeline,scene,result,keywords} = matches[0];
         if (![timeline,scene,result].every(value => typeof value === 'string' && value.trim())) continue;
-        if (event.closingExchange) {
-            const normalize=text=>text.replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"').replace(/\s+/gu,' ');
-            if (!normalize(scene).includes(normalize(sceneEndingExcerpt(event)))) continue;
-        }
         const content = `**Timeline**: ${timeline.trim()}\n\n**Scene**\n${scene.trim()}\n\n**Result**\n${result.trim()}`;
         try {
             const draft = validateSlothSceneResponse({title:event.title,content,keywords}, event.title,{enforceWordLimit:false});
