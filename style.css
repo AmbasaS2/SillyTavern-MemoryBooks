@@ -1136,17 +1136,20 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-sloth-settings-rule {
     width: 100%; margin: 2px 0; border: 0; border-top: 1px solid var(--stmb-workspace-rule);
 }
-.popup.stmb-popup .stmb-sloth-icon-picker { position: relative; }
-.popup.stmb-popup .stmb-sloth-icon-picker > summary {
-    display: inline-flex; align-items: center; gap: 6px; margin: 0; list-style: none;
+.popup.stmb-popup .stmb-sloth-icon-field { flex-wrap: wrap; }
+.popup.stmb-popup .stmb-sloth-icon-popover {
+    margin: 0; inset: auto; padding: 6px; border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 7px; background: var(--SmartThemeBlurTintColor); color: var(--SmartThemeBodyColor);
+    box-shadow: 0 4px 14px rgb(0 0 0 / .24); max-width: calc(100vw - 16px);
 }
-.popup.stmb-popup .stmb-sloth-icon-picker > summary::-webkit-details-marker { display: none; }
-.popup.stmb-popup .stmb-sloth-icon-picker > summary .fa-chevron-down { font-size: .65em; }
-.popup.stmb-popup .stmb-sloth-icon-options { display: flex; flex-wrap: wrap; gap: 3px; margin-block-start: 4px; }
+.popup.stmb-popup .stmb-sloth-icon-popover[hidden] { display: none; }
+.popup.stmb-popup .stmb-sloth-icon-popover:popover-open { position: fixed; }
+.popup.stmb-popup #stmb-sloth-icon-trigger { width: 2.3em; min-height: 27px; margin: 0; }
+.popup.stmb-popup .stmb-sloth-icon-options { display: grid; grid-template-columns: repeat(5, auto); gap: 4px; }
 .popup.stmb-popup .stmb-sloth-icon-options label { position: relative; cursor: pointer; }
 .popup.stmb-popup .stmb-sloth-icon-options input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .popup.stmb-popup .stmb-sloth-icon-options i {
-    display: grid; place-items: center; min-width: 27px; min-height: 27px;
+    display: grid; place-items: center; min-width: 31px; min-height: 31px;
     border: 1px solid var(--SmartThemeBorderColor); border-radius: 5px;
 }
 .popup.stmb-popup .stmb-sloth-icon-options input:is(:checked,:focus-visible) + i { outline: 1px solid currentColor; outline-offset: -2px; }
@@ -1179,24 +1182,24 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-management-action small { line-height: 1.28; }
 
-#rightSendForm #stmb-sloth-composer {
+#leftSendForm #stmb-sloth-composer {
     display: grid;
     place-items: center;
     flex: 0 0 auto;
     align-self: stretch;
-    min-width: calc(30px * var(--stmb-collect-scale, 1));
+    min-width: 30px;
     border: 0;
     padding: 0 4px;
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: calc(1em * var(--stmb-collect-scale, 1));
+    font-size: var(--stmb-collect-size, 20px);
     white-space: nowrap;
     opacity: .72;
     cursor: pointer;
 }
-#rightSendForm #stmb-sloth-composer:is(:hover,:focus-visible) { opacity: 1; }
-#rightSendForm #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
+#leftSendForm #stmb-sloth-composer:is(:hover,:focus-visible) { opacity: 1; }
+#leftSendForm #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
 
 .popup.stmb-popup .stmb-prompt-library { display:grid; gap:5px; text-align:start; margin-block:7px; }
 .popup.stmb-popup .stmb-prompt-library :is(.stmb-prompt-heading,.stmb-prompt-selection,.stmb-prompt-tools) {

@@ -130,11 +130,13 @@ export const settingsTemplate = Handlebars.compile(`
         <label for="stmb-sloth-memory-recall" class="stmb-sloth-inline-field">
           <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory recall</span>
           <select id="stmb-sloth-memory-recall" class="text_pole">
-            <option value="vector" {{#unless slothMemoryUsesKeywords}}selected{{/unless}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+            <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
             <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
+            <option value="jev" {{#if slothMemoryUsesJev}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallJev">NanoGPT Jev selection</option>
           </select>
         </label>
-        <small data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The latest 3 collected scenes stay always on. Apply this mode to older collected scenes on the next collection.</small>
+        <small id="stmb-sloth-native-recall-help" {{#if slothMemoryUsesJev}}hidden{{/if}} data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The latest 3 collected scenes stay always on. Apply this mode to older collected scenes on the next collection.</small>
+        <small id="stmb-sloth-jev-help" {{#unless slothMemoryUsesJev}}hidden{{/unless}} data-i18n="STMemoryBooks_SlothRecallJevHelp">Jev selects older memories for the current reply using the Scene Reader server plugin’s NanoGPT subscription key. If unavailable, the previous recall method is used.</small>
         <div data-stmb-prompt-library-slot="summary"></div>
         </details>
         {{/if}}
@@ -152,6 +154,27 @@ export const settingsTemplate = Handlebars.compile(`
           </div>
         </section>
         {{/if}}
+        <details id="stmb-sloth-auto" class="stmb-workspace-panel stmb-workspace-drawer">
+          <summary data-i18n="STMemoryBooks_SlothAutoTitle">Automatic collection</summary>
+          <div class="stmb-sloth-advanced-fields">
+            <label class="checkbox_label">
+              <input id="stmb-sloth-auto-enabled" type="checkbox" {{#if slothAutoEnabled}}checked{{/if}}>
+              <span data-i18n="STMemoryBooks_SlothAutoEnable">Collect memories automatically</span>
+            </label>
+            <label class="stmb-sloth-inline-field" for="stmb-sloth-auto-mode">
+              <span data-i18n="STMemoryBooks_SlothAutoIntervalUnit">Interval unit</span>
+              <select class="text_pole" id="stmb-sloth-auto-mode">
+                <option value="tokens" {{#if slothAutoUsesTokens}}selected{{/if}} data-i18n="STMemoryBooks_Tokens">Tokens</option>
+                <option value="messages" {{#unless slothAutoUsesTokens}}selected{{/unless}} data-i18n="STMemoryBooks_Messages">Messages</option>
+              </select>
+            </label>
+            <label class="stmb-sloth-inline-field" for="stmb-sloth-auto-interval">
+              <span data-i18n="STMemoryBooks_SlothAutoInterval">Collect every</span>
+              <input id="stmb-sloth-auto-interval" type="number" min="1" max="{{slothAutoIntervalMax}}" class="text_pole" value="{{slothAutoInterval}}">
+            </label>
+            <small data-i18n="STMemoryBooks_SlothAutoHelp">After a new reply, saves completed events once the interval is reached in chats with both lorebooks connected. Messages stay visible.</small>
+          </div>
+        </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
           <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Use the selected prompt to keep an additional record from a saved scene.</p>
@@ -185,16 +208,17 @@ export const settingsTemplate = Handlebars.compile(`
           <div class="stmb-sloth-advanced-fields">
             <label class="checkbox_label">
               <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
-              <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to Send</span>
+              <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to the Extensions menu</span>
             </label>
-            <div class="stmb-sloth-inline-field">
+            <div class="stmb-sloth-inline-field stmb-sloth-icon-field">
               <span id="stmb-sloth-composer-icon-label" data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
-              <details class="stmb-sloth-icon-picker">
-                <summary class="menu_button" aria-labelledby="stmb-sloth-composer-icon-label" title="{{slothComposerIcon.title}}">
-                  <i class="fa-solid fa-{{slothComposerIcon.id}}" aria-hidden="true"></i>
-                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </summary>
-                <div class="stmb-sloth-icon-options" role="group" aria-labelledby="stmb-sloth-composer-icon-label">
+              <button type="button" id="stmb-sloth-icon-trigger" class="menu_button" aria-labelledby="stmb-sloth-composer-icon-label"
+                aria-expanded="false" aria-controls="stmb-sloth-icon-popover" title="{{slothComposerIcon.title}}">
+                <i class="fa-solid fa-{{slothComposerIcon.id}}" aria-hidden="true"></i>
+              </button>
+              <div id="stmb-sloth-icon-popover" class="stmb-sloth-icon-popover" popover="auto" hidden
+                role="group" aria-labelledby="stmb-sloth-composer-icon-label">
+                <div class="stmb-sloth-icon-options">
                   {{#each slothComposerIcons}}
                   <label title="{{title}}">
                     <input type="radio" name="stmb-sloth-composer-icon" value="{{id}}" aria-label="{{title}}" {{#if selected}}checked{{/if}}>
@@ -202,12 +226,12 @@ export const settingsTemplate = Handlebars.compile(`
                   </label>
                   {{/each}}
                 </div>
-              </details>
+              </div>
             </div>
             <label for="stmb-sloth-composer-size" class="stmb-sloth-inline-field">
               <span data-i18n="STMemoryBooks_SlothComposerSize">Collect button size</span>
               <select id="stmb-sloth-composer-size" class="text_pole">
-                {{#each slothComposerSizes}}<option value="{{size}}" {{#if selected}}selected{{/if}}>{{size}}%</option>{{/each}}
+                {{#each slothComposerSizes}}<option value="{{size}}" {{#if selected}}selected{{/if}}>{{size}} px</option>{{/each}}
               </select>
             </label>
             <hr class="stmb-sloth-settings-rule">

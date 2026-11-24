@@ -9,6 +9,7 @@ import {
   chat,
   chat_metadata,
   getCurrentChatId,
+  getRequestHeaders,
   saveMetadata,
   saveChatDebounced,
   saveSettings,
@@ -74,6 +75,8 @@ import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCo
   runNexusSidePromptFollowup, runSlothSceneCompression } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
+import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
+import { prepareSlothJevRecall, requestSlothJevRecall, applySlothJevRecall } from './slothJevRecall.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -593,15 +596,24 @@ const STLO_EXTENSION_KEYS = new Set([
 ]);
 const SLOTH_COMPOSER_ICONS = Object.freeze({
   otter: ['Otter','SlothIconOtter'],
-  paw: ['Paw print','SlothIconPaw'],
-  inbox: ['Inbox','SlothIconInbox'],
-  'box-archive': ['Archive box','SlothIconArchive'],
-  'layer-group': ['Stacked cards','SlothIconLayers'],
+  cat: ['Cat','SlothIconCat'],
+  frog: ['Frog','SlothIconFrog'],
+  moon: ['Moon','SlothIconMoon'],
+  cloud: ['Cloud','SlothIconCloud'],
+  'cloud-moon': ['Cloud and moon','SlothIconCloudMoon'],
+  'cloud-rain': ['Rain cloud','SlothIconRain'],
+  snowflake: ['Snowflake','SlothIconSnowflake'],
+  rainbow: ['Rainbow','SlothIconRainbow'],
+  smog: ['Smog','SlothIconSmog'],
 });
 const getSlothComposerIcon = settings => Object.hasOwn(SLOTH_COMPOSER_ICONS,settings?.moduleSettings?.slothComposerIcon)
   ? settings.moduleSettings.slothComposerIcon : 'otter';
-const SLOTH_COMPOSER_SIZES = [80, 90, 100, 110, 125];
-const getSlothComposerSize = value => SLOTH_COMPOSER_SIZES.includes(Number(value)) ? Number(value) : 100;
+const SLOTH_COMPOSER_SIZES = [14, 16, 18, 20, 22, 25, 28];
+const getSlothComposerSize = value => {
+  const size = Number(value);
+  if (SLOTH_COMPOSER_SIZES.includes(size)) return size;
+  return [80, 90, 100, 110, 125].includes(size) ? size / 5 : 20;
+};
 const MEMORY_BOUNDARY_MODES = Object.freeze({
   OFF: "",
   DIVIDER: "divider",
@@ -647,6 +659,8 @@ const defaultSettings = {
     slothCollectionPrompt: "",
     slothLinkedBooksOnly: true,
     slothComposerEnabled: true,
+    slothJevRecallEnabled: false,
+    ...SLOTH_AUTOMATIC_DEFAULTS,
     slothHideRecent: DEFAULT_SLOTH_VISIBLE_TAIL,
     autoSummaryInterval: 50,
     autoSummaryTriggerMode: 'messages',
@@ -11049,6 +11063,7 @@ function buildSlothTemplateData(settings) {
     id, title:translate(label,'STMemoryBooks_'+key), selected:id===slothComposerIconId,
   }));
   const slothComposerSize = getSlothComposerSize(settings.moduleSettings.slothComposerSize);
+  const slothAutomatic = getSlothAutomaticSettings(settings);
   const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
   const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
@@ -11066,13 +11081,19 @@ function buildSlothTemplateData(settings) {
     slothRoleActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
-    slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
+    slothMemoryUsesKeywords: !settings.moduleSettings.slothJevRecallEnabled && settings.moduleSettings.nexusOlderSceneMode === 'keyword',
+    slothMemoryUsesVector: !settings.moduleSettings.slothJevRecallEnabled && settings.moduleSettings.nexusOlderSceneMode !== 'keyword',
+    slothMemoryUsesJev: settings.moduleSettings.slothJevRecallEnabled === true,
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
     slothComposerIcon: slothComposerIcons.find(icon => icon.selected),
     slothComposerIcons,
     slothComposerSizes: SLOTH_COMPOSER_SIZES.map(size => ({size,selected:size===slothComposerSize})),
+    slothAutoEnabled: slothAutomatic.enabled,
+    slothAutoUsesTokens: slothAutomatic.mode === 'tokens',
+    slothAutoInterval: slothAutomatic.threshold,
+    slothAutoIntervalMax: slothAutomatic.max,
     slothHideRecent: normalizeSlothVisibleTail(settings.moduleSettings.slothHideRecent),
     slothMissingCompanion: getSlothCompanion(slothChatRef, settings)?.missingRole,
     slothConnectionProfileMissing: !!stConnectionProfileId && !slothConnectionProfiles.some(profile => profile.selected),
@@ -11548,22 +11569,23 @@ async function runSlothCollectionEntryPoint() {
 function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   const existing = document.getElementById('stmb-sloth-composer');
   const ref = getCurrentStmbChatRef();
-  const send = document.querySelector('#rightSendForm #send_but');
-  if (!send || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
+  const extensionsMenu = document.querySelector('#leftSendForm #extensionsMenuButton');
+  if (!extensionsMenu || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
     existing?.remove();
     return;
   }
   const icon = getSlothComposerIcon(settings);
-  const scale = getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) / 100;
+  const size = getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px';
   if (existing) {
     existing.firstElementChild.className = 'fa-solid fa-'+icon;
-    existing.style.setProperty('--stmb-collect-scale',String(scale));
+    existing.style.setProperty('--stmb-collect-size',size);
+    if (extensionsMenu.nextElementSibling !== existing) extensionsMenu.after(existing);
     return;
   }
   const button = document.createElement('button');
   button.type = 'button';
   button.id = 'stmb-sloth-composer';
-  button.style.setProperty('--stmb-collect-scale',String(scale));
+  button.style.setProperty('--stmb-collect-size',size);
   const label = translate('Collect memories','STMemoryBooks_SlothCollectionTitle');
   button.title = label;
   button.setAttribute('aria-label', label);
@@ -11576,7 +11598,7 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
     try { await runSlothCollectionEntryPoint(); }
     finally { button.disabled = false; }
   });
-  send.before(button);
+  extensionsMenu.after(button);
 }
 
 async function runSlothSettingsAction(button, popupElement, settings) {
@@ -11626,6 +11648,30 @@ function selectMemoryBooksWorkspaceTab(root, name, focus = false) {
   if (focus) active.focus({ preventScroll: true });
 }
 
+function closeSlothIconPicker(menu, trigger) {
+  if (typeof menu?.hidePopover === 'function' && menu.matches(':popover-open')) menu.hidePopover();
+  if (menu) menu.hidden = true;
+  trigger?.setAttribute('aria-expanded','false');
+}
+
+function showSlothIconPicker(menu, trigger) {
+  menu.hidden = false;
+  if (typeof menu.showPopover === 'function') {
+    menu.setAttribute('popover','auto');
+    trigger.setAttribute('popovertarget',menu.id);
+    menu.showPopover();
+    const anchor = trigger.getBoundingClientRect();
+    const {width,height} = menu.getBoundingClientRect();
+    const left = Math.min(window.innerWidth - width - 8, anchor.right - width);
+    const above = anchor.top - height - 6;
+    const top = anchor.bottom + height + 14 > window.innerHeight && above >= 8 ? above : anchor.bottom + 6;
+    menu.style.left = Math.max(8,left)+'px';
+    menu.style.top = Math.max(8,Math.min(top,window.innerHeight-height-8))+'px';
+  }
+  trigger.setAttribute('aria-expanded','true');
+  menu.querySelector('input:checked')?.focus({preventScroll:true});
+}
+
 function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   if (!popupInstance?.dlg) return;
 
@@ -11660,6 +11706,15 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   };
 
   popupElement.addEventListener('keydown', e => {
+    const picker = popupElement.querySelector('#stmb-sloth-icon-popover');
+    if (e.key === 'Escape' && picker && !picker.hidden && typeof picker.hidePopover !== 'function') {
+      e.preventDefault();
+      e.stopPropagation();
+      const trigger = popupElement.querySelector('#stmb-sloth-icon-trigger');
+      closeSlothIconPicker(picker,trigger);
+      trigger?.focus();
+      return;
+    }
     const tab = e.target.closest?.('[data-stmb-workspace-tab]');
     if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
     e.preventDefault();
@@ -11667,9 +11722,26 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       (tab.dataset.stmbWorkspaceTab === 'sloth' ? 'original' : 'sloth');
     void activateTab(name,true);
   });
+  popupElement.addEventListener('toggle', e => {
+    if (e.target.id === 'stmb-sloth-icon-popover' && e.newState === 'closed') {
+      closeSlothIconPicker(e.target,popupElement.querySelector('#stmb-sloth-icon-trigger'));
+    }
+  },true);
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
+    const iconTrigger = e.target.closest?.('#stmb-sloth-icon-trigger');
+    if (iconTrigger) {
+      e.preventDefault();
+      const picker = popupElement.querySelector('#stmb-sloth-icon-popover');
+      if (!picker.hidden) closeSlothIconPicker(picker,iconTrigger);
+      else showSlothIconPicker(picker,iconTrigger);
+      return;
+    }
+    const fallbackPicker = popupElement.querySelector('#stmb-sloth-icon-popover:not([hidden])');
+    if (fallbackPicker && typeof fallbackPicker.showPopover !== 'function' && !fallbackPicker.contains(e.target)) {
+      closeSlothIconPicker(fallbackPicker,popupElement.querySelector('#stmb-sloth-icon-trigger'));
+    }
     const tab = e.target.closest?.('[data-stmb-workspace-tab]');
     if (tab) {
       await activateTab(tab.dataset.stmbWorkspaceTab);
@@ -11803,9 +11875,13 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     if (e.target.matches('input[name="stmb-sloth-composer-icon"]')) {
       if (!Object.hasOwn(SLOTH_COMPOSER_ICONS,e.target.value)) return;
       settings.moduleSettings.slothComposerIcon=e.target.value;
-      const picker = e.target.closest('.stmb-sloth-icon-picker');
-      picker.querySelector('summary i').className='fa-solid fa-'+e.target.value;
-      picker.querySelector('summary').title=e.target.getAttribute('aria-label');
+      const trigger = popupElement.querySelector('#stmb-sloth-icon-trigger');
+      if (trigger) {
+        trigger.querySelector('i').className = 'fa-solid fa-'+e.target.value;
+        trigger.title = e.target.getAttribute('aria-label');
+        closeSlothIconPicker(popupElement.querySelector('#stmb-sloth-icon-popover'),trigger);
+        trigger.focus({preventScroll:true});
+      }
       syncSlothComposerButton(settings);
       await saveSettings();
       return;
@@ -11813,6 +11889,22 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     if (e.target.matches('#stmb-sloth-composer-size')) {
       settings.moduleSettings.slothComposerSize=getSlothComposerSize(e.target.value);
       syncSlothComposerButton(settings);
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('#stmb-sloth-auto-enabled, #stmb-sloth-auto-mode, #stmb-sloth-auto-interval')) {
+      const params = settings.moduleSettings;
+      const interval = popupElement.querySelector('#stmb-sloth-auto-interval');
+      if (e.target.id === 'stmb-sloth-auto-enabled') params.slothAutoEnabled = e.target.checked;
+      if (e.target.id === 'stmb-sloth-auto-mode') params.slothAutoMode = e.target.value === 'messages' ? 'messages' : 'tokens';
+      const {field,max} = getSlothAutomaticSettings(settings);
+      if (e.target === interval) params[field] = Number(interval.value);
+      const {threshold} = getSlothAutomaticSettings(settings);
+      params[field] = threshold;
+      if (interval) {
+        interval.max = String(max);
+        interval.value = String(threshold);
+      }
       await saveSettings();
       return;
     }
@@ -11898,10 +11990,18 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
     if (e.target.matches("#stmb-nexus-older-scene-mode, #stmb-sloth-memory-recall")) {
-      settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
-      for (const select of popupElement.querySelectorAll('#stmb-nexus-older-scene-mode, #stmb-sloth-memory-recall')) {
-        select.value=settings.moduleSettings.nexusOlderSceneMode;
-      }
+      const slothSelect = e.target.id === 'stmb-sloth-memory-recall';
+      const jev = slothSelect && e.target.value === 'jev';
+      if (slothSelect) settings.moduleSettings.slothJevRecallEnabled = jev;
+      if (!jev) settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
+      const original = popupElement.querySelector('#stmb-nexus-older-scene-mode');
+      const sloth = popupElement.querySelector('#stmb-sloth-memory-recall');
+      const jevHelp = popupElement.querySelector('#stmb-sloth-jev-help');
+      const nativeHelp = popupElement.querySelector('#stmb-sloth-native-recall-help');
+      if (original) original.value = settings.moduleSettings.nexusOlderSceneMode;
+      if (sloth) sloth.value = settings.moduleSettings.slothJevRecallEnabled ? 'jev' : settings.moduleSettings.nexusOlderSceneMode;
+      if (jevHelp) jevHelp.hidden = settings.moduleSettings.slothJevRecallEnabled !== true;
+      if (nativeHelp) nativeHelp.hidden = settings.moduleSettings.slothJevRecallEnabled === true;
       await saveSettings();
       return;
     }
@@ -13960,9 +14060,16 @@ function setupEventListeners() {
     restoreNarratorCastFromTimeline(messageId);
   });
 
+  let slothGeneration = null;
+  let slothAutoTimer;
   // Track dry-run state for generation events
   eventSource.on(event_types.GENERATION_STARTED, (type, options, dryRun) => {
     isDryRun = dryRun || false;
+    clearTimeout(slothAutoTimer);
+    slothGeneration?.controller.abort();
+    slothGeneration = !dryRun && ['normal','continue','regenerate','swipe'].includes(type) ? {
+      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal', controller:new AbortController(),
+    } : null;
     // Clear any prior persistent failure toast and error when a new generation starts
     try {
       if (lastFailureToast) {
@@ -13993,22 +14100,61 @@ function setupEventListeners() {
     manualGroupGenerationSnapshot = null;
   };
   eventSource.on(event_types.GENERATION_ENDED, () => {
+    const completed = slothGeneration;
+    completed?.controller.abort();
+    slothGeneration = null;
+    const last = chat.at(-1);
+    const settings = extension_settings.STMemoryBooks;
+    if (completed?.automatic && completed.key && chat.length > completed.length &&
+        last && !last.is_user && !last.is_system && last.mes?.trim() && getSlothAutomaticSettings(settings).enabled) {
+      slothAutoTimer = setTimeout(async () => {
+        if (slothGeneration || completed.key !== getStmbChatKey()) return;
+        try {
+          const outcome=await runNexusCollector({
+            ...getSlothProfileConfiguration(extension_settings.STMemoryBooks),automaticChatKey:completed.key,
+          });
+          if (outcome?.saved) await refreshPopupContent();
+        } catch (error) { console.warn('Automatic Sloth collection stopped:',error); }
+      }, 900);
+    }
     narratorResponseGeneration.end({ processor: streamingProcessor, chat });
     clearGenerationLorebookSnapshots();
   });
   eventSource.on(event_types.GENERATION_STOPPED, () => {
+    clearTimeout(slothAutoTimer);
+    slothGeneration?.controller.abort();
+    slothGeneration = null;
     narratorResponseGeneration.clear();
     clearGenerationLorebookSnapshots();
   });
 
-  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, lists => {
+  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, async lists => {
     const ref = getCurrentStmbChatRef();
+    const settings = extension_settings.STMemoryBooks;
+    const chatKey = getStmbChatKey(ref);
     scopeNexusWorldInfo(lists, {
-      settings: extension_settings.STMemoryBooks,
-      ref,
-      chatKey: getStmbChatKey(ref),
-      avatar: ref?.avatarUrl,
+      settings, ref, chatKey, avatar: ref?.avatarUrl,
     });
+    const run = slothGeneration;
+    if (settings?.moduleSettings?.slothJevRecallEnabled !== true || !run || run.key !== chatKey || ref?.type !== 'character') return;
+    const memory = getNexusRoleResolutionForChatRef('memory',ref,settings);
+    if (memory.state !== 'ready') return;
+    const prepared = prepareSlothJevRecall(lists,memory.name,chat);
+    if (!prepared) return;
+    const signature = JSON.stringify(prepared.body);
+    if (run.recallSignature !== signature) {
+      run.recallSignature = signature;
+      const signal = AbortSignal.any([run.controller.signal,AbortSignal.timeout(12000)]);
+      run.recall = requestSlothJevRecall(prepared,getRequestHeaders(),{signal}).catch(error => {
+        if (!run.controller.signal.aborted) console.warn('Sloth Jev recall fell back to World Info:',error);
+        return null;
+      });
+    }
+    const chosen = await run.recall;
+    if (chosen && run === slothGeneration && run.key === getStmbChatKey() && run.recallSignature === signature &&
+        extension_settings.STMemoryBooks?.moduleSettings?.slothJevRecallEnabled === true) {
+      applySlothJevRecall(lists,memory.name,chosen);
+    }
   });
   eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED, async ({ globalLore, characterLore, chatLore, personaLore }) => {
     const arrays = [globalLore, characterLore, chatLore, personaLore].filter(Array.isArray);

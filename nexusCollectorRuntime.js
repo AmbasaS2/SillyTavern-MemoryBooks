@@ -35,6 +35,7 @@ import { proposeReviewedSidePrompt } from './sidePrompts.js';
 import { getSlothSidePresets, getSlothSideRecall, normalizeSlothSideKeywords } from './slothSidePrompts.js';
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
+import { automaticCollectionDue, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -460,18 +461,26 @@ function collectionProfile(settings, profileIndex, stConnectionProfileId) {
         settings.profiles?.[profileIndex ?? settings.defaultProfile] || settings.profiles?.[settings.defaultProfile];
 }
 
-export async function runNexusCollector({profileIndex, stConnectionProfileId}={}) {
-    if(collectorBusy)throw new Error('A Sloth collection is already in progress.');
+export async function runNexusCollector({profileIndex, stConnectionProfileId, automaticChatKey=''}={}) {
+    if(collectorBusy) {
+        if (automaticChatKey) return {saved:false,reason:'busy'};
+        throw new Error('A Sloth collection is already in progress.');
+    }
     collectorBusy=true;
     try {
         const settings=extension_settings.STMemoryBooks;
         const ref=structuredClone(getCurrentStmbChatRef());
+        const automatic=automaticChatKey ? getSlothAutomaticSettings(settings) : null;
+        if (automatic && (!automatic.enabled || getStmbChatKey(ref)!==automaticChatKey || ref?.type!=='character'))
+            return {saved:false,reason:'inactive-chat'};
         if(ref.type!=='character')throw new Error('Sloth collection currently supports individual character chats only.');
         const roles={
             memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
             nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings),
         };
         const initial=canStartNexusSetup(ref,settings);
+        if (automatic && (initial || roles.memory.state!=='ready' || roles.nexus.state!=='ready' ||
+            roles.memory.name===roles.nexus.name)) return {saved:false,reason:'books-unavailable'};
         if(!initial&&(roles.memory.state!=='ready'||roles.nexus.state!=='ready'||
             roles.memory.name===roles.nexus.name)) {
             throw new Error('Assign two existing, linked, different Nexus and Memory lorebooks first.');
@@ -479,6 +488,18 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         const character=getActiveNexusRoleContext(settings).character;
         const roleNames=initial?proposeNexusBookNames(character):
             {memory:roles.memory.name,nexus:roles.nexus.name};
+        const previousAuto = automatic ? structuredClone(getSceneMarkers().slothAutomatic) : null;
+        const checkpoint = previousAuto?.chatKey === automaticChatKey && previousAuto?.through < chat.length ?
+            previousAuto : null;
+        const thresholdMet = source => automaticCollectionDue({
+            source,previous:checkpoint,books:roleNames,mode:automatic.mode,
+            threshold:automatic.threshold,countTokens:getTokenCountAsync,
+        });
+        // The chat receipt is enough to check an upper bound without fetching
+        // either book at every reply. Saved older book entries can narrow this
+        // set further, which is checked before starting an AI request.
+        const pending = automatic ? activeSource(ref,null,roleNames).source : null;
+        if (automatic && !await thresholdMet(pending)) return {saved:false,reason:'below-threshold'};
         const originalBooks=initial?{nexus:{entries:{}},memory:{entries:{}}}:{
             nexus:await loadServerWorld(roleNames.nexus),
             memory:await loadServerWorld(roleNames.memory),
@@ -488,6 +509,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         }
         const {source,prior}=activeSource(ref,originalBooks.memory,roleNames);
         if(!source.length){
+            if (automatic) return {saved:false,reason:'no-source'};
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
             return {saved:false,reason:'no-source'};
         }
@@ -498,6 +520,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         const characterContext=initialCharacterContext(character);
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'};
         const checkOrigin=()=>{
+            if (automatic) {
+                const now = getSlothAutomaticSettings(extension_settings.STMemoryBooks);
+                if (!now.enabled || now.mode !== automatic.mode || now.threshold !== automatic.threshold)
+                    throw new Error('Automatic collection settings changed.');
+            }
             if(!initial)return assertOrigin(ref,roleNames,sourceIds,fingerprint);
             if(getStmbChatKey()!==getStmbChatKey(ref)||!canStartNexusSetup(ref,settings)||
                 initialCharacterContext(getActiveNexusRoleContext(settings).character)!==characterContext||
@@ -519,14 +546,28 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
                 throw new Error('The character card cannot fit with the selected context and completion settings. No content was truncated.');
             }
         }
-        toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
+        if (automatic) {
+            if (pending.length !== source.length && !await thresholdMet(source))
+                return {saved:false,reason:'below-threshold'};
+            await readReviewedChat(ref,sourceIds,fingerprint);
+            await patchStmbMetadataForChatRef(ref,markers=>{
+                checkOrigin();
+                if (stringify(markers.slothAutomatic)!==stringify(previousAuto))
+                    throw new Error('Automatic collection already advanced for this chat.');
+                return {...markers,slothAutomatic:{chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames}};
+            });
+        } else {
+            toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
+        }
         const plan=await analyzeSlothEvents({messages:source,profile,settings,characterContext});
         checkOrigin();
-        const approval=await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent));
+        if (automatic && !plan.events.length) return {saved:false,reason:'no-completed-events'};
+        const approval=automatic ? {hideRanges:[]} :
+            await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent));
         if(!approval)return {saved:false,reason:'plan-cancelled'};
         checkOrigin();
 
-        toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
+        if (!automatic) toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
         let collection;
         try {
             collection=await composeApprovedSlothCollection({nexus:originalBooks.nexus,messages:source,
@@ -539,7 +580,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         checkOrigin();
         const {scenes,edits}=collection;
         if(!scenes.length&&!edits.length){
-            toastr.info(t('There are no completed events or Nexus changes to save.',
+            if (!automatic) toastr.info(t('There are no completed events or Nexus changes to save.',
                 'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
             return {saved:false,reason:'no-complete-events-or-deltas'};
         }
@@ -613,7 +654,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
             ?t('Memory saved and Nexus updated.','STMemoryBooks_SlothSaved')
             :scenes.length?t('Completed events saved to Memory.','STMemoryBooks_SlothSceneOnlySaved')
                 :t('Nexus updated.','STMemoryBooks_SlothNexusOnlySaved');
-        toastr.success(message,'STMemoryBooks');
+        if (!automatic) toastr.success(message,'STMemoryBooks');
         return {saved:true,scenes:scenes.length,nexusEdits:edits.length,receiptVerified,result:outcome};
     }finally{
         collectorBusy=false;
