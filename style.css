@@ -1236,7 +1236,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: var(--stmb-collect-size, 16px);
+    font-size: var(--stmb-collect-size, 14px);
     white-space: nowrap;
     cursor: pointer;
 }

@@ -611,7 +611,7 @@ const SLOTH_COMPOSER_SIZES = [14, 16, 18, 20, 22, 25, 28];
 const getSlothComposerSize = value => {
   const size = Number(value);
   if (SLOTH_COMPOSER_SIZES.includes(size)) return size;
-  return [80, 90, 110, 125].includes(size) ? size / 5 : 16;
+  return [80, 90, 110, 125].includes(size) ? size / 5 : 14;
 };
 const MEMORY_BOUNDARY_MODES = Object.freeze({
   OFF: "",
