@@ -124,7 +124,7 @@ async function windowEvidence(window,ask) {
         'Rebuild the window records. Verify each quote directly against its cited message. Choose a shorter literal excerpt in the original language and include its ID in the nested inclusive ranges.',
         () => ({window:[a,b],originalMessages:JSON.parse(compact(window))}));
 }
-async function canUseOriginalSource(prompt, settings, profile, allowNativeProbe = false) {
+async function canUseOriginalSource(prompt, settings, profile, allowNativeProbe = false, nativeCeiling = 48000) {
     const contextSize = getMaxContextSize();
     if (!Number.isFinite(contextSize) || contextSize <= 0) return false;
     const selected = resolveConnection(profile);
@@ -137,7 +137,7 @@ async function canUseOriginalSource(prompt, settings, profile, allowNativeProbe 
     try {
         const input = await getTokenCountAsync(prompt);
         const ceiling = Math.floor(contextSize * 0.9);
-        return Number.isFinite(input) && input > 0 && input + completion + 2048 < (sameModel ? ceiling : Math.min(48000,ceiling));
+        return Number.isFinite(input) && input > 0 && input + completion + 2048 < (sameModel ? ceiling : Math.min(nativeCeiling,ceiling));
     } catch {
         return false;
     }
@@ -188,7 +188,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
     ].join('\n\n'),
     nexus:[
         'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
-        'STRICT JSON {"edits":[...]} only. Empty edits is allowed. Preserve every untouched fact.',
+        'An empty edits array is allowed. Preserve every untouched fact.',
         'Every edit must include a specific factual reason in "reason" and an "evidence" array. Each evidence item contains the original integer "messageId" and an exact 8–400 character substring in "quote".',
         'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
         'A quote proves that text was said, not that an interpretation is correct.',
@@ -291,6 +291,37 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
     return {...event,...draft};
 }
 
+const SCENE_LIST_SCHEMA = '{"scenes":[{"id":"given ID","timeline":"YYYY/MM/DD or Unknown","scene":"prose without headings","result":"one sentence","keywords":["cue"]}]}';
+
+function slothSceneBatchGuidance(events, settings, characterContext, maxProse = 650) {
+    return [
+        getActiveSlothSummaryPreset(settings).text,
+        `Output length per memory: ${Math.floor(maxProse / 2)}–${maxProse} tokens of Scene prose, roughly ${Math.floor(maxProse * 0.32)}–${Math.floor(maxProse * 0.62)} English words, or shorter for a simple event. Use indirect speech for long exchanges and keep only short distinctive or consequential quotations. Give the full ending of every event within its own budget.`,
+        'Return one Scene for each approved ID. Give its Timeline in YYYY/MM/DD, YYYY/MM/DD–YYYY/MM/DD, or Unknown. Use English.',
+        'Use only the assigned messages for that Scene, even when other approved events or deferred messages share this request. Stop at the last assigned action or utterance. Treat thoughts and suspicions as attributed; do not infer forgiveness, an answer or a new physical action.',
+        SCENE_KEYWORD_GUIDANCE,
+        'Character context: '+characterContext,
+        'Approved events: '+JSON.stringify(events.map(({id,title,result,messageIds})=>({id,title,result,messageIds}))),
+    ].join('\n\n');
+}
+
+function readSlothBatchScenes(response, events) {
+    const scenes = new Map();
+    const rows = Array.isArray(response.scenes) ? response.scenes : [];
+    for (const event of events) {
+        const matches = rows.filter(row => row?.id === event.id);
+        if (matches.length !== 1) continue;
+        const {timeline,scene,result,keywords} = matches[0];
+        if (![timeline,scene,result].every(value => typeof value === 'string' && value.trim())) continue;
+        const content = `**Timeline**: ${timeline.trim()}\n\n**Scene**\n${scene.trim()}\n\n**Result**\n${result.trim()}`;
+        try {
+            const draft = validateSlothSceneResponse({title:event.title,content,keywords}, event.title);
+            scenes.set(event.id,{...event,...draft});
+        } catch { /* The caller may recover only this scene. */ }
+    }
+    return scenes;
+}
+
 export async function composeSlothScenes({events,messages,profile,settings,signal=null,characterContext='',verifyOrigin=()=>{}}) {
     const ask = requester(profile,settings,signal);
     const configured = Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 0;
@@ -299,35 +330,18 @@ export async function composeSlothScenes({events,messages,profile,settings,signa
     const scenes = [];
     for (let index=0;index<events.length;index+=batchSize) {
         const batch = events.slice(index,index+batchSize);
-        const accepted = new Map();
+        let accepted = new Map();
         if (batch.length>1) {
             const wanted = new Set(batch.flatMap(event=>event.messageIds));
             const source = compact(messages.filter(message=>wanted.has(message.id)));
             const prompt = [
-                'Write the separate approved memories in one response. Return only JSON {"scenes":[{"id":"given ID","timeline":"YYYY/MM/DD or Unknown","scene":"prose without headings","result":"one sentence","keywords":["cue"]}]}. Return one object for each supplied ID, and no other IDs or fields. Use English. A supported date span uses YYYY/MM/DD–YYYY/MM/DD.',
-                getActiveSlothSummaryPreset(settings).text,
-                'Output length per memory: 325–650 tokens of Scene prose, roughly 210–400 English words, or shorter for a simple event. The remaining fields have their own short allowance. Use indirect speech for long exchanges and keep only short distinctive or consequential quotations. Give the full ending of every event within its own budget.',
-                'Keep an independent memory for each ID. Use only that event’s own approved message IDs from the source below. Never mix events or fill gaps. The event titles, outcomes and character context are guides; only the assigned source supports facts.',
-                SCENE_KEYWORD_GUIDANCE,
-                'Character context: '+characterContext,
-                'Approved events: '+JSON.stringify(batch.map(({id,title,result,messageIds})=>({id,title,result,messageIds}))),
+                'Write the separate approved memories in one response. Return only JSON '+SCENE_LIST_SCHEMA+'.',
+                slothSceneBatchGuidance(batch,settings,characterContext),
                 'Original source messages: ',
             ].join('\n\n');
             if (source.length<=18000 || await canUseOriginalSource(prompt+source,settings,profile,true)) {
                 try {
-                    const result = await ask(prompt+source,'Scene batch');
-                    const rows = Array.isArray(result.scenes) ? result.scenes : [];
-                    for(const event of batch) {
-                        const matches = rows.filter(row=>row?.id===event.id);
-                        if(matches.length!==1)continue;
-                        const {timeline,scene,result,keywords} = matches[0];
-                        if (![timeline,scene,result].every(value=>typeof value==='string' && value.trim())) continue;
-                        const content = `**Timeline**: ${timeline.trim()}\n\n**Scene**\n${scene.trim()}\n\n**Result**\n${result.trim()}`;
-                        try {
-                            const draft=validateSlothSceneResponse({title:event.title,content,keywords}, event.title);
-                            accepted.set(event.id,{...event,...draft,title:event.title});
-                        } catch { /* Only this entry needs the existing single-scene path. */ }
-                    }
+                    accepted = readSlothBatchScenes(await ask(prompt+source,'Scene batch'),batch);
                 } catch(error) {
                     if(error.code!=='STMB_SLOTH_MALFORMED_JSON' && !sourceCapacityExceeded(error)) throw error;
                 }
@@ -379,9 +393,7 @@ async function nexusStateEvidenceFor(messages, ask) {
     return payload;
 }
 
-export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null,
-    initial=false,characterContext=''}) {
-    const ask=requester(profile,settings,signal);
+function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext}) {
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const protectedEntry=!!e.disable || Number(e.position)===7 ||
             !!String(e.outletName||'').trim() ||
@@ -394,7 +406,7 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
     });
     const source=JSON.stringify(entries);
     if(source.length>60000)throw new Error('Nexus baseline too large for safe exact-span editing. Nothing saved.');
-    const prompt=[
+    return [
         DEFAULT_SLOTH_COLLECTION_PROMPTS.nexus,
         ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
             ['Supply specific literal recall keywords for every new LT or NPC detail. Never overwrite existing entry activation settings.']:[]),
@@ -409,8 +421,8 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
         'Legacy Long-Term Memory / Status / Scene Continuity conversion is out of scope: preserve them.',
-        'Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
-            title:s.title,result:s.result,content:s.content,segments:s.segments}))),
+        ...(scenes ? ['Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
+            title:s.title,result:s.result,content:s.content,segments:s.segments})))] : []),
         'Approved event classifications:',JSON.stringify({
             events:(plan?.events||[]).map(x=>({title:x.title,segments:x.segments})),
             deferred:(plan?.deferred||[]).map(x=>({reason:x.reason,segments:x.segments})),
@@ -419,30 +431,40 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         'claiming a deferred or uncertain incident is complete.',
         'Current Nexus entries (exact UIDs):',source,
         'If a window contains originalMessages instead of extracted citations, cite those original turns directly, retaining their IDs and language in quote fields.',
-        'Required response: strict JSON {"edits":[...]} only. EACH edit object must contain its own reason and evidence:[{"messageId":integer,"quote":"short exact original substring"}]. This also applies to create. New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append. Do not submit an uncited edit.',
+        'EACH edit object must contain its own reason and evidence:[{"messageId":integer,"quote":"short exact original substring"}]. This also applies to create. New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append. Do not submit an uncited edit.',
         'Keep the complete JSON within the output budget. Make reasons single short sentences and use the shortest sufficient literal quote for each change. Patch existing entries with minimal spans. Keep the handoff and durable changes; omit redundant recaps and routine dialogue.',
+    ].join('\n\n');
+}
+
+function readSlothNexusEdits(response, {messages,nexus,settings,initial}) {
+    try {
+        if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
+        const edits=validateGroundedNexusEdits(canonicalizeNewNexusTitles(response.edits),messages);
+        if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
+            throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
+        }
+        // Dry-run the same World Info guards used for the actual save.
+        stageNexusEdits(nexus,edits,book=>{
+            const used=new Set(Object.values(book.entries).map(entry=>Number(entry.uid)));
+            let uid=0;
+            while(used.has(uid)||Object.hasOwn(book.entries,uid))uid++;
+            return (book.entries[uid]={uid});
+        },{detailRecallMode:settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'});
+        return edits;
+    } catch (error) {
+        throw new InvalidSlothNexusProposal(error);
+    }
+}
+
+export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null,
+    initial=false,characterContext=''}) {
+    const ask=requester(profile,settings,signal);
+    const prompt=[
+        slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext}),
+        'Return strict JSON {"edits":[...]} only.',
         'Current-chat original grounded evidence (exact message IDs):',
     ].join('\n\n')+'\n\n';
-    const validate = response => {
-        try {
-            if(!Array.isArray(response.edits))throw new Error('Nexus delta must contain edits list.');
-            const edits=validateGroundedNexusEdits(canonicalizeNewNexusTitles(response.edits),messages);
-            if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
-                throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
-            }
-            // Dry-run the same World Info guards as the collector before asking
-            // the model to repair. This clone has no connection to the editor or server.
-            stageNexusEdits(nexus,edits,book=>{
-                const used=new Set(Object.values(book.entries).map(entry=>Number(entry.uid)));
-                let uid=0;
-                while(used.has(uid)||Object.hasOwn(book.entries,uid))uid++;
-                return (book.entries[uid]={uid});
-            },{detailRecallMode:settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'});
-            return edits;
-        } catch (error) {
-            throw new InvalidSlothNexusProposal(error);
-        }
-    };
+    const validate = response => readSlothNexusEdits(response, {messages,nexus,settings,initial});
     try {
         return await withFullSlothSource(messages,prompt,settings,profile,
             groundedSource => requestValidatedDraft(prompt+groundedSource,'Nexus delta',ask,validate,
@@ -456,6 +478,49 @@ export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile
         if (error.code==='STMB_SLOTH_MALFORMED_JSON') throw new InvalidSlothNexusProposal(error);
         throw error;
     }
+}
+
+export async function composeApprovedSlothCollection(options) {
+    const {nexus,messages,plan,profile,settings,signal=null,initial=false,characterContext='',verifyOrigin=()=>{}} = options;
+    const events = plan.events;
+    const limit = Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 0;
+    // Allow 2,000 tokens for Nexus edits, 1,200 for reserve and 100 per scene for its wrapping fields.
+    const maxProse = events.length ? Math.min(650, Math.floor((limit - 3200) / events.length) - 100) : 0;
+    let composed = new Map();
+    let edits;
+    if (maxProse >= 480) {
+        const original = compact(messages);
+        const schema = SCENE_LIST_SCHEMA.slice(0, -1) + ',"edits":[...]}';
+        const prompt = [
+            'Complete approved Memory Scenes and Nexus edits in one response. Return just one JSON object with scenes and edits arrays.',
+            'Response structure: '+schema,
+            slothSceneBatchGuidance(events,settings,characterContext,maxProse),
+            slothNexusGuidance({nexus,plan,settings,initial,characterContext}),
+            'Keep Nexus edits compact (approximately 2,000 tokens or fewer) and only cite the original chat. Treat any already drafted Scene as a summary, never as source evidence.',
+            'Original source messages (all current IDs, including deferred):',original,
+        ].join('\n\n');
+        if (original.length <= 18000 || await canUseOriginalSource(prompt,settings,profile,true,64000)) {
+            try {
+                const ask = requester(profile,settings,signal);
+                const result = await ask(prompt,'Approved collection');
+                composed = readSlothBatchScenes(result,events);
+                edits = readSlothNexusEdits(result,{messages,nexus,settings,initial});
+            } catch (error) {
+                if (!(error instanceof InvalidSlothNexusProposal)
+                    && error.code !== 'STMB_SLOTH_MALFORMED_JSON' && !sourceCapacityExceeded(error)) throw error;
+            }
+            verifyOrigin();
+        }
+    }
+    const missing = events.filter(event => !composed.has(event.id));
+    if (missing.length) {
+        for (const scene of await composeSlothScenes({...options,events:missing})) {
+            composed.set(scene.id,scene);
+        }
+    }
+    const scenes = events.map(event => composed.get(event.id));
+    edits ??= await proposeSlothNexusEdits({...options,scenes});
+    return {scenes,edits};
 }
 
 export async function compressSlothScene({entry,amount,focus,profile,settings,verifyOrigin,signal=null}) {

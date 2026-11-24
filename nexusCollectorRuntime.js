@@ -18,7 +18,7 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
     getSlothHideRanges, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
-import { analyzeSlothEvents, composeSlothScene, composeSlothScenes, proposeSlothNexusEdits, InvalidSlothNexusProposal,
+import { analyzeSlothEvents, composeSlothScene, composeApprovedSlothCollection, InvalidSlothNexusProposal,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
@@ -527,18 +527,17 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         checkOrigin();
 
         toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
-        const scenes=await composeSlothScenes({events:plan.events,messages:source,profile,settings,
-            characterContext,verifyOrigin:checkOrigin});
-        let edits;
+        let collection;
         try {
-            edits=await proposeSlothNexusEdits({scenes,nexus:originalBooks.nexus,messages:source,
-                plan,profile,settings,initial,characterContext});
+            collection=await composeApprovedSlothCollection({nexus:originalBooks.nexus,messages:source,
+                plan,profile,settings,initial,characterContext,verifyOrigin:checkOrigin});
         } catch(error) {
             if(!(error instanceof InvalidSlothNexusProposal))throw error;
             throw new Error(t('The Nexus changes could not be verified. No memories were saved.',
                 'STMemoryBooks_SlothCollectionInvalidNexus'),{cause:error});
         }
         checkOrigin();
+        const {scenes,edits}=collection;
         if(!scenes.length&&!edits.length){
             toastr.info(t('There are no completed events or Nexus changes to save.',
                 'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');

@@ -583,7 +583,7 @@ const SUPPORTED_COMPLETION_SOURCES = [
   "siliconflow",
 ];
 
-const DEFAULT_MAX_TOKENS = 4000;
+const DEFAULT_MAX_TOKENS = 10000;
 const DEFAULT_TITLE_FORMAT = "[000] - {{title}}";
 const STLO_EXTENSION_KEYS = new Set([
   "sillytavern-lorebookordering",

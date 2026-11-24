@@ -84,6 +84,6 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
 });
 test('unverified Nexus changes stop the approved collection before saving books',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    assert.match(runtime,/await proposeSlothNexusEdits[\s\S]*if\(!\(error instanceof InvalidSlothNexusProposal\)\)throw error;\s*throw new Error\(t\([^\n]*\n\s*'STMemoryBooks_SlothCollectionInvalidNexus'/);
+    assert.match(runtime,/await composeApprovedSlothCollection[\s\S]*if\(!\(error instanceof InvalidSlothNexusProposal\)\)throw error;\s*throw new Error\(t\([^\n]*\n\s*'STMemoryBooks_SlothCollectionInvalidNexus'/);
     assert.match(runtime,/commitSlothBooks/);
 });

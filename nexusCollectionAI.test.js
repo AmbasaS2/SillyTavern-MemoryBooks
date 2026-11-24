@@ -117,7 +117,7 @@ test('a usable single Scene keeps its keywords locally after recovering from an 
     const draftStart = source.indexOf('async function requestValidatedDraft(');
     const draftEnd = source.indexOf('\nasync function windowEvidence(', draftStart);
     const sceneStart = source.indexOf('async function composeSlothScene(');
-    const sceneEnd = source.indexOf('\nexport async function composeSlothScenes(', sceneStart);
+    const sceneEnd = source.indexOf('\nconst SCENE_LIST_SCHEMA', sceneStart);
     const makeDraft = prose => ({title: 'The letter', keywords: ['bell', 'gate', 'letter', 'palm', 'answer'],
         content: `**Timeline**: Unknown\n\n**Scene**\n${prose}\n\n**Result**\nShe gave him the letter.`});
     const corrected = {...makeDraft('She handed him the letter and kept her palm against his shoulder.'),
@@ -164,11 +164,11 @@ test('long source falls back only for a provider input-capacity error', async ()
 });
 
 test('scene batch reuses valid prose even with missing keywords and only recovers incomplete scenes', async () => {
-    const begin=source.indexOf('async function composeSlothScenes(');
+    const begin=source.indexOf('const SCENE_LIST_SCHEMA');
     const end=source.indexOf('\n/**',begin);
     const valid={id:'event-1',timeline:'Unknown',scene:'She opened the door.',result:'The door opened.'};
     const calls=[];
-    const compose=vm.runInNewContext(source.slice(begin,end)+'\ncomposeSlothScenes',{
+    const compose=vm.runInNewContext(source.slice(begin,end).replace('export async','async')+'\ncomposeSlothScenes',{
         requester:()=>async prompt=>{calls.push({prompt});return {scenes:[valid,{id:'event-2',title:'Invalid'}]};},
         SLOTH_SCENE_OUTPUT_CONTRACT:'single entry contract',getActiveSlothSummaryPreset:()=>({text:'Writing guidance'}),
         compact:JSON.stringify,oai_settings:{},validateSlothSceneResponse,
@@ -200,4 +200,48 @@ test('only a newly created reserved Nexus entry can lose a decorative title suff
     assert.equal(unchangedAppend,append);
     assert.equal(unchangedWrong,wrong);
     assert.match(correct.title,/vineyard/);
+});
+
+test('approved collection combines Memory and Nexus within the budget and recovers only missing work', async () => {
+    const helpersStart=source.indexOf('const SCENE_LIST_SCHEMA');
+    const helpersEnd=source.indexOf('\nexport async function composeSlothScenes(',helpersStart);
+    const start=source.indexOf('async function composeApprovedSlothCollection(');
+    const end=source.indexOf('\nexport async function compressSlothScene(',start);
+    const events=[{id:'first',title:'Read the letter',messageIds:[1]},
+        {id:'second',title:'Closed the door',messageIds:[2]}];
+    const first={id:'first',timeline:'Unknown',scene:'She read the letter.',result:'She read it.'};
+    const second={id:'second',timeline:'Unknown',scene:'He closed the door.',result:'He closed it.'};
+    const edits=[{uid:1}];
+    const calls=[];
+    let draft={scenes:[first,second],edits};
+    const run=vm.runInNewContext(source.slice(helpersStart,helpersEnd)+'\n'+source.slice(start,end)+'\ncomposeApprovedSlothCollection',{
+        SCENE_KEYWORD_GUIDANCE:'Recall guidance', getActiveSlothSummaryPreset:()=>({text:'Summary guidance'}),
+        oai_settings:{}, compact:JSON.stringify, validateSlothSceneResponse,
+        slothNexusGuidance:()=> 'Protected Nexus entries omitted',
+        readSlothNexusEdits:raw=>raw.edits,
+        requester:()=>async prompt=>{calls.push(prompt);return draft;},
+        composeSlothScenes:async ({events:missing})=>{calls.push(missing.map(x=>x.id));return missing;},
+        proposeSlothNexusEdits:async()=>{calls.push('Nexus');return edits;},
+    });
+    const options={plan:{events},messages:[{id:1,mes:'Read'},{id:2,mes:'Closed'}],nexus:{entries:{}},
+        settings:{moduleSettings:{maxTokens:10000}}};
+    const combined=await run(options);
+    assert.equal(calls.length,1);
+    assert.match(calls[0],/scenes and edits arrays/);
+    assert.match(calls[0],/325–650 tokens of Scene prose/);
+    assert.match(combined.scenes[0].content,/read the letter/);
+    assert.deepEqual(combined.edits,edits);
+
+    calls.length=0;
+    draft={scenes:[first],edits};
+    const recovered=await run(options);
+    assert.equal(calls.length,2);
+    assert.deepEqual(calls[1],['second']);
+    assert.match(recovered.scenes[0].content,/read the letter/);
+    assert.equal(recovered.scenes[1],events[1]);
+    assert.deepEqual(recovered.edits,edits);
+
+    calls.length=0;
+    await run({...options,settings:{moduleSettings:{maxTokens:4000}}});
+    assert.deepEqual(calls,[['first','second'],'Nexus']);
 });
