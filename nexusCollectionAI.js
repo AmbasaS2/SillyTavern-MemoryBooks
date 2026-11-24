@@ -240,11 +240,17 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
         'Character context: '+characterContext,'Evidence:',
     ].join('\n\n')+'\n\n';
     const evidence=await evidenceFor(source,ask,prompt,settings,profile);
-    const draft=await requestValidatedDraft(prompt+evidence,'Scene '+event.id,ask,raw=>{
+    const sourcePrompt=prompt+evidence;
+    const draft=await requestValidatedDraft(sourcePrompt,'Scene '+event.id,ask,raw=>{
         validateSlothSceneBody(raw);
         return raw;
-    },
-        'Rewrite the response using the same supported event. The JSON object has exactly title, content and keywords. Inside content use "**Timeline**: …", then a separate line "**Scene**" and its prose, then a separate line "**Result**" and a single plain result line. Give five distinct one-to-six-word keywords.');
+    }, error=>{
+        const format='Return only JSON with exactly title, content and keywords. Inside content use "**Timeline**: …", then a separate line "**Scene**" and its prose, then a separate line "**Result**" and a single plain result line. Give five distinct one-to-six-word keywords.';
+        const revision=error.code==='STMB_SLOTH_SCENE_TOO_LONG'
+            ? 'The Scene exceeded 650 words. Rewrite it from the original source in about 400 words. Condense long exchanges and repeated reactions before cutting any causal action, promise, change in knowledge or final physical state. Keep the final meaningful utterance and its actual answer or lack of one.'
+            : 'The previous response failed validation: '+error.message+' Rewrite the same supported event in the required format.';
+        return [sourcePrompt,revision,format].join('\n\n');
+    });
     let keywords;
     try { keywords=validateSlothSceneKeywords(draft.keywords); }
     catch {

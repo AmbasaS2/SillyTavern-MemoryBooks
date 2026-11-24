@@ -83,15 +83,14 @@ const writingRulesStart = SLOTH_SCENE_PROMPT_V13.indexOf('# What to preserve');
 export const SLOTH_SCENE_OUTPUT_CONTRACT = SLOTH_SCENE_PROMPT_V13.slice(outputContractStart, writingRulesStart).trim();
 export const SLOTH_DEFAULT_SUMMARY_PROMPT = [
     "# What to preserve",
-    "Write one self-contained scene memory in connected past-tense prose. Preserve causality, who knew and did what, why it mattered, and the exact stopping point. A simple event can be short. Keep meaningful character voice and concrete recall cues. Compress decoration, routine logistics, repetition and interchangeable details.",
-    "Timeline. Use every directly narrated story date in the selected event, including an earlier date in its first message. A date mentioned in a report or memory does not extend Timeline. Use Unknown when no date is supported.",
-    "Agency and knowledge. Keep proposer, accepter, chooser and executor distinct. Name the chosen route, method, owner or object when it explains the outcome. Keep direct experience, private thought, hearsay and inference separate. Preserve consequential nested relays in attributed prose, e.g. “A told B that C had heard the news from D.” D was the source, not necessarily the subject of the news. Do not invent access, motives, an intermediary or someone who agreed. Retain original names or a consistent transliteration.",
-    "Commitments. Keep each material promise, request, refusal, boundary, precondition, counterterm, finite offer and chooser-owned exception. Attach it to its maker, addressee and response. Keep successive stages distinct: unanswered, heard, permitted, accepted or declined, committed, enacted. An unused permission does not imply a choice. Keep accountability, acceptance and explicit forgiveness distinct.",
-    "Care and contact. Preserve what was offered, supplied, applied or consumed, still prescribed, and finished. Keep each consequential touch in order, including actor, surface, awareness, concealment and exact release. Preserve who or what was in hand, inside or outside, open or closed at the handoff when it matters.",
-    "Scene ending. Weave in short literal English quotes that establish a boundary, decision, correction, secret, joke or change in relationship. Render other languages as accurately attributed English prose. End on the final configuration and meaningful utterance with its speaker, stated reason and unanswered choice, if any. Do not supply a later answer or outcome. Keep the Scene within 650 words.",
-    "Result. One past-tense sentence naming the single defining completed consequence and its actors. An open concern or secondary beat stays in Scene.",
-    "Keywords. Five distinct literal English cues, 1–6 words each. Prefer specific phrases a character could naturally use later. Balance a commitment, object, bodily cue, hidden act, place, action or distinctive line as available. Use at most two dialogue fragments. Do not use whole descriptive clauses.",
-].join('\n\n');
+    "Write one self-contained scene memory in connected past-tense prose. Keep the chain from cause through actions to the shown consequence, plus distinctive voice and concrete recall cues. Compress scenery, routine logistics, repeated reactions and long exchanges before cutting facts. Aim for 300–520 words in Scene, fewer for a simple event and up to 650 only when the facts need it. Never exceed 650.",
+    "Timeline. Use directly narrated story dates, including an earlier date in the first selected message; dates merely remembered or reported do not extend it. Use Unknown when unsupported. Use names established by narration or dialogue. Use a role such as “the hostess” if only a private note, <Inner_Info> or status box gives the name. Apply this in Scene, Result and keywords. Keep private thoughts separate from what other characters learned.",
+    "Agency and knowledge. Keep proposer, accepter, chooser and executor distinct. Name the chosen route, method, owner or object when it explains the outcome. Keep direct experience, private thought, hearsay and inference separate. Preserve each named link in a consequential report: “A told B that C had heard the news from D.” Retain original names or a consistent transliteration.",
+    "Commitments and relationship. Retain each material promise, request, refusal, boundary, precondition, counterterm, limited offer or chooser-owned exception with its actor, addressee and actual response. Keep proposed, permitted, accepted, committed and enacted distinct. A promise remains open until the source shows it done. Attribute an onlooker's opinion to the onlooker. Keep characteristic voice with one to three short, exact English quotes, focusing on a joke, decision or final words. Paraphrase longer exchanges and attribute translated dialogue accurately.",
+    "Care and contact. Distinguish what was offered, supplied, applied or consumed, still prescribed and finished. Preserve consequential touch in order, including initiator, body part or object, and release if shown. End Scene with the last visible arrangement and meaningful utterance or action. If touch matters, write one concrete clause naming who held or touched what, exactly where, and whether it continued or ended. Keep meaningful positions, held objects or doors, and the supported answer or unanswered choice. Keep the prose in the story: “Her palm stayed on his cheek as he answered.”",
+    "Result. One past-tense sentence stating who did, said, decided or disclosed the defining completed thing. For a difficult exchange, “A apologized and B took A's hand” records the outcome; “they resolved the hurt” requires explicit evidence from both. Use the concrete steps when a character's response was unspoken, indirect or absent. Leave open concerns in Scene.",
+    "Keywords. Five distinct literal English cues of 1–6 words each. Choose phrases a character might use to recall this event; at most two short dialogue fragments.",
+].join("\n\n");
 
 export function validateSlothSceneBody(response) {
     const keys = Object.keys(response);
@@ -103,7 +102,9 @@ export function validateSlothSceneBody(response) {
         throw new Error('Scene must include title, Timeline, Scene and Result in the reviewed output format.');
     }
     if (parts[2].trim().split(/\s+/u).length > 650) {
-        throw new Error('Scene exceeds the original 650-word limit. Nothing saved.');
+        const error = new Error('Scene exceeds the original 650-word limit. Nothing saved.');
+        error.code = 'STMB_SLOTH_SCENE_TOO_LONG';
+        throw error;
     }
     return response.content.trim();
 }

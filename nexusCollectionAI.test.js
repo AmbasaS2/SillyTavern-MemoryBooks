@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
-import { selectSlothRepairKeywords } from './nexusSlothScenePrompt.js';
+import { selectSlothRepairKeywords, validateSlothSceneBody, validateSlothSceneKeywords } from './nexusSlothScenePrompt.js';
 
 test('keyword-only repair keeps five usable candidates in model order', () => {
     const candidates = [' door ', 'DOOR', 'one two three four five six seven',
@@ -115,4 +115,31 @@ test('a draft with overlapping message ownership gets one corrective request, pr
         throw new Error('Provider unavailable');
     },validate,'Use the required headings.'),/Provider unavailable/);
     assert.equal(attempts,1);
+});
+
+test('an overlong Scene is retried from the approved original with a lower target and its endpoint', async () => {
+    const draftStart = source.indexOf('async function requestValidatedDraft(');
+    const draftEnd = source.indexOf('\nasync function windowEvidence(', draftStart);
+    const sceneStart = source.indexOf('async function composeSlothScene(');
+    const sceneEnd = source.indexOf('\n/**', sceneStart);
+    const makeDraft = prose => ({title: 'The letter', keywords: ['bell', 'gate', 'letter', 'palm', 'answer'],
+        content: `**Timeline**: Unknown\n\n**Scene**\n${prose}\n\n**Result**\nShe gave him the letter.`});
+    const corrected = makeDraft('She handed him the letter and kept her palm against his shoulder.');
+    const requests = [];
+    const compose = vm.runInNewContext(source.slice(draftStart, draftEnd) + '\n' + source.slice(sceneStart, sceneEnd) + '\ncomposeSlothScene', {
+        SLOTH_SCENE_OUTPUT_CONTRACT: 'Required shape', getActiveSlothSummaryPreset: () => ({text: 'Writing guidance'}),
+        evidenceFor: async messages => messages.map(message => message.mes).join('\n'),
+        validateSlothSceneBody, validateSlothSceneKeywords,
+        requester: () => async prompt => {
+            requests.push(prompt);
+            return requests.length === 1 ? makeDraft('word '.repeat(651)) : corrected;
+        },
+    });
+    const event = {id: 'test', messageIds: [2], segments: [[2, 2]], title: 'The letter', result: 'She handed it over.'};
+    const messages = [{id: 1, mes: 'Outside the approved range'}, {id: 2, mes: 'Her palm stayed on his shoulder.'}];
+    const result = await compose({event, messages});
+    assert.equal(result.content, corrected.content);
+    assert.equal(requests.length, 2);
+    assert.match(requests[1], /Her palm stayed on his shoulder\.[\s\S]*about 400 words[\s\S]*final physical state/);
+    assert.doesNotMatch(requests[1], /Outside the approved range/);
 });
