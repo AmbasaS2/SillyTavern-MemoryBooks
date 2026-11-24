@@ -50,3 +50,21 @@ test('an old checkpoint can adopt its first pair only if the known original book
     assert.equal(canChangeNexusChatRolePair({ slothCollection: { chatKey: chat, savedRanges: [[0, 1]] } },
         chat, { nexus: 'New' }, { nexus: 'New', memory: 'Original' }, 'Original'), false);
 });
+
+test('an enabled Sloth Side Prompt follows its exact character chat even in a shared Nexus', () => {
+    const avatar='A.png';
+    const ref={type:'character',avatarUrl:avatar,fileName:'AU one'};
+    const settings={nexusCharacterRoles:{[avatar]:{nexus:'Nexus',memory:'Memory'}}};
+    const note=(name,uid)=>({world:'Nexus',uid,vectorized:true,STMB_slothSideNote:true,
+        STMB_sidePromptHistory:{chatKey:JSON.stringify(['character',avatar,name])}});
+    const current=note('AU one',1);
+    const shared={world:'Nexus',uid:4};
+    const scope=(fileName,type='character')=>{
+        const lists={characterLore:[current,note('AU two',2),shared]};
+        scopeNexusWorldInfo(lists,{settings,ref:{...ref,type,fileName},avatar});
+        return lists.characterLore;
+    };
+    assert.deepEqual(scope('AU one'),[current,shared]);
+    assert.deepEqual(scope('unrelated'),[shared]);
+    assert.deepEqual(scope('AU one','group'),[shared]);
+});

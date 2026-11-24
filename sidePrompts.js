@@ -37,7 +37,7 @@ import {
     SIDE_PROMPT_REGENERATION_METADATA_KEY,
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
-import { buildSlothSideReference, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
+import { buildSlothSideReference, normalizeSlothSideKeywords, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
 
 
 import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -1533,8 +1533,8 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
     return filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
 }
 
-/** Prepare a manual, chat-scoped Sloth note for disabled storage in Nexus. */
-export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene) {
+/** Prepare a manual, chat-scoped Sloth note in Nexus. */
+export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene, recallMode = 'disabled') {
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
     try {
         const tpl = {key: preset.id, name: '🦥 '+preset.name};
@@ -1544,22 +1544,36 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         const reference = buildSlothSideReference(savedScene, original);
         const prompt = [preset.text, '\n=== REFERENCE TO AVOID DUPLICATES (NOT NEW EVIDENCE) ===', reference,
             '=== END REFERENCE ==='].join('\n');
-        const finalPrompt = buildPrompt(prompt, prior, compiledScene, preset.responseFormat, [], {}, [],
+        const contentPrompt = buildPrompt(prompt, prior, compiledScene, preset.responseFormat, [], {}, [],
             compiledScene ? null : savedScene.content);
+        const finalPrompt = recallMode === 'keyword' ? contentPrompt + '\n\nReturn only JSON {"content":"the full requested note, in the requested format","keywords":["specific searchable phrase"]}. Suggest 2–5 distinct recall phrases based on the note. For no new details put [[NO_NEW_DETAILS]] in content.' : contentPrompt;
         const conn = resolveSidePromptConnection(profile);
-        const text = await runSidePromptAttempt({taskLabel:'SidePrompts:reviewedSloth:'+tpl.key,
+        let text = await runSidePromptAttempt({taskLabel:'SidePrompts:reviewedSloth:'+tpl.key,
             finalPrompt,conn,runEpoch:task.epoch});
+        let keywords = [];
+        if (recallMode === 'keyword' && typeof text === 'string') {
+            const fenced = text.trim().match(/^\x60{3}(?:json)?\s*\n([\s\S]*?)\n\x60{3}\s*$/iu);
+            try {
+                const response=JSON.parse(fenced?.[1] ?? text);
+                if (typeof response?.content === 'string') {
+                    text=response.content;
+                    keywords=normalizeSlothSideKeywords(response.keywords);
+                }
+            } catch { /* The review can accept plain text and user-entered keywords. */ }
+        }
         if (!ensureSidePromptTextNotBlank(text,tpl,'reviewedSloth')) {
             throw new Error('The Side Prompt returned empty content.');
         }
         if (text.trim() === SLOTH_NO_SIDE_DETAILS) return null;
         const title = getUnifiedSidePromptTitle(tpl);
         return {
-            text,
-            stage: content => stageLorebookEntriesBatch(lorebookName, original, [{
-                title,content,sidePromptHistory,archiveOnly:true,
-                entryOverrides:{position:0,outletName:'',ignoreBudget:false},
-                metadataUpdates:{STMB_slothSideArchive:true,[`STMB_sp_${tpl.key}_lastRunAt`]:new Date().toISOString()},
+            text,keywords,
+            stage: (content, reviewedKeywords = []) => stageLorebookEntriesBatch(lorebookName, original, [{
+                title,content,sidePromptHistory,archiveOnly:recallMode === 'disabled',
+                entryOverrides:{position:0,outletName:'',ignoreBudget:false,constant:false,
+                    vectorized:recallMode === 'vector',key:recallMode === 'keyword' ? reviewedKeywords : [],keysecondary:[]},
+                metadataUpdates:{STMB_slothSideNote:true,STMB_slothSideArchive:recallMode === 'disabled',
+                    [`STMB_sp_${tpl.key}_lastRunAt`]:new Date().toISOString()},
             }]).lorebookData,
         };
     } finally {

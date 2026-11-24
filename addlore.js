@@ -40,7 +40,7 @@ async function saveSidePromptLorebookChecked(name, data) {
     await eventSource.emit(event_types.WORLDINFO_UPDATED, name, data);
 }
 
-function applySidePromptHistory(data, title, history, entry, createEntry, archiveOnly = false) {
+function applySidePromptHistory(data, title, history, entry, createEntry, stampNew = false) {
     validateSidePromptHistoryRequest(history);
     const resolved = resolveSidePromptHistory(data, history);
     const group = resolved.versions[0]?.group || history.group;
@@ -76,7 +76,7 @@ function applySidePromptHistory(data, title, history, entry, createEntry, archiv
     const next = createEntry();
     if (!next) throw new Error(i18n('addlore.upsert.errors.createFailed', 'Failed to create lorebook entry'));
     next.comment = title;
-    if (archiveOnly) stamp(next, 1);
+    if (stampNew) stamp(next, 1);
     return { entry: next, created: true };
 }
 
@@ -1378,7 +1378,7 @@ export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
         let historyPriorEntry = undefined;
         if (sidePromptHistory) {
             const resolved = applySidePromptHistory(lorebookData, title, sidePromptHistory, entry,
-                () => createWorldInfoEntry(lorebookName, lorebookData), it.archiveOnly === true);
+                () => createWorldInfoEntry(lorebookName, lorebookData), Object.hasOwn(it, 'archiveOnly'));
             entry = resolved.entry;
             historyCreated = resolved.created;
             historyPriorEntry = resolved.priorEntry;

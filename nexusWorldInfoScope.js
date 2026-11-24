@@ -44,12 +44,13 @@ export function scopeNexusWorldInfo(lists, { settings, ref, chatKey, avatar }) {
             .filter(book => !isAssignedToAnotherNexusCharacter(settings, avatar, book))
         : defaultBooks);
     if (isSolo) for (const book of defaultBooks) managed.add(book);
-    if (!managed.size) return;
+    const sideChatKey = isSolo && ref.fileName ? JSON.stringify(['character',ref.avatarUrl,ref.fileName]) : null;
 
     for (const entries of [lists.globalLore, lists.characterLore, lists.chatLore, lists.personaLore]) {
         if (!Array.isArray(entries)) continue;
         let writeIndex = 0;
         for (const entry of entries) {
+            if (entry?.STMB_slothSideNote && (!sideChatKey || entry.STMB_sidePromptHistory?.chatKey !== sideChatKey)) continue;
             if (!managed.has(entry?.world) || allowed.has(entry.world)) entries[writeIndex++] = entry;
         }
         entries.length = writeIndex;

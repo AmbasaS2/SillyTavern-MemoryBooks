@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
-import { selectSlothRepairKeywords, validateSlothSceneBody, validateSlothSceneKeywords } from './nexusSlothScenePrompt.js';
+import { selectSlothRepairKeywords, validateSlothSceneBody, validateSlothSceneKeywords, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 
 test('keyword-only repair keeps five usable candidates in model order', () => {
     const candidates = [' door ', 'DOOR', 'one two three four five six seven',
@@ -58,6 +58,11 @@ test('long original source requires the active model context and a successful to
     const profile={api:'nanogpt',model:'active-model'};
     assert.equal(await canUse('original',{},profile),true);
     assert.equal(await canUse('original',{}, {...profile,model:'other-model'}),false);
+    state.tokens=24000;
+    assert.equal(await canUse('original',{}, {stConnectionProfileId:'alternate'},true),true);
+    assert.equal(await canUse('original',{}, {stConnectionProfileId:'alternate'}),false);
+    state.tokens=45000;
+    assert.equal(await canUse('original',{}, {stConnectionProfileId:'alternate'},true),false);
     state.tokens=0;
     assert.equal(await canUse('original',{},profile),false);
     state.tokens=100000;
@@ -121,14 +126,15 @@ test('an overlong Scene is retried from the approved original with a lower targe
     const draftStart = source.indexOf('async function requestValidatedDraft(');
     const draftEnd = source.indexOf('\nasync function windowEvidence(', draftStart);
     const sceneStart = source.indexOf('async function composeSlothScene(');
-    const sceneEnd = source.indexOf('\n/**', sceneStart);
+    const sceneEnd = source.indexOf('\nexport async function composeSlothScenes(', sceneStart);
     const makeDraft = prose => ({title: 'The letter', keywords: ['bell', 'gate', 'letter', 'palm', 'answer'],
         content: `**Timeline**: Unknown\n\n**Scene**\n${prose}\n\n**Result**\nShe gave him the letter.`});
     const corrected = makeDraft('She handed him the letter and kept her palm against his shoulder.');
     const requests = [];
     const compose = vm.runInNewContext(source.slice(draftStart, draftEnd) + '\n' + source.slice(sceneStart, sceneEnd) + '\ncomposeSlothScene', {
         SLOTH_SCENE_OUTPUT_CONTRACT: 'Required shape', getActiveSlothSummaryPreset: () => ({text: 'Writing guidance'}),
-        evidenceFor: async messages => messages.map(message => message.mes).join('\n'),
+        oai_settings:{},
+        withFullSlothSource: async (messages,_prompt,_settings,_profile,run) => run(messages.map(message => message.mes).join('\n')),
         validateSlothSceneBody, validateSlothSceneKeywords,
         requester: () => async prompt => {
             requests.push(prompt);
@@ -142,4 +148,62 @@ test('an overlong Scene is retried from the approved original with a lower targe
     assert.equal(requests.length, 2);
     assert.match(requests[1], /Her palm stayed on his shoulder\.[\s\S]*about 400 words[\s\S]*final physical state/);
     assert.doesNotMatch(requests[1], /Outside the approved range/);
+});
+
+test('long source falls back only for a provider input-capacity error', async () => {
+    const begin=source.indexOf('function sourceCapacityExceeded(');
+    const end=source.indexOf('async function evidenceFor(',begin);
+    const withSource=vm.runInNewContext(source.slice(begin,end)+'\nwithFullSlothSource',{
+        compact:JSON.stringify,canUseOriginalSource:async()=>true,
+    });
+    const observed=[];
+    const messages=[{id:1,mes:'oracle '.repeat(4000)}];
+    const fallback=async()=>{observed.push('windows');return 'window evidence';};
+    const response=await withSource(messages,'guide',{}, {},async text=>{
+        observed.push(text==='window evidence'?'grounded':'original');
+        if(observed.length===1)throw new Error('Request failed',{cause:new Error('maximum context length exceeded')});
+        return 'result';
+    },fallback);
+    assert.equal(response,'result');
+    assert.deepEqual(observed,['original','windows','grounded']);
+    await assert.rejects(withSource(messages,'guide',{}, {},async()=>{throw Error('Rate limit');},
+        async()=>assert.fail('Unrelated provider errors must propagate')),/Rate limit/);
+});
+
+test('scene batch sets a per-memory target and retains the drafts that passed review', async () => {
+    const begin=source.indexOf('async function composeSlothScenes(');
+    const end=source.indexOf('\n/**',begin);
+    const valid={id:'event-1',timeline:'Unknown',scene:'She opened the door.',result:'The door opened.',
+        keywords:['door','ribbon','lantern','key','handle']};
+    const calls=[];
+    const compose=vm.runInNewContext(source.slice(begin,end)+'\ncomposeSlothScenes',{
+        requester:()=>async prompt=>{calls.push({prompt});return {scenes:[valid,{id:'event-2',title:'Invalid'}]};},
+        SLOTH_SCENE_OUTPUT_CONTRACT:'single entry contract',getActiveSlothSummaryPreset:()=>({text:'Writing guidance'}),
+        compact:JSON.stringify,oai_settings:{},validateSlothSceneResponse,
+        composeSlothScene:async ({event})=>{calls.push({recovered:event.id});return event;},
+    });
+    const events=[{id:'event-1',title:'Approved first memory',result:'Opened',messageIds:[1]},
+        {id:'event-2',title:'Approved second memory',result:'Closed',messageIds:[5]}];
+    const messages=[{id:1,mes:'She opened the door.'},{id:2,mes:'An excluded remark.'},{id:5,mes:'He shut the gate.'}];
+    const result=await compose({events,messages,settings:{moduleSettings:{maxTokens:4000}}});
+    assert.equal(calls.length,2);
+    assert.match(calls[0].prompt,/325–650 tokens of Scene prose/);
+    assert.doesNotMatch(calls[0].prompt,/An excluded remark/);
+    assert.equal(calls[1].recovered,'event-2');
+    assert.equal(result[0].content,'**Timeline**: Unknown\n\n**Scene**\nShe opened the door.\n\n**Result**\nThe door opened.');
+    assert.equal(result[0].title,events[0].title);
+});
+
+test('only a newly created reserved Nexus entry can lose a decorative title suffix', () => {
+    const begin=source.indexOf('function canonicalizeNewNexusTitles(');
+    const end=source.indexOf('function parseStrictJSON(',begin);
+    const normalize=vm.runInNewContext(source.slice(begin,end)+'\ncanonicalizeNewNexusTitles');
+    const append={action:'append',kind:'core',title:'Core Memory — title should be ignored'};
+    const wrong={action:'create',kind:'continuity',title:'Unrelated entry'};
+    const correct={action:'create',kind:'continuity',title:'Current Continuity — vineyard, 10/23'};
+    const [assigned,unchangedAppend,unchangedWrong]=normalize([correct,append,wrong]);
+    assert.equal(assigned.title,'Current Continuity');
+    assert.equal(unchangedAppend,append);
+    assert.equal(unchangedWrong,wrong);
+    assert.match(correct.title,/vineyard/);
 });

@@ -18,7 +18,7 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
     getSlothHideRanges, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
-import { analyzeSlothEvents, composeSlothScene, proposeSlothNexusEdits, InvalidSlothNexusProposal,
+import { analyzeSlothEvents, composeSlothScene, composeSlothScenes, proposeSlothNexusEdits, InvalidSlothNexusProposal,
     auditSlothDraft, suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
@@ -32,7 +32,7 @@ import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames,
     commitInitialNexusBooks } from './nexusInitialSetup.js';
 import { compileScene, createSceneRequest } from './chatcompile.js';
 import { proposeReviewedSidePrompt } from './sidePrompts.js';
-import { getSlothSidePresets } from './slothSidePrompts.js';
+import { getSlothSidePresets, getSlothSideRecall, normalizeSlothSideKeywords } from './slothSidePrompts.js';
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 
@@ -245,6 +245,7 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
                 'STMemoryBooks_SlothSidePromptEmpty'), 'STMemoryBooks');
             return { saved: false };
         }
+        const recallMode = getSlothSideRecall(settings, preset.id);
         const memory = await loadServerWorld(roles.memory);
         assertSlothBookRoles(ref, roles);
         const chatIds = new Set([ref.fileName, ref.chatId].filter(Boolean).map(value => String(value).replace(/\.jsonl$/i,'')));
@@ -294,7 +295,7 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         verifyOrigin();
         const original = await loadServerWorld(roles.nexus);
         verifyOrigin();
-        const draft = await proposeReviewedSidePrompt(preset, roles.nexus, original, compiled, profile, scene.entry);
+        const draft = await proposeReviewedSidePrompt(preset, roles.nexus, original, compiled, profile, scene.entry, recallMode);
         verifyOrigin();
         if (!draft) {
             toastr.info(t('No new details to save.', 'STMemoryBooks_SlothSideNoDetails'), 'STMemoryBooks');
@@ -302,15 +303,28 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
         }
         const review = markStmbPopup(new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>' +
             html(preset.builtin ? t('Little Things', 'STMemoryBooks_SlothLittleThings') : preset.name) + '</h3><p>' +
-            html(t('Saved to Nexus for reference and kept out of the AI chat context.', 'STMemoryBooks_SlothSideArchiveHelp')) +
-            '</p><textarea class="text_pole stmb-sloth-side-review" rows="8" aria-label="' + html(title) + '"></textarea></div>'),
+            html(recallMode === 'disabled' ? t('Saved to Nexus for reference and kept out of the AI chat context.', 'STMemoryBooks_SlothSideArchiveHelp') :
+                t('Saved to Nexus using this prompt’s selected recall mode.', 'STMemoryBooks_SlothSideActiveHelp')) +
+            '</p><textarea class="text_pole stmb-sloth-side-review" rows="8" aria-label="' + html(title) + '"></textarea>' +
+            (recallMode === 'keyword' ? '<label class="stmb-sloth-edit">'+html(t('Recall keywords (comma-separated)', 'STMemoryBooks_SlothSideKeywordInput')) +
+                '<input id="stmb-sideprompt-keywords" type="text" class="text_pole" required></label>' : '') + '</div>'),
         POPUP_TYPE.CONFIRM, '', {wide:true,allowVerticalScrolling:true,okButton:t('Save','STMemoryBooks_Save'),
             cancelButton:t('Cancel','STMemoryBooks_Cancel')}));
         const editor = review.dlg.querySelector('.stmb-sloth-side-review');
         editor.value = draft.text;
+        const keywordInput = review.dlg.querySelector('#stmb-sideprompt-keywords');
+        if (keywordInput) {
+            keywordInput.value = draft.keywords.join(', ');
+            const saveButton = review.dlg.querySelector('.popup-button-ok');
+            const validate = () => { saveButton.disabled = !normalizeSlothSideKeywords(keywordInput.value).length; };
+            keywordInput.addEventListener('input',validate);
+            validate();
+        }
         if (await review.show() !== POPUP_RESULT.AFFIRMATIVE || !editor.value.trim()) return { saved: false };
+        const keywords = normalizeSlothSideKeywords(keywordInput?.value);
+        if (keywordInput && !keywords.length) return { saved: false };
         verifyOrigin();
-        const staged = draft.stage(editor.value.trim());
+        const staged = draft.stage(editor.value.trim(),keywords);
         if (scene.ids) await readReviewedChat(ref, scene.ids, fingerprint, fingerprintOptions);
         const storedMemory = await loadServerWorld(roles.memory);
         if (!Object.values(storedMemory.entries).some(entry => entry.uid === scene.entry.uid && stringify(entry) === stringify(scene.entry))) {
@@ -513,11 +527,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId}={}
         checkOrigin();
 
         toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
-        const scenes=[];
-        for(const event of plan.events){
-            scenes.push(await composeSlothScene({event,messages:source,profile,settings,characterContext}));
-            checkOrigin();
-        }
+        const scenes=await composeSlothScenes({events:plan.events,messages:source,profile,settings,
+            characterContext,verifyOrigin:checkOrigin});
         let edits;
         try {
             edits=await proposeSlothNexusEdits({scenes,nexus:originalBooks.nexus,messages:source,

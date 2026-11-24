@@ -31,6 +31,14 @@ test('the model cannot cite invented quotes, other chat IDs or uncertain fragmen
         [{messageId:'10',quote:'I sent the letter to B and received a reply.'}],
     ])assert.throws(()=>validateGroundedNexusEdits([{...change,evidence}],source),/evidence|quote|source/);
 });
+test('a transposed in-range ID can be recovered only from one exact original message',()=>{
+    const literal='I sent the letter to B and received a reply.';
+    const swapped={...change,evidence:quote(14,literal)};
+    assert.deepEqual(validateGroundedNexusEdits([swapped],source)[0].evidence,quote(10,literal));
+    assert.throws(()=>validateGroundedNexusEdits([swapped],[...source,{id:21,mes:literal}]),/missing from original/);
+    assert.throws(()=>validateGroundedNexusEdits([{...swapped,evidence:quote(11,literal)}],source),/missing from original/);
+    assert.throws(()=>validateSlothNexusWindowEvidence({evidence:[{...swapped.evidence[0],meaning:'Someone received a reply.'}]},source),/missing from original/);
+});
 test('current state replacement needs an explicit confirmed supersession and a reason',()=>{
     for(const supersession of [undefined,'mere_absence','assumed_resolution']){
         assert.throws(()=>validateGroundedNexusEdits([{...change,supersession}],source),/superseded/);

@@ -5,6 +5,27 @@ import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 
 export const SLOTH_NO_SIDE_DETAILS = '[[NO_NEW_DETAILS]]';
 
+export function normalizeSlothSideRecall(mode) {
+    return mode === 'vector' || mode === 'keyword' ? mode : 'disabled';
+}
+
+export function getSlothSideRecall(settings, id) {
+    return normalizeSlothSideRecall(settings?.moduleSettings?.slothSideRecallModes?.[id]);
+}
+
+export function normalizeSlothSideKeywords(value) {
+    const unique = new Map();
+    const items = Array.isArray(value) ? value : String(value ?? '').split(/[,\n]/u);
+    for (const item of items) {
+        if (typeof item !== 'string') continue;
+        const text = item.trim();
+        if (!text || text.length > 100 || /[\r\n]/u.test(text)) continue;
+        if (!unique.has(text.toLocaleLowerCase())) unique.set(text.toLocaleLowerCase(), text);
+        if (unique.size === 8) break;
+    }
+    return [...unique.values()];
+}
+
 const LITTLE_THINGS = Object.freeze({
     id: 'sloth-little-things',
     name: 'Little Things',

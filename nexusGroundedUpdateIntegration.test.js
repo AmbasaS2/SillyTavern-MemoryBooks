@@ -79,7 +79,7 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
     assert.match(code,/const checkbox = popup\.dlg\.querySelector\('#stmb-sloth-plan-hide'\)/);
     assert.match(code,/if \(checkbox\)[\s\S]*checkbox\.checked \? getSlothHideRanges/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
-    assert.match(prompt,/validateGroundedNexusEdits\(response.edits,messages\)/);
+    assert.match(prompt,/validateGroundedNexusEdits\(canonicalizeNewNexusTitles\(response.edits\),messages\)/);
     assert.match(prompt,/Deferred source is still visible/);
 });
 test('unverified Nexus changes stop the approved collection before saving books',()=>{

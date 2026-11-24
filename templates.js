@@ -127,6 +127,14 @@ export const settingsTemplate = Handlebars.compile(`
                 {{/if}}
             </select>
         </div>
+        <label for="stmb-sloth-memory-recall" class="stmb-sloth-inline-field">
+          <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory recall</span>
+          <select id="stmb-sloth-memory-recall" class="text_pole">
+            <option value="vector" {{#unless slothMemoryUsesKeywords}}selected{{/unless}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+            <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
+          </select>
+        </label>
+        <small data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The latest 3 collected scenes stay always on. Apply this mode to older collected scenes on the next collection.</small>
         <div data-stmb-prompt-library-slot="summary"></div>
         </details>
         {{/if}}
@@ -146,7 +154,7 @@ export const settingsTemplate = Handlebars.compile(`
         {{/if}}
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Save small details from a scene for reference. These notes stay out of the AI's chat context.</p>
+          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Use the selected prompt to keep an additional record from a saved scene.</p>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}

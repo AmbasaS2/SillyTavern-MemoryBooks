@@ -43,7 +43,7 @@ function recoverLiteralQuote(source, quote) {
     }
     return '';
 }
-function verifyEvidence(items,source,label) {
+function verifyEvidence(items,source,label,{recoverUniqueMessage=false}={}) {
     assert(Array.isArray(items) && items.length>=1 && items.length<=8,
         label+' requires one to eight direct source quotes.');
     return items.map((entry,index)=>{
@@ -51,10 +51,20 @@ function verifyEvidence(items,source,label) {
             typeof entry.quote==='string' && entry.quote===entry.quote.trim() &&
             entry.quote.length>=8 && entry.quote.length<=400,
             label+' evidence '+(index+1)+' needs an exact, short source quote and message ID.');
-        const literal = recoverLiteralQuote(source.get(entry.messageId)?.mes ?? '',entry.quote);
+        let messageId = entry.messageId;
+        let literal = recoverLiteralQuote(source.get(messageId)?.mes ?? '',entry.quote);
+        if (!literal && recoverUniqueMessage && source.has(messageId) && entry.quote.length>=24) {
+            // The original quote itself can prove its location when the model
+            // transposed a message number. Do not search outside this source.
+            const matches = [...source.values()].filter(message=>message.mes.includes(entry.quote));
+            if (matches.length===1) {
+                messageId=matches[0].id;
+                literal=entry.quote;
+            }
+        }
         assert(literal.length>=8 && literal.length<=400,
             label+' cites a quote missing from original message #'+entry.messageId+'.');
-        return {messageId:entry.messageId,quote:literal};
+        return {messageId,quote:literal};
     });
 }
 
@@ -131,7 +141,7 @@ export function validateGroundedNexusEdits(edits, messages) {
     return edits.map((op,index)=>{
         assert(isRecord(op), 'Nexus edit '+index+' is invalid.');
         const label='Nexus edit '+(index+1);
-        const evidence=verifyEvidence(op.evidence,source,label);
+        const evidence=verifyEvidence(op.evidence,source,label,{recoverUniqueMessage:true});
         assert(typeof op.reason==='string' && op.reason.trim().length>=12 &&
             op.reason.length<=600, label+' needs a specific reason backed by chat evidence.');
         if(op.action==='replace_exact' && op.kind==='continuity'){

@@ -11066,6 +11066,7 @@ function buildSlothTemplateData(settings) {
     slothRoleActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
+    slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
@@ -11896,9 +11897,12 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       saveSettingsDebounced();
       return;
     }
-    if (e.target.matches("#stmb-nexus-older-scene-mode")) {
+    if (e.target.matches("#stmb-nexus-older-scene-mode, #stmb-sloth-memory-recall")) {
       settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
-      saveSettingsDebounced();
+      for (const select of popupElement.querySelectorAll('#stmb-nexus-older-scene-mode, #stmb-sloth-memory-recall')) {
+        select.value=settings.moduleSettings.nexusOlderSceneMode;
+      }
+      await saveSettings();
       return;
     }
 

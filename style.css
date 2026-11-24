@@ -1131,6 +1131,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     gap: 4px 10px;
 }
 .popup.stmb-popup .stmb-sloth-inline-field input { width: 5em; max-width: 100%; margin: 0; }
+.popup.stmb-popup :is(#stmb-sloth-memory-recall,#stmb-side-prompt-recall) { width:auto; max-width:100%; margin:0; }
 .popup.stmb-popup .stmb-sloth-advanced-fields select { width: auto; margin: 0; }
 .popup.stmb-popup .stmb-sloth-settings-rule {
     width: 100%; margin: 2px 0; border: 0; border-top: 1px solid var(--stmb-workspace-rule);
