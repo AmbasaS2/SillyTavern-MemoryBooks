@@ -17,7 +17,8 @@ test('approved Hide excludes visible recent turns, deferred turns and previously
     assert.deepEqual(getSlothHideRanges(events,chat,2),[[0,1],[4,4],[6,7]]);
     assert.deepEqual(getSlothHideRanges(events,chat,0),[[0,1],[4,4],[6,8],[10,10]]);
     assert.deepEqual(getSlothHideRanges(events,chat,20),[]);
-    assert.equal(normalizeSlothVisibleTail(''),6);
+    assert.equal(normalizeSlothVisibleTail(''),0);
+    assert.equal(normalizeSlothVisibleTail(6),6);
 });
 
 test('approved Hide keeps the last six collected messages even when a newer event is deferred', () => {
@@ -41,7 +42,7 @@ test('summary presets keep the built-in summary and preserve old instructions on
     settings.moduleSettings.slothSummaryPresetId='a';
     assert.equal(getActiveSlothSummaryPreset(settings).text,'Write short prose.');
     const ai=source('./nexusCollectionAI.js');
-    assert.equal(ai.match(/getActiveSlothSummaryPreset\(settings\)/g)?.length,2);
+    assert.equal(ai.match(/getActiveSlothSummaryPreset\(settings\)/g)?.length,3);
     assert.match(ai,/async function composeSlothScene[\s\S]+?getActiveSlothSummaryPreset\(settings\)/);
 });
 

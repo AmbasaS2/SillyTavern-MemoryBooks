@@ -82,9 +82,10 @@ test('Sloth collection asks for the event plan once before any writing',()=>{
     const template=readFileSync(new URL('./templates.js',import.meta.url),'utf8');
     const source=readFileSync(new URL('./index.js',import.meta.url),'utf8');
     const collection=runtime.slice(runtime.indexOf('export async function runNexusCollector'),runtime.indexOf('function isVisibleSceneMessage'));
-    assert.match(collection,/await planApproval\(plan,initial,[^\n]+[\s\S]*await composeApprovedSlothCollection[\s\S]*await commitSlothBooks/);
+    assert.match(collection,/await planApproval\(plan,initial,[^\n]+[\s\S]*composeApprovedSlothCollection[\s\S]*await commitSlothBooks/);
+    assert.match(collection,/await showSlothRetryPrompt[\s\S]*if \(decision!==POPUP_RESULT.AFFIRMATIVE\) break;[\s\S]*await retryApprovedSlothScenes\(\{events:missingScenes/);
     assert.doesNotMatch(collection,/draftApproval|download/);
-    assert.match(collection,/if \(approval\.hideRanges.length\)[\s\S]*if \(!receiptVerified\)[\s\S]*await hideChatMessageRange/);
+    assert.match(collection,/getSlothHideRanges\(scenes,chat,approval\.keepRecent\)[\s\S]*if \(!receiptVerified\)[\s\S]*await hideChatMessageRange/);
     assert.match(template,/id="stmb-sloth-tab" role="tab" aria-selected="true"/);
     assert.match(template,/id="stmb-original-panel"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(source,/getSceneData\(\{[^}]*warnOnHiddenMessages: false/);

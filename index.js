@@ -76,7 +76,6 @@ import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCo
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
-import { prepareSlothJevRecall, requestSlothJevRecall, applySlothJevRecall } from './slothJevRecall.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
   initializePendingProgress, progressChatLoaded, captureProgressSource, buildProgressOrigin,
@@ -657,9 +656,9 @@ const defaultSettings = {
     slothConnectionProfileId: "",
     slothProfileName: "",
     slothCollectionPrompt: "",
+    slothSummaryReview: false,
     slothLinkedBooksOnly: true,
     slothComposerEnabled: true,
-    slothJevRecallEnabled: false,
     ...SLOTH_AUTOMATIC_DEFAULTS,
     slothHideRecent: DEFAULT_SLOTH_VISIBLE_TAIL,
     autoSummaryInterval: 50,
@@ -11081,12 +11080,12 @@ function buildSlothTemplateData(settings) {
     slothRoleActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
-    slothMemoryUsesKeywords: !settings.moduleSettings.slothJevRecallEnabled && settings.moduleSettings.nexusOlderSceneMode === 'keyword',
-    slothMemoryUsesVector: !settings.moduleSettings.slothJevRecallEnabled && settings.moduleSettings.nexusOlderSceneMode !== 'keyword',
-    slothMemoryUsesJev: settings.moduleSettings.slothJevRecallEnabled === true,
+    slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
+    slothMemoryUsesVector: settings.moduleSettings.nexusOlderSceneMode !== 'keyword',
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
+    slothSummaryReview: settings.moduleSettings.slothSummaryReview === true,
     slothComposerIcon: slothComposerIcons.find(icon => icon.selected),
     slothComposerIcons,
     slothComposerSizes: SLOTH_COMPOSER_SIZES.map(size => ({size,selected:size===slothComposerSize})),
@@ -11919,6 +11918,11 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       await saveSettings();
       return;
     }
+    if (e.target.matches('#stmb-sloth-summary-review')) {
+      settings.moduleSettings.slothSummaryReview = e.target.checked;
+      await saveSettings();
+      return;
+    }
 
     if (e.target.matches("#stmb-sloth-chat-override")) {
       const sloth = getActiveNexusRoleContext(settings);
@@ -11994,18 +11998,11 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
     if (e.target.matches("#stmb-nexus-older-scene-mode, #stmb-sloth-memory-recall")) {
-      const slothSelect = e.target.id === 'stmb-sloth-memory-recall';
-      const jev = slothSelect && e.target.value === 'jev';
-      if (slothSelect) settings.moduleSettings.slothJevRecallEnabled = jev;
-      if (!jev) settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
+      settings.moduleSettings.nexusOlderSceneMode = e.target.value === "keyword" ? "keyword" : "vector";
       const original = popupElement.querySelector('#stmb-nexus-older-scene-mode');
       const sloth = popupElement.querySelector('#stmb-sloth-memory-recall');
-      const jevHelp = popupElement.querySelector('#stmb-sloth-jev-help');
-      const nativeHelp = popupElement.querySelector('#stmb-sloth-native-recall-help');
       if (original) original.value = settings.moduleSettings.nexusOlderSceneMode;
-      if (sloth) sloth.value = settings.moduleSettings.slothJevRecallEnabled ? 'jev' : settings.moduleSettings.nexusOlderSceneMode;
-      if (jevHelp) jevHelp.hidden = settings.moduleSettings.slothJevRecallEnabled !== true;
-      if (nativeHelp) nativeHelp.hidden = settings.moduleSettings.slothJevRecallEnabled === true;
+      if (sloth) sloth.value = settings.moduleSettings.nexusOlderSceneMode;
       await saveSettings();
       return;
     }
@@ -14070,9 +14067,8 @@ function setupEventListeners() {
   eventSource.on(event_types.GENERATION_STARTED, (type, options, dryRun) => {
     isDryRun = dryRun || false;
     clearTimeout(slothAutoTimer);
-    slothGeneration?.controller.abort();
     slothGeneration = !dryRun && ['normal','continue','regenerate','swipe'].includes(type) ? {
-      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal', controller:new AbortController(),
+      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal',
     } : null;
     // Clear any prior persistent failure toast and error when a new generation starts
     try {
@@ -14105,7 +14101,6 @@ function setupEventListeners() {
   };
   eventSource.on(event_types.GENERATION_ENDED, () => {
     const completed = slothGeneration;
-    completed?.controller.abort();
     slothGeneration = null;
     const last = chat.at(-1);
     const settings = extension_settings.STMemoryBooks;
@@ -14126,39 +14121,18 @@ function setupEventListeners() {
   });
   eventSource.on(event_types.GENERATION_STOPPED, () => {
     clearTimeout(slothAutoTimer);
-    slothGeneration?.controller.abort();
     slothGeneration = null;
     narratorResponseGeneration.clear();
     clearGenerationLorebookSnapshots();
   });
 
-  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, async lists => {
+  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, lists => {
     const ref = getCurrentStmbChatRef();
     const settings = extension_settings.STMemoryBooks;
     const chatKey = getStmbChatKey(ref);
     scopeNexusWorldInfo(lists, {
       settings, ref, chatKey, avatar: ref?.avatarUrl,
     });
-    const run = slothGeneration;
-    if (settings?.moduleSettings?.slothJevRecallEnabled !== true || !run || run.key !== chatKey || ref?.type !== 'character') return;
-    const memory = getNexusRoleResolutionForChatRef('memory',ref,settings);
-    if (memory.state !== 'ready') return;
-    const prepared = prepareSlothJevRecall(lists,memory.name,chat);
-    if (!prepared) return;
-    const signature = JSON.stringify(prepared.body);
-    if (run.recallSignature !== signature) {
-      run.recallSignature = signature;
-      const signal = AbortSignal.any([run.controller.signal,AbortSignal.timeout(12000)]);
-      run.recall = requestSlothJevRecall(prepared,getRequestHeaders(),{signal}).catch(error => {
-        if (!run.controller.signal.aborted) console.warn('Sloth Jev recall fell back to World Info:',error);
-        return null;
-      });
-    }
-    const chosen = await run.recall;
-    if (chosen && run === slothGeneration && run.key === getStmbChatKey() && run.recallSignature === signature &&
-        extension_settings.STMemoryBooks?.moduleSettings?.slothJevRecallEnabled === true) {
-      applySlothJevRecall(lists,memory.name,chosen);
-    }
   });
   eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED, async ({ globalLore, characterLore, chatLore, personaLore }) => {
     const arrays = [globalLore, characterLore, chatLore, personaLore].filter(Array.isArray);

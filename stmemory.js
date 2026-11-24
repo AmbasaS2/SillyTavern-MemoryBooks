@@ -355,7 +355,7 @@ function getChatCompletionServiceOrNull() {
     return null;
 }
 
-async function sendViaChatCompletionService(body, signal, presetName = '', connection = null) {
+async function sendViaChatCompletionService(body, signal, presetName = '', connection = null, singleAttempt = false) {
     const service = connection ? null : getChatCompletionServiceOrNull();
     if (!connection && !service) {
         return {
@@ -422,7 +422,7 @@ async function sendViaChatCompletionService(body, signal, presetName = '', conne
         if (signal?.aborted) {
             throw error;
         }
-        if (connectionRequest) {
+        if (connectionRequest || singleAttempt) {
             // A direct retry would discard the connection profile's key,
             // routing and preset, and can compound a provider rate limit.
             // ST wraps connection-profile provider failures in a generic error.
@@ -457,6 +457,7 @@ async function sendViaChatCompletionService(body, signal, presetName = '', conne
 *@param {Object|null} [opts.jsonSchema] - Optional SillyTavern structured-output schema*
 *@param {boolean} [opts.useChatCompletionService=false] - Whether to use SillyTavern's ChatCompletionService for non-manual requests*
 *@param {string} [opts.chatCompletionPreset=''] - Optional SillyTavern chat completion preset to apply through ChatCompletionService.processRequest*
+*@param {boolean} [opts.singleAttempt=false] - Do not fall back to a direct request after a service call fails*
 *@returns {Promise<{text: string, full: object}>}*
 */
 export async function sendRawCompletionRequest({
@@ -474,6 +475,7 @@ export async function sendRawCompletionRequest({
     jsonSchema = null,
     useChatCompletionService = false,
     chatCompletionPreset = '',
+    singleAttempt = false,
 }) {
     let url = getCurrentCompletionEndpoint();
     let headers = getRequestHeaders();
@@ -639,7 +641,7 @@ export async function sendRawCompletionRequest({
     let chatCompletionServiceError = null;
     if (api !== 'full-manual' && (useChatCompletionService || stConnectionProfileId)) {
         const routedFallbackBody = applyOpenRouterRoutingSettings(body, oai_settings);
-        const serviceAttempt = await sendViaChatCompletionService(body, signal, chatCompletionPreset, connection);
+        const serviceAttempt = await sendViaChatCompletionService(body, signal, chatCompletionPreset, connection, singleAttempt);
         if (serviceAttempt.result) {
             return serviceAttempt.result;
         }
@@ -706,6 +708,7 @@ export async function requestCompletion({
     jsonSchema = null,
     useChatCompletionService = false,
     chatCompletionPreset = '',
+    singleAttempt = false,
 }) {
     // Delegate all provider-specific shaping to sendRawCompletionRequest which already
     // handles: full-manual, custom (custom_model_id  oai_settings.custom_url), and normal providers.
@@ -724,6 +727,7 @@ export async function requestCompletion({
         jsonSchema,
         useChatCompletionService,
         chatCompletionPreset,
+        singleAttempt,
     });
 }
 

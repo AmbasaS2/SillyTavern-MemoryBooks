@@ -83,7 +83,7 @@ const writingRulesStart = SLOTH_SCENE_PROMPT_V13.indexOf('# What to preserve');
 export const SLOTH_SCENE_OUTPUT_CONTRACT = SLOTH_SCENE_PROMPT_V13.slice(outputContractStart, writingRulesStart).trim();
 export const SLOTH_DEFAULT_SUMMARY_PROMPT = [
     "# What to preserve",
-    "Write one self-contained scene memory in connected past-tense prose. Keep the chain from cause through actions to the shown consequence, plus distinctive voice and concrete recall cues. Compress scenery, routine logistics, repeated reactions and long exchanges before cutting facts. Follow the per-memory output budget and go shorter for a simple event.",
+    "Write one self-contained scene memory in connected past-tense prose. Follow the cause, actions, turning point and observed outcome in order. Give the event the space its consequences need. Keep distinctive voice and concrete recall cues. Condense scenery, routine logistics, repeated reactions and long exchanges before cutting consequential facts.",
     "Timeline. Use directly narrated story dates, including an earlier date in the first selected message; dates merely remembered or reported do not extend it. Use Unknown when unsupported. Use names established by narration or dialogue. Use a role such as “the hostess” if only a private note, <Inner_Info> or status box gives the name. Apply this in Scene, Result and keywords. Keep private thoughts separate from what other characters learned.",
     "Agency and knowledge. Keep proposer, accepter, chooser and executor distinct. Name the chosen route, method, owner or object when it explains the outcome. Keep direct experience, private thought, hearsay and inference separate. Preserve each named link in a consequential report: “A told B that C had heard the news from D.” Retain original names or a consistent transliteration.",
     "Commitments and relationship. Retain each material promise, request, refusal, boundary, precondition, counterterm, limited offer or chooser-owned exception with its actor, addressee and actual response. Keep proposed, permitted, accepted, committed and enacted distinct. A promise remains open until the source shows it done. Attribute an onlooker's opinion to the onlooker. Keep characteristic voice with one to three short, exact English quotes, focusing on a joke, decision or final words. Paraphrase longer exchanges and attribute translated dialogue accurately.",
@@ -91,7 +91,7 @@ export const SLOTH_DEFAULT_SUMMARY_PROMPT = [
     "Result. One past-tense sentence stating who did, said, decided or disclosed the defining completed thing. For a difficult exchange, “A apologized and B took A's hand” records the outcome; “they resolved the hurt” requires explicit evidence from both. Use the concrete steps when a character's response was unspoken, indirect or absent. Leave open concerns in Scene.",
 ].join("\n\n");
 
-function validateSlothSceneBody(response) {
+function validateSlothSceneBody(response, enforceWordLimit) {
     const keys = Object.keys(response);
     const parts = typeof response.content === 'string' && response.content.trim().match(
         /^\*\*Timeline\*\*:\s*([^\n]+)\r?\n\s*\*\*Scene\*\*\s*\r?\n([\s\S]+?)\r?\n\s*\*\*Result\*\*\s*\r?\n([^\n]+)$/,
@@ -100,7 +100,7 @@ function validateSlothSceneBody(response) {
         !parts || !parts[2].trim() || !parts[3].trim()) {
         throw new Error('Scene must include title, Timeline, Scene and Result in the reviewed output format.');
     }
-    if (parts[2].trim().split(/\s+/u).length > 650) {
+    if (enforceWordLimit && parts[2].trim().split(/\s+/u).length > 650) {
         const error = new Error('Scene exceeds the original 650-word limit. Nothing saved.');
         error.code = 'STMB_SLOTH_SCENE_TOO_LONG';
         throw error;
@@ -108,8 +108,8 @@ function validateSlothSceneBody(response) {
     return response.content.trim();
 }
 
-export function validateSlothSceneResponse(response, fallbackKeyword = '') {
-    const content = validateSlothSceneBody(response);
+export function validateSlothSceneResponse(response, fallbackKeyword = '', { enforceWordLimit = true } = {}) {
+    const content = validateSlothSceneBody(response, enforceWordLimit);
     const keywords = new Map();
     for (const candidate of Array.isArray(response.keywords) ? response.keywords : []) {
         if (typeof candidate !== 'string') continue;

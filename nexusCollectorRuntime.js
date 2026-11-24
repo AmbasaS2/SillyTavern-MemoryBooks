@@ -3,7 +3,7 @@
 //
 // Analyze the chat, confirm the collection plan, then stage and save its results.
 
-import { chat, getMaxContextSize, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
+import { chat, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { hideChatMessageRange } from '../../../chats.js';
 import { extension_settings } from '../../../extensions.js';
@@ -18,7 +18,7 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
     getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges } from './nexusCollectionPolicy.js';
-import { analyzeSlothEvents, composeSlothScene, composeApprovedSlothCollection, InvalidSlothNexusProposal,
+import { analyzeSlothEvents, composeSlothScene, composeApprovedSlothCollection, retryApprovedSlothScenes,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
@@ -36,6 +36,7 @@ import { getSlothSidePresets, getSlothSideRecall, normalizeSlothSideKeywords } f
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 import { automaticCollectionDue, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
+import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -346,11 +347,13 @@ export async function runNexusSidePromptFollowup({ profileIndex, stConnectionPro
     }
 }
 
-async function planApproval(plan,initial,keepRecent) {
+async function planApproval(plan,initial,keepRecent,remaining) {
     const collectedIds = plan.events.flatMap(event => event.messageIds).sort((a, b) => a - b);
     const collectedRanges = readableSegments(slothSourceRanges(collectedIds));
-    const analyzedRange = readableSegments([[plan.start, plan.end]]);
-    const pending=plan.deferred.reduce((count,item)=>count+item.messageIds.length,0);
+    const analyzedRange = readableSegments(slothSourceRanges(plan.sourceIds));
+    const pending=plan.deferred.flatMap(item=>item.messageIds).sort((a,b)=>a-b);
+    const later=readableSegments(slothSourceRanges(remaining.map(message=>message.id)));
+    const noCompletedInChunk=remaining.length>0 && !plan.events.length;
     const eventCount=t('{{count}} events','STMemoryBooks_SlothPlanEvents').replace('{{count}}',String(plan.events.length));
     const rows=plan.events.map(item=>'<li><strong>'+html(item.title)+'</strong><small> #'+
         html(readableSegments(item.segments))+'</small></li>').join('');
@@ -359,20 +362,26 @@ async function planApproval(plan,initial,keepRecent) {
         '<dt>'+html(t('Analyzed range','STMemoryBooks_SlothPlanAnalyzed'))+'</dt><dd>#'+html(analyzedRange)+'</dd>'+
         '<dt>Memory</dt><dd>'+html(eventCount)+
         (collectedRanges?' · #'+html(collectedRanges):'')+'</dd>'+
-        '<dt>Nexus</dt><dd>'+html(t('Review through message','STMemoryBooks_SlothPlanNexusThrough'))+' #'+html(plan.end)+'</dd>'+
-        (pending?'<dt>'+html(t('Held for later','STMemoryBooks_SlothPlanPending'))+'</dt><dd>'+html(pending)+'</dd>':'')+
-        '</dl>'+(rows?'<ol class="stmb-sloth-plan-list">'+rows+'</ol>':'')+
+        (!noCompletedInChunk?'<dt>Nexus</dt><dd>'+html(remaining.length ?
+            t('Durable changes through message','STMemoryBooks_SlothPlanDurableNexus') :
+            t('Review through message','STMemoryBooks_SlothPlanNexusThrough'))+' #'+html(plan.end)+'</dd>':'')+
+        (pending.length?'<dt>'+html(t('Held for later','STMemoryBooks_SlothPlanPending'))+'</dt><dd>#'+
+            html(readableSegments(slothSourceRanges(pending)))+'</dd>':'')+
+        (later?'<dt>'+html(t('To read next time','STMemoryBooks_SlothPlanRemaining'))+'</dt><dd>#'+html(later)+'</dd>':'')+
+        '</dl>'+(noCompletedInChunk?'<p>'+html(t('There are no completed events or Nexus changes to save.',
+            'STMemoryBooks_SlothNoCompleted'))+'</p>':'')+(rows?'<ol class="stmb-sloth-plan-list">'+rows+'</ol>':'')+
         (rows?'<div class="stmb-sloth-plan-hide"><label class="checkbox_label"><input id="stmb-sloth-plan-hide" type="checkbox"> '+
             html(t('Hide saved chat messages after collection','STMemoryBooks_SlothHideAfter'))+'</label>'+
             '<label class="stmb-sloth-inline-field" for="stmb-sloth-plan-keep">'+
             html(t('Recent collected messages to keep visible','STMemoryBooks_SlothHideRecent'))+
             '<input id="stmb-sloth-plan-keep" class="text_pole" type="number" min="0" max="9999" value="'+html(keepRecent)+'"></label>'+
             '<small id="stmb-sloth-plan-hide-summary" aria-live="polite"></small></div>':'')+
-        (initial?'<p>'+html(t('New Nexus and Memory lorebooks will be connected to this character.',
+        (initial&&!noCompletedInChunk?'<p>'+html(t('New Nexus and Memory lorebooks will be connected to this character.',
             'STMemoryBooks_SlothFirstBooksReview'))+'</p>':'')+'</div>';
-    const popup=new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+    const popup=new Popup(DOMPurify.sanitize(body),noCompletedInChunk?POPUP_TYPE.TEXT:POPUP_TYPE.CONFIRM,'',{
         wide:true,allowVerticalScrolling:true,
-        okButton:plan.events.length?t('Collect memories','STMemoryBooks_SlothApprovePlan'):
+        okButton:noCompletedInChunk?t('Close','STMemoryBooks_Close'):
+            plan.events.length?t('Collect memories','STMemoryBooks_SlothApprovePlan'):
             t('Update Nexus','STMemoryBooks_SlothNexusOnlyReview'),
         cancelButton:t('Cancel','STMemoryBooks_Cancel'),
     });
@@ -392,7 +401,24 @@ async function planApproval(plan,initial,keepRecent) {
         keep.addEventListener('input',update);
         update();
     }
-    return await popup.show()===POPUP_RESULT.AFFIRMATIVE ? {hideRanges} : null;
+    const approved=await popup.show();
+    return !noCompletedInChunk && approved===POPUP_RESULT.AFFIRMATIVE ? {hideRanges,keepRecent:keep?.value ?? keepRecent} : null;
+}
+
+async function showSlothRetryPrompt(missingScenes, hasSavableDraft) {
+    const rows = missingScenes.map(event=>'<li><strong>'+html(event.title)+'</strong><small> #'+
+        html(readableSegments(event.segments))+'</small></li>').join('');
+    const body = '<div class="stmb-sloth-review"><h3 id="stmb-sloth-retry-title">'+
+        html(t('Retry these memories?','STMemoryBooks_SlothRetryTitle'))+'</h3><p>'+
+        html(t('The AI did not finish these memories. Retrying uses one more AI request.',
+            'STMemoryBooks_SlothRetryHelp'))+'</p><ul class="stmb-sloth-plan-list">'+rows+'</ul></div>';
+    const popup = markStmbPopup(new Popup(DOMPurify.sanitize(body),POPUP_TYPE.CONFIRM,'',{
+        wide:true,allowVerticalScrolling:true,defaultResult:POPUP_RESULT.NEGATIVE,
+        okButton:t('Retry collection','STMemoryBooks_SlothRetryButton'),
+        cancelButton:hasSavableDraft ? t('Save completed work only','STMemoryBooks_SlothRetrySaveCompleted') :
+            t('Close','STMemoryBooks_Close'),
+    }));
+    return await popup.show();
 }
 
 async function loadServerWorld(name) {
@@ -429,7 +455,7 @@ async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions,
     return stored[0].chat_metadata.STMemoryBooks?.slothCollection;
 }
 
-async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint) {
+async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow) {
     const savedRanges=[...(prior.savedRanges||[])];
     for(const event of events)for(const range of event.segments)savedRanges.push([...range]);
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
@@ -440,7 +466,13 @@ async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, f
         if (stringify(markers.slothCollection) !== stringify(previous)) {
             throw new Error('The saved collection receipt changed during review.');
         }
-        return { ...markers, slothCollection: receipt };
+        const next={...markers,slothCollection:receipt};
+        // After a successful partial collection, leave the unread tail eligible
+        // for the next automatic interval. Failed attempts keep their throttle.
+        if (autoWindow && stringify(markers.slothAutomatic)===stringify(autoWindow.attempt)) {
+            next.slothAutomatic={...autoWindow.attempt,through:autoWindow.through};
+        }
+        return next;
     });
     if (stringify(await readReviewedChat(ref, sourceIds, fingerprint)) !== stringify(receipt)) {
         throw new Error('The collection receipt did not persist in the original chat.');
@@ -474,6 +506,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const settings=extension_settings.STMemoryBooks;
         const ref=structuredClone(getCurrentStmbChatRef());
         const automatic=automaticChatKey ? getSlothAutomaticSettings(settings) : null;
+        const reviewSummaries=settings.moduleSettings?.slothSummaryReview===true;
         if (automatic && (!automatic.enabled || getStmbChatKey(ref)!==automaticChatKey || ref?.type!=='character'))
             return {saved:false,reason:'inactive-chat'};
         if(ref.type!=='character')throw new Error('Sloth collection currently supports individual character chats only.');
@@ -539,16 +572,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             await listNexusSetupBooks(ref.avatarUrl);
         }
         checkOrigin();
-        if (characterContext.length > 16000) {
-            const contextLimit = getMaxContextSize();
-            const outputLimit = Number(settings.moduleSettings?.maxTokens) || 0;
-            const characterTokens = await getTokenCountAsync(characterContext);
-            checkOrigin();
-            if (!Number.isFinite(contextLimit) || !Number.isFinite(characterTokens) ||
-                characterTokens + outputLimit + 2048 >= contextLimit) {
-                throw new Error('The character card cannot fit with the selected context and completion settings. No content was truncated.');
-            }
-        }
+        const [currentChunk,...laterChunks]=await splitSlothCollectionSource(source,getTokenCountAsync);
+        checkOrigin();
+        const partialSource=laterChunks.length>0;
+        const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames} : null;
+        const autoWindow=autoAttempt && partialSource ? {attempt:autoAttempt,through:currentChunk.at(-1).id} : null;
         if (automatic) {
             if (pending.length !== source.length && !await thresholdMet(source))
                 return {saved:false,reason:'below-threshold'};
@@ -557,32 +585,71 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 checkOrigin();
                 if (stringify(markers.slothAutomatic)!==stringify(previousAuto))
                     throw new Error('Automatic collection already advanced for this chat.');
-                return {...markers,slothAutomatic:{chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames}};
+                return {...markers,slothAutomatic:autoAttempt};
             });
         } else {
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
-        const plan=await analyzeSlothEvents({messages:source,profile,settings,characterContext});
+        const plan=await analyzeSlothEvents({messages:currentChunk,profile,settings,characterContext});
         checkOrigin();
         if (automatic && !plan.events.length) return {saved:false,reason:'no-completed-events'};
         const approval=automatic ? {hideRanges:[]} :
-            await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent));
+            await planApproval(plan,initial,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent),laterChunks.flat());
         if(!approval)return {saved:false,reason:'plan-cancelled'};
         checkOrigin();
 
         if (!automatic) toastr.info(t('Writing approved Scenes and Nexus changes...','STMemoryBooks_SlothComposing'),'STMemoryBooks');
-        let collection;
+        const requestDraft=review=>composeApprovedSlothCollection({nexus:originalBooks.nexus,messages:currentChunk,
+            plan,profile,settings,initial,characterContext,partialSource,reviewSummaries:review,verifyOrigin:checkOrigin});
+        let collection={scenes:[],edits:[],skippedNexusEdits:0,reviewFailed:false};
+        let incompleteError;
         try {
-            collection=await composeApprovedSlothCollection({nexus:originalBooks.nexus,messages:source,
-                plan,profile,settings,initial,characterContext,verifyOrigin:checkOrigin});
+            collection=await requestDraft(reviewSummaries);
         } catch(error) {
-            if(!(error instanceof InvalidSlothNexusProposal))throw error;
-            throw new Error(t('The Nexus changes could not be verified. No memories were saved.',
-                'STMemoryBooks_SlothCollectionInvalidNexus'),{cause:error});
+            if(error.code!=='STMB_SLOTH_MALFORMED_JSON')throw error;
+            incompleteError=error;
         }
         checkOrigin();
-        const {scenes,edits}=collection;
+        const drafts=new Map(collection.scenes.map(scene=>[scene.id,scene]));
+        let missingScenes=plan.events.filter(event=>!drafts.has(event.id));
+        while (!automatic && missingScenes.length) {
+            const decision=await showSlothRetryPrompt(missingScenes,drafts.size>0 || collection.edits.length>0);
+            if (decision===POPUP_RESULT.CANCELLED) return {saved:false,reason:'retry-cancelled'};
+            checkOrigin();
+            if (decision!==POPUP_RESULT.AFFIRMATIVE) break;
+            toastr.info(t('Retrying the incomplete memories…','STMemoryBooks_SlothRetrying'),'STMemoryBooks');
+            try {
+                let recovered;
+                if (incompleteError) {
+                    collection=await requestDraft(false);
+                    incompleteError=undefined;
+                    recovered=collection.scenes;
+                } else {
+                    recovered=await retryApprovedSlothScenes({events:missingScenes,messages:currentChunk,profile,settings,characterContext});
+                }
+                for (const scene of recovered) drafts.set(scene.id,scene);
+            } catch (error) {
+                console.warn('Requested memory retry did not complete.',error);
+            }
+            checkOrigin();
+            missingScenes=plan.events.filter(event=>!drafts.has(event.id));
+        }
+        if (incompleteError) throw new Error(t('The AI returned an incomplete or unreadable response. No memories were saved.',
+            'STMemoryBooks_SlothCollectionIncomplete'),{cause:incompleteError});
+        const scenes=plan.events.map(event=>drafts.get(event.id)).filter(Boolean);
+        const {edits,skippedNexusEdits,reviewFailed}=collection;
+        const skippedScenes=missingScenes.length;
+        const showSkipped=()=>{
+            if (automatic) return;
+            if (skippedScenes) toastr.warning(t('{{count}} planned memories were incomplete and were skipped.',
+                'STMemoryBooks_SlothCollectionSkippedScenes').replace('{{count}}',String(skippedScenes)),'STMemoryBooks');
+            if (skippedNexusEdits) toastr.warning(t('Skipped {{count}} Nexus changes that could not be verified.',
+                'STMemoryBooks_SlothCollectionSkippedNexus').replace('{{count}}',String(skippedNexusEdits)),'STMemoryBooks');
+            if (reviewFailed) toastr.warning(t('Summary review failed. The original drafts were kept.',
+                'STMemoryBooks_SlothSummaryReviewFailed'),'STMemoryBooks');
+        };
         if(!scenes.length&&!edits.length){
+            showSkipped();
             if (!automatic) toastr.info(t('There are no completed events or Nexus changes to save.',
                 'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
             return {saved:false,reason:'no-complete-events-or-deltas'};
@@ -625,24 +692,25 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         let receiptVerified=false;
         if(scenes.length){
             try {
-                await updateCollectedLedger(prior,plan.events,ref,roleNames,sourceIds,fingerprint);
+                await updateCollectedLedger(prior,scenes,ref,roleNames,sourceIds,fingerprint,autoWindow);
                 receiptVerified=true;
             } catch (error) {
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
-        if (approval.hideRanges.length) {
+        const hideRanges = approval.hideRanges.length ? getSlothHideRanges(scenes,chat,approval.keepRecent) : [];
+        if (hideRanges.length) {
             try {
                 if (!receiptVerified) throw new Error('The stored collection receipt could not be verified.');
                 let remaining = [...sourceIds];
                 assertOrigin(ref,roleNames,remaining,fingerprint);
-                for (const [start,end] of approval.hideRanges) {
+                for (const [start,end] of hideRanges) {
                     const expected = fingerprintSlothChat(chat,remaining.filter(id=>id<start||id>end));
                     await hideChatMessageRange(start,end,false);
                     remaining = remaining.filter(id=>id<start||id>end);
                     assertOrigin(ref,roleNames,remaining,expected);
                 }
-                await readReviewedChat(ref,sourceIds,fingerprint,{allowHidden:true},approval.hideRanges);
+                await readReviewedChat(ref,sourceIds,fingerprint,{allowHidden:true},hideRanges);
             } catch (error) {
                 console.warn('Memory saved; Sloth Hide stopped.',error);
                 toastr.warning(t('The memories are saved. Check which messages were hidden before trying again.',
@@ -658,7 +726,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             :scenes.length?t('Completed events saved to Memory.','STMemoryBooks_SlothSceneOnlySaved')
                 :t('Nexus updated.','STMemoryBooks_SlothNexusOnlySaved');
         if (!automatic) toastr.success(message,'STMemoryBooks');
-        return {saved:true,scenes:scenes.length,nexusEdits:edits.length,receiptVerified,result:outcome};
+        showSkipped();
+        return {saved:true,scenes:scenes.length,nexusEdits:edits.length,skippedScenes,skippedNexusEdits,receiptVerified,result:outcome};
     }finally{
         collectorBusy=false;
     }

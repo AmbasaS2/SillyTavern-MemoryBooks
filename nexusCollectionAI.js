@@ -7,7 +7,10 @@ import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
 import { oai_settings } from '../../../openai.js';
 import { getMaxContextSize } from '../../../../script.js';
 import { getTokenCountAsync } from '../../../tokenizers.js';
-import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, stageNexusEdits,
+import { getContext } from '../../../extensions.js';
+import { getSelectedConnectionProfile } from './connectionProfileRequest.js';
+import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
+import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, includeDeepSeekTailEvent, fitDeepSeekSceneBatch, stageNexusEdits,
     describeNexusCollectionEntry, npcNexusSubjectIsGrounded } from './nexusCollectionPolicy.js';
 import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
@@ -17,12 +20,6 @@ import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexus
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
 import { getCompressibleScene, getSlothCompressionInstructions, stageSlothSceneCompression } from './nexusSceneCompression.js';
 
-export class InvalidSlothNexusProposal extends Error {
-    constructor(cause) {
-        super(cause.message, {cause});
-    }
-}
-
 function canonicalizeNewNexusTitles(edits) {
     return edits.map(edit=>{
         if (edit?.action !== 'create' || typeof edit.title !== 'string') return edit;
@@ -30,6 +27,14 @@ function canonicalizeNewNexusTitles(edits) {
             edit.kind === 'core' && /^Core Memory\s*[:–—-]/iu.test(edit.title) ? 'Core Memory' : '';
         return title ? {...edit,title} : edit;
     });
+}
+
+function stripRepeatedContinuityHeading(edit) {
+    if (edit?.kind !== 'continuity' || edit.action !== 'append_section' ||
+        typeof edit.section !== 'string' || typeof edit.text !== 'string') return edit;
+    const text=edit.text.trimStart();
+    const heading=text.match(/^#{1,6}[ \t]+([^\r\n]+)\r?\n/u);
+    return heading?.[1].trim() === edit.section.trim() ? {...edit,text:text.slice(heading[0].length)} : edit;
 }
 
 function parseStrictJSON(raw,phase) {
@@ -60,7 +65,7 @@ function resolveConnection(profile) {
         useChatCompletionService:!!profile?.useChatCompletionService && conn.api!=='full-manual',
         chatCompletionPreset:String(profile?.chatCompletionPreset||'').trim()};
 }
-function requester(profile,settings,signal) {
+function requester(profile,settings,signal,singleAttempt=false) {
     const connection=resolveConnection(profile);
     const extra={},max=Number.parseInt(settings?.moduleSettings?.maxTokens,10);
     if(Number.isFinite(max)&&max>0)extra.max_tokens=max;
@@ -69,16 +74,17 @@ function requester(profile,settings,signal) {
         const { nanogpt_provider, nanogpt_payg_override, reasoning_effort } = oai_settings;
         Object.assign(extra, { nanogpt_provider, nanogpt_payg_override, reasoning_effort });
     }
-    return async (prompt,phase)=>{
+    return async (prompt,phase,parse=parseStrictJSON)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
-        const {text,full}=await requestCompletion({...connection,prompt,extra,signal});
+        const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt});
         if(signal?.aborted)throw new Error('Collection cancelled.');
         if(full?.error)throw new Error(phase+': the selected provider returned an error instead of a draft.',{cause:full.error});
-        return parseStrictJSON(text,phase);
+        return parse(text,phase);
     };
 }
-const compact=messages=>JSON.stringify(messages.map(m=>({id:m.id,name:m.name,
-    mes:m.mes,is_user:!!m.is_user,send_date:m.send_date})));
+const originalMessages=messages=>messages.map(m=>({id:m.id,name:m.name,
+    mes:m.mes,is_user:!!m.is_user,send_date:m.send_date}));
+const compact=messages=>JSON.stringify(originalMessages(messages));
 const SCENE_KEYWORD_GUIDANCE = 'Include up to five distinct, short recall keywords. Prefer specific names, objects, actions or quoted phrases that might recur in dialogue. Avoid full sentences.';
 async function requestValidatedDraft(prompt, phase, ask, validate, correction, fallback) {
     let received = false;
@@ -174,21 +180,18 @@ async function evidenceFor(messages,ask,prefix,settings,profile,forceWindows=fal
 const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
     plan:[
         'Roleplay Memory Books event planner. STRICT JSON only.',
-        'Use the fewest complete, independently useful scenes that preserve the story. One Scene can span several locations, activities or separated source ranges. A Scene is a whole incident with a durable consequence future play might rely on.',
-        'Group preparation, transit, arrival, introductions and routine steps with the event they enable. A new task, successful intermediate step, joke, moment of relief, change of room or handoff is insufficient to end a memory. Recallable dialogue, promises, habits, objects and actions can live inside the larger memory.',
-        'For each proposed cut, ask what independently completed, lasting change each side records. Keep the cut only if both sides have distinct initiating situations and consequential outcomes, and a future recall would use either without needing the other to explain its cause or significance. If the distinction is merely a new activity in the same incident or the later material answers, escalates or pays off the earlier material, omit the cut.',
-        'Keep one continuous disagreement and its attempts at repair, explanation, and final answer together. A pause, location change, apology, new speaker, or later reveal that answers that same exchange does not create a separate memory. Preserve the separate facts within that memory. Do not mark hurt forgiven unless the affected person explicitly shows it.',
-        'Example only: getting ready, travelling, meeting the host and learning what the surprise outing was for can be one memory. A disagreement during the outing, its escalation, and a candid answer after leaving the activity can be another. A separate, consequential bargain with a third person during the same outing can be its own memory. Use only the actual source for your plan.',
-        'In each reason, name the consequence that makes this a distinct complete memory. Keep consequential separate facts within a shared incident and keep genuinely unrelated incidents separate, even if they happen in one location. Never split by message count, time, location, token count or evidence window.',
-        'Window records are partial evidence, not candidate Scenes to copy. If an early problem and a later action resolve the same goal, join the setup, attempts and resolution into one event. Trust an exact quote over a conflicting paraphrase in a window record.',
-        'When a window contains originalMessages, those are complete original turns. Use them directly alongside the compact evidence from other windows.',
-        'Never mark a future, uncertain, or ongoing outcome as completed.',
-        'Put open or uncertain material in deferred only. Every item in events has complete: true and a distinct, observed ending.',
-        'Plan at whole-message granularity. Give each message exactly one owner. When a turn closes one event and mentions another, give the turn to the event whose observable action it primarily carries. Describe the unfinished mention as pending, never as another owner of the same ID. Separate events only if each has its own supported closure.',
-        'Every visible original message must appear exactly once across events and deferred. Assign ordinary dialogue and IDs absent from the condensed evidence to a related event when supported, or defer them as context. Check for gaps and duplicate IDs.',
+        'Read the whole source before assigning messages. Silently describe each major incident in a single causal sentence: what set it in motion, and what changed by the end? Outline the fewest complete memories that preserve the consequential outcomes. Use whole incidents rather than a timeline of individual beats. One incident can cross locations, activities, or separated source ranges.',
+        'Merge candidate memories if one supplies the cause, reaction, escalation, correction, answer, or repair of the other. Ask whether a future reader could understand the significance of each outcome without the other memory. If either explanation starts with "this answered what happened in the previous memory," keep them together. Split only if BOTH sides have a distinct initiating situation and an independently useful, completed outcome. Time, message count, activity, and tokens do not define a cut.',
+        'Look forward from each proposed cut. If later dialogue returns to the same incident and supplies its missing explanation, decision, or answer, keep that later beat with the original incident. Moving somewhere quieter or resuming another activity does not finish the unresolved question.',
+        'Example: a difficult disclosure, an initial reaction, an accident during the reaction, a clarification, and negotiation of the terms it raised form one incident when they answer the same issue. Resuming an outing or moving indoors can pause the conversation while its cause and answer still belong together. A separate agreement with a host can be its own incident if it changes a different obligation. Use these examples for boundaries only.',
+        'A memorable joke, private reaction, apology, or offer belongs inside its parent incident when that incident supplies its significance. Keep the exact actions, distinctive lines, independent terms of an agreement, and who learned what in that incident’s assigned messages. Merging an incident must retain its setup, turning points, and outcome.',
+        'Before returning events, inspect the final turns for an open causal incident. Trace any action, question, proposal, or repair attempt awaiting its outcome back to the start of that incident and defer its turns. A new activity, temporary calm, request to talk, or willingness to listen does not resolve the same issue. A direct answer can complete the disclosure without implying that the listener accepted the answer or forgave anyone.',
+        'For each complete event, select the original message that shows the decisive outcome. Before writing result, copy a continuous phrase directly from that message into closure.quote, preserving its wording and punctuation. Both narration and dialogue can be evidence. Verify the quote occurs verbatim in the cited message. Then describe only the outcome supported by the quote and its context. A prediction, an unaccepted offer, or an intermediate step inside the same open incident is not closure. If the original driving question still has no outcome, defer the incident from its beginning.',
+        'Use whole messages and assign each original ID exactly once. When one message closes an incident and briefly opens another, assign it to the action it primarily carries and do not list it twice. Important lines, humor, commitments, and changes in knowledge belong in their causal incident. Defer uncertain or unassigned context. Use English for the title, reason and result; keep the evidence quote in its original language.',
     ].join('\n\n'),
     nexus:[
         'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
+        'Record confirmed changes with lasting consequences and keep still-active state in Current Continuity. Match a fact to the existing role and subject first, then patch only the part that changed. Create an entry only for durable information that has no suitable active entry. Keep an undertaking distinct from its observed fulfillment.',
         'An empty edits array is allowed. Preserve every untouched fact.',
         'Every edit must include a specific factual reason in "reason" and an "evidence" array. Each evidence item contains the original integer "messageId" and an exact 8–400 character substring in "quote".',
         'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
@@ -222,6 +225,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'The disclosure by itself says nothing about unrelated habits or conditions. Never use the example’s data in a real edit.',
         'Keep accountability, explicit acceptance and forgiveness distinct. Track offers, supply, application, recovery and discharge independently.',
         'For Current Continuity, use append_section for additions, NOT generic append.',
+        'In append_section, put the heading name only in section and put only the new body text in text. Do not repeat the heading inside text. Use Markdown section headings in the content of a new Current Continuity entry only.',
         'Only replace_exact wholly within ONE Current Continuity section; do not change headings.',
         'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction. Quote the evidence that ends that state.',
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
@@ -232,32 +236,42 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
     ].join('\n\n'),
 });
 
-export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
-    const ask=requester(profile,settings,signal);
+const DEEPSEEK_FLASH_TAIL_GUIDANCE = [
+    'Resolve the final conversation first. Place its single causal incident in a top-level "tail" object, then list only OTHER incidents in events and deferred. Use real inclusive segments in tail. Return null for tail only when no independent final incident can be identified. Do not repeat tail messages in other rows.',
+    'For tail, first trace the latest direct question or attempted repair back to the earlier action, behavior, or conflict it addresses. The question itself may be phrased much later. When the final explanation revisits that older trigger, keep the trigger, intermediate reactions, and the reply together as ONE incident, even if the discussion moves or pauses. Exclude any independently completed incident that does not contribute to that conversation.',
+    'If the text ends with a request to talk and gives no answer to the issue, output tail with complete:false, reason and segments, covering the whole still-open incident from the original trigger. If someone gives an actual answer, admission, or explanation, output tail with complete:true, title, reason, result, closure and segments. Quote the actual answer from its message and include that message in segments. A later reaction, forgiveness, or decision can still be pending. The disclosure itself ended when the answer was spoken.',
+    'For tail, include origin:{"messageId":0,"quote":"exact short phrase from the initiating turn"}. When the final conversation refers back to behavior during an earlier quarrel, choose the first original turn showing that quarrel for origin. The later apology or newly phrased question is not its origin.',
+    'Example: someone takes offense at their partner speaking differently around a guest. A request to discuss it leaves the incident open. If they later talk alone, revisit that guest exchange, and the partner explains why they acted that way or how they really feel, end the same incident with that actual explanation. Do not begin a separate incident at the quieter conversation.',
+].join('\n\n');
+
+function slothPlanPrompt(messages,characterContext,deepSeekFlash) {
     const ids=messages.map(m=>m.id);
-    const evidenceHeader=[
+    return [
+        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
+        ...(deepSeekFlash ? [DEEPSEEK_FLASH_TAIL_GUIDANCE] : []),
+        'Return JSON with events and deferred arrays. Each event needs title, complete:true, reason (why it is distinct), result (the observed outcome), closure:{"messageId":42,"quote":"the shortest exact phrase showing the ending, or the whole message if very short"}, and segments. Each deferred item needs reason and segments. Segments are nested inclusive ranges. Use [[10,10],[12,12]] for two nonadjacent IDs. Return each original ID exactly once across both arrays.',
         'Ordered original IDs: '+JSON.stringify(ids),
         'Exact source index spans: '+JSON.stringify(slothSourceRanges(ids)),
         'Character context (do not treat as source event): '+characterContext,
-        'Original source or detailed window evidence:',
-    ].join('\n\n')+'\n\n';
-    const prompt=[
-        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
-        'Return JSON with events and deferred arrays. Each event needs title, complete:true, reason, result, and segments. Each deferred item needs reason and segments. Segments are nested inclusive ranges. Use [[10,10],[12,12]] for two nonadjacent IDs. Return each original ID exactly once across both arrays.',
-        evidenceHeader,
+        'Original source messages:',compact(messages),
+        ...(deepSeekFlash && messages.length ? [
+            'Ending check (copies of the final original messages with the same IDs):',
+            compact(messages.slice(-3)),
+            'Decide what the final answer actually settled before emitting any event. An in-story request to talk, or silently continuing an activity, is still open. A direct reply to the previous question is the outcome even if the other character has not reacted to the reply yet.',
+            'Return one JSON object now. Start with tail. Fill origin with the original earlier trigger and an exact quote from it, then assign the whole final incident through the actual answer if there is one. Use complete:false and no closure for an open incident. Copy one continuous phrase from the actual answer without joining separate quotations. Then list only independent remaining incidents in events and put other open material in deferred.',
+        ] : []),
     ].join('\n\n');
-    const run = source => requestValidatedDraft(prompt+source,'Event plan',ask,
-        raw=>validateNexusEventPlan(raw,ids,{deferUnclassified:true}),
-        error=>[DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
-            'The first event plan was rejected: '+error.message,
-            'Return three arrays: events, deferred, assignments. An event has title, complete:true, reason and result. A deferred record only has reason. Do not use ranges in this response.',
-            'In assignments, include one pair [originalMessageId, ownerLabel] for each exact ID below. e1 means first event, e2 means second event, d1 means first deferred record. Each original ID appears once; the same label can recur for separated source turns. Never assign new IDs to individual actions inside one message.',
-            'Exact original IDs: '+JSON.stringify(ids),
-            'Example for original IDs [10,12,13]: {"events":[{"title":"Recovered key","complete":true,"reason":"The owner got the key back.","result":"The owner recovered the key."}],"deferred":[{"reason":"A separate search has not started."}],"assignments":[[10,"e1"],[12,"d1"],[13,"e1"]]}.',
-            evidenceHeader+source,
-        ].join('\n\n'));
-    return withFullSlothSource(messages,prompt,settings,profile,run,
-        () => evidenceFor(messages,ask,prompt,settings,profile,true));
+}
+
+export async function analyzeSlothEvents({messages,profile,settings,characterContext='',signal=null}) {
+    const ask=requester(profile,settings,signal,true);
+    const deepSeekFlash=isDeepSeekFlashModel(slothCollectionModel(profile));
+    const draft=await ask(slothPlanPrompt(messages,characterContext,deepSeekFlash),'Event plan');
+    const ids=messages.map(m=>m.id);
+    const plan=deepSeekFlash ? includeDeepSeekTailEvent(draft,ids,messages) : draft;
+    const validated=validateNexusEventPlan(plan,ids,{deferUnclassified:true,originalMessages:messages,
+        deferClosingConversationRequest:deepSeekFlash});
+    return deepSeekFlash ? fitDeepSeekSceneBatch(validated,slothCollectionOutputLimit(settings)) : validated;
 }
 export async function composeSlothScene({event,messages,profile,settings,signal=null,characterContext=''}) {
     const ask=requester(profile,settings,signal);
@@ -295,15 +309,25 @@ export async function composeSlothScene({event,messages,profile,settings,signal=
 
 const SCENE_LIST_SCHEMA = '{"scenes":[{"id":"given ID","timeline":"YYYY/MM/DD or Unknown","scene":"prose without headings","result":"one sentence","keywords":["cue"]}]}';
 
-function slothSceneBatchGuidance(events, settings, characterContext, maxProse = 650) {
+function sceneEndingExcerpt(event) {
+    return event.closingExchange ? event.closure.quote.trim().split(/\s+/u).slice(0,12).join(' ') : '';
+}
+
+function slothSceneBatchGuidance(events, settings, characterContext) {
     return [
         getActiveSlothSummaryPreset(settings).text,
-        `Output length per memory: ${Math.floor(maxProse / 2)}–${maxProse} tokens of Scene prose, roughly ${Math.floor(maxProse * 0.32)}–${Math.floor(maxProse * 0.62)} English words, or shorter for a simple event. Use indirect speech for long exchanges and keep only short distinctive or consequential quotations. Give the full ending of every event within its own budget.`,
-        'Return one Scene for each approved ID. Give its Timeline in YYYY/MM/DD, YYYY/MM/DD–YYYY/MM/DD, or Unknown. Use English.',
+        'Return one complete Scene for every approved ID, using each exact ID once. Never add a placeholder. Give its Timeline in YYYY/MM/DD, YYYY/MM/DD–YYYY/MM/DD, or Unknown. Use English.',
+        'Fit the complete JSON within the overall response limit. Write concise prose for simple events and give complex outcomes enough space. Condense repeated dialogue and routine movements first; preserve each event’s actual ending.',
         'Use only the assigned messages for that Scene, even when other approved events or deferred messages share this request. Stop at the last assigned action or utterance. Treat thoughts and suspicions as attributed; do not infer forgiveness, an answer or a new physical action.',
+        ...(events.some(event=>event.closingExchange) ? [
+            'When an approved event includes closingExcerpt, weave that actual reply into the Scene prose verbatim. Explain how the original conflict led to this reply within the same Scene. The Result field alone is insufficient.',
+        ] : []),
         SCENE_KEYWORD_GUIDANCE,
         'Character context: '+characterContext,
-        'Approved events: '+JSON.stringify(events.map(({id,title,result,messageIds})=>({id,title,result,messageIds}))),
+        'Approved events: '+JSON.stringify(events.map(event=>{
+            const {id,title,result,messageIds,closure}=event;
+            return {id,title,result,messageIds,closure,...(event.closingExchange ? {closingExcerpt:sceneEndingExcerpt(event)} : {})};
+        })),
     ].join('\n\n');
 }
 
@@ -315,46 +339,15 @@ function readSlothBatchScenes(response, events) {
         if (matches.length !== 1) continue;
         const {timeline,scene,result,keywords} = matches[0];
         if (![timeline,scene,result].every(value => typeof value === 'string' && value.trim())) continue;
+        if (event.closingExchange) {
+            const normalize=text=>text.replace(/[‘’]/gu,"'").replace(/[“”]/gu,'"').replace(/\s+/gu,' ');
+            if (!normalize(scene).includes(normalize(sceneEndingExcerpt(event)))) continue;
+        }
         const content = `**Timeline**: ${timeline.trim()}\n\n**Scene**\n${scene.trim()}\n\n**Result**\n${result.trim()}`;
         try {
-            const draft = validateSlothSceneResponse({title:event.title,content,keywords}, event.title);
+            const draft = validateSlothSceneResponse({title:event.title,content,keywords}, event.title,{enforceWordLimit:false});
             scenes.set(event.id,{...event,...draft});
-        } catch { /* The caller may recover only this scene. */ }
-    }
-    return scenes;
-}
-
-export async function composeSlothScenes({events,messages,profile,settings,signal=null,characterContext='',verifyOrigin=()=>{}}) {
-    const ask = requester(profile,settings,signal);
-    const configured = Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 0;
-    // Reserve 650 prose tokens and room for every result, cue list and JSON object.
-    const batchSize = Math.max(1,Math.min(4,Math.floor((configured * 0.88 - 240) / 950)));
-    const scenes = [];
-    for (let index=0;index<events.length;index+=batchSize) {
-        const batch = events.slice(index,index+batchSize);
-        let accepted = new Map();
-        if (batch.length>1) {
-            const wanted = new Set(batch.flatMap(event=>event.messageIds));
-            const source = compact(messages.filter(message=>wanted.has(message.id)));
-            const prompt = [
-                'Write the separate approved memories in one response. Return only JSON '+SCENE_LIST_SCHEMA+'.',
-                slothSceneBatchGuidance(batch,settings,characterContext),
-                'Original source messages: ',
-            ].join('\n\n');
-            if (source.length<=18000 || await canUseOriginalSource(prompt+source,settings,profile,true)) {
-                try {
-                    accepted = readSlothBatchScenes(await ask(prompt+source,'Scene batch'),batch);
-                } catch(error) {
-                    if(error.code!=='STMB_SLOTH_MALFORMED_JSON' && !sourceCapacityExceeded(error)) throw error;
-                }
-                verifyOrigin();
-            }
-        }
-        for(const event of batch) {
-            const scene = accepted.get(event.id) || await composeSlothScene({event,messages,profile,settings,signal,characterContext});
-            verifyOrigin();
-            scenes.push(scene);
-        }
+        } catch { /* Save only complete, correctly formatted scene rows. */ }
     }
     return scenes;
 }
@@ -395,7 +388,7 @@ async function nexusStateEvidenceFor(messages, ask) {
     return payload;
 }
 
-function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext}) {
+function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource}) {
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const {roles,legacyLayout,protected:protectedEntry}=describeNexusCollectionEntry(e);
         return {uid:e.uid,title:e.comment,body:protectedEntry?'[protected; not included]':e.content,
@@ -403,7 +396,6 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
             position:e.position,outletName:e.outletName};
     });
     const source=JSON.stringify(entries);
-    if(source.length>60000)throw new Error('Nexus baseline too large for safe exact-span editing. Nothing saved.');
     return [
         DEFAULT_SLOTH_COLLECTION_PROMPTS.nexus,
         ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
@@ -419,14 +411,15 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
         'Reuse any active in-place legacy slot listed with the requested role. Never migrate, rename or disable it. On a combined legacy entry, Core edits stay in the durable preamble. Continuity edits stay in the current sections; use "Active Threads" for [Active threads — still unconfirmed] and "Active Conditions" for [Physical carryover]. Add or edit Present Handoff on the same UID.',
-        ...(scenes ? ['Newly composed completed Scenes:',JSON.stringify(scenes.map(s=>({
-            title:s.title,result:s.result,content:s.content,segments:s.segments})))] : []),
         'Approved event classifications:',JSON.stringify({
             events:(plan?.events||[]).map(x=>({title:x.title,segments:x.segments})),
             deferred:(plan?.deferred||[]).map(x=>({reason:x.reason,segments:x.segments})),
         }),
         'Deferred source is still visible; use it to assess ongoing state without',
         'claiming a deferred or uncertain incident is complete.',
+        ...(partialSource ? [
+            'Newer chat messages are outside this input. Only propose grounded durable edits. Do not create or modify Current Continuity or Present Handoff from this historical slice.',
+        ] : []),
         'Current Nexus entries (exact UIDs):',source,
         'If a window contains originalMessages instead of extracted citations, cite those original turns directly, retaining their IDs and language in quote fields.',
         'EACH edit object must contain its own reason and evidence:[{"messageId":integer,"quote":"short exact original substring"}]. This also applies to create. New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append. Do not submit an uncited edit.',
@@ -434,103 +427,174 @@ function slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext
     ].join('\n\n');
 }
 
-function readSlothNexusEdits(response, {messages,nexus,settings,initial}) {
-    try {
-        if(!Array.isArray(response.edits) || response.edits.length > 80)throw new Error('Nexus delta must contain a valid edits list.');
-        const candidates=canonicalizeNewNexusTitles(response.edits);
-        const isNpc = op => String(op?.kind).trim().toLowerCase() === 'npc';
-        const required = validateGroundedNexusEdits(candidates.filter(op => !isNpc(op)),messages);
-        const edits=candidates.flatMap(op => {
-            if (!isNpc(op)) return [required.shift()];
-            try {
-                const [npc] = validateGroundedNexusEdits([op],messages);
-                return npcNexusSubjectIsGrounded(npc,nexus) ? [npc] : [];
-            } catch {
-                // An optional NPC note must not block otherwise grounded updates.
-                return [];
-            }
-        });
-        if(initial&&edits.some(edit=>edit.action!=='create'||edit.kind==='npc-index')) {
-            throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
-        }
-        // Dry-run the same World Info guards used for the actual save.
-        stageNexusEdits(nexus,edits,book=>{
-            const used=new Set(Object.values(book.entries).map(entry=>Number(entry.uid)));
-            let uid=0;
-            while(used.has(uid)||Object.hasOwn(book.entries,uid))uid++;
-            return (book.entries[uid]={uid});
-        },{detailRecallMode:settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector'});
-        return edits;
-    } catch (error) {
-        throw new InvalidSlothNexusProposal(error);
+function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialSource}) {
+    const edits = [];
+    if (!Array.isArray(response.edits) || response.edits.length > 80) {
+        return { edits, skippedNexusEdits: Array.isArray(response.edits) ? response.edits.length : 1 };
     }
+    const candidates = canonicalizeNewNexusTitles(response.edits).map(stripRepeatedContinuityHeading);
+    const detailRecallMode = settings?.moduleSettings?.nexusDetailRecallMode === 'keyword' ? 'keyword' : 'vector';
+    const createPreviewEntry = book => {
+        const used = new Set(Object.values(book.entries).map(entry => Number(entry.uid)));
+        let uid = 0;
+        while (used.has(uid) || Object.hasOwn(book.entries, uid)) uid++;
+        return (book.entries[uid] = { uid });
+    };
+    let staged = nexus;
+    for (const [index, candidate] of candidates.entries()) {
+        try {
+            const [edit] = validateGroundedNexusEdits([candidate], messages);
+            if (partialSource && String(edit.kind).trim().toLowerCase() === 'continuity') continue;
+            if (String(edit.kind).trim().toLowerCase() === 'npc' && !npcNexusSubjectIsGrounded(edit, nexus)) continue;
+            if (initial && (edit.action !== 'create' || edit.kind === 'npc-index')) {
+                throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
+            }
+            // Each accepted edit becomes the baseline for the next, with the regular World Info guards.
+            staged = stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode }).staged;
+            edits.push(edit);
+        } catch (error) {
+            console.warn('Skipping collection Nexus edit ' + (index + 1), error);
+        }
+    }
+    return { edits, skippedNexusEdits: candidates.length - edits.length + Number(response.recoveredIncompleteEdits === true) };
 }
 
-export async function proposeSlothNexusEdits({scenes,nexus,messages,plan,profile,settings,signal=null,
-    initial=false,characterContext=''}) {
-    const ask=requester(profile,settings,signal);
-    const prompt=[
-        slothNexusGuidance({scenes,nexus,plan,settings,initial,characterContext}),
-        'Return strict JSON {"edits":[...]} only.',
-        'Current-chat original grounded evidence (exact message IDs):',
-    ].join('\n\n')+'\n\n';
-    const validate = response => readSlothNexusEdits(response, {messages,nexus,settings,initial});
-    try {
-        return await withFullSlothSource(messages,prompt,settings,profile,
-            groundedSource => requestValidatedDraft(prompt+groundedSource,'Nexus delta',ask,validate,
-                (error, rejected) => [prompt+groundedSource,
-                    'The first draft was rejected: '+error.message,
-                    ...(rejected ? ['Rejected draft for repair only; verify everything with the original messages:',JSON.stringify(rejected)] : []),
-                    'Return compact JSON {"edits":[...]}. Keep independent edits that can be verified, and correct or drop the invalid edit. Every retained edit needs its own short reason and evidence array of one to eight {"messageId":integer,"quote":"verbatim excerpt"} objects. Reuse existing matching UIDs. On NPC creation, verify evidence of the continuing role or omit the entry. For LT and NPC additions use append; only continuity uses append_section. Omit protected UIDs. Return {"edits":[]} if no edits are supported.',
-                ].join('\n\n')),
-            () => nexusStateEvidenceFor(messages,ask));
-    } catch (error) {
-        if (error.code==='STMB_SLOTH_MALFORMED_JSON') throw new InvalidSlothNexusProposal(error);
-        throw error;
+async function reviewSlothSceneDrafts({events,messages,scenes,settings,ask}) {
+    const approvedIds = new Map(events.map(event=>[event.id,new Set(event.messageIds)]));
+    const approvedMessages = new Set(events.flatMap(event=>event.messageIds));
+    const source = messages.filter(message=>approvedMessages.has(message.id));
+    const originals = new Map(source.map(message=>[message.id,message.mes]));
+    const prompt = [
+        'Review these Memory Scene drafts against their assigned original messages.',
+        'Return {"repairs":[]} if no serious correction is needed. Repair only missing Scenes, major omissions, or significant factual distortions. Keep stylistic preferences and complete drafts unchanged.',
+        'A major issue changes a cause or ending, who did or knew something, a meaningful promise or boundary, or the last significant answer or action. Verify that the last relevant action or answer is actually present. Never invent what happens next.',
+        'For each repair return an object with id, issue ("missing", "omission" or "distortion"), evidence ({messageId, quote}), timeline, scene, result and keywords. The evidence quote must be an exact substring of a message assigned to that scene. Keep complete JSON within the output limit.',
+        getActiveSlothSummaryPreset(settings).text,
+        SCENE_KEYWORD_GUIDANCE,
+        'Return only the IDs requiring repair.',
+        'Approved events and assigned messages: '+JSON.stringify(events.map(({id,title,messageIds})=>({id,title,messageIds}))),
+        'Current drafts:',JSON.stringify([...scenes.values()].map(({id,content,keywords})=>({id,content,keywords}))),
+        'Approved original messages:',compact(source),
+    ].join('\n\n');
+    const response = await ask(prompt,'Summary review');
+    if (!Array.isArray(response.repairs)) throw new Error('Summary review did not return a repairs array.');
+    const repairs = response.repairs.filter(repair=>{
+        const {messageId,quote} = repair?.evidence ?? {};
+        const missing = !scenes.has(repair?.id);
+        return (missing ? repair?.issue === 'missing' : ['omission','distortion'].includes(repair?.issue)) &&
+            approvedIds.get(repair?.id)?.has(messageId) && typeof quote === 'string' && quote.trim().length >= 8 &&
+            originals.get(messageId)?.includes(quote);
+    });
+    return readSlothBatchScenes({scenes:repairs},events);
+}
+
+function slothCollectionOutputLimit(settings) {
+    return Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 10000;
+}
+
+function deepSeekFlashWriteGuidance(settings) {
+    const output=slothCollectionOutputLimit(settings);
+    const jsonBudget=Math.floor(output*0.76);
+    const proseBudget=Math.floor(jsonBudget*0.39);
+    return [
+        'Keep the ENTIRE JSON under '+jsonBudget+' output tokens, including Scenes, Nexus edits, citations, and JSON syntax. Share roughly '+proseBudget+' English words across all Scene bodies. Allocate that space before writing, and finish every approved ID and both arrays.',
+        'Write dense archival prose. Use one short paragraph for a simple event and a second only when important turns need it. Paraphrase dialogue and include at most two short, distinctive quotes per Scene. Remove scenery, repeated gestures, and repeated versions of the same exchange first. Keep the original cause, what each person learned or agreed to, each disputed term, the real reply, and the final consequential action.',
+        'Use a single short Result sentence and a few brief retrieval cues per Scene. Keep Nexus edits to changed facts, with the shortest exact citation sufficient to ground each change. If space runs short, condense early summaries instead of omitting later IDs or leaving JSON incomplete.',
+    ].join('\n\n');
+}
+
+function deepSeekFlashSceneSources(messages,events) {
+    const batches=events.map(({id})=>({id,messages:[]}));
+    const owners=new Map(events.flatMap((event,index)=>event.messageIds.map(id=>[id,batches[index]])));
+    const nexusOnly=[];
+    for (const message of originalMessages(messages)) {
+        const owner=owners.get(message.id);
+        (owner?.messages ?? nexusOnly).push(message);
     }
+    return JSON.stringify({MemorySources:batches,nexusOnly});
+}
+
+function approvedSlothCollectionPrompt({nexus,messages,plan,settings,initial,characterContext,partialSource,deepSeekFlash}) {
+    const events = plan?.events ?? [];
+    const schema = SCENE_LIST_SCHEMA.slice(0, -1) + ',"edits":[...]}';
+    return [
+        'Complete approved Memory Scenes and Nexus edits in one response. Return just one JSON object with scenes and edits arrays.',
+        'Response structure: '+schema,
+        slothSceneBatchGuidance(events,settings,characterContext),
+        ...(deepSeekFlash ? [deepSeekFlashWriteGuidance(settings),
+            'The source is grouped by approved Scene ID below. For a Scene, use only the messages array in its matching MemorySources object. All arrays are available for grounded Nexus edits. nexusOnly is context for Nexus, never source for a Scene.'] : []),
+        ...(events.length ? [] : ['No Memory Scenes were approved. Return an empty scenes array.']),
+        slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource}),
+        'Keep Nexus changes to the minimal grounded updates. Cite the original chat; an already drafted Scene is a summary, never source evidence.',
+        'Original source messages (all current IDs, including deferred):',
+        deepSeekFlash ? deepSeekFlashSceneSources(messages,events) : compact(messages),
+    ].join('\n\n');
+}
+
+function slothCollectionModel(profile) {
+    const conn=resolveConnection(profile);
+    const id=conn.stConnectionProfileId ||
+        (conn.useChatCompletionService ? getContext().extensionSettings?.connectionManager?.selectedProfile : '');
+    const selected=id ? getSelectedConnectionProfile(getContext(),undefined,id) : null;
+    return conn.model || selected?.profile['custom-connection']?.settings?.custom_model || selected?.profile.model;
+}
+
+function isDeepSeekFlashModel(model) {
+    return /(?:^|[/:])deepseek(?:[-_.]v\d+(?:\.\d+)?)?[-_.]flash(?:$|[-_.:/])/i.test(model || '');
 }
 
 export async function composeApprovedSlothCollection(options) {
-    const {nexus,messages,plan,profile,settings,signal=null,initial=false,characterContext='',verifyOrigin=()=>{}} = options;
+    const {nexus,messages,plan,profile,settings,signal=null,initial=false,partialSource=false,
+        reviewSummaries=false,verifyOrigin=()=>{}} = options;
     const events = plan.events;
-    const limit = Number(settings?.moduleSettings?.maxTokens) || Number(oai_settings?.openai_max_tokens) || 0;
-    // Allow 2,000 tokens for Nexus edits, 1,200 for reserve and 100 per scene for its wrapping fields.
-    const maxProse = events.length ? Math.min(650, Math.floor((limit - 3200) / events.length) - 100) : 0;
-    let composed = new Map();
-    let edits;
-    if (maxProse >= 480) {
-        const original = compact(messages);
-        const schema = SCENE_LIST_SCHEMA.slice(0, -1) + ',"edits":[...]}';
-        const prompt = [
-            'Complete approved Memory Scenes and Nexus edits in one response. Return just one JSON object with scenes and edits arrays.',
-            'Response structure: '+schema,
-            slothSceneBatchGuidance(events,settings,characterContext,maxProse),
-            slothNexusGuidance({nexus,plan,settings,initial,characterContext}),
-            'Keep Nexus edits compact (approximately 2,000 tokens or fewer) and only cite the original chat. Treat any already drafted Scene as a summary, never as source evidence.',
-            'Original source messages (all current IDs, including deferred):',original,
-        ].join('\n\n');
-        if (original.length <= 18000 || await canUseOriginalSource(prompt,settings,profile,true,64000)) {
-            try {
-                const ask = requester(profile,settings,signal);
-                const result = await ask(prompt,'Approved collection');
-                composed = readSlothBatchScenes(result,events);
-                edits = readSlothNexusEdits(result,{messages,nexus,settings,initial});
-            } catch (error) {
-                if (!(error instanceof InvalidSlothNexusProposal)
-                    && error.code !== 'STMB_SLOTH_MALFORMED_JSON' && !sourceCapacityExceeded(error)) throw error;
-            }
-            verifyOrigin();
+    const deepSeekFlash=isDeepSeekFlashModel(slothCollectionModel(profile));
+    const prompt = approvedSlothCollectionPrompt({...options,deepSeekFlash});
+    const ask = requester(profile,settings,signal,true);
+    const parseDraft=(raw,phase)=>{
+        try { return normalizeSlothCollectionDraft(parseStrictJSON(raw,phase)); }
+        catch (error) {
+            const recovered=recoverSlothCollectionDraft(raw);
+            if (recovered) return recovered;
+            throw error;
         }
+    };
+    let response, repeated = false;
+    try {
+        response = await ask(prompt,'Approved collection',parseDraft);
+    } catch (error) {
+        if (!reviewSummaries || error.code !== 'STMB_SLOTH_MALFORMED_JSON') throw error;
+        verifyOrigin();
+        repeated = true;
+        response = await ask(prompt+'\n\nThe previous response was unreadable. Keep every summary and Nexus edit concise enough to finish the JSON within the response limit.','Approved collection retry',parseDraft);
     }
-    const missing = events.filter(event => !composed.has(event.id));
-    if (missing.length) {
-        for (const scene of await composeSlothScenes({...options,events:missing})) {
-            composed.set(scene.id,scene);
+    verifyOrigin();
+    const drafts = readSlothBatchScenes(response,events);
+    let reviewFailed = false;
+    if (reviewSummaries && !repeated && events.length) {
+        try {
+            const repairs = await reviewSlothSceneDrafts({events,messages,scenes:drafts,settings,ask});
+            for (const [id,repair] of repairs) drafts.set(id,repair);
+        } catch (error) {
+            reviewFailed = true;
+            console.warn('Collection summary review failed; keeping the original drafts.',error);
         }
+        verifyOrigin();
     }
-    const scenes = events.map(event => composed.get(event.id));
-    edits ??= await proposeSlothNexusEdits({...options,scenes});
-    return {scenes,edits};
+    const scenes = events.map(event=>drafts.get(event.id)).filter(Boolean);
+    return { scenes, ...readSlothNexusEdits(response,{messages,nexus,settings,initial,partialSource}),
+        skippedScenes: events.length - scenes.length, reviewFailed };
+}
+
+export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext=''}) {
+    const selectedIds = new Set(events.flatMap(event=>event.messageIds));
+    const source = messages.filter(message=>selectedIds.has(message.id));
+    const prompt = [
+        'Write only the approved Memory Scenes listed below. Supply a complete Scene for every given ID using that exact ID. Return only JSON '+SCENE_LIST_SCHEMA+'.',
+        slothSceneBatchGuidance(events,settings,characterContext),
+        'Original messages for these Scenes:',compact(source),
+    ].join('\n\n');
+    const response = await requester(profile,settings,null,true)(prompt,'Retry requested Memory Scenes');
+    return [...readSlothBatchScenes(response,events).values()];
 }
 
 export async function compressSlothScene({entry,amount,focus,profile,settings,verifyOrigin,signal=null}) {

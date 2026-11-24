@@ -23,7 +23,7 @@ export function slothSourceRanges(ids) {
     return ranges;
 }
 
-export const DEFAULT_SLOTH_VISIBLE_TAIL = 6;
+export const DEFAULT_SLOTH_VISIBLE_TAIL = 0;
 
 export function normalizeSlothVisibleTail(value) {
     const count = String(value ?? '').trim();
@@ -39,10 +39,96 @@ export function getSlothHideRanges(events, messages, keepRecent) {
     return slothSourceRanges(visible.slice(0, hideCount));
 }
 
-export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = false } = {}) {
+function describesPendingSlothOutcome(result) {
+    return /\b(?:unresolved|unanswered|unfinished)(?=\s*(?:[,.;:!?]|$))/iu.test(result) ||
+        /\b(?:has not|have not|had not|hasn't|haven't|hadn't) (?:yet )?(?:replied|answered|responded)\b/iu.test(result) ||
+        /\bno (?:reply|answer|response) (?:yet|follows?|followed|was (?:given|received))\b/iu.test(result) ||
+        /\b(?:awaits|awaiting|waits for|waiting for) (?:a |an |the )?(?:reply|answer|response|decision|outcome)\b/iu.test(result);
+}
+
+export function includeDeepSeekTailEvent(draft, sourceIds, messages = []) {
+    if (!Array.isArray(draft?.events)) return draft;
+    // The events array declares completed candidates. Keep the normal
+    // outcome and source checks when an otherwise complete row omits the flag.
+    draft={...draft,events:draft.events.map(row=>row?.complete===undefined && plain(row?.closure) ?
+        {...row,complete:true} : row)};
+    const tail=draft?.tail;
+    if (!plain(tail) || typeof tail.complete!=='boolean' || !Array.isArray(tail.segments) ||
+        Object.hasOwn(draft,'owners') || Object.hasOwn(draft,'assignments')) return draft;
+
+    const allowed=new Set(sourceIds);
+    const tailIds=new Set();
+    for (const range of tail.segments) {
+        if (!Array.isArray(range) || range.length!==2 || !range.every(Number.isSafeInteger)) return draft;
+        const [start,end]=range;
+        if (start<0 || end<start || end-start>=sourceIds.length) return draft;
+        for (let id=start;id<=end;id++) {
+            if (!allowed.has(id) || tailIds.has(id)) return draft;
+            tailIds.add(id);
+        }
+    }
+    if (!tailIds.size) return draft;
+    const origin=tail.origin;
+    const original=messages.find(message=>message.id===origin?.messageId);
+    const originQuote=str(origin?.quote);
+    const first=sourceIds.find(id=>tailIds.has(id));
+    let scopedTail=tail;
+    // If the model finds a grounded earlier trigger but omits it from the
+    // chosen spans, keep the original conflict and its later reply together.
+    if (original && allowed.has(original.id) && original.id<first && originQuote.length>=8 &&
+        original.mes.includes(originQuote)) {
+        const last=sourceIds.findLast(id=>tailIds.has(id));
+        const ids=sourceIds.filter(id=>id>=original.id&&id<=last);
+        for (const id of ids) tailIds.add(id);
+        scopedTail={...tail,segments:slothSourceRanges(ids)};
+    }
+    const events=[];
+    const deferred=[];
+    for (const [rows,preserved] of [[draft.events,events],[draft.deferred??[],deferred]]) {
+        if (!Array.isArray(rows)) return draft;
+        for (const row of rows) {
+            const segments=row?.segments;
+            if (!Array.isArray(segments) || !segments.every(range=>Array.isArray(range) && range.length===2 &&
+                range.every(Number.isSafeInteger) && range[0]>=0 && range[1]>=range[0] &&
+                range[1]-range[0]<sourceIds.length)) return draft;
+            const ids=sourceIds.filter(id=>segments.some(([start,end])=>start<=id&&id<=end));
+            if (!ids.some(id=>tailIds.has(id))) {
+                preserved.push(row);
+                continue;
+            }
+            // A row whose source belonged to the tail may no longer have
+            // support for its old result. Keep any remaining turns available.
+            const remainder=ids.filter(id=>!tailIds.has(id));
+            if (remainder.length) deferred.push({reason:'This range overlaps the final incident.',
+                segments:slothSourceRanges(remainder)});
+        }
+    }
+    if (scopedTail.complete) events.push({...scopedTail,closingExchange:true});
+    else deferred.push(scopedTail);
+    return {events,deferred};
+}
+
+export function fitDeepSeekSceneBatch(plan, outputTokens) {
+    // Reserve space for Nexus, JSON framing, and variation in Scene lengths.
+    const capacity=Math.max(1,Math.floor((outputTokens*0.76-1000)/450));
+    if (plan.events.length<=capacity) return plan;
+    const final=plan.events.find(event=>event.closingExchange);
+    const keep=new Set(plan.events.filter(event=>event!==final).slice(0,capacity-(final ? 1 : 0)));
+    if (final) keep.add(final);
+    const postponed=plan.events.filter(event=>!keep.has(event)).map(({segments,messageIds})=>({
+        reason:'A completed event waiting for room in the next response.',segments,messageIds,
+    }));
+    return {...plan,events:plan.events.filter(event=>keep.has(event)),
+        deferred:[...plan.deferred,...postponed],fullyCollected:false};
+}
+
+export function validateNexusEventPlan(raw, sourceIds, {
+    deferUnclassified = false, originalMessages, deferClosingConversationRequest = false,
+} = {}) {
     requireThat(plain(raw) && Array.isArray(sourceIds) && sourceIds.length, 'Missing analysis or source.');
     requireThat(Array.isArray(raw.events), 'Analysis events must be an array.');
     const allowed = new Set(sourceIds), assigned = new Map(), events = [], deferred = [];
+    const originals = originalMessages && new Map(originalMessages.map(({id,mes})=>[id,mes]));
     requireThat(allowed.size === sourceIds.length && sourceIds.every(Number.isSafeInteger), 'Invalid source IDs.');
     let eventRows=raw.events, deferredRows=raw.deferred||[];
     const hasOwners = Object.hasOwn(raw,'owners');
@@ -94,10 +180,33 @@ export function validateNexusEventPlan(raw, sourceIds, { deferUnclassified = fal
     }
     for (const [i,item] of eventRows.entries()) {
         const title = str(item?.title), reason = str(item?.reason), result=str(item?.result);
+        if (deferUnclassified && item?.complete === false && (reason || result)) {
+            deferred.push({reason:reason || result,...ranges(item.segments,'unfinished event '+(i+1))});
+            continue;
+        }
         requireThat(title && title.length<=180 && reason && result && item.complete === true,
             'Event '+(i+1)+' must have title, causal boundary reason and completed result.');
         const data = ranges(item.segments, 'event '+(i+1));
-        events.push({ id:'event-'+(i+1), title, reason, result,...data,
+        // Checking the quote can establish what happened, but an exact quote
+        // of an unanswered question does not turn a pending result into closure.
+        const closure = item.closure;
+        const closingRequest = deferClosingConversationRequest && closure?.messageId===data.messageIds.at(-1) &&
+            /^["'“‘]?(?:please,? )?(?:talk to me|can we talk|could we talk|would you talk to me|can we speak|could we speak)\b/iu
+                .test(str(closure.quote));
+        if (originals && (describesPendingSlothOutcome(result) || closingRequest)) {
+            deferred.push({reason:'The proposed result says the incident is still open.',...data});
+            continue;
+        }
+        const ending = originals?.get(closure?.messageId);
+        if (originals && !(data.messageIds.includes(closure?.messageId) &&
+            typeof closure.quote === 'string' && closure.quote.trim() &&
+            ending?.includes(closure.quote) && (closure.quote.trim().length >= 8 || closure.quote.trim() === ending.trim()))) {
+            deferred.push({reason:'The ending could not be matched to the original messages.',...data});
+            continue;
+        }
+        events.push({ id:'event-'+(i+1), title, reason, result,
+            ...(originals ? {closure:{messageId:closure.messageId,quote:closure.quote}} : {}),...data,
+            ...(originals && deferClosingConversationRequest && item.closingExchange===true ? {closingExchange:true} : {}),
             start:data.messageIds[0],end:data.messageIds.at(-1) });
     }
     for (const [i,item] of deferredRows.entries()) {

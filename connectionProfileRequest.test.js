@@ -126,7 +126,7 @@ function senderHarness(context) {
             return source.slice(start, source.indexOf('\n/**', start)).replace(/^export /, '');
         }).join('\n');
     vm.runInNewContext(functions, scope);
-    return { send: scope.sendRawCompletionRequest, calls };
+    return { send: scope.sendRawCompletionRequest, calls, service };
 }
 
 test('checked sender uses active connection even with a separate STMB preset and provider', async () => {
@@ -187,6 +187,19 @@ test('no selected ST connection retains both legacy service and explicit preset 
     assert.equal(calls[0][0], 'legacy');
     assert.equal(calls[1][0], 'preset');
     assert.equal(calls[1][2].presetName, 'chosen');
+});
+
+test('single-attempt collection never falls back after a legacy service request fails', async () => {
+    const { context } = fixture();
+    context.extensionSettings.connectionManager.selectedProfile = null;
+    const { send, calls, service } = senderHarness(context);
+    const failure = new Error('Provider failed');
+    let attempts = 0;
+    service.sendRequest = async () => { attempts++; throw failure; };
+    await assert.rejects(send({ api: 'nanogpt', model: 'model', prompt: 'scene',
+        useChatCompletionService: true, singleAttempt: true }), error => error === failure);
+    assert.equal(attempts,1);
+    assert.equal(calls.length,0);
 });
 
 test('connection streaming uses the existing accumulation path', async () => {

@@ -1,8 +1,100 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateNexusEventPlan,parseReviewedSegments,groupSlothSourceWindows,
+import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,parseReviewedSegments,groupSlothSourceWindows,
   fingerprintSlothChat,describeNexusCollectionEntry,npcNexusSubjectIsGrounded,
   stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
+
+test('a collection saves only events with an exact ending in their own original messages', () => {
+  const originalMessages=[
+    {id:4,mes:'They opened the parcel.'},
+    {id:5,mes:'They could finally read the letter.'},
+    {id:7,mes:'He began apologizing.'},
+    {id:8,mes:'He asked if they could speak.'},
+    {id:9,mes:'She asked if he agreed.'},
+    {id:10,mes:'Yes.'},
+  ];
+  const complete={title:'Event',reason:'Recorded result',result:'Observed outcome',complete:true};
+  const events=[
+    {...complete,segments:[[4,5]],closure:{messageId:5,quote:'finally read the letter'}},
+    {...complete,segments:[[7,8]],closure:{messageId:5,quote:'finally read the letter'}},
+    {...complete,segments:[[9,10]],closure:{messageId:10,quote:'Yes.'}},
+  ];
+  const validate=rows=>validateNexusEventPlan({events:rows},originalMessages.map(m=>m.id),
+    {deferUnclassified:true,originalMessages});
+  const plan=validate(events);
+  assert.deepEqual(plan.events.map(event=>event.closure.messageId),[5,10]);
+  assert.deepEqual(plan.deferred.map(row=>row.messageIds),[[7,8]]);
+  const invented=validate([{...events[0],closure:{messageId:5,quote:'The parcel was empty.'}},...events.slice(1)]);
+  assert.deepEqual(invented.events.map(event=>event.closure.messageId),[10]);
+  assert.deepEqual(invented.deferred.map(row=>row.messageIds),[[4,5],[7,8]]);
+  originalMessages[1].mes += ' The letter listed their travel plans.'.repeat(16);
+  const longQuote=validate([{...events[0],closure:{messageId:5,quote:originalMessages[1].mes}},...events.slice(1)]);
+  assert.deepEqual(longQuote.events.map(event=>event.closure.messageId),[5,10]);
+});
+
+test('an exact quote of a request cannot save an incident whose result still awaits a reply', () => {
+  const originalMessages=[
+    {id:4,mes:'She withdrew from the conversation.'},
+    {id:5,mes:'He asked her to talk when she was ready.'},
+    {id:6,mes:'The host locked the gates before the storm.'},
+  ];
+  const complete={title:'Event',reason:'Observed action',complete:true};
+  const events=[
+    {...complete,result:'He asks her to talk, but she has not responded.',segments:[[4,5]],
+      closure:{messageId:5,quote:'He asked her to talk'}},
+    {...complete,result:'The host resolved the previously unanswered security question by locking the gates.',
+      segments:[[6,6]],closure:{messageId:6,quote:'The host locked the gates'}},
+  ];
+  const plan=validateNexusEventPlan({events},[4,5,6],{deferUnclassified:true,originalMessages});
+  assert.deepEqual(plan.events.map(event=>event.messageIds),[[6]]);
+  assert.deepEqual(plan.deferred.map(item=>item.messageIds),[[4,5]]);
+});
+
+test('DeepSeek reserves one final incident and leaves conflicting original ranges for later', () => {
+  const originalMessages=[
+    {id:2,mes:'The host locked the door.'},
+    {id:3,mes:'She stood by the window.'},
+    {id:4,mes:'She wanted to know why he left.'},
+    {id:5,mes:'He asked if they could talk.'},
+    {id:6,mes:'He said he left to give her time.'},
+  ];
+  const ids=originalMessages.map(m=>m.id);
+  const closed={title:'The door',reason:'Independent incident',result:'The host locked the door.',
+    segments:[[2,2]],closure:{messageId:2,quote:'The host locked the door.'}};
+  const tail={title:'Why he left',reason:'The question and actual answer',result:'He explained why he left.',
+    complete:true,segments:[[5,6]],origin:{messageId:4,quote:'She wanted to know why he left.'},
+    closure:{messageId:6,quote:'He said he left to give her time.'}};
+  const duplicate={...tail,segments:[[3,5]]};
+  const validate=(draft,range)=>validateNexusEventPlan(includeDeepSeekTailEvent(draft,range,originalMessages),range,
+    {deferUnclassified:true,originalMessages});
+  const finished=validate({events:[closed,duplicate],tail},ids);
+  assert.deepEqual(finished.events.map(event=>event.messageIds),[[2],[4,5,6]]);
+  assert.deepEqual(finished.deferred.map(event=>event.messageIds),[[3]]);
+  const open=validate({events:[closed],tail:{complete:false,reason:'Still waiting',segments:[[4,5]]}},ids.slice(0,-1));
+  assert.deepEqual(open.events.map(event=>event.messageIds),[[2]]);
+  assert.deepEqual(open.deferred.map(event=>event.messageIds),[[4,5],[3]]);
+});
+
+test('DeepSeek carries forward complete events beyond the writing budget and retains the final exchange', () => {
+  const events=Array.from({length:20},(_,id)=>({id,segments:[[id,id]],messageIds:[id]}));
+  events[19].closingExchange=true;
+  const plan={events,deferred:[],fullyCollected:true};
+  const result=fitDeepSeekSceneBatch(plan,10000);
+  assert.deepEqual(result.events.map(event=>event.id),[0,1,2,3,4,5,6,7,8,9,10,11,12,19]);
+  assert.deepEqual(result.deferred.flatMap(event=>event.messageIds),[13,14,15,16,17,18]);
+  assert.equal(result.fullyCollected,false);
+  assert.equal(plan.events.length,20);
+});
+
+test('a final request to talk does not qualify as DeepSeek closure even if labeled complete', () => {
+  const originalMessages=[{id:0,mes:'She pulled away upset.'},{id:1,mes:'"Talk to me," he said.'}];
+  const event={title:'They spoke',complete:true,reason:'He tried to make amends',result:'He attempted to reassure her.',
+    closure:{messageId:1,quote:'Talk to me'},segments:[[0,1]]};
+  const plan=validateNexusEventPlan({events:[event]},[0,1],{deferUnclassified:true,originalMessages,
+    deferClosingConversationRequest:true});
+  assert.equal(plan.events.length,0);
+  assert.deepEqual(plan.deferred[0].messageIds,[0,1]);
+});
 
 test('legacy mixed Nexus updates the same active core and continuity UID in place', () => {
   const content = [
@@ -121,8 +213,10 @@ test('initial AI analysis can defer only omitted valid source IDs for review',()
   assert.equal(analysis.fullyCollected,false);
   assert.throws(()=>validateNexusEventPlan({...plan,events:[plan.events[0],plan.events[0]]},
     sparse,{deferUnclassified:true}),/already assigned/);
-  assert.throws(()=>validateNexusEventPlan({...plan,events:[{...plan.events[0],complete:false}]},
-    sparse,{deferUnclassified:true}),/completed result/);
+  const open=validateNexusEventPlan({...plan,events:[{...plan.events[0],complete:false}]},
+    sparse,{deferUnclassified:true});
+  assert.equal(open.events.length,0);
+  assert.deepEqual(open.deferred[0].messageIds,plan.events[0].segments.flatMap(([a,b])=>Array.from({length:b-a+1},(_,i)=>a+i)));
 });
 test('source windows preserve all messages, never silently truncate or invent IDs',()=>{
   const source=Array.from({length:12},(_,i)=>({id:i,mes:'story '.repeat(170),name:'Actor'}));

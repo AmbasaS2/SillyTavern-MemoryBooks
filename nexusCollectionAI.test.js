@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
+import { stageNexusEdits } from './nexusCollectionPolicy.js';
+import { validateGroundedNexusEdits, validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
 import { validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
+import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
+import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
 
 const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
 const from=source.indexOf('function parseStrictJSON('),to=source.indexOf('\nfunction resolveConnection(',from);
@@ -15,6 +18,7 @@ test('a provider error inside an HTTP success response is not treated as AI JSON
     const makeRequest=vm.runInNewContext(source.slice(start,end)+'\nrequester',{
         resolveConnection:()=>({api:'nanogpt',model:'active-model'}),
         oai_settings:{},
+        parseStrictJSON:parse,
         requestCompletion:async()=>({text:'',full:{error:{message:'Bad Request'}}}),
     });
     await assert.rejects(makeRequest({},{})('original','Scene'),/selected provider returned an error/);
@@ -27,10 +31,32 @@ test('strict JSON parser accepts exact JSON and a JSON fence without rewriting m
     assert.throws(()=>parse('{"events": [', 'plan'),/malformed/);
     assert.throws(()=>parse('[]','plan'),/object/);
 });
+test('a broken batch wrapper does not discard ready scenes or accept a half-written object', () => {
+    const ready={id:'first',scene:'She literally said "pick {this}" and left.'};
+    const draft={id:'second',scene:'Writing in progress'};
+    const cutScene='{"scenes":['+JSON.stringify(ready)+','+JSON.stringify(draft).slice(0,-5);
+    assert.deepEqual(recoverSlothCollectionDraft(cutScene),
+        {scenes:[ready],edits:[],recoveredIncompleteEdits:true});
+    const edit={uid:3,evidence:[{messageId:1,quote:'exact words'}]};
+    const cutNexus='{"scenes":['+JSON.stringify(ready)+'],"edits":['+JSON.stringify(edit)+',{"uid":5';
+    assert.deepEqual(recoverSlothCollectionDraft(cutNexus),
+        {scenes:[ready],edits:[edit],recoveredIncompleteEdits:true});
+    const missingOuterBrace='{"scenes":['+JSON.stringify(ready)+'],"edits":['+JSON.stringify(edit)+']';
+    assert.deepEqual(recoverSlothCollectionDraft(missingOuterBrace),
+        {scenes:[ready],edits:[edit],recoveredIncompleteEdits:false});
+    const nestedNexus={scenes:[ready,{edits:[edit]}]};
+    assert.deepEqual(normalizeSlothCollectionDraft(nestedNexus),
+        {scenes:[ready],edits:[edit],recoveredIncompleteEdits:false});
+    assert.deepEqual(recoverSlothCollectionDraft(JSON.stringify(nestedNexus).slice(0,-2)),
+        {scenes:[ready],edits:[edit],recoveredIncompleteEdits:false});
+    const ownsEdits={...nestedNexus,edits:[]};
+    assert.equal(normalizeSlothCollectionDraft(ownsEdits),ownsEdits);
+    assert.equal(recoverSlothCollectionDraft('Report: '+cutScene),null);
+    assert.equal(recoverSlothCollectionDraft('{"scenes":[{"id":"unfinished'),null);
+});
 test('collector limits Nexus source and hides protected Outlet content from the AI prompt',()=>{
     assert.match(source,/protectedEntry/);
     assert.match(source,/\[protected; not included\]/);
-    assert.match(source,/source\.length>60000/);
     assert.doesNotMatch(source,/auditSlothDraft|keywords correction/);
 });
 
@@ -61,6 +87,30 @@ test('long original source requires the active model context and a successful to
     state.context=8192;
     state.tokens=1200;
     assert.equal(await canUse('original',{},profile),false);
+});
+
+test('collection balances whole messages at 62,000 raw chat tokens per group', async () => {
+    const messages=Array.from({length:120},(_,index)=>({id:index*2,mes:'Same-sized chat message.',name:'Not part of token count'}));
+    const cases=[[62000,[120]],[62001,[60,60]],[90000,[60,60]],[124000,[60,60]],
+        [124001,[40,40,40]],[150000,[40,40,40]],[186001,[30,30,30,30]]];
+    for (const [tokens,sizes] of cases) {
+        const groups=await splitSlothCollectionSource(messages,async text=>{
+            assert.equal(text,messages.map(message=>message.mes).join('\n'));
+            return tokens;
+        });
+        assert.deepEqual(groups.map(group=>group.length),sizes);
+        assert.deepEqual(groups.flat(),messages);
+    }
+});
+
+test('collection chooses the closest whole-message boundary and has a local tokenizer fallback', async () => {
+    const messages=[120,30,120,60].map((size,id)=>({id,mes:'x'.repeat(size)}));
+    const groups=await splitSlothCollectionSource(messages,async()=>90000);
+    assert.deepEqual(groups.map(group=>group.map(message=>message.id)),[[0,1],[2,3]]);
+    const large=[{id:0,mes:'x'.repeat(120000)},{id:1,mes:'x'.repeat(120000)}];
+    const estimated=await splitSlothCollectionSource(large,async()=>{throw Error('unavailable');});
+    assert.deepEqual(estimated,[[large[0]],[large[1]]]);
+    assert.deepEqual(await splitSlothCollectionSource([large[0]],async()=>200000),[[large[0]]]);
 });
 
 test('window extraction keeps a verified quote from a source ID omitted from the proposed range', async () => {
@@ -163,31 +213,6 @@ test('long source falls back only for a provider input-capacity error', async ()
         async()=>assert.fail('Unrelated provider errors must propagate')),/Rate limit/);
 });
 
-test('scene batch reuses valid prose even with missing keywords and only recovers incomplete scenes', async () => {
-    const begin=source.indexOf('const SCENE_LIST_SCHEMA');
-    const end=source.indexOf('\n/**',begin);
-    const valid={id:'event-1',timeline:'Unknown',scene:'She opened the door.',result:'The door opened.'};
-    const calls=[];
-    const compose=vm.runInNewContext(source.slice(begin,end).replace('export async','async')+'\ncomposeSlothScenes',{
-        requester:()=>async prompt=>{calls.push({prompt});return {scenes:[valid,{id:'event-2',title:'Invalid'}]};},
-        SLOTH_SCENE_OUTPUT_CONTRACT:'single entry contract',getActiveSlothSummaryPreset:()=>({text:'Writing guidance'}),
-        compact:JSON.stringify,oai_settings:{},validateSlothSceneResponse,
-        SCENE_KEYWORD_GUIDANCE:'Writing guidance for keywords',
-        composeSlothScene:async ({event})=>{calls.push({recovered:event.id});return event;},
-    });
-    const events=[{id:'event-1',title:'Approved first memory',result:'Opened',messageIds:[1]},
-        {id:'event-2',title:'Approved second memory',result:'Closed',messageIds:[5]}];
-    const messages=[{id:1,mes:'She opened the door.'},{id:2,mes:'An excluded remark.'},{id:5,mes:'He shut the gate.'}];
-    const result=await compose({events,messages,settings:{moduleSettings:{maxTokens:4000}}});
-    assert.equal(calls.length,2);
-    assert.match(calls[0].prompt,/325–650 tokens of Scene prose/);
-    assert.doesNotMatch(calls[0].prompt,/An excluded remark/);
-    assert.equal(calls[1].recovered,'event-2');
-    assert.equal(result[0].content,'**Timeline**: Unknown\n\n**Scene**\nShe opened the door.\n\n**Result**\nThe door opened.');
-    assert.equal(result[0].title,events[0].title);
-    assert.deepEqual(result[0].keywords,[events[0].title]);
-});
-
 test('only a newly created reserved Nexus entry can lose a decorative title suffix', () => {
     const begin=source.indexOf('function canonicalizeNewNexusTitles(');
     const end=source.indexOf('function parseStrictJSON(',begin);
@@ -202,11 +227,11 @@ test('only a newly created reserved Nexus entry can lose a decorative title suff
     assert.match(correct.title,/vineyard/);
 });
 
-test('approved collection combines Memory and Nexus within the budget and recovers only missing work', async () => {
+test('approved collection uses one request and retains the valid scenes even over the old word limit', async () => {
     const helpersStart=source.indexOf('const SCENE_LIST_SCHEMA');
-    const helpersEnd=source.indexOf('\nexport async function composeSlothScenes(',helpersStart);
-    const start=source.indexOf('async function composeApprovedSlothCollection(');
-    const end=source.indexOf('\nexport async function compressSlothScene(',start);
+    const helpersEnd=source.indexOf('\n/**',helpersStart);
+    const begin=source.indexOf('async function reviewSlothSceneDrafts(');
+    const end=source.indexOf('\nexport async function retryApprovedSlothScenes(',begin);
     const events=[{id:'first',title:'Read the letter',messageIds:[1]},
         {id:'second',title:'Closed the door',messageIds:[2]}];
     const first={id:'first',timeline:'Unknown',scene:'She read the letter.',result:'She read it.'};
@@ -214,34 +239,155 @@ test('approved collection combines Memory and Nexus within the budget and recove
     const edits=[{uid:1}];
     const calls=[];
     let draft={scenes:[first,second],edits};
-    const run=vm.runInNewContext(source.slice(helpersStart,helpersEnd)+'\n'+source.slice(start,end)+'\ncomposeApprovedSlothCollection',{
-        SCENE_KEYWORD_GUIDANCE:'Recall guidance', getActiveSlothSummaryPreset:()=>({text:'Summary guidance'}),
-        oai_settings:{}, compact:JSON.stringify, validateSlothSceneResponse,
+    let repairResponse={repairs:[]};
+    const run=vm.runInNewContext(source.slice(helpersStart,helpersEnd)+'\n'+source.slice(begin,end).replaceAll('export async','async')+'\ncomposeApprovedSlothCollection',{
+        SCENE_KEYWORD_GUIDANCE:'Recall guidance',getActiveSlothSummaryPreset:()=>({text:'Summary guidance'}),
+        parseStrictJSON:parse,normalizeSlothCollectionDraft,recoverSlothCollectionDraft,
+        oai_settings:{},compact:JSON.stringify,originalMessages:messages=>messages,validateSlothSceneResponse,
+        resolveConnection:profile=>profile || {model:'z-ai/glm-5.3'},
+        getContext:()=>({}),
+        getSelectedConnectionProfile:(_context,_translate,id)=>({source:'custom',profile:{model:'placeholder',
+            'custom-connection':{settings:{custom_model:id}}}}),
         slothNexusGuidance:()=> 'Protected Nexus entries omitted',
-        readSlothNexusEdits:raw=>raw.edits,
-        requester:()=>async prompt=>{calls.push(prompt);return draft;},
-        composeSlothScenes:async ({events:missing})=>{calls.push(missing.map(x=>x.id));return missing;},
-        proposeSlothNexusEdits:async()=>{calls.push('Nexus');return edits;},
+        readSlothNexusEdits:raw=>({edits:raw.edits,skippedNexusEdits:0}),
+        requester:(_profile,_settings,_signal,singleAttempt)=>async (prompt,phase,parseDraft)=>{
+            assert.equal(singleAttempt,true);
+            calls.push({prompt,phase});
+            if(phase==='Summary review') {
+                if(repairResponse instanceof Error) throw repairResponse;
+                return repairResponse;
+            }
+            return typeof draft==='string' ? parseDraft(draft,phase) : draft;
+        },
+        console:{warn:()=>{}},
     });
-    const options={plan:{events},messages:[{id:1,mes:'Read'},{id:2,mes:'Closed'}],nexus:{entries:{}},
-        settings:{moduleSettings:{maxTokens:10000}}};
-    const combined=await run(options);
+    const options={plan:{events},messages:[{id:1,mes:'She read and burned the letter.'},{id:2,mes:'He closed the door.'}],
+        nexus:{entries:{}},settings:{moduleSettings:{maxTokens:10000}}};
+    const result=await run(options);
+    const originalPrompt=calls[0].prompt;
     assert.equal(calls.length,1);
-    assert.match(calls[0],/scenes and edits arrays/);
-    assert.match(calls[0],/325–650 tokens of Scene prose/);
-    assert.match(combined.scenes[0].content,/read the letter/);
-    assert.deepEqual(combined.edits,edits);
+    assert.match(originalPrompt,/scenes and edits arrays/);
+    assert.match(originalPrompt,/overall response limit/);
+    assert.doesNotMatch(originalPrompt,/per.memory|prose tokens|English words/iu);
+    assert.equal(result.scenes.length,2);
+    assert.deepEqual(result.edits,edits);
 
     calls.length=0;
-    draft={scenes:[first],edits};
+    await run({...options,profile:{stConnectionProfileId:'deepseek/deepseek-v4.1-flash-1017'}});
+    assert.equal(calls.length,1);
+    assert.match(calls[0].prompt,/ENTIRE JSON under 7600 output tokens/);
+    assert.match(calls[0].prompt,/2964 English words across all Scene bodies/);
+    assert.doesNotMatch(originalPrompt,/ENTIRE JSON under/);
+    const grouped=JSON.parse(calls[0].prompt.split('Original source messages (all current IDs, including deferred):\n\n').at(-1));
+    assert.deepEqual(grouped.MemorySources.map(batch=>[batch.id,batch.messages.map(m=>m.id)]),[['first',[1]],['second',[2]]]);
+    assert.deepEqual(grouped.nexusOnly,[]);
+
+    calls.length=0;
+    const closing=[events[0],{...events[1],closingExchange:true,closure:{messageId:2,quote:'He closed the door.'}}];
+    const deepOptions={...options,profile:{model:'deepseek/deepseek-v4.1-flash-1017'},plan:{events:closing}};
+    draft={scenes:[first,{...second,scene:'She stood by the window.',result:'He closed the door.'}],edits};
+    const wrongSource=await run(deepOptions);
+    assert.deepEqual(Array.from(wrongSource.scenes,scene=>scene.id),['first']);
+    assert.match(calls[0].prompt,/closingExcerpt":"He closed the door\./);
+    draft={scenes:[first,second],edits};
+    const grounded=await run(deepOptions);
+    assert.deepEqual(Array.from(grounded.scenes,scene=>scene.id),['first','second']);
+
+    calls.length=0;
+    draft={scenes:[{...first,scene:'Letter '.repeat(651)},{id:'second',scene:'Missing the other fields.'}],edits};
+    const partial=await run({...options,settings:{moduleSettings:{maxTokens:4000}}});
+    assert.equal(calls.length,1);
+    assert.equal(partial.scenes.length,1);
+    assert.equal(partial.scenes[0].id,'first');
+    assert.equal(partial.skippedScenes,1);
+
+    calls.length=0;
+    draft='{"scenes":['+JSON.stringify(first)+',{"id":"second","scene":"Interrupted';
     const recovered=await run(options);
-    assert.equal(calls.length,2);
-    assert.deepEqual(calls[1],['second']);
-    assert.match(recovered.scenes[0].content,/read the letter/);
-    assert.equal(recovered.scenes[1],events[1]);
-    assert.deepEqual(recovered.edits,edits);
+    assert.equal(calls.length,1);
+    assert.equal(recovered.scenes[0].id,'first');
+    assert.equal(recovered.skippedScenes,1);
 
     calls.length=0;
-    await run({...options,settings:{moduleSettings:{maxTokens:4000}}});
-    assert.deepEqual(calls,[['first','second'],'Nexus']);
+    draft={scenes:[first,second],edits};
+    repairResponse={repairs:[
+        {...first,scene:'She read and burned the letter.',issue:'omission',evidence:{messageId:1,quote:'burned the letter'}},
+        {...second,scene:'He opened the door.',issue:'distortion',evidence:{messageId:1,quote:'burned the letter'}},
+    ]};
+    const reviewed=await run({...options,reviewSummaries:true});
+    assert.equal(calls.length,2);
+    assert.equal(calls[0].prompt,originalPrompt);
+    assert.equal(calls[1].phase,'Summary review');
+    assert.match(reviewed.scenes[0].content,/burned the letter/);
+    assert.match(reviewed.scenes[1].content,/closed the door/);
+
+    calls.length=0;
+    repairResponse=new Error('Provider unavailable');
+    const withoutReview=await run({...options,reviewSummaries:true});
+    assert.equal(calls.length,2);
+    assert.equal(withoutReview.reviewFailed,true);
+    assert.equal(withoutReview.scenes[0].content,result.scenes[0].content);
+});
+
+test('bad Nexus citations and conflicting edits are skipped independently of other updates', () => {
+    const normalizerStart=source.indexOf('function canonicalizeNewNexusTitles(');
+    const normalizerEnd=source.indexOf('function parseStrictJSON(',normalizerStart);
+    const start=source.indexOf('function readSlothNexusEdits(');
+    const end=source.indexOf('async function reviewSlothSceneDrafts(',start);
+    const filter=vm.runInNewContext(source.slice(normalizerStart,normalizerEnd)+'\n'+source.slice(start,end)+'\nreadSlothNexusEdits',{
+        validateGroundedNexusEdits, stageNexusEdits, console:{warn:()=>{}},
+    });
+    const nexus={entries:{1:{uid:1,comment:'LT 01 | The letter',content:'The letter arrived.'},
+        2:{uid:2,comment:'LT 02 | The gate',content:'The gate had been open.'}}};
+    const messages=[{id:1,mes:'She answered the letter.'},{id:2,mes:'He closed the gate.'}];
+    const good={uid:1,kind:'lt',action:'append',text:'She answered the letter.',
+        reason:'The original conversation shows that she replied.',
+        evidence:[{messageId:1,quote:'She answered the letter.'}]};
+    const next={...good,uid:2,text:'He closed the gate.',evidence:[{messageId:2,quote:'He closed the gate.'}]};
+    const bad={...good,text:'An invented fact.',evidence:[{messageId:1,quote:'She set fire to the letter.'}]};
+    const saved=filter({edits:[good,bad,good,next]},{messages,nexus});
+    assert.equal(saved.skippedNexusEdits,2);
+    assert.deepEqual(JSON.parse(JSON.stringify(saved.edits)),[good,next]);
+    assert.equal(nexus.entries[1].content,'The letter arrived.');
+    const withContinuity={entries:{...nexus.entries,3:{uid:3,comment:'Current Continuity',
+        content:'## Present Handoff\nThe gate was open.',constant:true}}};
+    const continuity={uid:3,kind:'continuity',action:'append_section',section:'Present Handoff',
+        text:'He closed the gate.',reason:next.reason,evidence:next.evidence};
+    const partial=filter({edits:[continuity,good]},{messages,nexus:withContinuity,partialSource:true});
+    assert.deepEqual(JSON.parse(JSON.stringify(partial.edits)),[good]);
+    assert.equal(partial.skippedNexusEdits,1);
+    assert.equal(filter({edits:[continuity]},{messages,nexus:withContinuity}).edits.length,1);
+    const heading={...continuity,text:'## Present Handoff\n'+continuity.text};
+    assert.equal(filter({edits:[heading]},{messages,nexus:withContinuity}).edits[0].text,continuity.text);
+    const wrongHeading={...continuity,text:'## Active Threads\n'+continuity.text};
+    assert.equal(filter({edits:[wrongHeading]},{messages,nexus:withContinuity}).edits.length,0);
+    const secondHeading={...heading,text:heading.text+'\n## Active Conditions\nAnother section.'};
+    assert.equal(filter({edits:[secondHeading]},{messages,nexus:withContinuity}).edits.length,0);
+});
+
+test('a requested retry uses one request with only the missing scenes’ source spans', async () => {
+    const helpersStart = source.indexOf('const SCENE_LIST_SCHEMA');
+    const helpersEnd = source.indexOf('\n/**',helpersStart);
+    const begin = source.indexOf('async function retryApprovedSlothScenes(');
+    const end = source.indexOf('\nexport async function compressSlothScene(',begin);
+    const calls = [];
+    const run = vm.runInNewContext(source.slice(helpersStart,helpersEnd)+'\n'+source.slice(begin,end)+'\nretryApprovedSlothScenes',{
+        SCENE_KEYWORD_GUIDANCE:'Recall guidance', getActiveSlothSummaryPreset:()=>({text:'Summary guidance'}),
+        compact:JSON.stringify,validateSlothSceneResponse,
+        requester:(_profile,_settings,_signal,singleAttempt)=>async (prompt,phase)=>{
+            assert.equal(singleAttempt,true);
+            calls.push({prompt,phase});
+            return {scenes:[{id:'event-3',timeline:'Unknown',scene:'They bought a gift.',result:'They chose a gift.'}]};
+        },
+    });
+    const messages = [{id:24,mes:'Already completed.'},{id:26,mes:'They looked at gifts.'},
+        {id:27,mes:'Other event.'},{id:29,mes:'They paid.'},{id:30,mes:'Still pending.'}];
+    const events = [{id:'event-3',title:'Gift shop',messageIds:[26,29]}];
+    const scenes = await run({events,messages});
+    assert.equal(calls.length,1);
+    const supplied = JSON.parse(calls[0].prompt.split('Original messages for these Scenes:\n\n').at(-1));
+    assert.deepEqual(supplied.map(message=>message.id),[26,29]);
+    assert.equal(scenes.length,1);
+    assert.equal(scenes[0].title,'Gift shop');
+    assert.deepEqual(scenes[0].messageIds,[26,29]);
 });

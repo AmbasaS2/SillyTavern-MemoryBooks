@@ -55,7 +55,7 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     assert.doesNotMatch(advanced,/\/sloth-collect|new-profile|edit-profile|side-prompt-advanced/);
     assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-popover[\s\S]+stmb-sloth-composer-size[\s\S]+stmb-sloth-settings-rule[\s\S]+stmb-sloth-hide-recent/);
     assert.match(sloth,/data-stmb-sloth-action="collect"[\s\S]+id="stmb-sloth-auto"/);
-    assert.match(sloth,/option value="jev"/);
+    assert.doesNotMatch(sloth,/option value="jev"/);
     assert.match(sloth,/id="stmb-sloth-linked-books-only"/);
     assert.match(source,/slothLinkedBooksOnly \? \[\] : sloth\.worldNames\.filter/);
     assert.match(html,/data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton"/);

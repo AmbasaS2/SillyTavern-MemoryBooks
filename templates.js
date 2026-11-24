@@ -128,11 +128,14 @@ export const settingsTemplate = Handlebars.compile(`
           <select id="stmb-sloth-memory-recall" class="text_pole">
             <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
             <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
-            <option value="jev" {{#if slothMemoryUsesJev}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallJev">NanoGPT Jev selection</option>
           </select>
         </label>
-        <small id="stmb-sloth-native-recall-help" {{#if slothMemoryUsesJev}}hidden{{/if}} data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The latest 3 collected scenes stay always on. Apply this mode to older collected scenes on the next collection.</small>
-        <small id="stmb-sloth-jev-help" {{#unless slothMemoryUsesJev}}hidden{{/unless}} data-i18n="STMemoryBooks_SlothRecallJevHelp">Jev selects older memories for the current reply using the Scene Reader server plugin’s NanoGPT subscription key. If unavailable, the previous recall method is used.</small>
+        <small id="stmb-sloth-native-recall-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp">Older memories use the selected Vector or Keywords mode starting with the next collection. The latest 3 scenes stay always on.</small>
+        <label class="checkbox_label">
+          <input id="stmb-sloth-summary-review" type="checkbox" aria-describedby="stmb-sloth-summary-review-help" {{#if slothSummaryReview}}checked{{/if}}>
+          <span data-i18n="STMemoryBooks_SlothSummaryReview">Review and retry summaries</span>
+        </label>
+        <small id="stmb-sloth-summary-review-help" data-i18n="STMemoryBooks_SlothSummaryReviewHelp">Check for major omissions or distortions and repair them with up to one extra AI request.</small>
         <div data-stmb-prompt-library-slot="summary"></div>
         </details>
         {{/if}}

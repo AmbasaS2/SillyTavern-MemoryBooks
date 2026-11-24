@@ -73,17 +73,18 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
     const collector=code.slice(code.indexOf('export async function runNexusCollector'),code.indexOf('function isVisibleSceneMessage'));
     assert.match(collector,/if\(scenes.length\|\|initial\) \{[\s\S]*stageMemoryScenes/);
     assert.match(collector,/if\(edits.length\|\|initial\) \{[\s\S]*stageNexusEdits/);
-    assert.match(collector,/if\(scenes.length\)\{\s*try \{\s*await updateCollectedLedger/);
+    assert.match(collector,/if\(scenes.length\)\{\s*try \{\s*await updateCollectedLedger\(prior,scenes,/);
     assert.match(collector,/states.length===1\?await commitSlothNexusMigration/);
     assert.match(collector,/operation:scenes.length\?'Memory Scene save':'Nexus current-state update'/);
     assert.match(code,/const checkbox = popup\.dlg\.querySelector\('#stmb-sloth-plan-hide'\)/);
     assert.match(code,/if \(checkbox\)[\s\S]*checkbox\.checked \? getSlothHideRanges/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
-    assert.match(prompt,/canonicalizeNewNexusTitles\(response.edits\)[\s\S]*validateGroundedNexusEdits\(candidates.filter\(/);
+    assert.match(prompt,/canonicalizeNewNexusTitles\(response.edits\)[\s\S]*validateGroundedNexusEdits\(\[candidate\], messages\)/);
     assert.match(prompt,/Deferred source is still visible/);
 });
-test('unverified Nexus changes stop the approved collection before saving books',()=>{
+test('approved collection can save Memory alone and hides only the saved scenes',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    assert.match(runtime,/await composeApprovedSlothCollection[\s\S]*if\(!\(error instanceof InvalidSlothNexusProposal\)\)throw error;\s*throw new Error\(t\([^\n]*\n\s*'STMemoryBooks_SlothCollectionInvalidNexus'/);
+    assert.match(runtime,/const \{edits,skippedNexusEdits,reviewFailed\}=collection;[\s\S]*if\(scenes.length\|\|initial\)[\s\S]*if\(edits.length\|\|initial\)/);
     assert.match(runtime,/commitSlothBooks/);
+    assert.match(runtime,/getSlothHideRanges\(scenes,chat,approval.keepRecent\)/);
 });
