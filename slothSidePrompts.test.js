@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pickSlothSidePresets, slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
+import { canContinueSlothSideEntry, getSlothSidePresets, pickSlothSidePresets,
+    SLOTH_DIARY_ID, slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
 import { scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
 
 test('one run can select independent Side Prompts, including an always-on custom prompt', () => {
@@ -10,7 +11,35 @@ test('one run can select independent Side Prompts, including an always-on custom
         slothSideRecallModes: { [npc.id]: 'constant' } } };
     assert.deepEqual(pickSlothSidePresets(settings, []), []);
     const selected = pickSlothSidePresets(settings, [npc.id, npc.id, diary.id, 'unknown']);
-    assert.deepEqual(selected, [{ ...npc, recall: 'constant' }, { ...diary, responseFormat: '', recall: 'disabled' }]);
+    const destination = { book: '', entry: null };
+    assert.deepEqual(selected, [{ ...npc, recall: 'constant', destination },
+        { ...diary, responseFormat: '', recall: 'disabled', destination }]);
+});
+
+test('the canonical Diary uses character-specific books and chat-specific continuation targets', () => {
+    const avatar = 'mira.png';
+    const fileName = 'chapter-a';
+    const ref = { type: 'character', avatarUrl: avatar, fileName };
+    const entry = { book: 'Archive', uid: 5, title: 'My diary' };
+    const settings = { moduleSettings: {
+        slothSideBooks: { [JSON.stringify([avatar, SLOTH_DIARY_ID])]: 'Archive' },
+        slothSideEntries: { [JSON.stringify([avatar, fileName, SLOTH_DIARY_ID])]: entry },
+    } };
+    const [diary] = pickSlothSidePresets(settings, [SLOTH_DIARY_ID], ref);
+    assert.match(diary.text, /PRIVATE DIARY as a first-person record/);
+    assert.match(diary.responseFormat, /DIARY \(DON'T READ IT\) — \{\{char\}\}/u);
+    assert.equal(diary.recall, 'disabled');
+    assert.deepEqual(diary.destination, { book: 'Archive', entry });
+    assert.deepEqual(pickSlothSidePresets(settings, [SLOTH_DIARY_ID], { ...ref, fileName: 'chapter-b' })[0].destination,
+        { book: 'Archive', entry: null });
+    assert.deepEqual(pickSlothSidePresets(settings, [SLOTH_DIARY_ID], { ...ref, avatarUrl: 'other.png' })[0].destination,
+        { book: '', entry: null });
+    assert.ok(!getSlothSidePresets(settings).some(preset => preset.id === 'sloth-little-things'));
+    const record = { uid: 5, comment: 'Private journal', content: 'Earlier diary.' };
+    assert.ok(canContinueSlothSideEntry(record, SLOTH_DIARY_ID, ref));
+    assert.ok(!canContinueSlothSideEntry({ ...record, STMB_chatId: 'chapter-b' }, SLOTH_DIARY_ID, ref));
+    assert.ok(!canContinueSlothSideEntry({ ...record, position: 7 }, SLOTH_DIARY_ID, ref));
+    assert.ok(!canContinueSlothSideEntry({ ...record, comment: 'Core Memory' }, SLOTH_DIARY_ID, ref));
 });
 
 test('Little Things has a character-readable name and does not take an unrelated existing name', () => {

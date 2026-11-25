@@ -37,7 +37,8 @@ import {
     SIDE_PROMPT_REGENERATION_METADATA_KEY,
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
-import { buildSlothSideReference, normalizeSlothSideKeywords, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
+import { buildSlothSideReference, canContinueSlothSideEntry, normalizeSlothSideKeywords,
+    SLOTH_DIARY_ID, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
 
 
 import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -1533,7 +1534,7 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
     return filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
 }
 
-/** Prepare a reviewed Sloth note for the character's side lorebook. */
+/** Prepare a reviewed Sloth note for the selected lorebook. */
 export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene,
     { recallMode = 'disabled', nexus, chatRef } = {}) {
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
@@ -1541,8 +1542,24 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         const tpl = {key: preset.id, name: '🦥 '+preset.name};
         const sidePromptHistory = getSidePromptHistory(tpl, {}, [], chatRef);
         sidePromptHistory.legacyTitles = [];
-        const prior = resolveSidePromptHistory(original, sidePromptHistory).latest?.content ??
-            resolveSidePromptHistory(nexus, sidePromptHistory).latest?.content ?? '';
+        const resolved = resolveSidePromptHistory(original, sidePromptHistory);
+        let existingUid = preset.destination.entry?.uid;
+        if (existingUid === undefined && !resolved.latest && preset.id === SLOTH_DIARY_ID) {
+            const legacy = Object.values(original.entries).filter(entry =>
+                entry.STMB_sidePromptHistory?.chatKey === sidePromptHistory.chatKey &&
+                /^Diary\s*\(Don['’]t read it\)(?:$|\s|-)/iu.test(entry.comment || '') &&
+                canContinueSlothSideEntry(entry, preset.id, chatRef));
+            if (legacy.length === 1) existingUid = legacy[0].uid;
+        }
+        let target = resolved.latest;
+        if (existingUid !== undefined) {
+            sidePromptHistory.existingEntryUid = existingUid;
+            target = resolveSidePromptHistory(original, sidePromptHistory).latest;
+            if (!canContinueSlothSideEntry(target, preset.id, chatRef)) throw new Error('Side Prompt target entry changed.');
+        }
+        const prior = target?.content ?? '';
+        const adopted = target && existingUid !== undefined && !resolved.latest;
+        const preserveTitle = adopted || target?.STMB_slothPreserveTitle === true;
         const reference = buildSlothSideReference(savedScene, nexus);
         const prompt = [preset.text, '\n=== EXISTING MEMORY FOR REFERENCE (NOT NEW EVIDENCE) ===', reference,
             '=== END REFERENCE ==='].join('\n');
@@ -1566,15 +1583,17 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         if (!ensureSidePromptTextNotBlank(text,tpl,'reviewedSloth')) {
             throw new Error('The Side Prompt returned empty content.');
         }
-        if (text.trim() === SLOTH_NO_SIDE_DETAILS) return null;
+        if (text.trim() === SLOTH_NO_SIDE_DETAILS || (preset.id === SLOTH_DIARY_ID && text.trim() === prior.trim())) return null;
         const title = getUnifiedSidePromptTitle(tpl);
         return {
-            text,keywords,
+            text,keywords,target,
             stage: (book, content, reviewedKeywords = []) => stageLorebookEntriesBatch(lorebookName, book, [{
-                title,content,sidePromptHistory,archiveOnly:recallMode === 'disabled',
-                entryOverrides:{position:0,outletName:'',ignoreBudget:false,constant:recallMode === 'constant',
+                title,content,sidePromptHistory,preserveSidePromptTitle:preserveTitle,archiveOnly:recallMode === 'disabled',
+                entryOverrides:{constant:recallMode === 'constant',
                     vectorized:recallMode === 'vector',key:recallMode === 'keyword' ? reviewedKeywords : [],keysecondary:[]},
                 metadataUpdates:{STMB_slothSideNote:true,STMB_slothSideBook:true,STMB_slothSideArchive:recallMode === 'disabled',
+                    ...(adopted ? { STMB_slothPreserveTitle:true,
+                        STMB_slothPreviousSideHistory:target.STMB_sidePromptHistory || null } : {}),
                     [`STMB_sp_${tpl.key}_lastRunAt`]:new Date().toISOString()},
             }]).lorebookData,
         };

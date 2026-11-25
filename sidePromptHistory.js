@@ -31,6 +31,8 @@ export function validateSidePromptHistoryRequest(history) {
     if (!history || typeof history !== 'object' || Array.isArray(history)
         || ['templateKey', 'chatKey', 'chatId', 'titleBase', 'group'].some(key => typeof history[key] !== 'string' || !history[key].trim() || history[key].length > 4096)
         || !['name', 'override'].includes(history.titleSource) || typeof history.append !== 'boolean'
+        || (history.existingEntryUid !== undefined &&
+            (!Number.isSafeInteger(history.existingEntryUid) || history.existingEntryUid < 0 || history.append))
         || /[\s,]/u.test(history.group)
         || !Array.isArray(history.legacyTitles) || history.legacyTitles.length > 4
         || history.legacyTitles.some(title => typeof title !== 'string' || !title.trim() || title.length > 4096)) {
@@ -71,6 +73,11 @@ export function resolveSidePromptHistory(lorebookData, history) {
         sequences.add(sequence);
     }
     versions.sort((a, b) => a[SIDE_PROMPT_HISTORY_KEY].sequence - b[SIDE_PROMPT_HISTORY_KEY].sequence);
+    if (history.existingEntryUid !== undefined) {
+        const latest = entries.find(entry => entry?.uid === history.existingEntryUid);
+        if (!latest || (versions.length && versions.at(-1) !== latest)) throw sidePromptHistoryError();
+        return { versions, latest, legacy: versions.length ? null : latest };
+    }
     if (versions.length) return { versions, latest: versions.at(-1), legacy: null };
     const candidates = entries.filter(entry => {
         if (entry?.[SIDE_PROMPT_HISTORY_KEY]) return false;

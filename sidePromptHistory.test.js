@@ -92,8 +92,8 @@ test('Sloth publishes a disabled note per chat and updates only its own latest e
 });
 
 test('Sloth side defaults and duplicate references exclude shared presets and protected entries', () => {
-    const [little] = getSlothSidePresets({moduleSettings:{slothSidePresets:[{id:'plotpoints',name:'Plotpoints',text:'legacy'}]}});
-    assert.equal(little.name, 'Little Things');
+    const [diary] = getSlothSidePresets({moduleSettings:{slothSidePresets:[{id:'plotpoints',name:'Plotpoints',text:'legacy'}]}});
+    assert.equal(diary.name, "Diary (Don't read it)");
     assert.deepEqual(JSON.parse(buildSlothSideReference({content:'Scene copy'}, {entries:{
         0:{comment:'Extra',content:'extra'}, 1:{comment:'Core Memory',content:'core'},
         2:{comment:'Private Outlet',content:'outlet',position:7}, 3:{comment:'Archived',content:'archive',disable:true},

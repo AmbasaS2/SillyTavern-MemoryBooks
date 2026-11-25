@@ -65,7 +65,7 @@ Hide is optional and does not delete the chat history. Only successfully saved r
 | Section | When to use it |
 |---|---|
 | Automatic collection | Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages. |
-| Side Prompts | Save several prompts, each with its own instructions, optional response format and recall mode. Choose which prompts to run with a collection or run them separately on a saved scene. Approved results go to the character’s `Little Things - Character` lorebook. |
+| Side Prompts | The built-in Diary defaults to a private, non-injected record. Each prompt has its own lorebook, optional response format and recall mode. Use the existing matching entry, select an older entry to continue, or use `Little Things - Character`, which is created and linked on the first approved save. |
 | Manage existing memories | Review merging related scenes, splitting an existing scene, or shortening an event. Choose and review the changes instead of automatically replacing memories. |
 | Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
 | Original Memory Books | Original scene-marker tools, profiles, prompts, consolidation and other original features. Use the original feature guides for that workflow. |
@@ -133,7 +133,7 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 | 설정 영역 | 활용법 |
 |---|---|
 | 자동 수집 | 기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다. |
-| 사이드 프롬프트 | 지시문, 응답 형식, 상시·벡터·키워드·미주입 방식을 프롬프트별로 저장합니다. 기억 수집 계획에서 함께 실행할 프롬프트를 체크하거나 저장한 장면에서 따로 실행합니다. 검토한 결과는 `Little Things - 캐릭터 이름` 로어북에 저장됩니다. |
+| 사이드 프롬프트 | 기본 일기는 미주입으로 저장합니다. 프롬프트마다 로어북, 응답 형식, 주입 방식을 고릅니다. 같은 프롬프트의 기존 항목을 갱신하거나 예전 기록을 직접 고를 수 있습니다. Little Things를 선택하면 첫 승인 저장 때 필요한 책을 만들고 캐릭터에 연결합니다. |
 | 저장한 사건 수정 | 나뉜 사건 합치기, 한 기억을 사건별로 나누기, 사건 짧게 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 사용자가 대상과 변경안을 확인하는 작업입니다. |
 | 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
 | 기존 메모리북 | 원본의 구간 지정·프로필·프롬프트·압축·통합 등 기존 도구를 사용할 수 있습니다. |

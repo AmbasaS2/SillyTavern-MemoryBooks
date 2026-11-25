@@ -1287,6 +1287,9 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     gap: 4px;
     margin: 8px 0 0;
 }
+.popup.stmb-popup .stmb-sloth-side-draft > small { overflow-wrap: anywhere; }
+.popup.stmb-popup .stmb-sloth-side-target { width: fit-content; max-width: 100%; white-space: normal; }
+.popup.stmb-popup .stmb-sloth-side-target[hidden] { display: none; }
 .popup.stmb-popup .stmb-prompt-library textarea[readonly] { opacity:.86; }
 .popup.stmb-popup .stmb-prompt-format summary { cursor:pointer; }
 .popup.stmb-popup .stmb-prompt-format[open] summary { margin-bottom:4px; }

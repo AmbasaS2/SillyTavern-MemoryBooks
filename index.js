@@ -11612,10 +11612,10 @@ async function runCancellableSlothButton(button, start) {
 function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   const existingSlot = document.getElementById('stmb-sloth-composer-slot');
   const ref = getCurrentStmbChatRef();
-  const sendButton = settings?.moduleSettings?.slothComposerPosition === 'right'
-    ? document.querySelector('#rightSendForm > #send_but') : null;
-  const anchor = sendButton || document.querySelector('#leftSendForm #extensionsMenuButton');
-  if (!anchor || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
+  const rightToolbar = settings?.moduleSettings?.slothComposerPosition === 'right'
+    ? document.getElementById('rightSendForm') : null;
+  const anchor = rightToolbar ? null : document.querySelector('#leftSendForm #extensionsMenuButton');
+  if ((!rightToolbar && !anchor) || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
     existingSlot?.remove();
     return;
   }
@@ -11640,12 +11640,12 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
     button.firstElementChild.className = 'fa-solid fa-' + getSlothComposerIcon(settings);
   }
   button.style.setProperty('--stmb-collect-size', getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px');
-  // Flex items with the same order are laid out in DOM order.
-  slot.style.order = getComputedStyle(anchor).order;
-  if (sendButton) {
-    if (sendButton.previousElementSibling !== slot) sendButton.before(slot);
-  } else if (anchor.nextElementSibling !== slot) {
-    anchor.after(slot);
+  if (rightToolbar) {
+    slot.style.removeProperty('order');
+    if (slot.parentElement !== rightToolbar) rightToolbar.prepend(slot);
+  } else {
+    slot.style.order = getComputedStyle(anchor).order;
+    if (anchor.nextElementSibling !== slot) anchor.after(slot);
   }
 }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
+import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 
 export const SLOTH_NO_SIDE_DETAILS = '[[NO_NEW_DETAILS]]';
 
@@ -26,15 +27,39 @@ export function normalizeSlothSideKeywords(value) {
     return [...unique.values()];
 }
 
-const LITTLE_THINGS = Object.freeze({
-    id: 'sloth-little-things',
-    name: 'Little Things',
-    text: [
-        'Keep small details about the scene’s main characters: a stated taste, recurring habit, private nickname or joke, or the personal meaning of an ordinary object. Add at most three new details total and skip passing scenery, incidental reactions and side-character backstory.',
-        'Before using a detail, check the saved Scene, Nexus reference and prior notes for the same fact in any wording. If present there, omit it even if a different quote could illustrate it. Skip plot, core facts, relationship changes, promises and current conditions. New details must come from the selected scene.',
-        'Keep prior notes and add one brief English bullet per qualifying detail. Name the character and describe the concrete observation. Say “in this scene” for a one-off action; call it a habit only if the source explicitly makes it recurring. Use names from narration or dialogue, ignoring names found only in private-note labels. Preserve an exact short phrase only when it is the detail.',
-        'If the source adds nothing worth recording, return exactly '+SLOTH_NO_SIDE_DETAILS+'.',
-    ].join('\n\n'),
+export const SLOTH_DIARY_ID = 'sloth-diary';
+
+const DIARY = Object.freeze({
+    id: SLOTH_DIARY_ID,
+    name: "Diary (Don't read it)",
+    text: `Maintain {{char}}'s PRIVATE DIARY as a first-person record written from inside the lived moment.
+
+THIS CALL RETURNS THE COMPLETE REPLACEMENT BODY FOR THE SAME EXISTING SIDE ENTRY. Use the selected source, supplied context, and complete existing diary as the evidence boundary.
+
+ENTRY SELECTION
+For a normal update, add one dated entry when {{char}} has enough first-hand material to plausibly write it. For a rebuild with no existing diary, select up to four clearly established dates and include ordinary life alongside major turns when the source supports both. When the source supplies no qualifying first-hand material, return the existing diary unchanged.
+
+VOICE AND TIME-LOCAL KNOWLEDGE
+Write with {{char}}'s vocabulary, humor, restraint, bias, avoidance, blind spots, self-correction, and self-deception at that date. Keep knowledge and self-awareness at the level available then. Let meaning emerge through chosen details, omissions, evasions, and unfinished questions. Bring an existing entry that reads like a scene summary, relationship analysis, therapy note, or polished character arc back into immediate diary voice while preserving its grounded facts.
+
+CONTENT BALANCE
+Use the texture {{char}} would actually notice: school or work, weather, meals, errands, gossip, embarrassment, tiredness, minor irritation, odd observations, private jokes, unanswered questions, and important events. A sequence of entries should vary in subject, intensity, and length. Romantic, dramatic, erotic, tragic, or lyrical material appears in the proportion established by the source.
+
+GROUNDING AND SHAPE
+Ground every date, event, weather detail, meal, line of dialogue, thought, and motive in the supplied evidence. Keep background implicit unless {{char}} would naturally write it. Let entries stop where the thought naturally stops; titles and polished lessons appear only when they authentically belong to {{char}}'s diary practice.
+
+Most entries run 40–140 words; a major entry may reach 200. Preserve the newest eight entries plus up to four older entries of exceptional continuing importance.
+
+Return only the complete updated diary.`,
+    responseFormat: `=== DIARY (DON'T READ IT) — {{char}} ===
+
+## [Date or descriptive time marker]
+
+[First-person diary entry in {{char}}'s private voice.]
+
+[Repeat only for additional clearly established dates when rebuilding from a range.]
+
+=== END DIARY (DON'T READ IT) — {{char}} ===`,
     builtin: true,
 });
 
@@ -45,13 +70,35 @@ export function getSlothSidePresets(settings) {
         typeof preset.name === 'string' && preset.name.trim() &&
         typeof preset.text === 'string' && preset.text.trim()).map(({id,name,text,responseFormat}) =>
             ({id,name,text,responseFormat:typeof responseFormat === 'string' ? responseFormat : ''})) : [];
-    return [LITTLE_THINGS, ...custom];
+    return [DIARY, ...custom];
 }
 
-export function pickSlothSidePresets(settings, ids) {
+export function getSlothSideDestination(settings, id, ref) {
+    const module = settings?.moduleSettings;
+    const book = module?.slothSideBooks?.[JSON.stringify([ref?.avatarUrl, id])] || '';
+    const entry = module?.slothSideEntries?.[JSON.stringify([ref?.avatarUrl, ref?.fileName, id])];
+    return { book, entry: book && entry?.book === book ? entry : null };
+}
+
+export function pickSlothSidePresets(settings, ids, ref) {
     const selected = new Set(ids);
     return getSlothSidePresets(settings).filter(preset => selected.has(preset.id))
-        .map(preset => ({ ...preset, recall: getSlothSideRecall(settings, preset.id) }));
+        .map(preset => ({ ...preset, recall: getSlothSideRecall(settings, preset.id),
+            destination: getSlothSideDestination(settings, preset.id, ref) }));
+}
+
+export function canContinueSlothSideEntry(entry, presetId, ref) {
+    if (!entry || !Number.isSafeInteger(entry.uid) || typeof entry.content !== 'string' ||
+        !entry.content.trim() || entry.outletName || Number(entry.position) === 7 ||
+        entry.STMB_slothLegacyArchive || entry.STMB_sourceRanges?.length || isCompletedSceneEntry(entry) ||
+        /^(?:Core Memory|Current Continuity)(?:$|\s*[-—–:])/iu.test(entry.comment || '') ||
+        classifyNexusLegacyTitle(entry.comment)) return false;
+    const history = entry.STMB_sidePromptHistory;
+    const chatKey = JSON.stringify(['character', ref.avatarUrl, ref.fileName]);
+    if (history && history.chatKey !== chatKey) return false;
+    if (entry.STMB_slothSideNote) return history?.templateKey === presetId && history.titleSource === 'name';
+    const chatId = entry.STMB_chatId || entry.STMB_sidePromptRegeneration?.chatId;
+    return !chatId || String(chatId).replace(/\.jsonl$/iu, '') === ref.fileName;
 }
 
 export function slothSideBookName(character, names, suffix) {

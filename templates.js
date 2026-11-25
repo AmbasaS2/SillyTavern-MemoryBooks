@@ -176,7 +176,7 @@ export const settingsTemplate = Handlebars.compile(`
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Create multiple prompts for additional records. The first save creates a separate Little Things lorebook for this character.</p>
+          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Save diaries and other records using your choice of lorebook for each prompt.</p>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}
@@ -213,7 +213,7 @@ export const settingsTemplate = Handlebars.compile(`
               <span data-i18n="STMemoryBooks_SlothComposerPosition">Collection icon position</span>
               <select id="stmb-sloth-composer-position" class="text_pole">
                 <option value="left" {{#unless slothComposerOnRight}}selected{{/unless}} data-i18n="STMemoryBooks_SlothComposerLeft">Left · Extensions menu</option>
-                <option value="right" {{#if slothComposerOnRight}}selected{{/if}} data-i18n="STMemoryBooks_SlothComposerRight">Right · Send button</option>
+                <option value="right" {{#if slothComposerOnRight}}selected{{/if}} data-i18n="STMemoryBooks_SlothComposerRight">Right icon row</option>
               </select>
             </label>
             <div class="stmb-sloth-inline-field stmb-sloth-icon-field">

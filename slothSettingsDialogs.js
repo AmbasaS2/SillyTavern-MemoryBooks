@@ -8,7 +8,10 @@ import { translate } from '../../../i18n.js';
 import { escapeHtml } from '../../../utils.js';
 import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
 import { SLOTH_DEFAULT_SUMMARY_PROMPT } from './nexusSlothScenePrompt.js';
-import { getSlothSidePresets, getSlothSideRecall, normalizeSlothSideRecall } from './slothSidePrompts.js';
+import { getSlothSideDestination, getSlothSidePresets, getSlothSideRecall, normalizeSlothSideRecall } from './slothSidePrompts.js';
+import { getActiveNexusRoleContext } from './nexusCharacterRolesRuntime.js';
+import { getCurrentStmbChatRef, getStmbChatKey } from './stmbJobs.js';
+import { getSlothSideContinuationOptions } from './nexusCollectorRuntime.js';
 import { markStmbPopup } from './utils.js';
 
 const t = (source, key) => translate(source, 'STMemoryBooks_' + key);
@@ -35,11 +38,15 @@ function writePresetFile(record, format) {
     setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
-function mountPromptLibrary({target, title, heading=title, records, appliedId, format, save, remove, recall}) {
+function mountPromptLibrary({target, title, heading=title, records, appliedId, format, save, remove, recall, destination}) {
     const isSummary=format==='sloth-summary-prompt';
     const suffix=isSummary?'summary':'side';
     const id=field=>`stmb-${suffix}-prompt-${field}`;
     const icon = (name,glyph,label) => actionButton(name,glyph,label);
+    const bookLabel=t('Save to lorebook','SlothSideDestination');
+    const automaticBook=t('Little Things (create if needed)','SlothSideAutoBook');
+    const entryLabel=t('Entry to continue','SlothSideEntryTarget');
+    const automaticEntry=t('Find matching entry automatically','SlothSideAutoEntry');
     target.classList.add('stmb-prompt-library');
     target.innerHTML=DOMPurify.sanitize(`
         <header class="stmb-prompt-heading"><label for="${id('choice')}">${html(heading)}</label><div class="stmb-prompt-tools">
@@ -63,13 +70,18 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
             <option value="constant">${html(t('Always include','SlothRecallConstant'))}</option>
             <option value="vector">${html(t('Vector','NexusRecallVector'))}</option>
             <option value="keyword">${html(t('Keywords','SlothRecallKeywords'))}</option>
-          </select></label><small>${html(t('Applies when you update this Side Prompt.','SlothSideRecallHelp'))}</small>`:''}
+          </select></label>`:''}
+        ${destination?`<label class="stmb-sloth-inline-field" for="${id('book')}">${html(bookLabel)}
+          <select id="${id('book')}" class="text_pole"></select></label>
+          <button type="button" class="menu_button stmb-sloth-side-target" id="${id('entry')}" hidden></button>
+          <small id="${id('destination-help')}"></small>`:''}
         <small class="stmb-prompt-status" id="${id('status')}" role="status" aria-live="polite"></small>
         <input type="file" id="${id('file')}" accept=".json,application/json" hidden>`);
     const find=field=>target.querySelector('#'+id(field));
     const button=action=>target.querySelector(`[data-prompt-action="${action}"]`);
     const select=find('choice'), editor=find('text'), response=find('format'), file=find('file');
     const recallSelect=find('recall');
+    const bookSelect=find('book'), entryButton=find('entry');
     const empty={id:'',name:t('New Side Prompt','SlothSideNew'),text:'',responseFormat:''};
     let current=records.find(record=>record.id===appliedId)||records[0]||empty;
     let busy=false;
@@ -81,6 +93,10 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const sync=()=>{
         select.disabled=busy;
         if(recallSelect)recallSelect.disabled=busy||!current.id;
+        if(bookSelect) {
+            bookSelect.disabled=busy||!current.id||!destination.enabled;
+            entryButton.disabled=bookSelect.disabled;
+        }
         button('save').disabled=busy||!editor.value.trim()||!(dirty()||(isSummary&&current.id!==appliedId));
         button('copy').disabled=busy||!editor.value.trim();
         button('rename').disabled=busy||!current.id||readOnly();
@@ -90,6 +106,20 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         button('expand').disabled=busy||!editor.value.trim();
         setStatus(dirty()?t('Unsaved edits','SlothPromptUnsaved'):
             (isSummary&&current.id===appliedId?t('In use','SlothPromptActive'):''));
+    };
+    const renderDestination=()=>{
+        if(!bookSelect)return;
+        const {book,entry}=destination.get(current.id);
+        const books=destination.books();
+        if(book&&!books.includes(book))books.push(book);
+        bookSelect.replaceChildren(new Option(automaticBook,''), ...books.map(name=>new Option(name,name)));
+        bookSelect.value=book;
+        entryButton.hidden=!destination.enabled||!book;
+        entryButton.textContent=entryLabel+(entry ? ' · '+entry.title : '');
+        find('destination-help').textContent=destination.enabled
+            ? (!book ? t('The first approved save connects Little Things to this character.','SlothSideAutoBookHelp') :
+                t('Existing lorebook links stay as configured. Choose an entry to continue an older record.','SlothSideExistingBookHelp'))
+            : t('Open a character chat to choose a lorebook.','SlothSideOpenChat');
     };
     const render=()=>{
         const options=isSummary?records:[empty,...records];
@@ -106,6 +136,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         if(recallSelect) {
             recallSelect.value=recall.get(current.id);
         }
+        renderDestination();
         sync();
     };
     const run=async task=>{
@@ -150,6 +181,27 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     });
     for(const input of [editor,response])input?.addEventListener('input',sync);
     recallSelect?.addEventListener('change',()=>void run(()=>recall.set(current.id,recallSelect.value)));
+    bookSelect?.addEventListener('change',()=>void run(async()=>{
+        try { await destination.setBook(current.id,bookSelect.value); }
+        finally { renderDestination(); }
+    }));
+    entryButton?.addEventListener('click',()=>void run(async()=>{
+        const {book,entry}=destination.get(current.id);
+        if(!book)return;
+        const entries=await destination.listEntries(book,current.id);
+        const popup=markStmbPopup(new Popup(
+            '<h3>'+html(entryLabel)+'</h3><p>'+html(book)+'</p><select class="text_pole stmb-sloth-side-entry-choice"></select>',
+            POPUP_TYPE.CONFIRM,'',{okButton:t('Save','Save'),cancelButton:t('Cancel','Cancel')}));
+        const choice=popup.dlg.querySelector('select');
+        choice.setAttribute('aria-label',entryLabel);
+        choice.replaceChildren(new Option(automaticEntry,''),...entries.map(item=>
+            new Option((item.comment||'#'+item.uid)+' · #'+item.uid,String(item.uid))));
+        choice.value=entry&&entries.some(item=>item.uid===entry.uid)?String(entry.uid):'';
+        if(await popup.show()!==POPUP_RESULT.AFFIRMATIVE)return;
+        const picked=entries.find(item=>String(item.uid)===choice.value);
+        await destination.setEntry(current.id,book,picked);
+        renderDestination();
+    }));
     button('save').addEventListener('click',()=>void run(()=>current.id?saveRecord(value()):saveAs(value())));
     button('copy').addEventListener('click',()=>void run(()=>saveAs(value())));
     button('rename').addEventListener('click',()=>void run(async()=>{
@@ -249,8 +301,13 @@ export function mountSlothCollectionPrompts(target,settings) {
 
 export function mountSlothSidePromptSettings(target,settings) {
     const params=settings.moduleSettings;
+    const ref=getCurrentStmbChatRef();
+    const chatKey=getStmbChatKey(ref);
+    const verifyChat=()=>{
+        if(getStmbChatKey()!==chatKey)throw new Error('The character chat changed.');
+    };
     const records=getSlothSidePresets(settings).map(record=>({...record,
-        name:record.builtin?t('Small details','SlothLittleThings'):record.name}));
+        name:record.builtin?t("Diary (Don't read it)",'SlothDiary'):record.name}));
     const write=async (presets,selected)=>{
         params.slothSidePresets=presets;
         params.slothSidePresetId=selected;
@@ -258,6 +315,25 @@ export function mountSlothSidePromptSettings(target,settings) {
     };
     mountPromptLibrary({target,title:t('Side Prompt settings','SlothSidePromptSettings'),heading:t('Prompt','SlothPromptText'),records,
         appliedId:params.slothSidePresetId,format:'sloth-side-prompt',
+        destination:{
+            enabled:ref?.type==='character'&&!!ref.fileName,
+            books:()=>[...new Set(getActiveNexusRoleContext(settings).worldNames)],
+            get:id=>getSlothSideDestination(settings,id,ref),
+            setBook:async(id,book)=>{
+                verifyChat();
+                params.slothSideBooks={...params.slothSideBooks,[JSON.stringify([ref.avatarUrl,id])]:book};
+                await saveSettings();
+            },
+            listEntries:(book,id)=>getSlothSideContinuationOptions(book,id,ref),
+            setEntry:async(id,book,entry)=>{
+                verifyChat();
+                const key=JSON.stringify([ref.avatarUrl,ref.fileName,id]);
+                params.slothSideEntries ||= {};
+                if(entry)params.slothSideEntries[key]={book,uid:entry.uid,title:entry.comment||'#'+entry.uid};
+                else delete params.slothSideEntries[key];
+                await saveSettings();
+            },
+        },
         recall:{
             get:id=>getSlothSideRecall(settings,id),
             set:async (id,mode)=>{

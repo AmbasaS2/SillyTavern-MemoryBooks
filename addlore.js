@@ -70,6 +70,10 @@ function applySidePromptHistory(data, title, history, entry, createEntry, stampN
     const latest = resolved.latest;
     if (latest) {
         const priorEntry = structuredClone(latest);
+        if (resolved.legacy && history.existingEntryUid !== undefined) {
+            stamp(latest, 1);
+            latest.group = priorEntry.group || group;
+        }
         for (const old of resolved.versions) updateVersion(old, old !== latest);
         return { entry: latest, created: false, priorEntry };
     }
@@ -1445,7 +1449,7 @@ export function stageLorebookEntriesBatch(lorebookName, lorebookData, items) {
 
         if (sidePromptHistory && protectedHistory) {
             entry[SIDE_PROMPT_HISTORY_KEY] = protectedHistory;
-            entry.comment = formatSidePromptVersionTitle(sidePromptHistory.titleBase, protectedHistory.sequence);
+            if (!it.preserveSidePromptTitle) entry.comment = formatSidePromptVersionTitle(sidePromptHistory.titleBase, protectedHistory.sequence);
             entry.group = protectedGroup;
             entry.disable = it.archiveOnly === true;
         }
