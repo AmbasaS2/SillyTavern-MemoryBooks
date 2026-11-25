@@ -113,7 +113,7 @@ export const settingsTemplate = Handlebars.compile(`
           <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose an individual character chat to connect lorebooks.</p>
         {{/unless}}
         {{#if slothCharacterAvailable}}
-        <details id="stmb-sloth-collection-settings" class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
+        <details id="stmb-sloth-collection-settings" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
           <summary id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</summary>
         <div class="stmb-sloth-settings-fields">
         <label for="stmb-sloth-profile-select" class="stmb-sloth-select-row">

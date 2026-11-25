@@ -57,7 +57,8 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     assert.match(sloth,/id="stmb-sloth-advanced"[\s\S]+id="stmb-sloth-collection-footer"[\s\S]+data-stmb-sloth-action="collect"/);
     assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-trigger[\s\S]+stmb-sloth-composer-position[\s\S]+stmb-sloth-composer-size/);
     assert.match(sloth,/<details id="stmb-sloth-lorebooks" open /);
-    for (const id of ['stmb-sloth-collection-settings','stmb-sloth-auto','stmb-sloth-side-prompts','stmb-manage-memories','stmb-sloth-advanced']) {
+    assert.match(sloth,/<details id="stmb-sloth-collection-settings" open /);
+    for (const id of ['stmb-sloth-auto','stmb-sloth-side-prompts','stmb-manage-memories','stmb-sloth-advanced']) {
         assert.match(sloth,new RegExp('<details id="'+id+'" class='));
     }
     assert.match(source,/function mountSlothCollectionFooter[\s\S]+?controls\.prepend\(footer\)/);
@@ -70,6 +71,18 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     assert.match(html,/STMemoryBooks_SlothManualHelp/);
     const css=file('./style.css');
     assert.match(css,/\.popup\.stmb-popup \.stmb-sloth-review/);
+    assert.match(css,/\.stmb-memorybooks-workspace:has\(#stmb-sloth-panel:not\(\[hidden\]\)\)\s*\{\s*height: fit-content !important/);
+    assert.match(css,/\.popup-controls:has\(> \.stmb-collection-footer:not\(\[hidden\]\)\)\s*\{\s*align-self: stretch;/);
+    assert.match(css,/\.stmb-sloth-advanced-fields > \.stmb-sloth-select-row\.stmb-sloth-compact-field\s*\{\s*grid-template-columns: min\(42%, 10em\)/);
+});
+
+test('Side Prompt has one always-visible preset selector and independent disclosure',()=>{
+    const dialogs=file('./slothSettingsDialogs.js');
+    assert.match(dialogs,/heading\.prepend\(card\.checkbox,selection\.querySelector\('select'\)\)/);
+    assert.match(dialogs,/body\.prepend\(tools\);\s*tools\.append\(\.\.\.selection\.children\);\s*selection\.remove\(\)/);
+    assert.match(dialogs,/body\.hidden=!expanded;\s*toggle\.setAttribute\('aria-expanded',String\(expanded\)\)/);
+    assert.doesNotMatch(dialogs,/stmb-side-card-toggle span/);
+    assert.match(dialogs,/stmb-side-card-toggle'\)\.setAttribute\('aria-label'/);
 });
 
 test('AU chat-only lorebook switch is opt-in and routed separately from character defaults', () => {

@@ -54,7 +54,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         icon('copy','fa-file-circle-plus',t('Save as new prompt','SlothPromptSaveAs'));
     target.classList.add('stmb-prompt-library');
     target.innerHTML=DOMPurify.sanitize(`
-        <header class="stmb-prompt-heading">${card?`<button type="button" class="stmb-side-card-toggle" aria-expanded="true" aria-controls="${id('body')}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i><span></span></button>`:`<label for="${id('choice')}">${html(heading)}</label>`}<div class="stmb-prompt-tools">
+        <header class="stmb-prompt-heading">${card?`<button type="button" class="stmb-side-card-toggle" aria-expanded="true" aria-controls="${id('body')}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>`:`<label for="${id('choice')}">${html(heading)}</label>`}<div class="stmb-prompt-tools">
             ${icon('expand','fa-expand',t('View full prompt','SlothPromptExpand'))}
             ${icon('export','fa-file-export',t('Export prompt','SlothPromptExport'))}
             ${icon('import','fa-file-import',t('Import prompt','SlothPromptImport'))}
@@ -91,11 +91,16 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const toggle=heading.querySelector('.stmb-side-card-toggle');
         const tools=heading.querySelector('.stmb-prompt-tools');
         const body=target.querySelector('.stmb-side-card-body');
+        // The selected preset is the only visible card title, even when collapsed.
+        // Reuse the original controls so preset selection, drafts and actions keep their handlers.
+        const selection=target.querySelector('.stmb-prompt-selection');
+        heading.prepend(card.checkbox,selection.querySelector('select'));
         heading.append(card.removeSlot);
-        target.querySelector('.stmb-prompt-selection').prepend(card.checkbox);
+        body.prepend(tools);
+        tools.append(...selection.children);
+        selection.remove();
         const setOpen=expanded=>{
             body.hidden=!expanded;
-            tools.hidden=!expanded;
             toggle.setAttribute('aria-expanded',String(expanded));
         };
         toggle.addEventListener('click',()=>setOpen(body.hidden));
@@ -456,7 +461,7 @@ export function mountSlothSidePromptSettings(target,settings) {
         const refresh=()=>{
             const label=t('Use this prompt for this character','SlothSideLink');
             const name=row.record?.name||t('Choose a prompt','SlothSideChoosePreset');
-            wrapper.querySelector('.stmb-side-card-toggle span').textContent=name;
+            wrapper.querySelector('.stmb-side-card-toggle').setAttribute('aria-label',t('Side Prompt','Compaction_TypeSidePrompt')+' · '+name);
             checkbox.title=label;
             checkbox.setAttribute('aria-label',label+' · '+name);
             checkbox.disabled=!enabled||!row.record?.id;

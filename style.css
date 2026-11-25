@@ -929,6 +929,20 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .stmb-sort-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
 
 /* 🦥 Sloth System — scoped clean role controls; inherit the ST font/theme. */
+/* Let the Sloth workspace fit its content, but keep long content scrollable.
+   The original Memory Books tab retains SillyTavern's large popup layout. */
+.popup.stmb-popup.stmb-memorybooks-workspace:has(#stmb-sloth-panel:not([hidden])) {
+    height: fit-content !important;
+    min-height: 0;
+    max-height: min(90dvh, calc(100dvh - 2em));
+}
+.popup.stmb-popup.stmb-memorybooks-workspace:has(#stmb-sloth-panel:not([hidden])) .popup-body {
+    height: auto;
+    min-height: 0;
+}
+.popup.stmb-popup.stmb-memorybooks-workspace:has(#stmb-sloth-panel:not([hidden])) .popup-content {
+    min-height: 0;
+}
 .popup.stmb-popup.stmb-memorybooks-workspace:focus,
 .popup.stmb-popup.stmb-memorybooks-workspace .stmb-workspace-header h2:focus { outline: none; }
 .popup.stmb-popup .stmb-workspace {
@@ -1011,6 +1025,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup #stmb-sloth-panel .text_pole { margin-block: 0; }
 /* Only the Sloth tab contributes an action to the native fixed footer. */
 .popup.stmb-popup.stmb-memorybooks-workspace .popup-controls:has(> .stmb-collection-footer:not([hidden])) {
+    align-self: stretch;
     justify-content: space-between;
     align-items: flex-end;
     padding-block-start: 8px;
@@ -1216,6 +1231,10 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-sloth-settings-fields > .stmb-sloth-help-row { min-height: 24px; }
 .popup.stmb-popup .stmb-sloth-settings-fields .stmb-sloth-help-row > label { word-break: keep-all; }
 .popup.stmb-popup .stmb-sloth-advanced-fields { gap: 8px; }
+/* Short icon controls do not need the wider summary/auto columns. */
+.popup.stmb-popup .stmb-sloth-advanced-fields > .stmb-sloth-select-row.stmb-sloth-compact-field {
+    grid-template-columns: min(42%, 10em) minmax(0, 1fr);
+}
 .popup.stmb-popup .stmb-sloth-advanced-fields > .stmb-sloth-compact-field > :is(select, button) {
     justify-self: start;
     width: auto;
@@ -1355,21 +1374,28 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     background: color-mix(in srgb, var(--stmb-workspace-surface) 90%, var(--SmartThemeQuoteColor, var(--SmartThemeBodyColor)) 10%);
 }
 .popup.stmb-popup .stmb-side-row > .stmb-prompt-heading {
-    flex-wrap: wrap; justify-content: flex-start;
+    flex-wrap: nowrap; justify-content: flex-start;
+}
+.popup.stmb-popup .stmb-side-row > .stmb-prompt-heading > select {
+    flex: 1 1 0;
+    min-width: 0; width: auto; margin: 0;
+    text-overflow: ellipsis;
 }
 .popup.stmb-popup .stmb-side-card-toggle {
-    display: flex; gap: 5px; align-items: center;
-    flex: 1 1 7em; min-width: 0; margin: 0; padding: 1px 0;
+    display: grid; place-items: center;
+    flex: 0 0 24px; min-width: 24px; min-height: 28px;
+    margin: 0; padding: 0;
     color: inherit; background: transparent; border: 0;
-    font: inherit; font-weight: 600; text-align: start; cursor: pointer;
+    font: inherit; cursor: pointer;
 }
-.popup.stmb-popup .stmb-side-card-toggle span { min-width: 0; overflow-wrap: anywhere; }
-.popup.stmb-popup .stmb-side-card-toggle i { flex: 0 0 auto; font-size: .8em; }
+.popup.stmb-popup .stmb-side-card-toggle i { font-size: .8em; }
 .popup.stmb-popup .stmb-side-card-toggle[aria-expanded="false"] i { transform: rotate(-90deg); }
-.popup.stmb-popup .stmb-side-row > .stmb-prompt-heading .stmb-prompt-tools { margin-inline-start: auto; }
+.popup.stmb-popup .stmb-side-card-body > .stmb-prompt-tools {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
 .popup.stmb-popup .stmb-side-card-body { display: grid; gap: 5px; min-width: 0; }
 .popup.stmb-popup .stmb-side-card-body[hidden],
-.popup.stmb-popup .stmb-side-row > .stmb-prompt-heading .stmb-prompt-tools[hidden],
 .popup.stmb-popup .stmb-side-slot-remove[hidden] { display: none; }
 .popup.stmb-popup .stmb-side-card-link { flex: 0 0 auto; margin: 0; }
 .popup.stmb-popup .stmb-side-card-settings {
