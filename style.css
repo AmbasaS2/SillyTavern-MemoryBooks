@@ -1009,19 +1009,39 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup #stmb-sloth-panel .world_entry_form_control { margin-block: 0 5px; gap: 3px; }
 .popup.stmb-popup #stmb-sloth-panel .text_pole { margin-block: 0; }
-.popup.stmb-popup #stmb-sloth-panel > .stmb-collection {
-    --stmb-collect-accent: var(--SmartThemeQuoteColor, var(--SmartThemeEmColor, currentColor));
-    border-color: color-mix(in srgb, var(--stmb-collect-accent) 50%, var(--SmartThemeBorderColor));
-    border-inline-start: 3px solid var(--stmb-collect-accent);
-    background: color-mix(in srgb, var(--stmb-workspace-surface) 88%, var(--stmb-collect-accent) 12%);
+/* Only the Sloth tab contributes an action to the native fixed footer. */
+.popup.stmb-popup.stmb-memorybooks-workspace .popup-controls:has(> .stmb-collection-footer:not([hidden])) {
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-block-start: 8px;
+    border-top: 1px solid color-mix(in srgb, var(--SmartThemeBorderColor) 74%, var(--SmartThemeBodyColor) 26%);
 }
+.popup.stmb-popup .stmb-collection-footer {
+    display: flex;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    text-align: start;
+}
+.popup.stmb-popup .stmb-collection-footer[hidden] { display: none; }
+.popup.stmb-popup .stmb-collection-footer .stmb-sloth-help {
+    flex: 1 0 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.popup.stmb-popup .stmb-collection-footer .stmb-sloth-help[hidden] { display: none; }
+.popup.stmb-popup .stmb-collection-footer .stmb-sloth-help p { margin: 0 0 5px; }
 .popup.stmb-popup .stmb-collection-steps {
     margin: 0 0 7px; padding-inline-start: 1.45em; line-height: 1.35;
 }
-.popup.stmb-popup .stmb-collection button[data-stmb-sloth-action="collect"] {
-    padding-inline: 16px;
+.popup.stmb-popup .stmb-collection-footer button[data-stmb-sloth-action="collect"] {
+    min-height: 34px;
+    margin: 0;
+    padding-inline: 12px;
     background: color-mix(in srgb, var(--SmartThemeChatTintColor) 76%, var(--SmartThemeQuoteColor, var(--SmartThemeEmColor)) 24%);
-    border-color: var(--stmb-workspace-rule);
+    border-color: var(--SmartThemeBorderColor);
     font-weight: 600;
 }
 .popup.stmb-popup .stmb-workspace .stmb-workspace-drawer > summary {
@@ -1169,26 +1189,46 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin: 0;
 }
 .popup.stmb-popup .stmb-sloth-select-row > select { text-overflow: ellipsis; }
-/* Give the translated label and its help button their own space. The
-   collection selectors need not fill the entire panel. */
-.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row {
-    grid-template-columns: minmax(0, min(57%, 16em)) minmax(0, min(40%, 14em));
+/* Identical label/control columns and vertical rhythm in all three settings groups. */
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields) {
+    display: grid;
+    gap: 8px;
+    margin-block: 4px 8px;
+    min-width: 0;
+}
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) > .stmb-sloth-select-row {
+    grid-template-columns: minmax(0, 43%) minmax(0, 48%);
+    gap: 8px;
+    margin: 0;
+}
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) > .stmb-sloth-select-row > :is(select, input) {
+    min-height: 28px;
+    margin: 0;
+    font: inherit;
+}
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) .checkbox_label {
+    display: flex;
+    align-items: center;
     gap: 6px;
+    margin: 0;
+    min-height: 24px;
 }
-.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row > .stmb-sloth-help-row > label {
-    word-break: keep-all;
-    overflow-wrap: break-word;
+.popup.stmb-popup .stmb-sloth-settings-fields > .stmb-sloth-help-row { min-height: 24px; }
+.popup.stmb-popup .stmb-sloth-settings-fields .stmb-sloth-help-row > label { word-break: keep-all; }
+.popup.stmb-popup .stmb-sloth-advanced-fields { gap: 8px; }
+.popup.stmb-popup .stmb-sloth-advanced-fields > .stmb-sloth-compact-field > :is(select, button) {
+    justify-self: start;
+    width: auto;
+    max-width: 100%;
 }
-.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row > .stmb-sloth-help-row > button {
-    flex: 0 0 auto;
+.popup.stmb-popup .stmb-sloth-advanced-fields select { margin: 0; }
+@media (max-width: 380px) {
+    .popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) > .stmb-sloth-select-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+    }
+    .popup.stmb-popup .stmb-collection-footer { flex-basis: auto; }
 }
-.popup.stmb-popup #stmb-sloth-collection-settings .stmb-sloth-select-row + .stmb-sloth-select-row {
-    margin-block-start: 5px;
-}
-.popup.stmb-popup .stmb-sloth-auto-fields { display: grid; gap: 5px; }
-.popup.stmb-popup .stmb-sloth-auto-fields .stmb-sloth-select-row { grid-template-columns: min(42%, 9em) minmax(0, 8em); }
-.popup.stmb-popup .stmb-sloth-auto-fields :is(#stmb-sloth-auto-mode, #stmb-sloth-auto-interval) { width: 100%; }
-.popup.stmb-popup .stmb-sloth-advanced-fields select { width: auto; margin: 0; }
 .popup.stmb-popup .stmb-sloth-settings-rule {
     width: 100%; margin: 2px 0; border: 0; border-top: 1px solid var(--stmb-workspace-rule);
 }
@@ -1278,17 +1318,17 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 /* Sloth side slots use the summary-prompt editor and a compact, independent disclosure. */
 .popup.stmb-popup #stmb-sloth-side-title { font-weight: 600; }
 /* Help buttons stay beside the relevant heading/field and never inherit menu-button chrome. */
-.popup.stmb-popup #stmb-sloth-panel :is(.stmb-sloth-info, .stmb-sloth-icon-only) {
+.popup.stmb-popup :is(#stmb-sloth-panel, #stmb-sloth-collection-footer) :is(.stmb-sloth-info, .stmb-sloth-icon-only) {
     display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center;
     min-width: 24px; min-height: 24px; width: auto; height: auto; padding: 0 3px;
     margin: 0; border: 0; background: transparent; box-shadow: none;
     color: inherit; font: inherit; cursor: pointer; vertical-align: middle;
 }
-.popup.stmb-popup #stmb-sloth-panel :is(.stmb-sloth-info, .stmb-sloth-icon-only):hover {
+.popup.stmb-popup :is(#stmb-sloth-panel, #stmb-sloth-collection-footer) :is(.stmb-sloth-info, .stmb-sloth-icon-only):hover {
     background: transparent; box-shadow: none; color: var(--SmartThemeQuoteColor, currentColor);
 }
 .popup.stmb-popup #stmb-sloth-panel :is(.stmb-sloth-info, .stmb-sloth-help)[hidden] { display: none; }
-.popup.stmb-popup #stmb-sloth-panel .stmb-sloth-help:not([hidden]) {
+.popup.stmb-popup :is(#stmb-sloth-panel, #stmb-sloth-collection-footer) .stmb-sloth-help:not([hidden]) {
     display: block; margin: 2px 0 5px; line-height: 1.4; font-size: .92em;
 }
 .popup.stmb-popup .stmb-sloth-help-row {
@@ -1296,7 +1336,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-help-row > label { margin: 0; }
 /* Keep help glyphs compact; the existing transparent button chrome is unchanged. */
-.popup.stmb-popup #stmb-sloth-panel .stmb-sloth-info {
+.popup.stmb-popup :is(#stmb-sloth-panel, #stmb-sloth-collection-footer) .stmb-sloth-info {
     min-width: 16px; min-height: 24px; padding: 0 1px; font-size: .8em;
 }
 .popup.stmb-popup .stmb-sloth-select-row > .stmb-sloth-help-row {

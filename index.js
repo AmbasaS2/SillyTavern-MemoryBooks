@@ -11461,6 +11461,7 @@ async function showSettingsPopup() {
     markStmbPopup(popup);
     popup.dlg.classList.add('stmb-memorybooks-workspace');
     popup.content.querySelector('#stmb-original-actions')?.append(...popup.dlg.querySelectorAll('.stmb-original-action'));
+    mountSlothCollectionFooter(popup);
     setupSettingsEventListeners(popup);
     const heading = popup.content.querySelector('.stmb-workspace-header h2');
     heading.tabIndex = -1;
@@ -11719,6 +11720,13 @@ async function runSlothSettingsAction(button, popupElement, settings) {
   }
 }
 
+// Keep the Sloth action in SillyTavern's non-scrolling native popup controls.
+function mountSlothCollectionFooter(popup) {
+  const footer = popup.content.querySelector('#stmb-sloth-collection-footer');
+  const controls = popup.dlg.querySelector('.popup-controls');
+  if (footer && controls) controls.prepend(footer);
+}
+
 /** Setup event listeners for settings popups using full event delegation. */
 function selectMemoryBooksWorkspaceTab(root, name, focus = false) {
   const tabs = [...root.querySelectorAll('[data-stmb-workspace-tab]')];
@@ -11731,6 +11739,8 @@ function selectMemoryBooksWorkspaceTab(root, name, focus = false) {
     const panel = root.querySelector('#' + CSS.escape(tab.getAttribute('aria-controls')));
     if (panel) panel.hidden = !selected;
   }
+  const footer = root.querySelector('#stmb-sloth-collection-footer');
+  if (footer) footer.hidden = name !== 'sloth';
   if (focus) active.focus({ preventScroll: true });
 }
 
@@ -11830,7 +11840,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     }
   },true);
   popupElement.addEventListener('keydown', e => {
-    const toggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info');
+    const toggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info, #stmb-sloth-collection-footer .stmb-sloth-info');
     if (e.key === 'Enter' && toggle) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -11840,7 +11850,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
-    const infoToggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info');
+    const infoToggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info, #stmb-sloth-collection-footer .stmb-sloth-info');
     if (infoToggle) {
       e.preventDefault();
       e.stopPropagation();
@@ -13121,6 +13131,7 @@ async function refreshPopupContent({loadOriginal=false} = {}) {
     const drawers = [...content.querySelectorAll('details[id]')].map(drawer => [drawer.id, drawer.open]);
     const focusedId = content.contains(document.activeElement) ? document.activeElement.id : '';
     const scrollTop = content.scrollTop;
+    popup.dlg.querySelector('.popup-controls > #stmb-sloth-collection-footer')?.remove();
     currentPopupInstance.content.innerHTML = newHtml;
     if (includeOriginal) popup.dlg.dataset.stmbOriginalLoaded = 'true';
     else delete popup.dlg.dataset.stmbOriginalLoaded;
@@ -13130,7 +13141,8 @@ async function refreshPopupContent({loadOriginal=false} = {}) {
       content.querySelector(`[data-stmb-prompt-library-slot="${promptLibrary.dataset.stmbPromptLibrarySlot}"]`)?.replaceWith(promptLibrary);
     }
     mountSlothPromptLibraries(content,settings);
-    if (activeTab) selectMemoryBooksWorkspaceTab(content, activeTab);
+    mountSlothCollectionFooter(popup);
+    if (activeTab) selectMemoryBooksWorkspaceTab(popup.dlg, activeTab);
     for (const [id, open] of drawers) {
       const drawer = content.querySelector('#' + CSS.escape(id));
       if (drawer) drawer.open = open;

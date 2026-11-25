@@ -113,8 +113,9 @@ export const settingsTemplate = Handlebars.compile(`
           <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose an individual character chat to connect lorebooks.</p>
         {{/unless}}
         {{#if slothCharacterAvailable}}
-        <details id="stmb-sloth-collection-settings" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
+        <details id="stmb-sloth-collection-settings" class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
           <summary id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</summary>
+        <div class="stmb-sloth-settings-fields">
         <label for="stmb-sloth-profile-select" class="stmb-sloth-select-row">
             <span data-i18n="STMemoryBooks_SlothAIModule">Memory collection AI</span>
             <select id="stmb-sloth-profile-select" class="text_pole">
@@ -146,24 +147,10 @@ export const settingsTemplate = Handlebars.compile(`
           <button type="button" id="stmb-sloth-summary-review-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-summary-review-help" aria-label="Review and retry summaries" data-i18n="[aria-label]STMemoryBooks_SlothSummaryReview"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
         </div>
         <small id="stmb-sloth-summary-review-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSummaryReviewHelp" hidden>Check for major omissions or distortions and repair them with up to one extra AI request.</small>
+        </div>
+        <hr class="stmb-sloth-settings-rule">
         <div data-stmb-prompt-library-slot="summary"></div>
         </details>
-        {{/if}}
-        {{#if slothCanCollect}}
-        <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
-          <div class="stmb-collection-action">
-            <h3 id="stmb-collection-title"><span data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</span> <button type="button" id="stmb-sloth-manual-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-manual-help" aria-label="Collect memories" data-i18n="[aria-label]STMemoryBooks_SlothCollectionTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></h3>
-            <div id="stmb-sloth-manual-help" class="stmb-sloth-help" hidden>
-            <p data-i18n="STMemoryBooks_SlothManualHelp">The AI finds events to summarize in messages you have not collected yet.</p>
-            <ol class="stmb-collection-steps">
-              <li data-i18n="STMemoryBooks_SlothCollectStepRange">Check the collection range and number of memories.</li>
-              <li data-i18n="STMemoryBooks_SlothCollectStepHide">Choose whether to hide the saved messages.</li>
-              <li data-i18n="STMemoryBooks_SlothCollectStepSave">Confirm to start writing and saving the summaries.</li>
-            </ol>
-            </div>
-            <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect memories</button>
-          </div>
-        </section>
         {{/if}}
         <details id="stmb-sloth-auto" class="stmb-workspace-panel stmb-workspace-drawer">
           <summary><span data-i18n="STMemoryBooks_SlothAutoTitle">Automatic collection</span> <button type="button" id="stmb-sloth-auto-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-auto-help" aria-label="Automatic collection" data-i18n="[aria-label]STMemoryBooks_SlothAutoTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></summary>
@@ -186,7 +173,7 @@ export const settingsTemplate = Handlebars.compile(`
             <small id="stmb-sloth-auto-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothAutoHelp" hidden>In chats with Nexus and Memory linked, completed events are saved after a reply once enough unsaved messages accumulate. Messages stay visible.</small>
           </div>
         </details>
-        <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
+        <details id="stmb-sloth-side-prompts" class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title">
             <span data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</span>
             <button type="button" id="stmb-sloth-side-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-side-help"
@@ -227,14 +214,7 @@ export const settingsTemplate = Handlebars.compile(`
               <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
               <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collection icon</span>
             </label>
-            <label for="stmb-sloth-composer-position" class="stmb-sloth-inline-field">
-              <span data-i18n="STMemoryBooks_SlothComposerPosition">Collection icon position</span>
-              <select id="stmb-sloth-composer-position" class="text_pole">
-                <option value="left" {{#unless slothComposerOnRight}}selected{{/unless}} data-i18n="STMemoryBooks_SlothComposerLeft">Left · Extensions menu</option>
-                <option value="right" {{#if slothComposerOnRight}}selected{{/if}} data-i18n="STMemoryBooks_SlothComposerRight">Right icon row</option>
-              </select>
-            </label>
-            <div class="stmb-sloth-inline-field stmb-sloth-icon-field">
+            <div class="stmb-sloth-select-row stmb-sloth-icon-field stmb-sloth-compact-field">
               <span id="stmb-sloth-composer-icon-label" data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
               <button type="button" id="stmb-sloth-icon-trigger" class="stmb-sloth-icon-only" aria-labelledby="stmb-sloth-composer-icon-label"
                 aria-expanded="false" aria-controls="stmb-sloth-icon-popover" title="{{slothComposerIcon.title}}">
@@ -252,7 +232,14 @@ export const settingsTemplate = Handlebars.compile(`
                 </div>
               </div>
             </div>
-            <label for="stmb-sloth-composer-size" class="stmb-sloth-inline-field">
+            <label for="stmb-sloth-composer-position" class="stmb-sloth-select-row stmb-sloth-compact-field">
+              <span data-i18n="STMemoryBooks_SlothComposerPosition">Collection icon position</span>
+              <select id="stmb-sloth-composer-position" class="text_pole">
+                <option value="left" {{#unless slothComposerOnRight}}selected{{/unless}} data-i18n="STMemoryBooks_SlothComposerLeft">Left · Extensions menu</option>
+                <option value="right" {{#if slothComposerOnRight}}selected{{/if}} data-i18n="STMemoryBooks_SlothComposerRight">Right icon row</option>
+              </select>
+            </label>
+            <label for="stmb-sloth-composer-size" class="stmb-sloth-select-row stmb-sloth-compact-field">
               <span data-i18n="STMemoryBooks_SlothComposerSize">Collect button size</span>
               <select id="stmb-sloth-composer-size" class="text_pole">
                 {{#each slothComposerSizes}}<option value="{{size}}" {{#if selected}}selected{{/if}}>{{size}} px</option>{{/each}}
@@ -276,6 +263,20 @@ export const settingsTemplate = Handlebars.compile(`
           </div>
         </details>
 
+        {{#if slothCanCollect}}
+        <div id="stmb-sloth-collection-footer" class="stmb-collection-footer">
+            <div id="stmb-sloth-manual-help" class="stmb-sloth-help" hidden>
+            <p data-i18n="STMemoryBooks_SlothManualHelp">The AI finds events to summarize in messages you have not collected yet.</p>
+            <ol class="stmb-collection-steps">
+              <li data-i18n="STMemoryBooks_SlothCollectStepRange">Check the collection range and number of memories.</li>
+              <li data-i18n="STMemoryBooks_SlothCollectStepHide">Choose whether to hide the saved messages.</li>
+              <li data-i18n="STMemoryBooks_SlothCollectStepSave">Confirm to start writing and saving the summaries.</li>
+            </ol>
+            </div>
+            <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect memories</button>
+            <button type="button" id="stmb-sloth-manual-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-manual-help" aria-label="Collect memories" data-i18n="[aria-label]STMemoryBooks_SlothCollectionTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+        </div>
+        {{/if}}
         </section>
         <section id="stmb-original-panel" class="stmb-tab-panel stmb-original-panel" role="tabpanel" aria-labelledby="stmb-original-tab" hidden>
         {{#if showOriginalSettings}}

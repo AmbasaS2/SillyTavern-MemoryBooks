@@ -54,7 +54,15 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     const advanced=sloth.slice(sloth.indexOf('id="stmb-sloth-advanced"'));
     assert.doesNotMatch(advanced,/\/sloth-collect|new-profile|edit-profile|side-prompt-advanced/);
     assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-popover[\s\S]+stmb-sloth-composer-size[\s\S]+stmb-sloth-settings-rule[\s\S]+stmb-sloth-hide-recent/);
-    assert.match(sloth,/data-stmb-sloth-action="collect"[\s\S]+id="stmb-sloth-auto"/);
+    assert.match(sloth,/id="stmb-sloth-advanced"[\s\S]+id="stmb-sloth-collection-footer"[\s\S]+data-stmb-sloth-action="collect"/);
+    assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-trigger[\s\S]+stmb-sloth-composer-position[\s\S]+stmb-sloth-composer-size/);
+    assert.match(sloth,/<details id="stmb-sloth-lorebooks" open /);
+    for (const id of ['stmb-sloth-collection-settings','stmb-sloth-auto','stmb-sloth-side-prompts','stmb-manage-memories','stmb-sloth-advanced']) {
+        assert.match(sloth,new RegExp('<details id="'+id+'" class='));
+    }
+    assert.match(source,/function mountSlothCollectionFooter[\s\S]+?controls\.prepend\(footer\)/);
+    assert.match(source,/footer\.hidden = name !== 'sloth'/);
+    assert.match(source,/\.popup-controls > #stmb-sloth-collection-footer'\)\?\.remove\(\)/);
     assert.doesNotMatch(sloth,/option value="jev"/);
     assert.match(sloth,/id="stmb-sloth-linked-books-only"/);
     assert.match(source,/slothLinkedBooksOnly \? \[\] : sloth\.worldNames\.filter/);
