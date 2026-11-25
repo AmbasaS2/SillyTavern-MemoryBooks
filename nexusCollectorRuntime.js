@@ -3,13 +3,13 @@
 //
 // Analyze the chat, confirm the collection plan, then stage and save its results.
 
-import { chat, getRequestHeaders, menu_type, saveSettings } from '../../../../script.js';
+import { chat, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { hideChatMessageRange } from '../../../chats.js';
 import { extension_settings } from '../../../extensions.js';
 import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
     charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
-import { getTokenCountAsync } from '../../../tokenizers.js';
+import { getTokenCountAsync, getTokenizerModel } from '../../../tokenizers.js';
 import { DOMPurify } from '../../../../lib.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
@@ -37,8 +37,11 @@ import { getRunnableSlothSidePresets, pickSlothSidePresets, normalizeSlothSideKe
     slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
-import { automaticCollectionDue, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
+import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticTokenCounter,
+    createAutomaticTokenUpperBound } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
+import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
+    slothSideRenameBooks, stageSlothSideIdentityRename } from './slothSideIdentity.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -201,31 +204,39 @@ function activeSource(ref, memoryBook, roleNames) {
     const receipt=markers.slothCollection;
     const prior=receipt?.chatKey===currentKey&&receipt.books?.nexus===roleNames.nexus&&receipt.books?.memory===roleNames.memory
         ? receipt : {chatKey:currentKey,savedRanges:[]};
-    const already=new Set();
-    for(const pair of prior.savedRanges||[]) {
-        if(!Array.isArray(pair)||pair.length!==2)continue;
-        const [a,b]=pair;
-        if(!Number.isSafeInteger(a)||!Number.isSafeInteger(b)||b<a||b>=chat.length)continue;
-        for(let id=a;id<=b;id++)already.add(id);
-    }
-    // Existing entries for THIS exact chat are also authoritative collection
-    // receipts. Never collect them again just because old metadata was missing.
+    const ranges=[];
+    const addRange=pair=>{
+        if(!Array.isArray(pair)||pair.length!==2)return;
+        const [start,end]=pair;
+        if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||
+            start<0||end<start||end>=chat.length)return;
+        ranges.push([start,end]);
+    };
+    for(const pair of prior.savedRanges||[])addRange(pair);
+    // Existing entries for THIS exact chat are also authoritative receipts.
     const sourceChatIds=new Set([String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean));
     for(const entry of Object.values(memoryBook?.entries||{})){
         if(!sourceChatIds.has(String(entry?.STMB_chatId||'')))continue;
-        const ranges=Array.isArray(entry.STMB_sourceRanges)?entry.STMB_sourceRanges:[];
-        for(const pair of ranges){
-            if(!Array.isArray(pair)||pair.length!==2)continue;
-            const [start,end]=pair;
-            if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||
-                start<0||end<start||end>=chat.length)continue;
-            for(let id=start;id<=end;id++)already.add(id);
-        }
+        for(const pair of Array.isArray(entry.STMB_sourceRanges)?entry.STMB_sourceRanges:[])addRange(pair);
     }
-    const source=chat.map((entry,id)=>({entry,id}))
-        .filter(({entry,id})=>!already.has(id) && entry && !entry.is_system && typeof entry.mes==='string' && entry.mes.trim())
-        .map(({entry,id})=>({id,name:String(entry.name||''),mes:String(entry.mes||''),
-            is_user:!!entry.is_user,send_date:entry.send_date||null}));
+    ranges.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    const merged=[];
+    for(const pair of ranges){
+        const last=merged.at(-1);
+        if(last&&pair[0]<=last[1]+1)last[1]=Math.max(last[1],pair[1]);
+        else merged.push(pair);
+    }
+    const source=[];
+    let rangeIndex=0;
+    for(let id=0;id<chat.length;id++){
+        while(rangeIndex<merged.length&&merged[rangeIndex][1]<id)rangeIndex++;
+        const range=merged[rangeIndex];
+        if(range&&id>=range[0]){id=range[1];continue;}
+        const entry=chat[id];
+        if(!entry||entry.is_system||typeof entry.mes!=='string'||!entry.mes.trim())continue;
+        source.push({id,name:String(entry.name||''),mes:entry.mes,
+            is_user:!!entry.is_user,send_date:entry.send_date||null});
+    }
     return {source,prior};
 }
 
@@ -267,7 +278,108 @@ async function listSlothSideBooks() {
     return books;
 }
 
+const pendingSideRenames = settings => Array.isArray(settings?.moduleSettings?.slothSidePendingRenames)
+    ? settings.moduleSettings.slothSidePendingRenames : [];
+let sideRenameTail = Promise.resolve();
+
+function assertSideRenameReady(ref) {
+    if (pendingSideRenames(extension_settings.STMemoryBooks).some(change=>sideRenameMatches(change,ref)))
+        throw new Error(t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
+            'STMemoryBooks_SlothSideRenamePending'));
+}
+
+async function persistSideRenameQueue(params, next) {
+    const previous = params.slothSidePendingRenames;
+    params.slothSidePendingRenames = next;
+    try {
+        await saveSettings();
+        const stored = (await readNexusSetupSettings()).extensions?.moduleSettings;
+        if (stringify(stored?.slothSidePendingRenames || []) !== stringify(params.slothSidePendingRenames))
+            throw new Error('Side Prompt rename recovery could not be saved.');
+    } catch (error) {
+        if (params.slothSidePendingRenames === next) params.slothSidePendingRenames = previous;
+        throw error;
+    }
+}
+
+async function processSlothSideRenames() {
+    const settings = extension_settings.STMemoryBooks;
+    const params = settings?.moduleSettings;
+    if (!params) return;
+    while (pendingSideRenames(settings).length) {
+        const record = pendingSideRenames(settings)[0];
+        const change = normalizeSlothSideRename(record);
+        if (!change) throw new Error('Invalid Side Prompt rename recovery record.');
+        planSlothSideSettingsRename(params,change);
+        const books = await listSlothSideBooks();
+        const owners = books.filter(book=>[change.avatar,change.newAvatar].filter(Boolean).includes(slothSideBookOwner(book)));
+        if (change.type === 'avatar' && owners.length > 1)
+            throw new Error('Multiple dedicated Side Prompt lorebooks conflict after the character rename.');
+        const names = new Set([...slothSideRenameBooks(settings,change),...(record.books || []),
+            ...owners.map(book=>book.file_id)]);
+        const available = new Set(books.map(book=>book.file_id));
+        const verifyOrigin = () => {
+            if (pendingSideRenames(settings)[0] !== record)
+                throw new Error('Side Prompt rename recovery changed.');
+        };
+        // The migration is rare and scoped to this character's known books.
+        // Do not write a book without an exact owner/history change.
+        for (const name of names) {
+            if (!available.has(name)) continue;
+            verifyOrigin();
+            const original = await loadServerWorld(name);
+            const staged = stageSlothSideIdentityRename(original,change);
+            if (!staged) continue;
+            await commitSlothNexusMigration({name,original,staged},{
+                loadFresh:loadServerWorld, save:(book,data)=>saveWorldInfo(book,data,true),
+                withLock:(book,task)=>withStmbWriteLane({type:'lorebook',name:book},task),
+                verifyOrigin, verifyBeforeWrite:assertReviewedCache,
+                resetCache:(book,data)=>worldInfoCache.set(book,structuredClone(data)),
+                operation:'Side Prompt update',
+            });
+            try { await Promise.resolve(reloadEditor(name)); } catch (error) { console.warn(error); }
+        }
+        verifyOrigin();
+        // Recheck rather than replacing any settings edited during the reads.
+        const freshPatch = planSlothSideSettingsRename(params,change);
+        Object.assign(params,freshPatch);
+        await persistSideRenameQueue(params,pendingSideRenames(settings).slice(1));
+    }
+}
+
+function reportSideRenameFailure(error) {
+    console.warn('Memory Books Side Prompt identity migration stopped:',error);
+    toastr.warning(t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
+        'STMemoryBooks_SlothSideRenamePending'),'STMemoryBooks',{preventDuplicates:true});
+}
+
+export function queueSlothSideRename(rawChange, books = []) {
+    const change = normalizeSlothSideRename(rawChange);
+    const params = extension_settings.STMemoryBooks?.moduleSettings;
+    if (!change || !params) return Promise.resolve();
+    const records = pendingSideRenames(extension_settings.STMemoryBooks);
+    const record = {...change,books:[...new Set([...books,...slothSideRenameBooks(extension_settings.STMemoryBooks,change)])]};
+    // Add synchronously so an in-flight Side Prompt cannot write under an old identity.
+    params.slothSidePendingRenames = [...records,record];
+    sideRenameTail = sideRenameTail.catch(()=>{}).then(async()=>{
+        await persistSideRenameQueue(params,pendingSideRenames(extension_settings.STMemoryBooks));
+        await processSlothSideRenames();
+    }).catch(reportSideRenameFailure);
+    return sideRenameTail;
+}
+
+export function retrySlothSideRenames() {
+    if (!pendingSideRenames(extension_settings.STMemoryBooks).length) return Promise.resolve();
+    sideRenameTail = sideRenameTail.catch(()=>{}).then(async()=>{
+        const settings = extension_settings.STMemoryBooks;
+        await persistSideRenameQueue(settings.moduleSettings,pendingSideRenames(settings));
+        await processSlothSideRenames();
+    }).catch(reportSideRenameFailure);
+    return sideRenameTail;
+}
+
 async function resolveSlothSideBook(ref, books, {book: selected, create}, signal) {
+    assertSideRenameReady(ref);
     if (selected) {
         if (!books.some(book => book.file_id === selected)) throw new Error('The selected Side Prompt lorebook no longer exists.');
         const original = await loadServerWorld(selected, signal);
@@ -391,6 +503,7 @@ async function reviewSlothSideDrafts(drafts, signal) {
 async function runReviewedSlothSidePrompts({ ref, roles, presets, source, profile, verifyOrigin, verifySource, signal }) {
     if (!presets.length) return { saved: false };
     const verifyDestinations = () => {
+        assertSideRenameReady(ref);
         verifyOrigin();
         if (presets.some(preset => !isSlothSideLinked(extension_settings.STMemoryBooks, preset.id, ref) ||
             stringify(preset.destination) !==
@@ -752,9 +865,15 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const previousAuto = automatic ? structuredClone(getSceneMarkers().slothAutomatic) : null;
         const checkpoint = previousAuto?.chatKey === automaticChatKey && previousAuto?.through < chat.length ?
             previousAuto : null;
+        const countAutomaticTokens = createAutomaticTokenCounter(getTokenCountAsync);
+        // Only use the byte bound for a known host tiktoken path. Remote and
+        // other tokenizers always get the original exact check.
+        const knownTiktoken = automatic?.mode === 'tokens' && main_api === 'openai' &&
+            /^(?:gpt-[345](?:[.o-]|$)|o[134](?:-|$)|chatgpt-4o)/i.test(String(getTokenizerModel() || ''));
+        const automaticUpperBound = knownTiktoken ? createAutomaticTokenUpperBound() : undefined;
         const thresholdMet = source => automaticCollectionDue({
             source,previous:checkpoint,books:roleNames,mode:automatic.mode,
-            threshold:automatic.threshold,countTokens:getTokenCountAsync,
+            threshold:automatic.threshold,countTokens:countAutomaticTokens,upperBound:automaticUpperBound,
         });
         // The chat receipt is enough to check an upper bound without fetching
         // either book at every reply. Saved older book entries can narrow this

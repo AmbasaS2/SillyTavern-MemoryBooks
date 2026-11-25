@@ -129,7 +129,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         button('import').disabled=busy;
         button('expand').disabled=busy||!editor.value.trim();
         setStatus(dirty()?t('Unsaved edits','SlothPromptUnsaved'):
-            (isSummary&&current.id===appliedId?t('In use','SlothPromptActive'):''));
+            (isSummary&&current.id===appliedId?t('Currently applied','SlothPromptActive'):''));
     };
     const renderDestination=()=>{
         if(!bookSelect)return;

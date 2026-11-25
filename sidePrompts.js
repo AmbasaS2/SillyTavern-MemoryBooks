@@ -1283,6 +1283,13 @@ function parseManualRange(range) {
 /**
  * Evaluate tracker prompts and fire if thresholds are met
  */
+let trackerCheckpointRevision = 0;
+const trackerCheckpoints = new Map();
+export function invalidateTrackerCheckpoints() {
+    trackerCheckpointRevision++;
+    trackerCheckpoints.clear();
+}
+
 export async function evaluateTrackers() {
     const parentTask = createStmbInFlightTask('SidePrompts:onInterval');
     const evalEpoch = parentTask.epoch;
@@ -1320,11 +1327,34 @@ export async function evaluateTrackers() {
 
         const currentLast = chat.length - 1;
         if (currentLast < 0) return;
+        const trackerChatKey = getStmbChatKey();
+        const minimum = Math.min(...intervalRunItems.map(item =>
+            Math.max(1, Number(item.tpl?.triggers?.onInterval?.visibleMessages ?? 50))));
+        // A tracker cannot be due if even a never-run tracker has too few turns.
+        // Stop counting as soon as the smallest threshold is reached.
+        let possible = 0;
+        for (let i = 0; i <= currentLast && possible < minimum; i++) {
+            if (chat[i] && !chat[i].is_system) possible++;
+        }
+        if (possible < minimum) return;
 
         for (const runItem of intervalRunItems) {
+            if (getStmbChatKey() !== trackerChatKey) return;
             const tpl = runItem.tpl;
             const runtimeMacros = runItem.runtimeMacros || {};
             const displayName = runItem.name || tpl.name;
+            const threshold = Math.max(1, Number(tpl?.triggers?.onInterval?.visibleMessages ?? 50));
+            if (currentLast + 1 < threshold) continue;
+            const history = getSidePromptHistory(tpl,runtimeMacros,['tracker']);
+            const checkpointKey = JSON.stringify([trackerChatKey,selectedSetKey,runItem.item?.id || '',
+                tpl.key,history.titleSource,history.titleBase,threshold,
+                tpl.settings?.lorebook?.targetLorebookName,getSidePromptChatLorebookOverrides(),
+                getHighestProcessedMessageBaseline()]);
+            const checkpoint = trackerCheckpoints.get(checkpointKey);
+            if (checkpoint && isExistingLorebookName(checkpoint.book) &&
+                (Date.now()-checkpoint.lastRunAt < 10000 ||
+                    countVisibleMessagesSince(checkpoint.lastMsgId,currentLast) < threshold)) continue;
+            const checkpointRevision = trackerCheckpointRevision;
             let lore;
             try {
                 lore = await resolveSidePromptLorebook(tpl);
@@ -1345,6 +1375,11 @@ export async function evaluateTrackers() {
                 ? Date.parse(existing[`STMB_sp_${tpl.key}_lastRunAt`])
                 : (existing?.STMB_tracker_lastRunAt ? Date.parse(existing.STMB_tracker_lastRunAt) : null);
             const now = Date.now();
+            if (getStmbChatKey() !== trackerChatKey) return;
+            if (checkpointRevision === trackerCheckpointRevision) {
+                if (trackerCheckpoints.size >= 128) trackerCheckpoints.clear();
+                trackerCheckpoints.set(checkpointKey,{book:lore.name,lastMsgId,lastRunAt});
+            }
 
             // Internal debounce to prevent disk thrash (not user-configurable)
             const debounceMs = 10_000; // 10 seconds
@@ -1354,7 +1389,6 @@ export async function evaluateTrackers() {
 
             // Count visible messages since last checkpoint
             const visibleSince = countVisibleMessagesSince(lastMsgId, currentLast);
-            const threshold = Math.max(1, Number(tpl?.triggers?.onInterval?.visibleMessages ?? 50));
             if (visibleSince < threshold) {
                 continue;
             }

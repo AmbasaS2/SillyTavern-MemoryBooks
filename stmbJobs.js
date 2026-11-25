@@ -305,7 +305,7 @@ function getRunningJobs(store) {
     return store.runningJobs;
 }
 
-function cloneJobForView(job = {}) {
+function cloneJobForView(job = {}, includePayloads = true) {
     return {
         id: String(job.id || ''),
         chatKey: String(job.chatKey || ''),
@@ -314,7 +314,7 @@ function cloneJobForView(job = {}) {
         title: String(job.title || ''),
         detail: String(job.detail || ''),
         error: job.error ? { ...job.error } : null,
-        result: job.result ? safeClone(job.result) : null,
+        result: includePayloads && job.result ? safeClone(job.result) : null,
         createdAt: Number(job.createdAt || 0),
         startedAt: Number(job.startedAt || 0),
         updatedAt: Number(job.updatedAt || 0),
@@ -323,7 +323,7 @@ function cloneJobForView(job = {}) {
         characterName: String(job.characterName || ''),
         lorebookName: String(job.lorebookName || job.payload?.lorebookName || ''),
         range: job.range ? { ...job.range } : null,
-        approvalRequest: job.approvalRequest ? safeClone(job.approvalRequest) : null,
+        approvalRequest: includePayloads && job.approvalRequest ? safeClone(job.approvalRequest) : null,
         parentJobId: String(job.parentJobId || ''),
         parentJobOrder: normalizeParentJobOrder(job.parentJobOrder),
     };
@@ -811,7 +811,7 @@ function getCurrentStoreRows() {
         ...getRunningJobs(store),
         ...store.queue,
         ...store.recentHistory,
-    ].map(cloneJobForView);
+    ].map(job => cloneJobForView(job, false));
 }
 
 function renderJobsSummary() {
@@ -852,6 +852,17 @@ function renderStmbJobsUi() {
     topBarBadge.style.display = totalBadge > 0 ? 'inline-flex' : 'none';
     topBarBadge.textContent = totalBadge > 99 ? '99+' : String(totalBadge);
     topBarBadge.classList.toggle('stmb-jobs-badge-failed', activeCount === 0 && failureCount > 0);
+
+    // Approval behavior is independent of whether the drawer is visible.
+    const currentStore = jobStores.get(getStmbChatKey());
+    const reviewJob = getRunningJobs(currentStore).find(job => job.state === 'needs_review') || null;
+    const approval = reviewJob ? pendingApprovals.get(reviewJob.id) : null;
+    if (approval && isCurrentJobChat(reviewJob)) {
+        setTimeout(() => {
+            approval.openApproval().catch(error => console.warn(`${MODULE_NAME}: approval open failed`, error));
+        }, 0);
+    }
+    if (!jobsPanel.classList.contains('visible')) return;
 
     jobsActions.innerHTML = rows.some(row => TERMINAL_STATES.has(String(row.state)))
         ? `<button type="button" class="menu_button stmb-jobs-action-link" data-action="dismiss-terminal">${escapeHtml(tr('STMemoryBooks_Jobs_DismissCompleted', 'Dismiss completed'))}</button>`
@@ -898,14 +909,7 @@ function renderStmbJobsUi() {
             </div>`;
     }).join('');
 
-    const currentStore = jobStores.get(getStmbChatKey());
-    const reviewJob = getRunningJobs(currentStore).find(job => job.state === 'needs_review') || null;
-    const approval = reviewJob ? pendingApprovals.get(reviewJob.id) : null;
-    if (approval && isCurrentJobChat(reviewJob)) {
-        setTimeout(() => {
-            approval.openApproval().catch(error => console.warn(`${MODULE_NAME}: approval open failed`, error));
-        }, 0);
-    }
+
 }
 
 function toggleJobsPanel() {

@@ -1169,6 +1169,19 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin: 0;
 }
 .popup.stmb-popup .stmb-sloth-select-row > select { text-overflow: ellipsis; }
+/* Give the translated label and its help button their own space. The
+   collection selectors need not fill the entire panel. */
+.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row {
+    grid-template-columns: minmax(0, min(57%, 16em)) minmax(0, min(40%, 14em));
+    gap: 6px;
+}
+.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row > .stmb-sloth-help-row > label {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+.popup.stmb-popup #stmb-sloth-collection-settings > .stmb-sloth-select-row > .stmb-sloth-help-row > button {
+    flex: 0 0 auto;
+}
 .popup.stmb-popup #stmb-sloth-collection-settings .stmb-sloth-select-row + .stmb-sloth-select-row {
     margin-block-start: 5px;
 }

@@ -203,10 +203,17 @@ export function createMessageDeletionTracker() {
             message.mes ?? null,
         ]);
     };
-    const capture = messages => Array.from(messages || [], message => ({
+    const captureOne = message => ({
         objectId: identifyObject(message),
         stableId: identifyStable(message),
-    }));
+    });
+    const capture = messages => Array.from(messages || [], captureOne);
+    const remember = (key, entries) => {
+        // Only the loaded chat can emit a message deletion. A switched chat
+        // gets a fresh snapshot before it can be edited.
+        snapshots.clear();
+        snapshots.set(key, entries);
+    };
     const findDeletion = (before, after, field) => {
         const removedCount = before.length - after.length;
         let start = 0;
@@ -218,10 +225,25 @@ export function createMessageDeletionTracker() {
     };
 
     return {
-        snapshot(chatKey, messages) {
+        snapshot(chatKey, messages, changedId = null) {
             const key = String(chatKey || '').trim();
-            if (!key) return;
-            snapshots.set(key, capture(messages));
+            if (!key) { snapshots.clear(); return; }
+            const before = snapshots.get(key);
+            const id = changedId === null || changedId === undefined || changedId === ''
+                ? -1 : Number(changedId);
+            const length = messages?.length ?? 0;
+            // The host provides the index for send/receive/edit/swipe.
+            // Unexpected length or identity changes use the complete fallback.
+            if (before && Number.isSafeInteger(id) && id >= 0 && id < length &&
+                (length === before.length || (length === before.length + 1 && id === length - 1))) {
+                const unchanged = index => index < 0 || index >= before.length || index === id ||
+                    before[index].objectId === identifyObject(messages[index]);
+                if (unchanged(0) && unchanged(id - 1) && unchanged(id + 1) && unchanged(before.length - 1)) {
+                    before[id] = captureOne(messages[id]);
+                    return;
+                }
+            }
+            remember(key, capture(messages));
         },
         clear(chatKey = null) {
             const key = String(chatKey || '').trim();
@@ -233,7 +255,7 @@ export function createMessageDeletionTracker() {
             if (!key) return null;
             const before = snapshots.get(key);
             const after = capture(messages);
-            snapshots.set(key, after);
+            remember(key, after);
             if (!before || before.length <= after.length) return null;
 
             const removedCount = before.length - after.length;

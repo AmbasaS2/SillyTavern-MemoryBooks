@@ -35,6 +35,7 @@ import { executeSlashCommands } from "../../../slash-commands.js";
 import {
   METADATA_KEY,
   world_names,
+  world_info,
   loadWorldInfo,
   saveWorldInfo,
   updateWorldInfoList,
@@ -62,7 +63,7 @@ import {
 } from "./addlore.js";
 import { autoCreateLorebook } from "./autocreate.js";
 import {
-  normalizeNexusCharacterRoles,
+  normalizeNexusCharacterRoles, getLinkedCharacterWorlds,
   setCharacterNexusRole, moveCharacterNexusRoles, removeCharacterNexusRoles,
 } from './nexusCharacterRoles.js';
 import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -72,7 +73,7 @@ import {
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
-  runNexusSidePromptFollowup, runSlothSceneCompression } from './nexusCollectorRuntime.js';
+  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
@@ -158,7 +159,7 @@ import {
 } from "./consolidationWorkItemPolicy.js";
 import { getGroupParticipantConfirmationPolicy } from "./groupParticipantPolicy.js";
 import {
-  evaluateTrackers,
+  evaluateTrackers, invalidateTrackerCheckpoints,
   generateSidePromptFromSnapshot,
   isSidePromptEntryTitle,
   prepareSidePromptRegenerationRun,
@@ -1524,6 +1525,7 @@ async function maybePromptContextSettingForChatOpen() {
 }
 
 async function handleChatChanged(chatId) {
+  invalidateTrackerCheckpoints();
   syncSlothComposerButton();
   getMemoryReminderController().dismiss();
   progressChatLoaded();
@@ -4383,65 +4385,96 @@ function getRegenerationDisabledMessage(eligibility) {
   }
 }
 
-function scheduleLorebookRegenerationActionsRefresh() {
-  clearTimeout(lorebookRegenerationRefreshTimer);
+let regenerationCache = null;
+let regenerationRevision = 0;
+let regenerationFullRefresh = false;
+let regenerationRunning = false;
+const pendingRegenerationRows = new Set();
+
+function queueLorebookRegenerationRefresh() {
+  if (lorebookRegenerationRefreshTimer !== null || regenerationRunning) return;
   lorebookRegenerationRefreshTimer = setTimeout(() => {
+    lorebookRegenerationRefreshTimer = null;
     void refreshLorebookRegenerationActions();
   }, 80);
 }
 
+function scheduleLorebookRegenerationActionsRefresh() {
+  regenerationRevision++;
+  regenerationCache = null;
+  regenerationFullRefresh = true;
+  pendingRegenerationRows.clear();
+  queueLorebookRegenerationRefresh();
+}
+
 async function refreshLorebookRegenerationActions() {
+  if (regenerationRunning) return;
+  regenerationRunning = true;
+  const revision = regenerationRevision;
   const lorebookName = getCurrentLorebookEditorName();
-  const rows = Array.from(document.querySelectorAll("#world_popup_entries_list .world_entry"));
-  if (!lorebookName || rows.length === 0) return;
-
-  let lorebookData = null;
+  const root = document.getElementById('world_popup_entries_list');
+  const full = regenerationFullRefresh || regenerationCache?.name !== lorebookName;
+  const rows = full ? Array.from(root?.querySelectorAll('.world_entry') || []) : [...pendingRegenerationRows];
+  regenerationFullRefresh = false;
+  pendingRegenerationRows.clear();
   try {
-    lorebookData = await loadWorldInfo(lorebookName);
-  } catch {
-    return;
-  }
-  if (!lorebookData?.entries || lorebookName !== getCurrentLorebookEditorName()) return;
+    if (!lorebookName || !rows.length) return;
+    if (!regenerationCache || regenerationCache.name !== lorebookName) {
+      const data = await loadWorldInfo(lorebookName);
+      if (!data?.entries || revision !== regenerationRevision || lorebookName !== getCurrentLorebookEditorName()) return;
+      regenerationCache = { name: lorebookName, data, indexes: buildRegenerationIndexes(data) };
+    }
+    const {data: lorebookData, indexes: regenerationIndexes} = regenerationCache;
+    for (const row of rows) {
+      if (!root?.contains(row)) continue;
+      const uid = row.dataset.uid ?? row.getAttribute("uid");
+      const entry = getEntryByUid(lorebookData, uid, regenerationIndexes);
+      const uidDisplay = row.querySelector(".world_entry_form_uid_value");
+      if (!entry || !uidDisplay || Object.hasOwn(entry, CLIP_REVIEW_METADATA_KEY)) {
+        row.querySelector('.stmb-regenerate-entry')?.remove();
+        continue;
+      }
+      let eligibility = getRegenerationEligibility(entry, lorebookData, regenerationIndexes);
+      const isSidePrompt = eligibility.kind === "sidePrompt" || isSidePromptEntryTitle(entry.comment);
+      if (entry.stmemorybooks !== true && !isSidePrompt) {
+        row.querySelector('.stmb-regenerate-entry')?.remove();
+        continue;
+      }
+      if (isSidePrompt && !Object.hasOwn(entry, SIDE_PROMPT_REGENERATION_METADATA_KEY)) {
+        eligibility = { eligible: false, reason: "missing-sideprompt-snapshot" };
+      }
 
-  const regenerationIndexes = buildRegenerationIndexes(lorebookData);
-  for (const row of rows) {
-    const uid = row.dataset.uid ?? row.getAttribute("uid");
-    const entry = getEntryByUid(lorebookData, uid, regenerationIndexes);
-    const uidDisplay = row.querySelector(".world_entry_form_uid_value");
-    if (!entry || !uidDisplay) continue;
-    if (Object.hasOwn(entry, CLIP_REVIEW_METADATA_KEY)) continue;
-    let eligibility = getRegenerationEligibility(entry, lorebookData, regenerationIndexes);
-    const isSidePrompt = eligibility.kind === "sidePrompt" || isSidePromptEntryTitle(entry.comment);
-    if (entry.stmemorybooks !== true && !isSidePrompt) continue;
-    if (isSidePrompt && !Object.hasOwn(entry, SIDE_PROMPT_REGENERATION_METADATA_KEY)) {
-      eligibility = { eligible: false, reason: "missing-sideprompt-snapshot" };
+      let button = row.querySelector(".stmb-regenerate-entry");
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.className = "menu_button stmb-regenerate-entry";
+        button.innerHTML = '<i class="fa-solid fa-rotate-right"></i> <span></span>';
+        uidDisplay.insertAdjacentElement("afterend", button);
+      }
+      button.dataset.lorebookName = lorebookName;
+      button.dataset.entryUid = String(uid);
+      button.dataset.entryKind = isSidePrompt ? "sidePrompt" : "memory";
+      const buttonText = isSidePrompt
+        ? translate("Regenerate side prompt", "STMemoryBooks_SidePromptRegeneration_Button")
+        : translate("Regenerate memory", "STMemoryBooks_Regeneration_Button");
+      const buttonLabel = button.querySelector("span");
+      if (buttonLabel && buttonLabel.textContent !== buttonText) {
+        buttonLabel.textContent = buttonText;
+      }
+      button.disabled = !eligibility.eligible;
+      button.title = eligibility.eligible
+        ? translate(
+            "Generate a replacement using current settings. Approval is always required.",
+            "STMemoryBooks_Regeneration_ButtonTooltip",
+          )
+        : getRegenerationDisabledMessage(eligibility);
     }
-
-    let button = row.querySelector(".stmb-regenerate-entry");
-    if (!button) {
-      button = document.createElement("button");
-      button.type = "button";
-      button.className = "menu_button stmb-regenerate-entry";
-      button.innerHTML = '<i class="fa-solid fa-rotate-right"></i> <span></span>';
-      uidDisplay.insertAdjacentElement("afterend", button);
-    }
-    button.dataset.lorebookName = lorebookName;
-    button.dataset.entryUid = String(uid);
-    button.dataset.entryKind = isSidePrompt ? "sidePrompt" : "memory";
-    const buttonText = isSidePrompt
-      ? translate("Regenerate side prompt", "STMemoryBooks_SidePromptRegeneration_Button")
-      : translate("Regenerate memory", "STMemoryBooks_Regeneration_Button");
-    const buttonLabel = button.querySelector("span");
-    if (buttonLabel && buttonLabel.textContent !== buttonText) {
-      buttonLabel.textContent = buttonText;
-    }
-    button.disabled = !eligibility.eligible;
-    button.title = eligibility.eligible
-      ? translate(
-          "Generate a replacement using current settings. Approval is always required.",
-          "STMemoryBooks_Regeneration_ButtonTooltip",
-        )
-      : getRegenerationDisabledMessage(eligibility);
+  } catch (error) {
+    console.warn('Memory Books could not refresh regeneration actions.', error);
+  } finally {
+    regenerationRunning = false;
+    if (regenerationFullRefresh || pendingRegenerationRows.size) queueLorebookRegenerationRefresh();
   }
 }
 
@@ -4452,12 +4485,12 @@ function initializeLorebookRegenerationObserver() {
   lorebookRegenerationObserver = new MutationObserver(records => {
     for (const { addedNodes } of records) {
       for (const node of addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE && (node.matches(".world_entry") || node.querySelector(".world_entry"))) {
-          scheduleLorebookRegenerationActionsRefresh();
-          return;
-        }
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node.matches('.world_entry')) pendingRegenerationRows.add(node);
+        for (const row of node.querySelectorAll('.world_entry')) pendingRegenerationRows.add(row);
       }
     }
+    if (pendingRegenerationRows.size) queueLorebookRegenerationRefresh();
   });
   lorebookRegenerationObserver.observe(observerRoot, { childList: true, subtree: true });
   $("#world_editor_select").on("change.stmb-regeneration", scheduleLorebookRegenerationActionsRefresh);
@@ -4469,6 +4502,10 @@ function cleanupLorebookRegenerationObserver() {
   lorebookRegenerationObserver = null;
   clearTimeout(lorebookRegenerationRefreshTimer);
   lorebookRegenerationRefreshTimer = null;
+  regenerationRevision++;
+  regenerationCache = null;
+  regenerationFullRefresh = false;
+  pendingRegenerationRows.clear();
   $("#world_editor_select").off(".stmb-regeneration");
 }
 
@@ -14040,13 +14077,19 @@ function setupEventListeners() {
   getBranchLorebookController().initialize();
   eventSource.on(event_types.CHAT_CHANGED, handleChatChanged);
   eventSource.on(MEMORY_TIER_CACHE_REFRESH_EVENT, refreshMemoryTierMacroCache);
+  eventSource.on(event_types.SETTINGS_UPDATED, invalidateTrackerCheckpoints);
   eventSource.on(event_types.WORLDINFO_UPDATED, (name, data) => {
+    invalidateTrackerCheckpoints();
     updateMemoryTierMacroCache(name, data);
-    scheduleLorebookRegenerationActionsRefresh();
+    if (name === getCurrentLorebookEditorName()) scheduleLorebookRegenerationActionsRefresh();
     populateInlineButtons();
   });
-  eventSource.on(event_types.CHARACTER_RENAMED, (oldAvatar, newAvatar) => {
+  eventSource.on(event_types.CHARACTER_RENAMED, async (oldAvatar, newAvatar) => {
     const settings = initializeSettings();
+    const originalCharacter = characters?.find(character => character?.avatar === oldAvatar);
+    const sideRename = queueSlothSideRename({type:'avatar',avatar:oldAvatar,newAvatar},
+      getLinkedCharacterWorlds({character:{...originalCharacter,avatar:newAvatar},worldInfo:world_info,worldNames:world_names}));
+
     const renamedCharacter = characters?.find(character => character?.avatar === newAvatar);
     const movedMemoryLock = moveCharacterMemoryBookLock(
       settings.characterMemoryBookLocks, oldAvatar, newAvatar, renamedCharacter?.name,
@@ -14065,6 +14108,13 @@ function setupEventListeners() {
       saveSettingsDebounced();
       populateInlineButtons();
     }
+    await sideRename;
+  });
+  eventSource.on(event_types.CHAT_RENAMED, async event => {
+    if (!event?.avatarId || event.groupId) return;
+    const character = characters?.find(item=>item?.avatar===event.avatarId);
+    await queueSlothSideRename({type:'chat',avatar:event.avatarId,oldFile:event.oldFileName,newFile:event.newFileName},
+      getLinkedCharacterWorlds({character,worldInfo:world_info,worldNames:world_names}));
   });
   eventSource.on(event_types.CHARACTER_EDITED, (payload) => {
     const character = payload?.detail?.character || payload?.character;
@@ -14094,6 +14144,7 @@ function setupEventListeners() {
     }
   });
   eventSource.on(event_types.MESSAGE_DELETED, (deletedId) => {
+    invalidateTrackerCheckpoints();
     const settings = initializeSettings();
     const chatKey = getStmbChatKey();
     const deletion = memoryRollbackDeletionTracker.detect(chatKey, chat) || {
@@ -14117,7 +14168,7 @@ function setupEventListeners() {
     }
   });
   eventSource.on(event_types.MESSAGE_SENT, (messageId) => {
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat);
+    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
     if (!getCurrentMemoryBooksContext().isNarratorMode) return;
     const message = chat?.[messageId];
     if (!message) return;
@@ -14125,7 +14176,7 @@ function setupEventListeners() {
     saveChatDebounced();
   });
   eventSource.on(event_types.MESSAGE_RECEIVED, (messageId, type) => {
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat);
+    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
     const generation = narratorResponseGeneration.receive({
       messageId, type, chatKey: getStmbChatKey(), chat,
       narratorMode: getCurrentMemoryBooksContext().isNarratorMode,
@@ -14137,11 +14188,11 @@ function setupEventListeners() {
     saveChatDebounced();
   });
   eventSource.on(event_types.MESSAGE_RECEIVED, handleMessageReceived);
-  eventSource.on(event_types.MESSAGE_EDITED, () => {
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat);
+  eventSource.on(event_types.MESSAGE_EDITED, (messageId) => {
+    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
   });
   eventSource.on(event_types.MESSAGE_SWIPED, (messageId) => {
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat);
+    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
     restoreNarratorCastFromTimeline(messageId);
   });
 
@@ -14219,10 +14270,14 @@ function setupEventListeners() {
     });
   });
   eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED, async ({ globalLore, characterLore, chatLore, personaLore }) => {
+    if (!narratorGenerationSnapshot && !manualGroupGenerationSnapshot) return;
+    const context = getCurrentMemoryBooksContext();
+    if (!(narratorGenerationSnapshot && context.isNarratorMode) &&
+        !(manualGroupGenerationSnapshot && context.isGroupChat)) return;
     const arrays = [globalLore, characterLore, chatLore, personaLore].filter(Array.isArray);
     const existingKeys = new Set(arrays.flatMap(entries => entries.map(entry => `${entry?.world}.${entry?.uid}`)));
 
-    if (narratorGenerationSnapshot && getCurrentMemoryBooksContext().isNarratorMode) {
+    if (narratorGenerationSnapshot && context.isNarratorMode) {
       const config = getCurrentNarratorConfig();
       const members = config.members.filter(member => !member.retired && narratorGenerationSnapshot.includes(member.id));
       for (const member of members) {
@@ -14233,7 +14288,7 @@ function setupEventListeners() {
       return;
     }
 
-    if (manualGroupGenerationSnapshot && getCurrentMemoryBooksContext().isGroupChat) {
+    if (manualGroupGenerationSnapshot && context.isGroupChat) {
       const speakingAvatar = String(characters?.[this_chid]?.avatar || "").trim();
       const lorebookName = getManualGroupSpeakerLorebook(
         manualGroupGenerationSnapshot,
@@ -15330,6 +15385,7 @@ async function init() {
   queueDeletedMessageRollbackUnhideRecovery(getStmbChatKey(), getMemoryRollbackChatId());
   initializeLorebookRegenerationObserver();
   registerMemoryTierMacros();
+  void retrySlothSideRenames();
   await refreshMemoryTierMacroCache();
   registerStmbJobExecutor("memory", executeQueuedMemoryJob);
   registerStmbJobExecutor("memoryAssistance", executeQueuedMemoryAssistanceJob);
