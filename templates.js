@@ -175,8 +175,14 @@ export const settingsTemplate = Handlebars.compile(`
           </div>
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
-          <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Check the prompts to use for this character and choose where to save each one.</p>
+          <summary id="stmb-sloth-side-title">
+            <span data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</span>
+            <button type="button" id="stmb-sloth-side-help-toggle" class="menu_button" aria-expanded="false" aria-controls="stmb-sloth-side-help"
+              aria-label="Side Prompt help" data-i18n="[aria-label]STMemoryBooks_SlothSideHelpTitle">
+              <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            </button>
+          </summary>
+          <small id="stmb-sloth-side-help" data-i18n="STMemoryBooks_SlothSidePromptHelp" hidden>Checked Side Prompts are linked only to the current character, not automatically to other characters. Choose a destination lorebook for each prompt.</small>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}

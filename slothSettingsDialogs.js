@@ -54,12 +54,13 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         icon('copy','fa-file-circle-plus',t('Save as new prompt','SlothPromptSaveAs'));
     target.classList.add('stmb-prompt-library');
     target.innerHTML=DOMPurify.sanitize(`
-        <header class="stmb-prompt-heading">${card?'':`<label for="${id('choice')}">${html(heading)}</label>`}<div class="stmb-prompt-tools">
+        <header class="stmb-prompt-heading">${card?`<button type="button" class="stmb-side-card-toggle" aria-expanded="true" aria-controls="${id('body')}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i><span></span></button>`:`<label for="${id('choice')}">${html(heading)}</label>`}<div class="stmb-prompt-tools">
             ${icon('expand','fa-expand',t('View full prompt','SlothPromptExpand'))}
             ${icon('export','fa-file-export',t('Export prompt','SlothPromptExport'))}
             ${icon('import','fa-file-import',t('Import prompt','SlothPromptImport'))}
             ${icon('delete','fa-trash',t('Delete prompt','SlothPromptDelete'))}
         </div></header>
+        ${card?`<div class="stmb-side-card-body" id="${id('body')}">`:''}
         <div class="stmb-prompt-selection">
             <select id="${id('choice')}" class="text_pole" aria-label="${html(title)}"></select>
             ${editButtons}
@@ -67,6 +68,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         <textarea id="${id('text')}" class="text_pole" rows="5" spellcheck="false" aria-label="${html(title)}"></textarea>
         ${isSummary?'':`<details class="stmb-prompt-format"><summary>${html(t('Response format (optional)','SlothSideFormat'))}</summary>
           <textarea id="${id('format')}" class="text_pole" rows="3" aria-label="${html(t('Response format (optional)','SlothSideFormat'))}"></textarea></details>`}
+        ${card?'<div class="stmb-side-card-settings">':''}
         ${recall?`<label class="stmb-sloth-inline-field" for="${id('recall')}">${html(t('Side Prompt recall','SlothSideRecall'))}
           <select id="${id('recall')}" class="text_pole">
             <option value="disabled">${html(t('Do not inject','SlothRecallDisabled'))}</option>
@@ -75,11 +77,28 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
             <option value="keyword">${html(t('Keywords','SlothRecallKeywords'))}</option>
           </select></label>`:''}
         ${destination?`<label class="stmb-sloth-inline-field" for="${id('book')}">${html(bookLabel)}
-          <select id="${id('book')}" class="text_pole"></select></label>
-          <button type="button" class="menu_button stmb-sloth-side-target" id="${id('entry')}" hidden></button>
+          <select id="${id('book')}" class="text_pole"></select></label>`:''}
+        ${card?'</div>':''}
+        ${destination?`<button type="button" class="menu_button stmb-sloth-side-target" id="${id('entry')}" hidden></button>
           <small id="${id('destination-help')}"></small>`:''}
         <small class="stmb-prompt-status" id="${id('status')}" role="status" aria-live="polite"></small>
-        <input type="file" id="${id('file')}" accept=".json,application/json" hidden>`);
+        <input type="file" id="${id('file')}" accept=".json,application/json" hidden>
+        ${card?'</div>':''}`);
+    if(card) {
+        const heading=target.querySelector('.stmb-prompt-heading');
+        const toggle=heading.querySelector('.stmb-side-card-toggle');
+        const tools=heading.querySelector('.stmb-prompt-tools');
+        const body=target.querySelector('.stmb-side-card-body');
+        heading.append(card.removeSlot);
+        target.querySelector('.stmb-prompt-selection').prepend(card.checkbox);
+        const setOpen=expanded=>{
+            body.hidden=!expanded;
+            tools.hidden=!expanded;
+            toggle.setAttribute('aria-expanded',String(expanded));
+        };
+        toggle.addEventListener('click',()=>setOpen(body.hidden));
+        setOpen(card.open);
+    }
     const find=field=>target.querySelector('#'+id(field));
     const button=action=>target.querySelector(`[data-prompt-action="${action}"]`);
     const select=find('choice'), editor=find('text'), response=find('format'), file=find('file');
@@ -376,12 +395,32 @@ export function mountSlothSidePromptSettings(target,settings) {
         if(params.slothSideRecallModes)delete params.slothSideRecallModes[id];
         await saveSettings();
     };
+    const section=target.closest('#stmb-sloth-side-prompts');
+    const info=section?.querySelector('#stmb-sloth-side-help-toggle');
+    const help=section?.querySelector('#stmb-sloth-side-help');
+    if(info&&help) {
+        const setHelp=visible=>{
+            help.hidden=!visible;
+            info.setAttribute('aria-expanded',String(visible));
+        };
+        info.addEventListener('click',event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            const visible=help.hidden;
+            if(visible)section.open=true;
+            setHelp(visible);
+        });
+        section.addEventListener('toggle',()=>{if(!section.open)setHelp(false);});
+    }
     const list=document.createElement('div');
     list.className='stmb-side-cards';
     const add=document.createElement('button');
     add.type='button';
     add.className='menu_button stmb-side-card-add';
-    add.textContent=t('Add Side Prompt','SlothSideAdd');
+    const addIcon=document.createElement('i');
+    addIcon.className='fa-solid fa-plus';
+    addIcon.setAttribute('aria-hidden','true');
+    add.append(addIcon,document.createTextNode(t('Add Side Prompt','SlothSideAdd')));
     target.append(list,add);
     const rows=[];
     let sequence=0;
@@ -410,10 +449,6 @@ export function mountSlothSidePromptSettings(target,settings) {
         const checkbox=document.createElement('input');
         checkbox.type='checkbox';
         checkbox.className='stmb-side-card-link';
-        const details=document.createElement('details');
-        details.className='stmb-side-card';
-        const summary=document.createElement('summary');
-        const editor=document.createElement('div');
         const removeSlot=document.createElement('button');
         removeSlot.type='button';
         removeSlot.className='menu_button stmb-side-slot-remove';
@@ -423,20 +458,16 @@ export function mountSlothSidePromptSettings(target,settings) {
         removeSlot.innerHTML='<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
         const row={record:initial,remove:removeSlot};
         rows.push(row);
-        details.append(summary,editor);
-        wrapper.append(checkbox,details,removeSlot);
         list.append(wrapper);
-        refreshRemoveButtons();
         const refresh=()=>{
             const label=t('Use this prompt for this character','SlothSideLink');
             const name=row.record?.name||t('Choose a prompt','SlothSideChoosePreset');
-            summary.textContent=name;
+            wrapper.querySelector('.stmb-side-card-toggle span').textContent=name;
             checkbox.title=label;
             checkbox.setAttribute('aria-label',label+' · '+name);
             checkbox.disabled=!enabled||!row.record?.id;
             checkbox.checked=!!row.record?.id&&isSlothSideLinked(settings,row.record.id,ref);
         };
-        refresh();
         checkbox.addEventListener('change',async()=>{
             try {
                 verifyChat();
@@ -457,30 +488,26 @@ export function mountSlothSidePromptSettings(target,settings) {
                 await persistSlots();
             } catch(error) {reportSettingsError(error);}
         });
-        const mount=()=>{
-            if(!details.open||editor.firstElementChild)return;
-            mountPromptLibrary({target:editor,title:t('Choose a prompt','SlothSideChoosePreset'),
-                records:getRecords(),appliedId:row.record?.id,format:'sloth-side-prompt',destination,recall,save,remove,
-                card:{
-                    number,names:getRecords,
-                    choices:()=>getRecords().filter(record=>!rows.some(other=>other!==row&&other.record?.id===record.id)),
-                    added:async next=>{addCard(next,true);await persistSlots();},
-                    changed:async next=>{
-                        const previous=row.record?.id||'';
-                        if(previous!==next.id&&enabled)verifyChat();
-                        row.record=next.id?next:null;
-                        refresh();
-                        if(previous===next.id)return;
-                        setLink(previous,false);
-                        await persistSlots();
-                    },
+        mountPromptLibrary({target:wrapper,title:t('Choose a prompt','SlothSideChoosePreset'),
+            records:getRecords(),appliedId:row.record?.id,format:'sloth-side-prompt',destination,recall,save,remove,
+            card:{
+                number,names:getRecords,checkbox,removeSlot,open,
+                choices:()=>getRecords().filter(record=>!rows.some(other=>other!==row&&other.record?.id===record.id)),
+                added:async next=>{addCard(next,true);await persistSlots();},
+                changed:async next=>{
+                    const previous=row.record?.id||'';
+                    if(previous!==next.id&&enabled)verifyChat();
+                    row.record=next.id?next:null;
+                    refresh();
+                    if(previous===next.id)return;
+                    setLink(previous,false);
+                    await persistSlots();
                 },
-            });
-        };
-        details.open=open;
-        if(open)mount();
-        details.addEventListener('toggle',mount);
-        return details;
+            },
+        });
+        refresh();
+        refreshRemoveButtons();
+        return wrapper;
     }
     const available=getRecords();
     const stored=enabled?params.slothSideSlots?.[ref.avatarUrl]:null;
