@@ -18,7 +18,7 @@ Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTa
 1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books → Usage mode → Sloth (default). Group chats use Original mode.
 2. Assign distinct Nexus and Memory books or create them on approved first collection if no books are linked. Use chat-only assignments for different AU histories.
 3. Select a collection AI profile, choose Keyword or Vector for older scenes, and leave automatic collection off for your first try. Vector recall requires native vector setup.
-4. After a completed event, click Collect memories or /sloth-collect. Confirm the range and plan, review the draft and approve the save. Optional Hide applies only to successfully saved ranges.
+4. After a completed event, click Collect memories or /sloth-collect. Confirm the range and approve the event plan. The AI then writes, validates and saves the memories; inspect them after saving. Optional Hide applies only to successfully saved ranges.
 5. Continue RP. The latest three completed scenes stay always-on; older scenes switch recall mode while their text remains saved.
 
 ### Works alone, better together
@@ -32,10 +32,12 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## Who is this for?
 
-- Long-running roleplayers who want to preserve distinct events rather than repeatedly merge all memories into one large summary.
-- Players who want recent events remembered continuously, but old events recalled only when relevant.
-- Players who find selecting every scene, writing summaries and manually changing old entries tedious.
-- Players who want to use a separate AI to organize memories without changing the model they roleplay with.
+- Preserve individual completed scenes without repeatedly compressing them into a single history summary.
+- Separate ongoing continuity and key facts (Nexus) from completed events (Memory).
+- Automatically identify completed events from unsaved chat, approve the plan, and optionally hide successfully collected messages.
+- Keep the latest three completed scenes always on, convert older scenes to keyword or vector recall, and retain their full text.
+- Collect manually or at a token/message interval, use different books for different chats with the same character, and keep the RP model unchanged.
+- Generate separate Side Prompts such as diaries; review merge, split, or shortening operations on stored scenes; or select the original Memory Books workflow per character.
 
 If you prefer the original manual or consolidation workflow, select **Original Memory Books** in the character's Usage mode, then use its settings tab. Group chats use Original mode.
 
@@ -89,9 +91,9 @@ Choose two distinct books already linked to this character, or confirm your firs
 
 Hide is optional and does not delete the chat history. Only successfully saved ranges are eligible to be hidden. You can choose how many recent collected messages to keep visible. Review the proposed ranges and generated memories if exact continuity matters: model judgments can be wrong.
 
-### Review before saving
+### Approve the plan, then inspect saved memories
 
-The final reviewed collection lets you inspect the proposed Scene and Nexus text. In 9.4.0-ambasa.1 normal Nexus updates no longer require literal quotation receipts. The original chat still guides the AI; structure, UID, role, duplicate, section and save/rollback safeguards remain. Scene/event range and legacy reconciliation evidence checks are separate. Review AI-generated content before saving.
+The manual plan shows analyzed message ranges, completed event titles and ranges, the Nexus review range, deferred messages and optional Hide. Approving starts AI writing, validation and saving. The current collection workflow does not have a second editable Scene/Nexus draft popup. Read or edit saved entries in World Info or the optional Lorebook Manager afterward. Incomplete scenes can be retried, or completed work can be saved. The optional summary review may make an additional AI request. Normal Nexus updates no longer require literal quotation receipts in 9.4.0-ambasa.1; structure, UID, role, duplicate, section and save/rollback safeguards remain. Scene range and legacy reconciliation checks are separate. Hide requires a verified collection receipt. Side Prompt drafts have their own separate review/edit step.
 
 ## Other settings and tools
 
@@ -99,7 +101,7 @@ The final reviewed collection lets you inspect the proposed Scene and Nexus text
 |---|---|
 | Automatic collection | Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages. |
 | Side Prompts | Choose a prompt in the empty slot and add slots as needed. Diary is a built-in option with injection off by default. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book). |
-| Manage existing memories | Review merging related scenes, splitting an existing scene, or shortening an event. Choose and review the changes instead of automatically replacing memories. |
+| Manage existing memories | Review merging causally related completed scenes, splitting a completed scene with verifiable original message ranges, or shortening a long event. Choose and inspect changes; preserve original records where archived and back up before editing. |
 | Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
 | Original Memory Books | Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools. |
 
@@ -120,7 +122,7 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → Memory Books → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
 2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 승인 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
 3. 수집 AI 프로필과 이전 기억의 키워드/벡터 전환 방식을 고릅니다. 첫 수집은 자동 수집을 끄고 수동으로 해 보세요. 벡터는 ST 자체 설정이 필요합니다.
-4. 완료된 사건이 생기면 기억 수집 하기 또는 /sloth-collect → 범위·사건 계획 확인 → 생성 내용 검토·저장 승인. Hide는 성공적으로 저장된 구간에만 선택 적용됩니다.
+4. 완료된 사건이 생기면 기억 수집 하기 또는 /sloth-collect → 범위·사건 계획 확인 → 승인 후 AI 작성·검증·저장 → 결과 확인. Hide는 성공적으로 저장된 구간에만 선택 적용됩니다.
 5. 다시 롤플합니다. 최근 완료 Scene 3개는 파란불, 오래된 장면은 조건부 호출로 전환됩니다. 저장된 본문은 유지합니다.
 
 ### 단독으로도 충분하고, 함께 쓰면 더 편리합니다
@@ -134,10 +136,13 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 ## 이런 분들께 추천합니다!
 
-- 장기 롤플을 하면서 오래된 기억을 계속 압축·통합해서 디테일을 잃고 싶지 않은 분
-- 최근 사건은 계속 기억하되 과거 사건은 필요한 순간에만 불러오고 싶은 분
-- 사건이 끝날 때마다 구간을 직접 지정하고, 기억을 만들고, 오래된 파란불을 초록불로 바꾸기 귀찮았던 분
-- 롤플 모델은 그대로 두고 다른 AI에게 기억 정리를 맡기고 싶은 분
+- 반복 압축·통합으로 과거 사건의 디테일을 잃고 싶지 않은 분
+- 핵심 사실·현재 상태(Nexus)와 완료된 사건(Memory)을 두 권으로 분리하고 싶은 분
+- AI가 아직 수집하지 않은 대화에서 완료 사건을 골라 주고, 계획을 확인해 승인하고 싶은 분
+- 최근 완료 장면 3개는 상시 주입하고 이전 기억은 키워드·벡터로 자동 전환하되 본문을 유지하고 싶은 분
+- 메시지 수·토큰 기준 자동 수집 또는 수동 수집을 선택하고, 같은 캐릭터의 여러 채팅에서 별도 기억을 쓰고 싶은 분
+- 롤플 모델을 바꾸지 않고 별도 AI·맞춤 프롬프트를 사용하며, 일기 등 사이드 프롬프트를 작성하거나 기존 사건의 합치기·나누기·줄이기를 사용하고 싶은 분
+- 기존 메모리북 기능도 캐릭터별로 선택하고 싶은 분
 
 원본의 구간 지정·압축·통합 방식은 사용 모드를 기존 메모리북으로 선택하고 해당 탭을 사용하세요. 그룹 채팅은 기존 메모리북 모드입니다.
 
@@ -188,9 +193,9 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 채팅 맥락에서 숨기며, 수집한 메시지 중 최근 몇 개를 남길지도 지정할 수 있습니다. AI가 사건 범위를 잘못 판단하거나 중요한 내용을 놓칠 수 있으니 필요한 경우 수집 계획과 저장된 내용을 확인하세요.
 
-### 저장 전 검토
+### 수집 계획 승인과 저장 후 확인
 
-최종 수집 검토에서 Scene과 Nexus 변경 내용을 확인합니다. 9.4.0-ambasa.1부터 일반 Nexus 갱신에 원문 직접 인용을 필수로 요구하지 않습니다. 원래 대화는 AI의 판단 근거이며 구조·UID·역할·중복·섹션·저장 및 복구 검증은 유지합니다. 사건 구간 및 기존 기억 이전의 근거 검증은 별개입니다. 생성 내용은 저장 전에 확인하세요.
+계획창에서 분석 범위, 완료 사건 제목과 대화 범위, Nexus 갱신 범위, 다음에 남길 구간, 숨기기 여부를 확인합니다. 승인하면 AI가 작성·검증·저장을 진행합니다. 현재 일반 수집에는 별도의 최종 Scene/Nexus 본문 편집 팝업이 없습니다. 저장한 항목은 월드 인포 또는 선택적 로어북 매니저에서 확인·수정하세요. 미완료 기억은 재시도하거나 완료된 작업만 저장할 수 있습니다. 선택형 요약 검증은 추가 AI 요청이 발생할 수 있습니다. 9.4.0-ambasa.1부터 일반 Nexus 갱신에 원문 직접 인용이 필수는 아니지만 구조·UID·역할·중복·섹션·저장 및 복구 검증은 유지합니다. 사건 범위 및 기존 기억 이전의 검증은 별개입니다. 수집 기록 검증에 성공한 구간만 숨길 수 있습니다. 사이드 프롬프트 초안은 별도 검토·편집 단계가 있습니다.
 
 ## 나머지 설정은 필요할 때만!
 
@@ -198,7 +203,7 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 |---|---|
 | 자동 수집 | 기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다. |
 | 사이드 프롬프트 | 빈 칸의 목록에서 일기나 저장한 프롬프트를 고릅니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다. |
-| 저장한 사건 수정 | 나뉜 사건 합치기, 한 기억을 사건별로 나누기, 사건 짧게 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 사용자가 대상과 변경안을 확인하는 작업입니다. |
+| 저장한 사건 수정 | 인과적으로 연결된 완료 사건 합치기, 원래 메시지 범위와 순서를 확인할 수 있는 사건 나누기, 긴 사건 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 대상과 변경안을 확인하는 작업이며 기존 기록을 백업합니다. |
 | 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
 | 기존 메모리북 | 사용 모드를 기존 메모리북으로 변경해야 원본의 구간 지정·압축·통합 등 작업이 실행됩니다. 탭은 공유 프로필·설정 열람에도 사용할 수 있습니다. |
 
