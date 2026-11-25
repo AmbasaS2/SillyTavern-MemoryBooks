@@ -38,7 +38,7 @@ import { getRunnableSlothSidePresets, pickSlothSidePresets, normalizeSlothSideKe
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticTokenCounter,
-    createAutomaticTokenUpperBound } from './slothAutomaticCollection.js';
+    createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
     slothSideRenameBooks, stageSlothSideIdentityRename } from './slothSideIdentity.js';
@@ -47,6 +47,24 @@ const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
 const stringify=value=>JSON.stringify(value);
 let collectorBusy=false;
+const automaticByteBound = createAutomaticTokenUpperBound();
+let automaticReading = null;
+let automaticReadingRevision = 0;
+
+export function invalidateSlothAutomaticProgress() {
+    automaticReading = null;
+    automaticReadingRevision++;
+}
+
+export function getSlothAutomaticProgress(ref, books, mode) {
+    const reading = automaticReading;
+    const previous = getSceneMarkers()?.slothAutomatic;
+    const chatKey = getStmbChatKey(ref);
+    const checkpoint = previous?.chatKey === chatKey && previous?.through < chat.length ? previous : null;
+    return reading && reading.chatKey === chatKey && reading.nexus === books.nexus &&
+        reading.memory === books.memory && reading.mode === mode && reading.length === chat.length &&
+        reading.through === getAutomaticCheckpointThrough(checkpoint,books) ? reading : null;
+}
 
 function assertReviewedCache(name, ...allowed) {
     // Core World Info updates the cache before its debounced HTTP write.
@@ -198,7 +216,7 @@ function assertOrigin(ref, roles, sourceIds, sourceFingerprint, fingerprintOptio
     }
 }
 
-function activeSource(ref, memoryBook, roleNames) {
+function activeSource(ref, memoryBook, roleNames, afterId = -1) {
     const markers=getSceneMarkers()||{};
     const currentKey=getStmbChatKey(ref);
     const receipt=markers.slothCollection;
@@ -228,7 +246,7 @@ function activeSource(ref, memoryBook, roleNames) {
     }
     const source=[];
     let rangeIndex=0;
-    for(let id=0;id<chat.length;id++){
+    for(let id=Math.max(0,afterId+1);id<chat.length;id++){
         while(rangeIndex<merged.length&&merged[rangeIndex][1]<id)rangeIndex++;
         const range=merged[rangeIndex];
         if(range&&id>=range[0]){id=range[1];continue;}
@@ -870,15 +888,24 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         // other tokenizers always get the original exact check.
         const knownTiktoken = automatic?.mode === 'tokens' && main_api === 'openai' &&
             /^(?:gpt-[345](?:[.o-]|$)|o[134](?:-|$)|chatgpt-4o)/i.test(String(getTokenizerModel() || ''));
-        const automaticUpperBound = knownTiktoken ? createAutomaticTokenUpperBound() : undefined;
+        const automaticUpperBound = knownTiktoken ? automaticByteBound : undefined;
+        const through = getAutomaticCheckpointThrough(checkpoint,roleNames);
+        const revision = automaticReadingRevision;
+        const readingLength = chat.length;
+        const publishReading = (reading, checkedThrough = through) => {
+            if (revision !== automaticReadingRevision || getStmbChatKey() !== automaticChatKey || chat.length !== readingLength) return;
+            automaticReading = {...reading,chatKey:automaticChatKey,...roleNames,mode:automatic.mode,
+                length:readingLength,through:checkedThrough};
+        };
         const thresholdMet = source => automaticCollectionDue({
             source,previous:checkpoint,books:roleNames,mode:automatic.mode,
             threshold:automatic.threshold,countTokens:countAutomaticTokens,upperBound:automaticUpperBound,
+            onReading:publishReading,
         });
         // The chat receipt is enough to check an upper bound without fetching
         // either book at every reply. Saved older book entries can narrow this
         // set further, which is checked before starting an AI request.
-        const pending = automatic ? activeSource(ref,null,roleNames).source : null;
+        const pending = automatic ? activeSource(ref,null,roleNames,through).source : null;
         if (automatic && !await thresholdMet(pending)) return {saved:false,reason:'below-threshold'};
         const originalBooks=initial?{nexus:{entries:{}},memory:{entries:{}}}:{
             nexus:await loadServerWorld(roleNames.nexus,signal),
@@ -924,14 +951,21 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             return {saved:false,reason:'start-cancelled'};
         }
         checkBeforeSave();
+        // Check the authoritative pending range before spending time splitting the
+        // source. An identical preflight needs neither a second count nor a join.
+        if (automatic) {
+            const remaining = source.filter(message => message.id > through);
+            if ((remaining.length !== pending.length ||
+                remaining.some((message,i)=>message.id !== pending[i]?.id || message.mes !== pending[i]?.mes)) &&
+                !await thresholdMet(remaining)) return {saved:false,reason:'below-threshold'};
+        }
+        checkBeforeSave();
         const [currentChunk,...laterChunks]=await splitSlothCollectionSource(source,getTokenCountAsync);
         checkBeforeSave();
         const partialSource=laterChunks.length>0;
         const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames} : null;
         const autoWindow=autoAttempt && partialSource ? {attempt:autoAttempt,through:currentChunk.at(-1).id} : null;
         if (automatic) {
-            if (pending.length !== source.length && !await thresholdMet(source))
-                return {saved:false,reason:'below-threshold'};
             await readReviewedChat(ref,sourceIds,fingerprint);
             await patchStmbMetadataForChatRef(ref,markers=>{
                 checkOrigin();
@@ -939,6 +973,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     throw new Error('Automatic collection already advanced for this chat.');
                 return {...markers,slothAutomatic:autoAttempt};
             });
+            publishReading({count:0,exact:true},autoAttempt.through);
         } else {
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
@@ -1063,6 +1098,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             try {
                 await updateCollectedLedger(prior,scenes,ref,roleNames,sourceIds,fingerprint,autoWindow);
                 receiptVerified=true;
+                if (!automatic || autoWindow) invalidateSlothAutomaticProgress();
             } catch (error) {
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }

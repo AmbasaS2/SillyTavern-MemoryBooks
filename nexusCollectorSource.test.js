@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {fingerprintSlothChat} from './nexusCollectionPolicy.js';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-const start=source.indexOf('function activeSource(ref, memoryBook, roleNames) {');
+const start=source.indexOf('function activeSource(');
 const end=source.indexOf('\nfunction readableSegments(',start);
 assert.ok(start>=0&&end>start);
 const body=source.slice(start,end);
@@ -87,4 +87,18 @@ test('the collection receipt is tied to persisted source and is reread after met
     turns[0].mes = 'A different event happened.';
     await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /saved chat differs/);
     assert.equal(metadataWrites, 1);
+});
+
+
+test('automatic preflight skips checkpoint history but retains every eligible later message',()=>{
+    const h=harness();
+    h.metadata.slothCollection.savedRanges=[[1,1],[3,5]];
+    h.chat[8].is_system=true;
+    const pair={nexus:'N',memory:'M'};
+    const memory={entries:{14:{STMB_chatId:'chat-a',STMB_sourceRanges:[[6,6]]}}};
+    const all=h.fn(h.current,memory,pair).source;
+    for (const checkpoint of [-1,0,4,5,7,9]) {
+        const result=h.fn(h.current,memory,pair,checkpoint).source;
+        assert.deepEqual(Array.from(result,m=>m.id),Array.from(all.filter(m=>m.id>checkpoint),m=>m.id));
+    }
 });

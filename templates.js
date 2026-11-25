@@ -170,6 +170,10 @@ export const settingsTemplate = Handlebars.compile(`
               <span data-i18n="STMemoryBooks_SlothAutoInterval">Collect every</span>
               <input id="stmb-sloth-auto-interval" type="number" min="1" max="{{slothAutoIntervalMax}}" class="text_pole" value="{{slothAutoInterval}}">
             </label>
+            <div id="stmb-sloth-auto-progress" class="stmb-sloth-auto-progress" hidden>
+              <small id="stmb-sloth-auto-status" role="status"></small>
+              <progress id="stmb-sloth-auto-bar" max="1" value="0" hidden></progress>
+            </div>
             <small id="stmb-sloth-auto-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothAutoHelp" hidden>In chats with Nexus and Memory linked, completed events are saved after a reply once enough unsaved messages accumulate. Messages stay visible.</small>
           </div>
         </details>

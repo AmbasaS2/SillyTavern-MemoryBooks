@@ -33,6 +33,19 @@ export function createAutomaticTokenCounter(countTokens) {
 
 export function createAutomaticTokenUpperBound() {
     const encoder = new TextEncoder();
+    // Cache only the byte measurements, never approximate tokenizer counts.
+    // Bounded by both entry count and maximum cacheable message length.
+    const cache = new Map();
+    function measure(text) {
+        const cached = cache.get(text);
+        if (cached) return cached;
+        const measured = [encoder.encode(text).length, encoder.encode(JSON.stringify(text)).length];
+        if (text.length <= 8192) {
+            if (cache.size >= 256) cache.delete(cache.keys().next().value);
+            cache.set(text, measured);
+        }
+        return measured;
+    }
     // A byte-level tiktoken encoding cannot exceed the UTF-8 byte length plus
     // the host's fixed single-system-message overhead. Its error fallback
     // estimates the JSON body; count that too (including escaped characters).
@@ -40,20 +53,32 @@ export function createAutomaticTokenUpperBound() {
         let bytes = 0, jsonBytes = 0;
         for (const message of messages) {
             const text = String(message.mes ?? '');
-            bytes += encoder.encode(text).length;
-            jsonBytes += encoder.encode(JSON.stringify(text)).length;
+            const [length, escapedLength] = measure(text);
+            bytes += length;
+            jsonBytes += escapedLength;
         }
         const separators = Math.max(0,messages.length-1);
         return Math.max(bytes+separators+32,Math.ceil((jsonBytes+2*separators+64)/3.35));
     };
 }
 
-export async function automaticCollectionDue({source,previous,books,mode,threshold,countTokens,upperBound}) {
+export function getAutomaticCheckpointThrough(previous, books) {
     const sameBooks = !!previous?.books && previous.books.nexus === books.nexus && previous.books.memory === books.memory;
-    const through = sameBooks && Number.isSafeInteger(previous.through) ? previous.through : -1;
+    return sameBooks && Number.isSafeInteger(previous.through) ? previous.through : -1;
+}
+
+export async function automaticCollectionDue({source,previous,books,mode,threshold,countTokens,upperBound,onReading}) {
+    const through = getAutomaticCheckpointThrough(previous, books);
     const pending = source.filter(message => message.id > through);
-    if (!pending.length) return false;
-    if (mode === 'messages') return pending.length >= threshold;
-    if (upperBound && upperBound(pending) < threshold) return false;
-    return await countTokens(pending.map(message => message.mes).join('\n')) >= threshold;
+    const report = (count, exact) => {
+        onReading?.({count,exact});
+        return count >= threshold;
+    };
+    if (!pending.length) return report(0,true);
+    if (mode === 'messages') return report(pending.length,true);
+    if (upperBound) {
+        const bound = upperBound(pending);
+        if (bound < threshold) return report(bound,false);
+    }
+    return report(await countTokens(pending.map(message => message.mes).join('\n')),true);
 }

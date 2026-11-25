@@ -44,3 +44,27 @@ test('a saved partial window leaves the unread messages due without replacing a 
     await collect();
     assert.equal(markers.slothAutomatic.through,16);
 });
+
+
+test('automatic progress reuses the threshold decision without extra exact token calls',async()=>{
+    const books={nexus:'N',memory:'M'};
+    const source=[{id:0,mes:'old'},{id:1,mes:'first'},{id:2,mes:'second'}];
+    const previous={through:0,books};
+    const readings=[];
+    let calls=0;
+    const opts={source,previous,books,mode:'tokens',threshold:20,
+        countTokens:async text=>{calls++;assert.equal(text,'first\nsecond');return 11;},
+        onReading:reading=>readings.push(reading)};
+    assert.equal(await automaticCollectionDue({...opts,upperBound:()=>18}),false);
+    assert.deepEqual(readings.pop(),{count:18,exact:false});
+    assert.equal(calls,0);
+    assert.equal(await automaticCollectionDue({...opts,upperBound:()=>30}),false);
+    assert.deepEqual(readings.pop(),{count:11,exact:true});
+    assert.equal(calls,1);
+    assert.equal(await automaticCollectionDue({...opts,mode:'messages',threshold:2}),true);
+    assert.deepEqual(readings.pop(),{count:2,exact:true});
+    assert.equal(calls,1);
+    assert.equal(await automaticCollectionDue({...opts,source:[]}),false);
+    assert.deepEqual(readings.pop(),{count:0,exact:true});
+    assert.equal(calls,1);
+});
