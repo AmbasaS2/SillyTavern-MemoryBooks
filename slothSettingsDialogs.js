@@ -54,17 +54,16 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         icon('copy','fa-file-circle-plus',t('Save as new prompt','SlothPromptSaveAs'));
     target.classList.add('stmb-prompt-library');
     target.innerHTML=DOMPurify.sanitize(`
-        <header class="stmb-prompt-heading"><label for="${id(card?'text':'choice')}">${html(heading)}</label><div class="stmb-prompt-tools">
-            ${card?editButtons:''}
+        <header class="stmb-prompt-heading">${card?'':`<label for="${id('choice')}">${html(heading)}</label>`}<div class="stmb-prompt-tools">
             ${icon('expand','fa-expand',t('View full prompt','SlothPromptExpand'))}
             ${icon('export','fa-file-export',t('Export prompt','SlothPromptExport'))}
             ${icon('import','fa-file-import',t('Import prompt','SlothPromptImport'))}
             ${icon('delete','fa-trash',t('Delete prompt','SlothPromptDelete'))}
         </div></header>
-        ${card?'':`<div class="stmb-prompt-selection">
+        <div class="stmb-prompt-selection">
             <select id="${id('choice')}" class="text_pole" aria-label="${html(title)}"></select>
             ${editButtons}
-        </div>`}
+        </div>
         <textarea id="${id('text')}" class="text_pole" rows="5" spellcheck="false" aria-label="${html(title)}"></textarea>
         ${isSummary?'':`<details class="stmb-prompt-format"><summary>${html(t('Response format (optional)','SlothSideFormat'))}</summary>
           <textarea id="${id('format')}" class="text_pole" rows="3" aria-label="${html(t('Response format (optional)','SlothSideFormat'))}"></textarea></details>`}
@@ -86,8 +85,8 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const select=find('choice'), editor=find('text'), response=find('format'), file=find('file');
     const recallSelect=find('recall');
     const bookSelect=find('book'), entryButton=find('entry');
-    const empty={id:'',name:t('New Side Prompt','SlothSideNew'),text:'',responseFormat:''};
-    let current=records.find(record=>record.id===appliedId)||records[0]||empty;
+    const empty={id:'',name:t('Choose a prompt','SlothSideChoosePreset'),text:'',responseFormat:''};
+    let current=records.find(record=>record.id===appliedId)||(card?empty:records[0]);
     let busy=false;
     const drafts=new Map();
     const value=()=>({...current,text:editor.value,responseFormat:response?.value||''});
@@ -95,7 +94,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const dirty=()=>editor.value!==current.text||(response?.value||'')!==(current.responseFormat||'');
     const setStatus=(message='')=>{find('status').textContent=message;};
     const sync=()=>{
-        if(select)select.disabled=busy;
+        select.disabled=busy;
         if(recallSelect)recallSelect.disabled=busy||!current.id;
         if(bookSelect) {
             bookSelect.disabled=busy||!current.id||!destination.enabled;
@@ -104,7 +103,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         button('save').disabled=busy||!editor.value.trim()||!(dirty()||(isSummary&&current.id!==appliedId));
         button('copy').disabled=busy||!editor.value.trim()||Boolean(card&&!current.id);
         button('rename').disabled=busy||!current.id||readOnly();
-        button('delete').disabled=busy||readOnly()||(!card&&!current.id);
+        button('delete').disabled=busy||readOnly()||!current.id;
         button('export').disabled=busy||!current.id||dirty();
         button('import').disabled=busy;
         button('expand').disabled=busy||!editor.value.trim();
@@ -127,11 +126,13 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
             : book ? t('Existing lorebook links stay as configured. Choose an entry to continue an older record.','SlothSideExistingBookHelp')
             : '';
     };
+    const renderChoices=()=>{
+        const choices=card?[empty,...card.choices()]:records;
+        select.replaceChildren(...choices.map(record=>new Option(record.name,record.id)));
+        select.value=current.id;
+    };
     const render=()=>{
-        if(select) {
-            select.replaceChildren(...records.map(record=>new Option(record.name,record.id)));
-            select.value=current.id;
-        }
+        renderChoices();
         const draft=drafts.get(current.id)||current;
         editor.value=draft.text;
         editor.scrollTop=0;
@@ -164,7 +165,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const id=await save(draft,activate);
         const stored={id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat||''};
         if(card&&current.id&&id!==current.id) {
-            card.added(stored);
+            await card.added(stored);
             return;
         }
         const index=records.findIndex(record=>record.id===id);
@@ -174,9 +175,9 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         }
         if(activate&&isSummary) appliedId=id;
         current=records.find(record=>record.id===id)||stored;
-        card?.changed(current);
         drafts.delete(id);
         render();
+        await card?.changed(current);
     };
     const saveAs=async draft=>{
         const name=await askPresetName(t('Save as new prompt','SlothPromptSaveAs'));
@@ -185,11 +186,16 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         await saveRecord({...draft,id:'',name,recallMode:recall?.get(draft.id)});
         drafts.delete('');
     };
-    select?.addEventListener('change',()=>{
+    if(card)select.addEventListener('focus',renderChoices);
+    select.addEventListener('change',()=>{
         if(busy){select.value=current.id;return;}
-        if(dirty())drafts.set(current.id,value());
-        current=records.find(record=>record.id===select.value)||empty;
-        render();
+        const next=(card?.choices()||records).find(record=>record.id===select.value)||empty;
+        void run(async()=>{
+            if(dirty())drafts.set(current.id,value());
+            current=next;
+            render();
+            await card?.changed(current);
+        });
     });
     for(const input of [editor,response])input?.addEventListener('input',sync);
     recallSelect?.addEventListener('change',()=>void run(()=>recall.set(current.id,recallSelect.value)));
@@ -226,15 +232,20 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         if(response)response.value=previous.responseFormat;
     }));
     button('delete').addEventListener('click',()=>void run(async()=>{
-        if(readOnly())return;
-        if(!current.id&&card) {card.removed();return;}
+        if(!current.id||readOnly())return;
         const confirmation=t('Delete “{{name}}”?','DeleteSidePromptConfirm').replace('{{name}}',current.name);
         if(await markStmbPopup(new Popup(html(confirmation),POPUP_TYPE.CONFIRM,'')).show()!==POPUP_RESULT.AFFIRMATIVE)return;
         const id=current.id;
         await remove(id);
-        if(card) {card.removed();return;}
-        records.splice(records.findIndex(record=>record.id===id),1);
+        const recordIndex=records.findIndex(record=>record.id===id);
+        if(recordIndex>=0)records.splice(recordIndex,1);
         drafts.delete(id);
+        if(card) {
+            current=empty;
+            render();
+            await card.changed(current);
+            return;
+        }
         if(appliedId===id)appliedId=records.find(record=>record.builtin)?.id||'';
         current=records.find(record=>record.id===appliedId)||records[0]||empty;
         render();
@@ -372,52 +383,98 @@ export function mountSlothSidePromptSettings(target,settings) {
     add.className='menu_button stmb-side-card-add';
     add.textContent=t('Add Side Prompt','SlothSideAdd');
     target.append(list,add);
+    const rows=[];
     let sequence=0;
+    const persistSlots=async()=>{
+        if(!enabled)return;
+        verifyChat();
+        params.slothSideSlots={...params.slothSideSlots,[ref.avatarUrl]:rows.map(row=>row.record?.id||'')};
+        await saveSettings();
+    };
+    const setLink=(id,use)=>{
+        if(!enabled||!id)return;
+        const key=JSON.stringify([ref.avatarUrl,id]);
+        params.slothSideCharacterLinks ||= {};
+        if(use)params.slothSideCharacterLinks[key]=true;
+        else delete params.slothSideCharacterLinks[key];
+    };
+    const reportSettingsError=error=>{
+        console.warn('Memory Books could not change a Side Prompt slot.',error);
+        toastr.error(t('Failed to save settings. Please try again.','FailedToSaveSettings'),'STMemoryBooks');
+    };
+    const refreshRemoveButtons=()=>rows.forEach(row=>{row.remove.hidden=rows.length===1;});
     function addCard(initial,open) {
         const number=++sequence;
-        let record=initial;
         const wrapper=document.createElement('div');
-        wrapper.className='stmb-side-card';
+        wrapper.className='stmb-side-row';
         const checkbox=document.createElement('input');
         checkbox.type='checkbox';
         checkbox.className='stmb-side-card-link';
         const details=document.createElement('details');
+        details.className='stmb-side-card';
         const summary=document.createElement('summary');
         const editor=document.createElement('div');
+        const removeSlot=document.createElement('button');
+        removeSlot.type='button';
+        removeSlot.className='menu_button stmb-side-slot-remove';
+        const removeLabel=t('Remove Side Prompt slot','SlothSideRemoveSlot');
+        removeSlot.setAttribute('aria-label',removeLabel);
+        removeSlot.title=removeLabel;
+        removeSlot.innerHTML='<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+        const row={record:initial,remove:removeSlot};
+        rows.push(row);
         details.append(summary,editor);
-        wrapper.append(checkbox,details);
+        wrapper.append(checkbox,details,removeSlot);
         list.append(wrapper);
+        refreshRemoveButtons();
         const refresh=()=>{
             const label=t('Use this prompt for this character','SlothSideLink');
-            const name=record?.name||t('New Side Prompt','SlothSideNew');
+            const name=row.record?.name||t('Choose a prompt','SlothSideChoosePreset');
             summary.textContent=name;
             checkbox.title=label;
             checkbox.setAttribute('aria-label',label+' · '+name);
-            checkbox.disabled=!enabled||!record?.id;
-            checkbox.checked=!!record&&isSlothSideLinked(settings,record.id,ref);
+            checkbox.disabled=!enabled||!row.record?.id;
+            checkbox.checked=!!row.record?.id&&isSlothSideLinked(settings,row.record.id,ref);
         };
         refresh();
         checkbox.addEventListener('change',async()=>{
             try {
                 verifyChat();
-                const key=JSON.stringify([ref.avatarUrl,record.id]);
-                params.slothSideCharacterLinks ||= {};
-                if(checkbox.checked)params.slothSideCharacterLinks[key]=true;
-                else delete params.slothSideCharacterLinks[key];
+                setLink(row.record?.id,checkbox.checked);
                 checkbox.disabled=true;
                 await saveSettings();
-            } catch(error) {
-                console.warn('Memory Books could not change a character Side Prompt.',error);
-                toastr.error(t('Failed to save settings. Please try again.','FailedToSaveSettings'),'STMemoryBooks');
-            } finally {refresh();}
+            } catch(error) {reportSettingsError(error);}
+            finally {refresh();}
+        });
+        removeSlot.addEventListener('click',async()=>{
+            if(rows.length===1)return;
+            try {
+                if(enabled)verifyChat();
+                setLink(row.record?.id,false);
+                rows.splice(rows.indexOf(row),1);
+                wrapper.remove();
+                refreshRemoveButtons();
+                await persistSlots();
+            } catch(error) {reportSettingsError(error);}
         });
         const mount=()=>{
             if(!details.open||editor.firstElementChild)return;
-            mountPromptLibrary({target:editor,title:summary.textContent,heading:t('Prompt','SlothPromptText'),
-                records:record?[record]:[],format:'sloth-side-prompt',destination,recall,save,remove,
-                card:{number,names:getRecords,added:next=>addCard(next,true),
-                    changed:next=>{if(!record)add.disabled=false;record=next;refresh();},
-                    removed:()=>{if(!record)add.disabled=false;wrapper.remove();}},
+            mountPromptLibrary({target:editor,title:t('Choose a prompt','SlothSideChoosePreset'),
+                records:getRecords(),appliedId:row.record?.id,format:'sloth-side-prompt',destination,recall,save,remove,
+                card:{
+                    number,names:getRecords,
+                    choices:()=>getRecords().filter(record=>!rows.some(other=>other!==row&&other.record?.id===record.id)),
+                    added:async next=>{addCard(next,true);await persistSlots();},
+                    changed:async next=>{
+                        const previous=row.record?.id||'';
+                        if(previous!==next.id&&enabled)verifyChat();
+                        row.record=next.id?next:null;
+                        refresh();
+                        if(previous===next.id)return;
+                        setLink(previous,false);
+                        await persistSlots();
+                    },
+                },
             });
         };
         details.open=open;
@@ -425,9 +482,23 @@ export function mountSlothSidePromptSettings(target,settings) {
         details.addEventListener('toggle',mount);
         return details;
     }
-    getRecords().forEach((record,index)=>addCard(record,index===0));
-    add.addEventListener('click',()=>{
+    const available=getRecords();
+    const stored=enabled?params.slothSideSlots?.[ref.avatarUrl]:null;
+    const selected=Array.isArray(stored)?stored:available.filter(record=>{
+        const choice=destination.get(record.id);
+        return isSlothSideLinked(settings,record.id,ref)||choice.book||choice.create;
+    }).map(record=>record.id);
+    (selected.length?selected:['']).forEach((id,index)=>{
+        const record=rows.some(row=>row.record?.id===id)?null:available.find(item=>item.id===id);
+        addCard(record||null,index===0);
+    });
+    add.addEventListener('click',async()=>{
         add.disabled=true;
-        addCard(null,true).querySelector('textarea').focus();
+        try {
+            if(enabled)verifyChat();
+            addCard(null,true).querySelector('select').focus();
+            await persistSlots();
+        } catch(error) {reportSettingsError(error);}
+        finally {add.disabled=false;}
     });
 }

@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "Tulis draf",
   "STMemoryBooks_SlothSidePromptHelp": "Centang prompt untuk karakter ini dan pilih lorebook untuk masing-masing prompt.",
   "STMemoryBooks_SlothSideAdd": "Tambah prompt tambahan",
+  "STMemoryBooks_SlothSideChoosePreset": "Pilih prompt",
+  "STMemoryBooks_SlothSideRemoveSlot": "Hapus slot prompt tambahan",
   "STMemoryBooks_SlothSideLink": "Gunakan untuk karakter ini",
   "STMemoryBooks_SlothSideSetupRequired": "Centang prompt untuk karakter ini dan pilih lorebook tujuannya.",
   "STMemoryBooks_SlothDiary": "Buku harian (Jangan dibaca)",

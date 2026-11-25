@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "Entwürfe schreiben",
   "STMemoryBooks_SlothSidePromptHelp": "Wähle die Prompts für diese Figur und für jeden das Ziel-Lorebook.",
   "STMemoryBooks_SlothSideAdd": "Nebenprompt hinzufügen",
+  "STMemoryBooks_SlothSideChoosePreset": "Prompt auswählen",
+  "STMemoryBooks_SlothSideRemoveSlot": "Nebenprompt-Platz entfernen",
   "STMemoryBooks_SlothSideLink": "Für diese Figur verwenden",
   "STMemoryBooks_SlothSideSetupRequired": "Wähle einen Nebenprompt für diese Figur und sein Ziel-Lorebook.",
   "STMemoryBooks_SlothDiary": "Tagebuch (Nicht lesen)",

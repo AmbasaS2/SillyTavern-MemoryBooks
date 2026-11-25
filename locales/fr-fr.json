@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "Rédiger les brouillons",
   "STMemoryBooks_SlothSidePromptHelp": "Cochez les consignes à utiliser pour ce personnage et choisissez le livre de chacune.",
   "STMemoryBooks_SlothSideAdd": "Ajouter une consigne annexe",
+  "STMemoryBooks_SlothSideChoosePreset": "Choisir une consigne",
+  "STMemoryBooks_SlothSideRemoveSlot": "Retirer un emplacement de consigne annexe",
   "STMemoryBooks_SlothSideLink": "Utiliser pour ce personnage",
   "STMemoryBooks_SlothSideSetupRequired": "Cochez une consigne pour ce personnage et choisissez son livre de destination.",
   "STMemoryBooks_SlothDiary": "Journal (Ne pas lire)",

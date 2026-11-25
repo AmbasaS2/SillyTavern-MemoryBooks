@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "Redigir rascunhos",
   "STMemoryBooks_SlothSidePromptHelp": "Marque os prompts para este personagem e escolha onde salvar cada um.",
   "STMemoryBooks_SlothSideAdd": "Adicionar prompt auxiliar",
+  "STMemoryBooks_SlothSideChoosePreset": "Escolher prompt",
+  "STMemoryBooks_SlothSideRemoveSlot": "Remover espaço de prompt auxiliar",
   "STMemoryBooks_SlothSideLink": "Usar para este personagem",
   "STMemoryBooks_SlothSideSetupRequired": "Marque um prompt para este personagem e escolha o livro de destino.",
   "STMemoryBooks_SlothDiary": "Diário (Não leia)",

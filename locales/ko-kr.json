@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "초안 작성",
   "STMemoryBooks_SlothSidePromptHelp": "이 캐릭터에서 쓸 프롬프트를 체크하고 저장할 로어북을 고르세요.",
   "STMemoryBooks_SlothSideAdd": "사이드 프롬프트 추가",
+  "STMemoryBooks_SlothSideChoosePreset": "프롬프트 선택",
+  "STMemoryBooks_SlothSideRemoveSlot": "사이드 프롬프트 칸 제거",
   "STMemoryBooks_SlothSideLink": "이 캐릭터에서 사용",
   "STMemoryBooks_SlothSideSetupRequired": "이 캐릭터에서 쓸 사이드 프롬프트를 체크하고 저장할 로어북을 골라 주세요.",
   "STMemoryBooks_SlothDiary": "일기 (읽지 마세요)",

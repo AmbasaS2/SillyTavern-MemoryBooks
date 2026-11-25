@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "Tulis draf",
   "STMemoryBooks_SlothSidePromptHelp": "Tandakan prom untuk watak ini dan pilih buku lore bagi setiap prom.",
   "STMemoryBooks_SlothSideAdd": "Tambah prom sampingan",
+  "STMemoryBooks_SlothSideChoosePreset": "Pilih prom",
+  "STMemoryBooks_SlothSideRemoveSlot": "Buang ruang prom sampingan",
   "STMemoryBooks_SlothSideLink": "Gunakan untuk watak ini",
   "STMemoryBooks_SlothSideSetupRequired": "Tandakan prom untuk watak ini dan pilih buku lore destinasinya.",
   "STMemoryBooks_SlothDiary": "Diari (Jangan baca)",

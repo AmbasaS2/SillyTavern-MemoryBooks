@@ -16,6 +16,8 @@
   "STMemoryBooks_SlothSidePromptGenerate": "撰寫草稿",
   "STMemoryBooks_SlothSidePromptHelp": "勾選這個角色要使用的側邊提示詞，並為各項選擇儲存的世界書。",
   "STMemoryBooks_SlothSideAdd": "新增側邊提示詞",
+  "STMemoryBooks_SlothSideChoosePreset": "選擇提示詞",
+  "STMemoryBooks_SlothSideRemoveSlot": "移除側邊提示詞欄位",
   "STMemoryBooks_SlothSideLink": "用於這個角色",
   "STMemoryBooks_SlothSideSetupRequired": "請勾選這個角色的側邊提示詞並選擇儲存的世界書。",
   "STMemoryBooks_SlothDiary": "日記（請勿閱讀）",
