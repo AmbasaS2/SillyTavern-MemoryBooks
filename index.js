@@ -1471,13 +1471,6 @@ function initializeChatObserver() {
   chatObserver.observe(chatContainer, {
     childList: true,
   });
-
-  console.log(
-    translate(
-      "STMemoryBooks: Chat observer initialized",
-      "index.log.chatObserverInitialized",
-    ),
-  );
 }
 
 /**
@@ -1487,12 +1480,6 @@ function cleanupChatObserver() {
   if (chatObserver) {
     chatObserver.disconnect();
     chatObserver = null;
-    console.log(
-      translate(
-        "STMemoryBooks: Chat observer disconnected",
-        "index.log.chatObserverDisconnected",
-      ),
-    );
   }
 
   if (updateTimeout) {
@@ -15174,7 +15161,6 @@ function showFailedAIResponsePopup(error) {
 async function init() {
   if (hasBeenInitialized) return;
   hasBeenInitialized = true;
-  console.log("STMemoryBooks: Initializing");
   // Merge this extension's locale data into SillyTavern's current locale:
   // - Do not reinitialize ST i18n (host owns init)
   // - Load JSON for current locale if available, then ensure English fallback exists
@@ -15322,9 +15308,6 @@ async function init() {
     progressChatLoaded();
     processExistingMessages();
     void maybePromptContextSettingForChatOpen();
-    console.log(
-      "STMemoryBooks: Processed existing messages during initialization",
-    );
   } catch (error) {
     console.error(
       "STMemoryBooks: Error processing existing messages during init:",
@@ -15336,8 +15319,6 @@ async function init() {
   Handlebars.registerHelper("eq", function (a, b) {
     return a === b;
   });
-
-  console.log("STMemoryBooks: Extension loaded successfully");
 }
 
 /**
