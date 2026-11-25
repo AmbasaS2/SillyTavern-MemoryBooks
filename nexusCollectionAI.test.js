@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import { stageNexusEdits } from './nexusCollectionPolicy.js';
-import { validateGroundedNexusEdits, validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
+import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
 import { validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
@@ -334,13 +334,13 @@ test('approved collection uses one request and retains the valid scenes even ove
     assert.equal(withoutReview.scenes[0].content,result.scenes[0].content);
 });
 
-test('bad Nexus citations and conflicting edits are skipped independently of other updates', () => {
+test('Nexus edits without citations are accepted; structural conflicts are skipped independently', () => {
     const normalizerStart=source.indexOf('function canonicalizeNewNexusTitles(');
     const normalizerEnd=source.indexOf('function parseStrictJSON(',normalizerStart);
     const start=source.indexOf('function readSlothNexusEdits(');
     const end=source.indexOf('async function reviewSlothSceneDrafts(',start);
     const filter=vm.runInNewContext(source.slice(normalizerStart,normalizerEnd)+'\n'+source.slice(start,end)+'\nreadSlothNexusEdits',{
-        validateGroundedNexusEdits, stageNexusEdits, console:{warn:()=>{}},
+        stageNexusEdits, console:{warn:()=>{}},
     });
     const nexus={entries:{1:{uid:1,comment:'LT 01 | The letter',content:'The letter arrived.'},
         2:{uid:2,comment:'LT 02 | The gate',content:'The gate had been open.'}}};
@@ -349,7 +349,8 @@ test('bad Nexus citations and conflicting edits are skipped independently of oth
         reason:'The original conversation shows that she replied.',
         evidence:[{messageId:1,quote:'She answered the letter.'}]};
     const next={...good,uid:2,text:'He closed the gate.',evidence:[{messageId:2,quote:'He closed the gate.'}]};
-    const bad={...good,text:'An invented fact.',evidence:[{messageId:1,quote:'She set fire to the letter.'}]};
+    const bad={...good,uid:null,text:'Cannot edit an invalid UID.'};
+    delete good.evidence; delete good.reason;
     const saved=filter({edits:[good,bad,good,next]},{messages,nexus});
     assert.equal(saved.skippedNexusEdits,2);
     assert.deepEqual(JSON.parse(JSON.stringify(saved.edits)),[good,next]);

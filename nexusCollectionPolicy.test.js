@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,parseReviewedSegments,groupSlothSourceWindows,
-  fingerprintSlothChat,describeNexusCollectionEntry,npcNexusSubjectIsGrounded,
+  fingerprintSlothChat,describeNexusCollectionEntry,
   stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
 
 test('a collection keeps proposed events while forwarding only verified ending quotes', () => {
@@ -151,17 +151,15 @@ test('a new numbered detail cannot duplicate an existing person or topic', () =>
   ],maker),/Use existing UID 4/);
 });
 
-test('only quotes naming the right NPC can update their entry or support a new one', () => {
-  const entries = {
-    3:{uid:3,comment:'NPC 02 | Madame Vasseur'},
-    4:{uid:4,comment:'NPC 03 | Madame Thérèse Vidal'},
-  };
-  const update = quote => ({action:'append',uid:3,evidence:[{quote}]});
-  assert.equal(npcNexusSubjectIsGrounded(update('Madame Bachir showed us the old books.'),{entries}),false);
-  assert.equal(npcNexusSubjectIsGrounded(update('Mme. Vasseur wrote to me yesterday.'),{entries}),true);
-  const create = quote => ({action:'create',title:'NPC 04 | Madame Thérèse Vidal',continuingRole:{evidence:{quote}}});
-  assert.equal(npcNexusSubjectIsGrounded(create('The madame was going to keep them there after the tour.'),{entries}),false);
-  assert.equal(npcNexusSubjectIsGrounded(create('Thérèse Vidal promised to visit every January.'),{entries}),true);
+test('NPC updates do not require literal citations; malformed UIDs cannot edit entry zero', () => {
+  const original={entries:{0:{uid:0,comment:'NPC 01 | Madame Vasseur',content:'Known person.'}}};
+  const update={kind:'npc',action:'append',uid:0,text:'She now visits weekly.'};
+  const maker=()=>assert.fail('must reuse existing entry');
+  assert.match(stageNexusEdits(original,[update],maker).staged.entries[0].content,/visits weekly/);
+  for(const uid of [null,undefined,'',false,[],{}]) {
+    assert.throws(()=>stageNexusEdits(original,[{...update,uid}],maker),/numeric UID/);
+  }
+  assert.equal(original.entries[0].content,'Known person.');
 });
 
 const messages=Array.from({length:10},(_,id)=>({id,name:'A',mes:'message '+id}));

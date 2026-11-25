@@ -6,7 +6,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { reviewSlothSceneDrafts, reviewSlothNexusDrafts } from './nexusCollectionReview.js';
 import { stageNexusEdits, stageMemoryScenes } from './nexusCollectionPolicy.js';
-import { validateGroundedNexusEdits } from './nexusEditEvidence.js';
 
 const text='**Timeline**: Unknown\n\n**Scene**\nA promised to bring the letter. B accepted.\n\n**Result**\nB accepted the promise.';
 const scene={id:'event-1',title:'Promised letter',content:text,
@@ -57,8 +56,7 @@ test('Nexus direct edits preserve reason, original UID, source citations and oth
     assert.equal(reviewed[0].find,op.find);
     assert.deepEqual(reviewed[0].evidence,op.evidence);
     assert.deepEqual(reviewSlothNexusDrafts([op,op],[{include:false},{body:'The letter was answered today.'}]),reviewed);
-    const grounded=validateGroundedNexusEdits(reviewed,messages);
-    const result=stageNexusEdits(original,grounded,maker);
+    const result=stageNexusEdits(original,reviewed,maker);
     assert.match(result.staged.entries[1].content,/answered today/);
     assert.equal(result.staged.entries[2].content,'Keep this unchanged');
     assert.equal(original.entries[1].content.includes('unanswered'),true);

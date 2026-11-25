@@ -108,7 +108,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
     validateMergedArchives(entries);
     const splitOrder=validateSplitArchives(entries,sceneNumberFromTitle);
     const numbered = [];
-    const usedUids = new Set();
+    const originalByUid = new Map();
     const usedNumbers = new Set();
     for (const entry of entries) {
         const uid = requireValidUid(entry);
@@ -116,10 +116,10 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
         if (!isCompletedSceneEntry(entry)) {
             throw new Error(`Memory contains an incomplete or non-Scene entry (UID ${uid}).`);
         }
-        if (usedUids.has(uid) || usedNumbers.has(sequence)) {
+        if (originalByUid.has(uid) || usedNumbers.has(sequence)) {
             throw new Error(`Ambiguous Memory Scene UID or sequence (UID ${uid}, Scene ${sequence}).`);
         }
-        usedUids.add(uid);
+        originalByUid.set(uid, entry);
         usedNumbers.add(sequence);
         if (!Object.prototype.hasOwnProperty.call(entry, MERGED_INTO) &&
             !Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) {
@@ -136,7 +136,7 @@ export function planNexusSceneRotation(memory, { olderMode = 'vector', keepRecen
         if (Object.prototype.hasOwnProperty.call(entry, MERGED_INTO) ||
             Object.prototype.hasOwnProperty.call(entry, SPLIT_ARCHIVE)) continue; // archived original retained only for lossless recovery
         const uid = requireValidUid(entry);
-        const old = Object.values(memory.entries).find(item => Number(item?.uid) === uid);
+        const old = originalByUid.get(uid);
         const alwaysOn = recent.has(uid);
         if (alwaysOn && entry.disable === true) {
             throw new Error(`Scene ${uid} is disabled; it cannot be silently enabled.`);

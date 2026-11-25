@@ -2,77 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateSlothNexusWindowEvidence,validateGroundedNexusEdits} from './nexusEditEvidence.js';
+import {validateSlothNexusWindowEvidence,isAllowedContinuityRetirement} from './nexusEditEvidence.js';
 
 const source=[
     {id:10,name:'A',mes:'I sent the letter to B and received a reply.',is_user:false},
     {id:14,name:'B',mes:'I told A about the secret in person.',is_user:false},
     {id:18,name:'A',mes:'My injured wrist still hurts today.',is_user:false},
 ];
-const quote=(messageId,quote)=>[{messageId,quote}];
-const change={
-    kind:'continuity',action:'replace_exact',uid:2,find:'The letter is unanswered.',
-    text:'A received B’s reply.',supersession:'observed_resolution',
-    reason:'A explicitly confirmed receiving a response to the letter.',
-    evidence:quote(10,'I sent the letter to B and received a reply.'),
-};
-test('exact source receipts allow scoped updates without changing user inputs',()=>{
-    const original=structuredClone(change);
-    const edits=validateGroundedNexusEdits([change],source);
-    assert.deepEqual(edits,[change]);assert.deepEqual(change,original);
-    assert.equal(edits[0].evidence[0].messageId,10);
-});
-test('new NPC needs exact evidence of a role beyond the current encounter', () => {
-    const op = {kind:'npc',action:'create',title:'NPC 03 | The courier',content:'A reusable contact.',
-        reason:'The courier is a confirmed regular contact.',
-        evidence:quote(10,'I sent the letter to B and received a reply.')};
-    assert.throws(()=>validateGroundedNexusEdits([op],source),/role beyond the current episode/);
-    assert.throws(()=>validateGroundedNexusEdits([{
-        ...op,continuingRole:{basis:'separate_future_encounter',
-            evidence:{messageId:10,quote:'I am coming back next week.'}},
-    }],source),/quote missing from original/);
-    const more = [...source,{id:22,name:'A',mes:'I will be your regular courier every week.'}];
-    const continuingRole={basis:'durable_relationship',evidence:{messageId:22,quote:more.at(-1).mes}};
-    assert.deepEqual(validateGroundedNexusEdits([{...op,continuingRole}],more)[0].continuingRole,continuingRole);
-});
-test('the model cannot cite invented quotes, other chat IDs or uncertain fragments',()=>{
-    for(const evidence of [
-        quote(11,'I sent the letter to B and received a reply.'),
-        quote(10,'The letter was delivered to B.'),
-        quote(10,'letter'),
-        [],
-        [{messageId:'10',quote:'I sent the letter to B and received a reply.'}],
-    ])assert.throws(()=>validateGroundedNexusEdits([{...change,evidence}],source),/evidence|quote|source/);
-});
-test('a transposed in-range ID can be recovered only from one exact original message',()=>{
-    const literal='I sent the letter to B and received a reply.';
-    const swapped={...change,evidence:quote(14,literal)};
-    assert.deepEqual(validateGroundedNexusEdits([swapped],source)[0].evidence,quote(10,literal));
-    assert.throws(()=>validateGroundedNexusEdits([swapped],[...source,{id:21,mes:literal}]),/missing from original/);
-    assert.throws(()=>validateGroundedNexusEdits([{...swapped,evidence:quote(11,literal)}],source),/missing from original/);
-    assert.throws(()=>validateSlothNexusWindowEvidence({evidence:[{...swapped.evidence[0],meaning:'Someone received a reply.'}]},source),/missing from original/);
-});
-test('current state replacement needs an explicit confirmed supersession and a reason',()=>{
-    for(const supersession of [undefined,'mere_absence','assumed_resolution']){
-        assert.throws(()=>validateGroundedNexusEdits([{...change,supersession}],source),/superseded/);
-    }
-    assert.throws(()=>validateGroundedNexusEdits([{...change,reason:'it changed'}],source),/specific reason/);
-    // A completed or disproven current-state line can be retired only with
-    // a directly cited source quote; its meaning still needs human review.
-    const retirement={...change,text:''};
-    assert.deepEqual(validateGroundedNexusEdits([retirement],source),[retirement]);
-    for(const supersession of [undefined,'mere_absence','new_confirmed_information']){
-        assert.throws(()=>validateGroundedNexusEdits([{...retirement,supersession}],source),
-            /superseded|cannot erase/);
-    }
-    assert.throws(()=>validateGroundedNexusEdits([{...retirement,evidence:[]}],source),/source quotes/);
-});
-test('additions cite exact deferred messages, including unresolved current conditions',()=>{
-    const op={kind:'continuity',action:'append_section',uid:2,section:'Active Conditions',
-        text:'A is still injured.',reason:'A reports the injury is ongoing in their latest message.',
-        evidence:quote(18,'My injured wrist still hurts today.')};
-    assert.deepEqual(validateGroundedNexusEdits([op],source),[op]);
-    assert.deepEqual(validateGroundedNexusEdits([],source),[]);
+test('explicit whole-line retirement classification does not require an AI quote',()=>{
+    const op={kind:'continuity',action:'replace_exact',text:'',supersession:'observed_resolution'};
+    assert.equal(isAllowedContinuityRetirement(op),true);
+    assert.equal(isAllowedContinuityRetirement({...op,supersession:'mere_absence'}),false);
+    assert.equal(isAllowedContinuityRetirement({...op,text:undefined}),false);
+    assert.equal(isAllowedContinuityRetirement({...op,kind:'core'}),false);
 });
 test('window evidence summaries cannot forge source text',()=>{
     const input={evidence:[{messageId:14,
@@ -104,10 +46,10 @@ test('quote presentation can be recovered only as a unique literal source span',
     assert.throws(()=>validate(original+' '+original),/missing from original/);
     assert.throws(()=>validate(original.replace('돌려줄래','버려줄래')),/missing from original/);
 });
-test('duplicate or malformed input IDs fail before any edits',()=>{
-    assert.throws(()=>validateGroundedNexusEdits([change],[...source,source[0]]),/repeated/);
-    assert.throws(()=>validateGroundedNexusEdits([change],[]),/original chat/);
-    assert.throws(()=>validateGroundedNexusEdits([null],source),/invalid/);
+test('duplicate or malformed source IDs still fail in legacy evidence extraction',()=>{
+    const raw={evidence:[]};
+    assert.throws(()=>validateSlothNexusWindowEvidence(raw,[...source,source[0]]),/repeated/);
+    assert.throws(()=>validateSlothNexusWindowEvidence(raw,[]),/original chat/);
 });
 import { validateSlothEventWindowEvidence } from './nexusEditEvidence.js';
 test('event windows retain exact citations without claiming messages between disjoint sources', () => {

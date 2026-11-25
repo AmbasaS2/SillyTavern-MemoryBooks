@@ -11,8 +11,8 @@ import { getContext } from '../../../extensions.js';
 import { getSelectedConnectionProfile } from './connectionProfileRequest.js';
 import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
 import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, includeDeepSeekTailEvent, fitDeepSeekSceneBatch, stageNexusEdits,
-    describeNexusCollectionEntry, npcNexusSubjectIsGrounded } from './nexusCollectionPolicy.js';
-import { validateGroundedNexusEdits, validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
+    describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
+import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
@@ -193,19 +193,16 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'Propose minimal EXACT SPAN updates to an existing SillyTavern Nexus World Info.',
         'Record confirmed changes with lasting consequences and keep still-active state in Current Continuity. Match a fact to the existing role and subject first, then patch only the part that changed. Create an entry only for durable information that has no suitable active entry. Keep an undertaking distinct from its observed fulfillment.',
         'An empty edits array is allowed. Preserve every untouched fact.',
-        'Every edit must include a specific factual reason in "reason" and an "evidence" array. Each evidence item contains the original integer "messageId" and an exact 8–400 character substring in "quote".',
-        'Cite current original message IDs, NOT generated Scene titles or fabricated references.',
-        'A quote proves that text was said, not that an interpretation is correct.',
-        'A continuity replace_exact also requires "supersession" with exactly ONE of these values:',
-        '"observed_resolution", "observed_correction", "explicit_retraction", "new_confirmed_information". Never combine the values.',
+        'Only when retiring a whole Current Continuity line (empty replacement), give "supersession" with exactly ONE of these values:',
+        '"observed_resolution", "observed_correction", "explicit_retraction". Never combine the values.',
         'Never remove an old state just because a date passed or no one mentioned it.',
         'For a reported state, clearly attribute who reported it; do not present it as observed fact.',
-        'Skip a fact already recorded correctly, even if the chat reconfirms it. Each changed clause must be supported by its own citation.',
+        'Skip a fact already recorded correctly, even if the chat reconfirms it. Keep each change consistent with the actual current chat.',
         'Keep one live line per fact. Correct a matching line in place when more precise evidence changes the same condition; use append_section only for a distinct current fact. If a report is corrected in the same exchange, store the corrected live condition with its source. Retain the prior report separately only if a named person still believes it or later actions depend on it.',
         'A newly stated practical constraint can refine an otherwise unchanged line. Keep evidence-backed changes to ongoing treatment, allowed activity, or discharge in that same line when they affect the next turn. Do not append a duplicate condition or recopy the report that was disproven.',
         'For each edit choose one kind: core, continuity, lt, npc, npc-index.',
-        'Choose exactly one action and include its fields along with reason and evidence:',
-        '- replace_exact: uid (integer), find (the exact existing substring), text (minimal replacement). For continuity include supersession.',
+        'Choose exactly one action and include its fields:',
+        '- replace_exact: uid (integer), find (the exact existing substring), text (minimal replacement). For an empty continuity replacement include supersession.',
         '- append: uid and text (one grounded addition). For core, lt, npc and npc-index.',
         '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
         '- create: unique title, content, and optional keywords array.',
@@ -221,18 +218,18 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'Active Threads need a responsible actor, unfinished condition and concrete completion check. A question alone belongs in Handoff.',
         'Keep direct observation, named relay, suspicion, false belief, inability to know and deliberate concealment distinct for each person.',
         'Example only: if the book says "Only the scout knows the trail." and message #5 says "I showed the trail to the guide.", a valid edit is:',
-        '{"kind":"continuity","action":"replace_exact","uid":2,"find":"Only the scout knows the trail.","text":"The scout and the guide know the trail.","supersession":"new_confirmed_information","reason":"The scout explicitly told the guide about the trail.","evidence":[{"messageId":5,"quote":"I showed the trail to the guide."}]}',
+        '{"kind":"continuity","action":"replace_exact","uid":2,"find":"Only the scout knows the trail.","text":"The scout and the guide know the trail."}',
         'The disclosure by itself says nothing about unrelated habits or conditions. Never use the example’s data in a real edit.',
         'Keep accountability, explicit acceptance and forgiveness distinct. Track offers, supply, application, recovery and discharge independently.',
         'For Current Continuity, use append_section for additions, NOT generic append.',
         'In append_section, put the heading name only in section and put only the new body text in text. Do not repeat the heading inside text. Use Markdown section headings in the content of a new Current Continuity entry only.',
         'Only replace_exact wholly within ONE Current Continuity section; do not change headings.',
-        'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction. Quote the evidence that ends that state.',
+        'To retire a fully ended or disproven Current Continuity line, use replace_exact with its one whole exact line and text="" only with observed resolution, correction or explicit retraction.',
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
         'If the old Continuity has only legacy source blocks, add a grounded named section',
         'instead of rewriting or interpreting the original archive without an explicit review.',
-        'Match LT to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. An existing NPC update needs an exact quote naming that person (full name or uniquely identifying name). Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new LT needs a distinct lasting subject with no existing home.',
-        'For new NPCs include continuingRole: {"basis":"durable_relationship|separate_future_encounter","evidence":{"messageId":integer,"quote":"exact source wording naming the NPC and the continuing relationship or separate encounter"}}. One visit or expected follow-up during the same visit is insufficient. Record relevant immediate follow-up or knowledge boundaries in continuity.',
+        'Match LT to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. Use the surrounding chat context to identify the same person, including unambiguous pronouns or aliases. Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new LT needs a distinct lasting subject with no existing home.',
+        'Create a new NPC entry for a durable relationship or a separate future encounter supported by the chat. One visit or expected follow-up during the same visit is insufficient. Record relevant immediate follow-up or knowledge boundaries in continuity.',
     ].join('\n\n'),
 });
 
@@ -402,7 +399,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
-            'The following character card is reference for disambiguation only. Every new memory still needs an exact source quote from the chat:',
+            'The following character card is reference for disambiguation only. New memories must reflect the actual chat:',
             characterContext,
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
@@ -418,9 +415,8 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             'Newer chat messages are outside this input. Only propose grounded durable edits. Do not create or modify Current Continuity or Present Handoff from this historical slice.',
         ] : []),
         'Current Nexus entries (exact UIDs):',source,
-        'If a window contains originalMessages instead of extracted citations, cite those original turns directly, retaining their IDs and language in quote fields.',
-        'EACH edit object must contain its own reason and evidence:[{"messageId":integer,"quote":"short exact original substring"}]. This also applies to create. New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append. Do not submit an uncited edit.',
-        'Keep the complete JSON within the output budget. Make reasons single short sentences and use the shortest sufficient literal quote for each change. Patch existing entries with minimal spans. Keep the handoff and durable changes; omit redundant recaps and routine dialogue.',
+        'New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append.',
+        'Keep the complete JSON within the output budget. Patch existing entries with minimal spans. Keep the handoff and durable changes; omit redundant recaps and routine dialogue.',
     ].join('\n\n');
 }
 
@@ -440,9 +436,10 @@ function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialS
     let staged = nexus;
     for (const [index, candidate] of candidates.entries()) {
         try {
-            const [edit] = validateGroundedNexusEdits([candidate], messages);
+            // Structural staging, not mandatory model-generated quotation receipts,
+            // determines whether an edit can safely be applied.
+            const edit = candidate;
             if (partialSource && String(edit.kind).trim().toLowerCase() === 'continuity') continue;
-            if (String(edit.kind).trim().toLowerCase() === 'npc' && !npcNexusSubjectIsGrounded(edit, nexus)) continue;
             if (initial && (edit.action !== 'create' || edit.kind === 'npc-index')) {
                 throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
             }
@@ -522,7 +519,7 @@ function approvedSlothCollectionPrompt({nexus,messages,plan,settings,initial,cha
             'The source is grouped by approved Scene ID below. For a Scene, use only the messages array in its matching MemorySources object. All arrays are available for grounded Nexus edits. nexusOnly is context for Nexus, never source for a Scene.'] : []),
         ...(events.length ? [] : ['No Memory Scenes were approved. Return an empty scenes array.']),
         slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource}),
-        'Keep Nexus changes to the minimal grounded updates. Cite the original chat; an already drafted Scene is a summary, never source evidence.',
+        'Keep Nexus changes to the minimal grounded updates. Use the original chat; an already drafted Scene is a summary, not a substitute for it.',
         'Original source messages (all current IDs, including deferred):',
         deepSeekFlash ? deepSeekFlashSceneSources(messages,events) : compact(messages),
     ].join('\n\n');

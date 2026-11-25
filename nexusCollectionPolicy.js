@@ -5,13 +5,14 @@
 import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
 import { appendContinuitySection, guardContinuityChange, legacyContinuitySectionStart,
     guardNewContinuityContent } from './nexusContinuitySections.js';
-import { isGroundedContinuityRetirement } from './nexusEditEvidence.js';
+import { isAllowedContinuityRetirement } from './nexusEditEvidence.js';
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 
 const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = v => typeof v === 'string' ? v.trim() : '';
 const requireThat = (ok, msg) => { if (!ok) throw new Error(msg); };
-const intUid = x => Number.isSafeInteger(Number(x)) && Number(x) >= 0 ? Number(x) : null;
+const intUid = x => (typeof x === 'number' || (typeof x === 'string' && /^\d+$/u.test(x)))
+    && Number.isSafeInteger(Number(x)) && Number(x) >= 0 ? Number(x) : null;
 
 export function slothSourceRanges(ids) {
     const ranges = [];
@@ -259,10 +260,6 @@ const normalizedTitle = title => str(title).normalize('NFKC').toLowerCase().repl
 const detailIdentity = title => normalizedTitle(title).replace(DETAIL_TITLE, '$2')
     .normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
     .replace(/^mme\s/u, 'madame ');
-const npcName = title => detailIdentity(title).replace(/^(?:madame|madam|mrs|miss|ms|mr|monsieur|dr|professor)\s+/u, '');
-const quoteNames = (quote, names) => names.some(name =>
-    name && (' ' + detailIdentity(quote) + ' ').includes(' ' + name + ' '));
-
 export function describeNexusCollectionEntry(entry) {
     const title = str(entry?.comment);
     const content = str(entry?.content);
@@ -287,22 +284,6 @@ export function describeNexusCollectionEntry(entry) {
         entry?.STMB_slothLegacyArchive || (legacy && !roles.length) ||
         entry?.stmemorybooks || entry?.stmbSummary || entry?.stmbArc);
     return {roles, legacyLayout, protected: protectedEntry};
-}
-
-export function npcNexusSubjectIsGrounded(op, book) {
-    if (str(op.action).toLowerCase() === 'create') {
-        const name = npcName(op.title);
-        return quoteNames(op.continuingRole?.evidence?.quote, [name]);
-    }
-    const entries = Object.values(book.entries || {});
-    const target = entries.find(entry => intUid(entry?.uid) === intUid(op.uid));
-    const name = npcName(target?.comment);
-    if (!name) return false;
-    const otherNames = entries.filter(entry => entry !== target &&
-        describeNexusCollectionEntry(entry).roles.includes('npc')).map(entry => npcName(entry.comment));
-    const shortNames = name.split(' ').filter(word => word.length >= 3 &&
-        !otherNames.some(other => other.split(' ').includes(word)));
-    return op.evidence.some(({quote}) => quoteNames(quote, [name, ...shortNames]));
 }
 
 function getUidEntry(book,uid){
@@ -375,7 +356,7 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
         const before = coreBoundary < 0 ? body : body.slice(0, coreBoundary);
         const remainder = coreBoundary < 0 ? '' : body.slice(coreBoundary);
         const text=str(op.text);
-        const retirement=isGroundedContinuityRetirement(op);
+        const retirement=isAllowedContinuityRetirement(op);
         requireThat(text||retirement,'Nexus edit has empty text.');
         if(action!=='replace_exact')requireThat(!originalText.includes(text),
             'Nexus addition already exists; refusing a repeated append.');

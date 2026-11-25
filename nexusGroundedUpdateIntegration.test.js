@@ -3,7 +3,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import {validateGroundedNexusEdits} from './nexusEditEvidence.js';
 import {stageNexusEdits} from './nexusCollectionPolicy.js';
 import {commitSlothNexusMigration} from './nexusLegacyMigrationCommit.js';
 
@@ -36,7 +35,7 @@ const edits=[
 test('source-grounded unfinished incidents update Nexus alone, preserving legacy structures',async()=>{
     const original=nexus(),originalMemory={entries:{10:{uid:10,content:'untouched Scene'}}};
     const rawCopy=structuredClone(original);
-    const accepted=validateGroundedNexusEdits(edits,source);
+    const accepted=edits.map(({reason,evidence,...edit})=>edit);
     const staged=stageNexusEdits(original,accepted,mk);
     assert.deepEqual(original,rawCopy);
     assert.match(staged.staged.entries[2].content,/B reported the promise/);
@@ -79,7 +78,8 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
     assert.match(code,/const checkbox = popup\.dlg\.querySelector\('#stmb-sloth-plan-hide'\)/);
     assert.match(code,/if \(checkbox\)[\s\S]*checkbox\.checked \? getSlothHideRanges/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
-    assert.match(prompt,/canonicalizeNewNexusTitles\(response.edits\)[\s\S]*validateGroundedNexusEdits\(\[candidate\], messages\)/);
+    assert.match(prompt,/canonicalizeNewNexusTitles\(response.edits\)[\s\S]*stageNexusEdits\(staged, \[edit\]/);
+    assert.doesNotMatch(prompt,/validateGroundedNexusEdits|npcNexusSubjectIsGrounded/);
     assert.match(prompt,/Deferred source is still visible/);
 });
 test('approved collection can save Memory alone and hides only the saved scenes',()=>{
