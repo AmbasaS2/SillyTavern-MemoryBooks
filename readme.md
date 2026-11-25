@@ -9,6 +9,26 @@ Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTa
 
 [한국어 안내 ↓](#-메모리북--ambasas2-포크) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md) · [한국어 Notion 사용 설명서](https://app.notion.com/p/422a96b06fd481fd8667ed84f80f5452)
 
+## Start here — Memory Books in five minutes
+
+**Current version: 9.4.0-ambasa.1.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
+
+<p align="center"><img src="assets/readme/mobile/quickstart-and-integration-mobile.svg" alt="Bilingual mobile quick-start and optional integrations" width="860"></p>
+
+1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books → Usage mode → Sloth (default). Group chats use Original mode.
+2. Assign distinct Nexus and Memory books or create them on approved first collection if no books are linked. Use chat-only assignments for different AU histories.
+3. Select a collection AI profile, choose Keyword or Vector for older scenes, and leave automatic collection off for your first try. Vector recall requires native vector setup.
+4. After a completed event, click Collect memories or /sloth-collect. Confirm the range and plan, review the draft and approve the save. Optional Hide applies only to successfully saved ranges.
+5. Continue RP. The latest three completed scenes stay always-on; older scenes switch recall mode while their text remains saved.
+
+### Works alone, better together
+
+Memory Books works on its own with native keyword/vector recall. Optional STLO selects existing lore with Jev and budgets; WorldInfo Info shows what activated; Lorebook Manager provides a reading library. None is required.
+
+[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) · [Four-extension workflow guide (Korean, bilingual diagrams)](https://app.notion.com/p/423a96b06fd48147be13ec0929ee088d)
+
+The detailed sections below explain optional settings. Compatibility is version-dependent; it does not guarantee every third-party extension or device.
+
 ## Who is this for?
 
 - Long-running roleplayers who want to preserve distinct events rather than repeatedly merge all memories into one large summary.
@@ -68,6 +88,10 @@ Choose two distinct books already linked to this character, or confirm your firs
 
 Hide is optional and does not delete the chat history. Only successfully saved ranges are eligible to be hidden. You can choose how many recent collected messages to keep visible. Review the proposed ranges and generated memories if exact continuity matters: model judgments can be wrong.
 
+### Review before saving
+
+The final reviewed collection lets you inspect the proposed Scene and Nexus text. In 9.4.0-ambasa.1 normal Nexus updates no longer require literal quotation receipts. The original chat still guides the AI; structure, UID, role, duplicate, section and save/rollback safeguards remain. Scene/event range and legacy reconciliation evidence checks are separate. Review AI-generated content before saving.
+
 ## Other settings and tools
 
 | Section | When to use it |
@@ -87,6 +111,24 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 # 📕 메모리북 — AmbasaS2 포크
 
 [원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이 메모리북 시스템을 확장 자체에 넣은 포크입니다. 1:1 캐릭터는 기본적으로 게으름뱅이 모드입니다. **사용 모드 (현재 캐릭터)**가 실제 동작을 결정하며 탭은 설정 화면만 바꿉니다. 기존 메모리북을 사용하려면 사용 모드에서 선택하세요.
+
+## 먼저 읽어 보세요 · 처음 사용하는 분을 위한 5분 안내
+
+**현재 버전: 9.4.0-ambasa.1.** 롤플이 길어져도 사건과 지금의 관계를 잊지 않도록 Nexus(핵심 정보와 현재 상태)와 Memory(완료된 사건)를 분리해 저장합니다. 실제 호출은 실리태번이 담당합니다. 원본 모드는 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
+
+1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → Memory Books → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
+2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 승인 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
+3. 수집 AI 프로필과 이전 기억의 키워드/벡터 전환 방식을 고릅니다. 첫 수집은 자동 수집을 끄고 수동으로 해 보세요. 벡터는 ST 자체 설정이 필요합니다.
+4. 완료된 사건이 생기면 기억 수집 하기 또는 /sloth-collect → 범위·사건 계획 확인 → 생성 내용 검토·저장 승인. Hide는 성공적으로 저장된 구간에만 선택 적용됩니다.
+5. 다시 롤플합니다. 최근 완료 Scene 3개는 파란불, 오래된 장면은 조건부 호출로 전환됩니다. 저장된 본문은 유지합니다.
+
+### 단독으로도 충분하고, 함께 쓰면 더 편리합니다
+
+메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. STLO는 선택형 Jev와 예산 관리, 월드인포인포는 발동 확인, 로어북 매니저는 독립 서재를 제공합니다. 모두 선택입니다.
+
+[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) · [4개 확장 연동 사용설명서](https://app.notion.com/p/423a96b06fd48147be13ec0929ee088d)
+
+아래에서 필요한 설정만 자세히 읽으세요. 지원 버전 기준이며 모든 기기·다른 확장 조합을 보장하는 것은 아닙니다.
 
 ## 이런 분들께 추천합니다!
 
@@ -143,6 +185,10 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 4. 다시 롤플하면 됩니다. 최근 완료 Scene 3개는 상시로, 오래된 Scene은 선택한 벡터 또는 키워드 방식으로 관리됩니다.
 
 Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 채팅 맥락에서 숨기며, 수집한 메시지 중 최근 몇 개를 남길지도 지정할 수 있습니다. AI가 사건 범위를 잘못 판단하거나 중요한 내용을 놓칠 수 있으니 필요한 경우 수집 계획과 저장된 내용을 확인하세요.
+
+### 저장 전 검토
+
+최종 수집 검토에서 Scene과 Nexus 변경 내용을 확인합니다. 9.4.0-ambasa.1부터 일반 Nexus 갱신에 원문 직접 인용을 필수로 요구하지 않습니다. 원래 대화는 AI의 판단 근거이며 구조·UID·역할·중복·섹션·저장 및 복구 검증은 유지합니다. 사건 구간 및 기존 기억 이전의 근거 검증은 별개입니다. 생성 내용은 저장 전에 확인하세요.
 
 ## 나머지 설정은 필요할 때만!
 
