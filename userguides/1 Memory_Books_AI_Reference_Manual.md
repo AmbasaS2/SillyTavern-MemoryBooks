@@ -1207,6 +1207,8 @@ Reset to Default if a custom prompt stops producing useful output.
 
 ## 16. Side Prompts
 
+In the Ambasa fork’s Sloth workflow, choose optional presets in the character’s Side Prompt slots: Diary (unchanged), NPC Directory (reader-facing supporting-character reference), and Memorable Quotes (verbatim original chat dialogue). Each built-in or custom preset defaults to no injection and can independently select no injection, always-on, vector, or keywords. Select its destination and review the proposed text and any suggested keywords before saving. Memorable Quotes requires original chat messages; a summary alone is not sufficient. The Nexus collector is separate and these presets do not run unless selected.
+
 A Side Prompt is a named STMB prompt that runs separately from the normal character reply. It usually creates or updates one continuing support entry rather than another sequential scene Memory.
 
 In the **Trackers & Side Prompts** list, the power icon immediately changes the prompt-wide **Enabled** flag: green means enabled and dim means disabled. This control does not add, remove, or otherwise change the prompt's configured triggers.

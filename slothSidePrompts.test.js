@@ -81,3 +81,24 @@ test('Little Things stays in its source chat and replaces only the same previous
     assert.deepEqual(lists.globalLore, [core]);
     assert.deepEqual(lists.characterLore, []);
 });
+
+test('reader-facing built-ins are distinct, optional, and support all four recall modes', () => {
+    const settings = {moduleSettings:{}};
+    const presets = getSlothSidePresets(settings);
+    assert.deepEqual(presets.map(p=>p.id), ['sloth-diary','sloth-npc-directory','sloth-memorable-quotes']);
+    assert.ok(presets.every(p=>p.builtin));
+    assert.match(presets[1].text, /minor or one-off characters/);
+    assert.match(presets[2].text, /verbatim/);
+    const ref={type:'character',avatarUrl:'test.png',fileName:'a'};
+    for(const p of presets){
+        const link=JSON.stringify([ref.avatarUrl,p.id]);
+        settings.moduleSettings.slothSideCharacterLinks={[link]:true};
+        settings.moduleSettings.slothSideBooks={[link]:'Notes'};
+        delete settings.moduleSettings.slothSideRecallModes;
+        assert.equal(pickSlothSidePresets(settings,[p.id],ref)[0].recall,'disabled');
+        for(const recall of ['disabled','constant','vector','keyword']){
+            settings.moduleSettings.slothSideRecallModes={[p.id]:recall};
+            assert.equal(pickSlothSidePresets(settings,[p.id],ref)[0].recall,recall);
+        }
+    }
+});

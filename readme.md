@@ -111,7 +111,7 @@ Normal Nexus updates no longer require literal quotation receipts in 9.4.0-ambas
 | Section | When to use it |
 |---|---|
 | Automatic collection | Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages. |
-| Side Prompts | Choose a prompt in the empty slot and add slots as needed. Diary is a built-in option with injection off by default. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book). |
+| Side Prompts | Choose a prompt in the empty slot and add slots as needed. Built-in examples: Diary, NPC Directory (including minor supporting characters), and Memorable Quotes (verbatim source dialogue). All default to no injection; each can independently use no injection, always-on, vector, or keywords, including custom prompts. Keyword suggestions can be edited before saving. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book). |
 | Manage existing memories | Review merging causally related completed scenes, splitting a completed scene with verifiable original message ranges, or shortening a long event. Choose and inspect changes; preserve original records where archived and back up before editing. |
 | Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
 | Original Memory Books | Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools. |
@@ -224,7 +224,7 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 | 설정 영역 | 활용법 |
 |---|---|
 | 자동 수집 | 기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다. |
-| 사이드 프롬프트 | 빈 칸의 목록에서 일기나 저장한 프롬프트를 고릅니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다. |
+| 사이드 프롬프트 | 빈 칸에서 기본 예시인 일기·NPC 등장인물록(조연 포함)·명대사 모음(실제 발화 그대로) 또는 사용자 프롬프트를 고릅니다. 기본은 미주입이며 각 프롬프트에서 미주입·상시·벡터·키워드를 독립적으로 선택할 수 있습니다. 키워드는 저장 검토 화면에서 수정할 수 있습니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다. |
 | 저장한 사건 수정 | 인과적으로 연결된 완료 사건 합치기, 원래 메시지 범위와 순서를 확인할 수 있는 사건 나누기, 긴 사건 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 대상과 변경안을 확인하는 작업이며 기존 기록을 백업합니다. |
 | 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
 | 기존 메모리북 | 사용 모드를 기존 메모리북으로 변경해야 원본의 구간 지정·압축·통합 등 작업이 실행됩니다. 탭은 공유 프로필·설정 열람에도 사용할 수 있습니다. |

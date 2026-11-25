@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "Für diese Figur verwenden",
   "STMemoryBooks_SlothSideSetupRequired": "Wähle einen Nebenprompt für diese Figur und sein Ziel-Lorebook.",
   "STMemoryBooks_SlothDiary": "Tagebuch (Nicht lesen)",
+  "STMemoryBooks_SlothNpcDirectory": "Figurenverzeichnis",
+  "STMemoryBooks_SlothMemorableQuotes": "Denkwürdige Zitate",
   "STMemoryBooks_SlothSideDestination": "Ziel-Lorebook",
   "STMemoryBooks_SlothSideAutoBook": "Lorebook erstellen [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "MemoryBook Side Prompt",

@@ -218,3 +218,8 @@ No manifest/version bump, main merge, live lorebook write or new ZIP release bef
 - Keep independent Scene/event range and legacy reconciliation evidence checks; those are not the ordinary Nexus update gate. No added model call, observer, timer or redraw path.
 - Fix invalid UID coercion (null/blank/boolean/array must not become UID 0). Index original Scene entries by UID once instead of scanning all records for each rotation.
 - Node regression suite: 542 passing in isolation (obsolete quote-gate tests removed/replaced); rebuild browser bundle and source map with Bun 1.3.2. Real model responses, installed SillyTavern/Termux/iOS and long-running RP not exercised. Rollback: restore previous code and bundled output; preserve all user data.
+
+
+## Reader-facing Side Prompt examples (2026-11-26)
+
+Diary is unchanged. NPC Directory and Memorable Quotes are optional built-ins, with no injection by default. Existing independent always-on, vector, keyword and no-injection paths apply to built-ins and custom presets. Quotes require original chat messages; no reconstruction from summaries. Nexus collection is unchanged. Existing destinations, review and save routes are reused.

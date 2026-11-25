@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "Usar para este personagem",
   "STMemoryBooks_SlothSideSetupRequired": "Marque um prompt para este personagem e escolha o livro de destino.",
   "STMemoryBooks_SlothDiary": "Diário (Não leia)",
+  "STMemoryBooks_SlothNpcDirectory": "Diretório de NPCs",
+  "STMemoryBooks_SlothMemorableQuotes": "Citações memoráveis",
   "STMemoryBooks_SlothSideDestination": "Livro de destino",
   "STMemoryBooks_SlothSideAutoBook": "Criar lorebook [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "MemoryBook Side Prompt",

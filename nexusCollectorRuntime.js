@@ -35,7 +35,7 @@ import { compileScene, createSceneRequest } from './chatcompile.js';
 import { proposeReviewedSidePrompt } from './sidePrompts.js';
 import { getRunnableSlothSidePresets, pickSlothSidePresets, normalizeSlothSideKeywords,
     canContinueSlothSideEntry, getSlothSideDestination, isSlothSideLinked,
-    slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
+    slothSideBookName, slothSideBookOwner, SLOTH_DIARY_ID, SLOTH_NPC_DIRECTORY_ID, SLOTH_QUOTES_ID } from './slothSidePrompts.js';
 import { isCompletedSceneEntry } from './nexusSceneRotation.js';
 import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchives.js';
 import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticTokenCounter,
@@ -266,7 +266,9 @@ function readableSegments(segments) {
 }
 
 function sidePromptName(preset) {
-    return preset.builtin ? t("Diary (Don't read it)", 'STMemoryBooks_SlothDiary') : preset.name;
+    return preset.id === SLOTH_DIARY_ID ? t("Diary (Don't read it)", 'STMemoryBooks_SlothDiary')
+        : preset.id === SLOTH_NPC_DIRECTORY_ID ? t(preset.name, 'STMemoryBooks_SlothNpcDirectory')
+        : preset.id === SLOTH_QUOTES_ID ? t(preset.name, 'STMemoryBooks_SlothMemorableQuotes') : preset.name;
 }
 
 function sidePromptCheckboxes(presets, label) {

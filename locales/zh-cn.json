@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "用于此角色",
   "STMemoryBooks_SlothSideSetupRequired": "请勾选此角色的侧边提示词并选择保存的世界书。",
   "STMemoryBooks_SlothDiary": "日记（请勿阅读）",
+  "STMemoryBooks_SlothNpcDirectory": "NPC 人物名录",
+  "STMemoryBooks_SlothMemorableQuotes": "经典台词",
   "STMemoryBooks_SlothSideDestination": "保存到世界书",
   "STMemoryBooks_SlothSideAutoBook": "创建世界书 [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "记忆书侧边提示词",

@@ -40,7 +40,7 @@ import {
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
 import { buildSlothSideReference, canContinueSlothSideEntry, normalizeSlothSideKeywords,
-    SLOTH_DIARY_ID, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
+    SLOTH_DIARY_ID, SLOTH_QUOTES_ID, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
 
 
 import { getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
@@ -1577,6 +1577,10 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
 /** Prepare a reviewed Sloth note for the selected lorebook. */
 export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene,
     { recallMode = 'disabled', nexus, chatRef } = {}) {
+    // A saved summary is not proof of exact dialogue.
+    if (preset.id === SLOTH_QUOTES_ID && !compiledScene) {
+        throw new Error('Memorable Quotes requires the original chat messages.');
+    }
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
     try {
         const tpl = {key: preset.id, name: '🦥 '+preset.name};
@@ -1623,7 +1627,7 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         if (!ensureSidePromptTextNotBlank(text,tpl,'reviewedSloth')) {
             throw new Error('The Side Prompt returned empty content.');
         }
-        if (text.trim() === SLOTH_NO_SIDE_DETAILS || (preset.id === SLOTH_DIARY_ID && text.trim() === prior.trim())) return null;
+        if (text.trim() === SLOTH_NO_SIDE_DETAILS || (preset.builtin && text.trim() === prior.trim())) return null;
         const title = getUnifiedSidePromptTitle(tpl);
         return {
             text,keywords,target,

@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "이 캐릭터에서 사용",
   "STMemoryBooks_SlothSideSetupRequired": "이 캐릭터에서 쓸 사이드 프롬프트를 체크하고 저장할 로어북을 골라 주세요.",
   "STMemoryBooks_SlothDiary": "일기 (읽지 마세요)",
+  "STMemoryBooks_SlothNpcDirectory": "NPC 등장인물록",
+  "STMemoryBooks_SlothMemorableQuotes": "명대사 모음",
   "STMemoryBooks_SlothSideDestination": "저장할 로어북",
   "STMemoryBooks_SlothSideAutoBook": "로어북 생성하기 [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "메모리북 사이드 프롬프트",

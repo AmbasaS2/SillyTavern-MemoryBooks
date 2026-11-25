@@ -9,7 +9,7 @@ import { escapeHtml } from '../../../utils.js';
 import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
 import { SLOTH_DEFAULT_SUMMARY_PROMPT } from './nexusSlothScenePrompt.js';
 import { getSlothSideDestination, getSlothSidePresets, getSlothSideRecall,
-    isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK, slothSideBookName } from './slothSidePrompts.js';
+    isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK, slothSideBookName, SLOTH_DIARY_ID, SLOTH_NPC_DIRECTORY_ID, SLOTH_QUOTES_ID } from './slothSidePrompts.js';
 import { getActiveNexusRoleContext } from './nexusCharacterRolesRuntime.js';
 import { getCurrentStmbChatRef, getStmbChatKey } from './stmbJobs.js';
 import { getSlothSideContinuationOptions } from './nexusCollectorRuntime.js';
@@ -367,7 +367,9 @@ export function mountSlothSidePromptSettings(target,settings) {
         if(!enabled||getStmbChatKey()!==chatKey)throw new Error('The character chat changed.');
     };
     const getRecords=()=>getSlothSidePresets(settings).map(record=>({...record,
-        name:record.builtin?t("Diary (Don't read it)",'SlothDiary'):record.name}));
+        name:record.id===SLOTH_DIARY_ID?t("Diary (Don't read it)",'SlothDiary'):
+            record.id===SLOTH_NPC_DIRECTORY_ID?t(record.name,'SlothNpcDirectory'):
+            record.id===SLOTH_QUOTES_ID?t(record.name,'SlothMemorableQuotes'):record.name}));
     const destination={
         enabled,
         books:()=>[...new Set(getActiveNexusRoleContext(settings).worldNames)],

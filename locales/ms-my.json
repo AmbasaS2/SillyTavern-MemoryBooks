@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "Gunakan untuk watak ini",
   "STMemoryBooks_SlothSideSetupRequired": "Tandakan prom untuk watak ini dan pilih buku lore destinasinya.",
   "STMemoryBooks_SlothDiary": "Diari (Jangan baca)",
+  "STMemoryBooks_SlothNpcDirectory": "Direktori NPC",
+  "STMemoryBooks_SlothMemorableQuotes": "Petikan yang diingati",
   "STMemoryBooks_SlothSideDestination": "Buku lore destinasi",
   "STMemoryBooks_SlothSideAutoBook": "Cipta lorebook [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "MemoryBook Side Prompt",

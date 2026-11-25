@@ -64,6 +64,53 @@ Return only the complete updated diary.`,
     builtin: true,
 });
 
+// Optional reader-facing records; never participate in the Nexus collector.
+export const SLOTH_NPC_DIRECTORY_ID = 'sloth-npc-directory';
+export const SLOTH_QUOTES_ID = 'sloth-memorable-quotes';
+
+const NPC_DIRECTORY = Object.freeze({
+    id: SLOTH_NPC_DIRECTORY_ID,
+    name: 'NPC Directory',
+    text: `Maintain a reader-facing NPC DIRECTORY for the selected story, independent of the operative Nexus NPC records.
+
+Return the complete updated directory using only the selected source as new evidence and the existing directory as its baseline. The supplied Scene and Nexus are reference context, not a reason to duplicate their analyses. Include named or uniquely identifiable supporting characters encountered or explicitly established in the selected source, including minor or one-off characters worth recognizing later. Exclude {{char}} and {{user}}. Merge aliases only when identity is established; preserve distinct people and established names. Keep unaffected entries and their order, append new people in first-encounter order, and correct only the details that new evidence changes.
+
+For each person, record their name or established identifier, role or connection, a concise distinguishing detail (appearance, manner, speech, occupation, or a memorable action), and where or in what situation they were encountered if established. Distinguish firsthand facts from reports and uncertainties. Preserve specific details without inventing profiles, motives, future relevance, relationships, or knowledge. Omit unsupported fields. Do not copy the ongoing obligations, tactical knowledge boundaries, or relationship analysis maintained by Nexus. If no qualifying information changes the directory, return the existing directory unchanged (or [[NO_NEW_DETAILS]] when empty).
+
+Return only the complete directory.`,
+    responseFormat: `=== NPC DIRECTORY ===
+
+## [Name or established identifier]
+- Role / connection: [grounded description]
+- Distinguishing details: [brief supported details]
+- Encounter: [grounded situation or time marker, if established]
+
+[Repeat for each distinct person. Omit unsupported fields.]
+
+=== END NPC DIRECTORY ===`,
+    builtin: true,
+});
+
+const MEMORABLE_QUOTES = Object.freeze({
+    id: SLOTH_QUOTES_ID,
+    name: 'Memorable Quotes',
+    text: `Maintain a reader-facing collection of memorable actual dialogue from the selected story.
+
+Return the complete updated collection. Preserve every existing quote exactly, in its existing order, and append only distinct lines from the selected source that are worth rereading: characteristic humor, banter, nicknames in context, unusually revealing statements, emotional admissions, promises, or other distinctive lines. Keep the speaker, addressee if established, original language, punctuation, and wording verbatim. Use the actual spoken or written line, not paraphrased dialogue or invented reconstruction from a Scene or Nexus summary. Add one brief factual context line only when supported. Select for distinctiveness, not a fixed quota; ordinary filler does not qualify. Do not merge different lines or repeat a previously recorded quote. Preserve differences in character voice and emotional intensity. When there is no qualifying new quote, return the existing collection unchanged (or [[NO_NEW_DETAILS]] when empty).
+
+Return only the complete updated collection.`,
+    responseFormat: `=== MEMORABLE QUOTES ===
+
+## [Speaker]
+"[Exact dialogue from the source]"
+Context: [brief factual situation; addressee if known]
+
+[Repeat for each distinct quotation, preserving previous entries.]
+
+=== END MEMORABLE QUOTES ===`,
+    builtin: true,
+});
+
 export function getSlothSidePresets(settings) {
     const entries = settings?.moduleSettings?.slothSidePresets;
     const custom = Array.isArray(entries) ? entries.filter(preset => preset &&
@@ -71,7 +118,7 @@ export function getSlothSidePresets(settings) {
         typeof preset.name === 'string' && preset.name.trim() &&
         typeof preset.text === 'string' && preset.text.trim()).map(({id,name,text,responseFormat}) =>
             ({id,name,text,responseFormat:typeof responseFormat === 'string' ? responseFormat : ''})) : [];
-    return [DIARY, ...custom];
+    return [DIARY, NPC_DIRECTORY, MEMORABLE_QUOTES, ...custom];
 }
 
 export function getSlothSideDestination(settings, id, ref) {

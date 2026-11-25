@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "このキャラクターで使用",
   "STMemoryBooks_SlothSideSetupRequired": "このキャラクターで使うサイドプロンプトにチェックし、保存先を選んでください。",
   "STMemoryBooks_SlothDiary": "日記（読まないで）",
+  "STMemoryBooks_SlothNpcDirectory": "NPC 名簿",
+  "STMemoryBooks_SlothMemorableQuotes": "名台詞集",
   "STMemoryBooks_SlothSideDestination": "保存先ロアブック",
   "STMemoryBooks_SlothSideAutoBook": "ロアブックを作成 [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "メモリーブック サイドプロンプト",

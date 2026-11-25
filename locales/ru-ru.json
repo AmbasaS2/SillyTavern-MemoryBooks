@@ -22,6 +22,8 @@
   "STMemoryBooks_SlothSideLink": "Использовать для этого персонажа",
   "STMemoryBooks_SlothSideSetupRequired": "Отметьте промпт для этого персонажа и выберите книгу мира для сохранения.",
   "STMemoryBooks_SlothDiary": "Дневник (Не читать)",
+  "STMemoryBooks_SlothNpcDirectory": "Справочник NPC",
+  "STMemoryBooks_SlothMemorableQuotes": "Памятные цитаты",
   "STMemoryBooks_SlothSideDestination": "Книга для сохранения",
   "STMemoryBooks_SlothSideAutoBook": "Создать лорбук [{{book}}]",
   "STMemoryBooks_SlothSideBookSuffix": "MemoryBook Side Prompt",
