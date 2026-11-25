@@ -5,9 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 # 📕 Memory Books — AmbasaS2 fork
 
-Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTavern-MemoryBooks). This fork integrates my Sloth (게으름뱅이) memory workflow into Memory Books while retaining the original tools in a separate tab.
+Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTavern-MemoryBooks). This fork integrates my Sloth (게으름뱅이) memory workflow into Memory Books while retaining the original tools in a separate tab. **Usage mode is selected per character; tabs only switch the settings view.**
 
-[한국어 안내 ↓](#-메모리북--ambasas2-포크) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
+[한국어 안내 ↓](#-메모리북--ambasas2-포크) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md) · [한국어 Notion 사용 설명서](https://app.notion.com/p/422a96b06fd481fd8667ed84f80f5452)
 
 ## Who is this for?
 
@@ -16,7 +16,7 @@ Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTa
 - Players who find selecting every scene, writing summaries and manually changing old entries tedious.
 - Players who want to use a separate AI to organize memories without changing the model they roleplay with.
 
-If you prefer the original manual, consolidation or group-chat workflow, use the **Original Memory Books** tab or upstream itself.
+If you prefer the original manual or consolidation workflow, select **Original Memory Books** in the character's Usage mode, then use its settings tab. Group chats use Original mode.
 
 ## Install and set up once
 
@@ -27,11 +27,17 @@ If you prefer the original manual, consolidation or group-chat workflow, use the
    https://github.com/AmbasaS2/SillyTavern-MemoryBooks
    ```
 
-3. Reload and open an individual character chat. Open **Memory Books** from the extension menu and select the **For 게으름뱅이 🦥** tab. Run only one Memory Books installation at a time.
+3. Reload and open an individual character chat. Open **Memory Books** from the extension menu. Check **Usage mode (this character) → For 게으름뱅이 🦥** (default in one-to-one chats), then open the Sloth settings tab. Run only one Memory Books installation at a time.
+
+**The mode selector controls what runs; the two tabs only change the visible settings.** Switching mode keeps existing settings, lorebooks and previously hidden messages. Original workflow operations and automatic collection are mode-gated.
+
+<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="Sloth settings and usage mode / 게으름뱅이 설정" width="860" /></p>
 
 ### 1. Lorebook setup
 
-The Sloth workflow separates two existing SillyTavern lorebooks:
+The Sloth workflow separates two SillyTavern lorebook roles:
+
+<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus and Memory roles / 두 로어북 역할" width="860" /></p>
 
 | Book | What goes in it |
 |---|---|
@@ -53,9 +59,11 @@ Choose two distinct books already linked to this character, or confirm your firs
 
 ## Everyday use: roleplay, then collect memories
 
+<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="Collect and rotate memories / 기억 수집 흐름" width="860" /></p>
+
 1. Press the collection icon in the chat input row, **Collect memories** in Memory Books, or `/sloth-collect`. Confirm the available message range to start analysis.
 2. The collection AI reads the not-yet-collected messages and proposes completed events. Check the suggested ranges and number of memories. Incomplete events can remain for a later collection.
-3. Choose whether to hide the successfully saved messages from the AI's active chat context, then approve. The AI writes the scene memories and updates relevant Nexus information.
+3. Choose whether to hide the successfully saved messages from the AI's active chat context, then approve. The AI writes and saves the scene memories and relevant Nexus updates. Incomplete or unverifiable outputs may be retried or skipped; check the saved memories.
 4. Continue your RP. The latest three completed scenes stay active; older ones become keyword or vector entries according to your settings. Their full stored memory text is retained.
 
 Hide is optional and does not delete the chat history. Only successfully saved ranges are eligible to be hidden. You can choose how many recent collected messages to keep visible. Review the proposed ranges and generated memories if exact continuity matters: model judgments can be wrong.
@@ -68,7 +76,7 @@ Hide is optional and does not delete the chat history. Only successfully saved r
 | Side Prompts | Choose a prompt in the empty slot and add slots as needed. Diary is a built-in option with injection off by default. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book). |
 | Manage existing memories | Review merging related scenes, splitting an existing scene, or shortening an event. Choose and review the changes instead of automatically replacing memories. |
 | Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
-| Original Memory Books | Original scene-marker tools, profiles, prompts, consolidation and other original features. Use the original feature guides for that workflow. |
+| Original Memory Books | Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools. |
 
 Memory Books saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [the STLO fork](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [the Lorebook Manager fork](https://github.com/AmbasaS2/lore-manager). Both are optional.
 
@@ -78,7 +86,7 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 # 📕 메모리북 — AmbasaS2 포크
 
-[원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이 메모리북 시스템을 확장 자체에 넣은 포크입니다. 원본 기능은 **기존 메모리북** 탭에서 사용할 수 있습니다.
+[원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이 메모리북 시스템을 확장 자체에 넣은 포크입니다. 1:1 캐릭터는 기본적으로 게으름뱅이 모드입니다. **사용 모드 (현재 캐릭터)**가 실제 동작을 결정하며 탭은 설정 화면만 바꿉니다. 기존 메모리북을 사용하려면 사용 모드에서 선택하세요.
 
 ## 이런 분들께 추천합니다!
 
@@ -87,17 +95,23 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 - 사건이 끝날 때마다 구간을 직접 지정하고, 기억을 만들고, 오래된 파란불을 초록불로 바꾸기 귀찮았던 분
 - 롤플 모델은 그대로 두고 다른 AI에게 기억 정리를 맡기고 싶은 분
 
-모든 기억을 상시 주입하거나 원본의 압축·통합 방식, 그룹 채팅 기능을 사용하고 싶다면 기존 메모리북 탭 또는 원본 확장을 사용하셔도 됩니다.
+원본의 구간 지정·압축·통합 방식은 사용 모드를 기존 메모리북으로 선택하고 해당 탭을 사용하세요. 그룹 채팅은 기존 메모리북 모드입니다.
 
 ## 처음 한 번: 메모리북 설정
 
 1. 기존 채팅·로어북·설정을 백업합니다. 원본과 이 포크를 동시에 실행하지 마세요.
 2. 실리태번 확장 설치 메뉴에서 `https://github.com/AmbasaS2/SillyTavern-MemoryBooks`를 설치하고 새로고침합니다.
-3. 1:1 캐릭터 채팅을 열고 확장 메뉴 → **Memory Books → For 게으름뱅이 🦥** 탭으로 들어갑니다.
+3. 1:1 캐릭터 채팅 → 확장 메뉴 → **Memory Books** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
+
+**모드와 탭은 다릅니다.** 모드를 변경해도 기존 로어북과 설정은 유지되며, 이전에 Hide한 메시지는 자동으로 복원되지 않습니다.
+
+<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="게으름뱅이 설정 및 사용 모드 / Sloth settings" width="860" /></p>
 
 ### 1. 로어북 준비
 
-게으름뱅이 시스템은 로어북을 두 권으로 나눠 사용합니다.
+게으름뱅이 시스템은 로어북을 두 역할로 나눠 사용합니다.
+
+<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus와 Memory / Two roles" width="860" /></p>
 
 | 로어북 | 저장하는 내용 |
 |---|---|
@@ -121,9 +135,11 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 ## 평소 사용법: 롤플하고 사건이 끝나면 수집!
 
+<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="기억 수집 흐름 / Collection workflow" width="860" /></p>
+
 1. 입력창의 **수집 아이콘**, 메모리북의 **기억 수집 하기** 또는 `/sloth-collect`를 사용합니다. 화면에 표시된 메시지 범위를 확인하면 분석을 시작합니다.
 2. AI가 아직 수집하지 않은 메시지를 읽고 완결된 사건을 나눠 제안합니다. 분석 범위와 저장할 기억의 개수를 확인하세요. 진행 중인 사건은 다음 수집에 남길 수 있습니다.
-3. **저장한 구간을 AI 대화 맥락에서 숨기기**를 사용할지 선택하고 승인합니다. AI가 사건별 기억을 작성하고 필요한 Nexus 정보를 갱신합니다.
+3. **저장한 구간을 AI 대화 맥락에서 숨기기**를 사용할지 선택하고 승인합니다. AI가 사건별 기억을 작성·저장하고 필요한 Nexus 정보를 갱신합니다. 불완전하거나 검증되지 않은 결과는 재시도 또는 제외될 수 있으므로 저장된 내용을 확인하세요.
 4. 다시 롤플하면 됩니다. 최근 완료 Scene 3개는 상시로, 오래된 Scene은 선택한 벡터 또는 키워드 방식으로 관리됩니다.
 
 Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 채팅 맥락에서 숨기며, 수집한 메시지 중 최근 몇 개를 남길지도 지정할 수 있습니다. AI가 사건 범위를 잘못 판단하거나 중요한 내용을 놓칠 수 있으니 필요한 경우 수집 계획과 저장된 내용을 확인하세요.
@@ -136,7 +152,7 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 | 사이드 프롬프트 | 빈 칸의 목록에서 일기나 저장한 프롬프트를 고릅니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다. |
 | 저장한 사건 수정 | 나뉜 사건 합치기, 한 기억을 사건별로 나누기, 사건 짧게 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 사용자가 대상과 변경안을 확인하는 작업입니다. |
 | 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
-| 기존 메모리북 | 원본의 구간 지정·프로필·프롬프트·압축·통합 등 기존 도구를 사용할 수 있습니다. |
+| 기존 메모리북 | 사용 모드를 기존 메모리북으로 변경해야 원본의 구간 지정·압축·통합 등 작업이 실행됩니다. 탭은 공유 프로필·설정 열람에도 사용할 수 있습니다. |
 
 ### 다른 로어북 확장과 함께 사용하고 싶다면
 
@@ -146,6 +162,8 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 둘 다 필수 확장은 아닙니다. 수집·검증·사이드 프롬프트 작성에는 AI 호출이 발생하며 비용과 결과는 사용 모델·채팅 길이에 따라 달라집니다. 수집용 AI 제공자에게 채팅 및 기억 내용이 전달될 수 있다는 점을 고려해 주세요.
 
 ---
+
+**Documentation basis / 안내 기준:** main [`8bcf2d0`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/8bcf2d05529278d4802742e9a19dedceaf6e5717) (2026-11-25), upstream manifest 9.4.0. Illustrations are bilingual UI guides, not live screenshots. Installed SillyTavern and live provider integration are not verified by this documentation update.
 
 ## Original Memory Books documentation / 원본 기능 안내
 
