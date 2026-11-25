@@ -1247,6 +1247,15 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin: 0;
     min-height: 24px;
 }
+/* Equalize the plain AI label and the label with a help button. */
+.popup.stmb-popup .stmb-sloth-settings-fields > .stmb-sloth-select-row > span {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
+}
+.popup.stmb-popup .stmb-sloth-settings-fields > .stmb-sloth-select-row > select {
+    margin-block-start: auto;
+}
 .popup.stmb-popup .stmb-sloth-settings-fields > .stmb-sloth-help-row { min-height: 24px; }
 .popup.stmb-popup .stmb-sloth-settings-fields .stmb-sloth-help-row > label { word-break: keep-all; }
 .popup.stmb-popup .stmb-sloth-advanced-fields { gap: 8px; }
