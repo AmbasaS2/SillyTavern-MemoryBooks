@@ -1204,14 +1204,33 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     margin: 0;
 }
 .popup.stmb-popup .stmb-sloth-select-row > select { text-overflow: ellipsis; }
-/* Identical label/control columns and vertical rhythm in all three settings groups. */
+/* Match the Nexus/Memory label-above-control layout. Wrap against the
+   available panel width, not the viewport; keep non-field rows full width. */
 .popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields) {
-    display: grid;
-    gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
     margin-block: 4px 8px;
     min-width: 0;
 }
-.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) > .stmb-sloth-select-row {
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields) > :not(.stmb-sloth-select-row) {
+    flex: 0 0 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields) > .stmb-sloth-select-row {
+    display: flex;
+    flex: 1 1 max(14em, calc((100% - 10px) / 2));
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
+    gap: 2px;
+    margin: 0;
+}
+.popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields) > .stmb-sloth-select-row > :is(select, input) {
+    max-width: 100%;
+}
+.popup.stmb-popup .stmb-sloth-advanced-fields > .stmb-sloth-select-row {
     grid-template-columns: minmax(0, 43%) minmax(0, 48%);
     gap: 8px;
     margin: 0;
@@ -1242,7 +1261,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-advanced-fields select { margin: 0; }
 @media (max-width: 380px) {
-    .popup.stmb-popup :is(.stmb-sloth-settings-fields, .stmb-sloth-auto-fields, .stmb-sloth-advanced-fields) > .stmb-sloth-select-row {
+    .popup.stmb-popup .stmb-sloth-advanced-fields > .stmb-sloth-select-row {
         grid-template-columns: minmax(0, 1fr);
         gap: 4px;
     }
