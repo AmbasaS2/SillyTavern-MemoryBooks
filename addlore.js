@@ -1,6 +1,10 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { explicitMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
+import { legacyRotationEnabled } from './memoryBooksMode.js';
+import { getCurrentStmbChatRef } from './stmbJobs.js';
 import { getContext } from '../../../extensions.js';
 import { isCharacterAwarenessDisabled } from './groupChatPolicy.js';
 import { guardArchivedNexusSidePromptWrite } from './nexusLegacyMigration.js';
@@ -567,6 +571,10 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         }
 
         const settings = extension_settings.STMemoryBooks || {};
+        if (explicitMemoryBooksMode(settings, options.originChatRef || getCurrentStmbChatRef()) === 'original' &&
+            isManagedNexusWorld(settings, lorebookValidation.name)) {
+            throw new Error(i18n('STMemoryBooks_ModeSeparateBook','Choose a separate original Memory Book. Existing Sloth lorebooks are protected.'));
+        }
         // Generation may outlive a chat switch; enforce the original character's roles.
         const resolveRole = role => options.originChatRef
             ? getNexusRoleResolutionForChatRef(role, options.originChatRef, settings)
@@ -589,7 +597,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
             throw new Error('Memory target changed from the assigned character Memory lorebook; no save performed.');
         }
         const rotateNexusMemory = characterMemoryRole.state === 'ready'
-            || (settings.moduleSettings?.nexusSceneRotationEnabled === true
+            || (legacyRotationEnabled(settings, options.originChatRef || getCurrentStmbChatRef())
                 && isNexusMemoryBookName(lorebookValidation.name));
         // Stage changes to avoid polluting the source World Info on validation failure.
         const workingLorebook = rotateNexusMemory

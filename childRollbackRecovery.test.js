@@ -1,3 +1,5 @@
+import { getMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -17,8 +19,9 @@ function harness() {
     };
     const context = vm.createContext({
         structuredClone, console, Number, Date, Map, Set,
+        getMemoryBooksMode, isManagedNexusWorld, getCurrentStmbChatRef:()=>({type:'character',avatarUrl:'Legacy.png'}),
         ROLLBACK_SCOPE_AFFECTED: 'affected',
-        initializeSettings: () => ({ moduleSettings: {
+        initializeSettings: () => ({ characterMemoryBooksModes:{'Legacy.png':'original'}, moduleSettings: {
             autoRollbackEnabled: true, autoRollbackDeleteLastMemory: state.deleteMemories !== false, refreshEditor: false,
             autoRollbackUpdateLastProcessed: state.updateCheckpoint === true,
         } }),

@@ -1,6 +1,8 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { explicitMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
 import { chat, chat_metadata } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { loadWorldInfo, world_names } from '../../../world-info.js';
@@ -134,8 +136,8 @@ async function resolveSidePromptLorebook(tpl, resolveContext = null) {
         // another chat's overrides while updating the originating character.
         throw new Error('Return to the original chat before updating Nexus Side Prompts.');
     }
-    if (['missing', 'detached', 'invalid-override'].includes(memoryRole.state) ||
-        ['missing', 'detached', 'invalid-override'].includes(nexusRole.state)) {
+    if (['missing', 'detached', 'invalid-override', 'mode-pending'].includes(memoryRole.state) ||
+        ['missing', 'detached', 'invalid-override', 'mode-pending'].includes(nexusRole.state)) {
         throw new Error('Assigned Nexus / Memory lorebook is missing or detached. Resolve the character bindings before updating side prompts.');
     }
     if ((memoryRole.state === 'ready' || nexusRole.state === 'ready') &&
@@ -143,6 +145,10 @@ async function resolveSidePromptLorebook(tpl, resolveContext = null) {
         throw new Error('Set both Nexus and Memory character lorebooks before updating side prompts.');
     }
     const ensureNotMemory = (lorebook) => {
+        if (lorebook && explicitMemoryBooksMode(extension_settings.STMemoryBooks, resolveContext?.chatRef || getCurrentStmbChatRef()) === 'original' &&
+            isManagedNexusWorld(extension_settings.STMemoryBooks, lorebook.name)) {
+            throw new Error(translate('Choose a separate original Memory Book. Existing Sloth lorebooks are protected.', 'STMemoryBooks_ModeSeparateBook'));
+        }
         if (memoryRole.state === 'ready' && lorebook?.name === memoryRole.name) {
             throw new Error('A side prompt cannot be stored in the character Memory Scene book. Select Nexus or another lorebook.');
         }

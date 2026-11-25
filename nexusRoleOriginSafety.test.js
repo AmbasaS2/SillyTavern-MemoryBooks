@@ -1,5 +1,6 @@
 // Copyright (C) 2026 AmbasaS2
 // SPDX-License-Identifier: AGPL-3.0-only
+import { getMemoryBooksMode, legacyRotationEnabled } from './memoryBooksMode.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -29,7 +30,7 @@ function originHarness() {
         'A.png': { nexus: 'A Nexus', memory: 'A Memory' },
         'B.png': { nexus: 'B Nexus', memory: 'B Memory' },
     }};
-    const scope = { characters, world_info, world_names, getCharacterNexusRoles,
+    const scope = { getMemoryBooksMode, characters, world_info, world_names, getCharacterNexusRoles,
         getLinkedCharacterWorlds, resolveCharacterNexusRole, getNexusChatRoleOverride,
         isAssignedToAnotherNexusCharacter,
         getStmbChatKey: ref => 'character:' + ref.avatarUrl + ':' + ref.fileName,
@@ -97,6 +98,7 @@ test('queued Sloth memory suppresses a separate auto-hide path even if global to
     const script = extractFunction('async function applyQueuedMemoryAutoHide(', '\nasync function completeQueuedMemoryPostSave(');
     const hidden = [];
     const scope = {
+        legacyRotationEnabled,
         getNexusRoleResolutionForChatRef: role => role === 'memory'
             ? {state:'ready', name:'A Memory'} : {state:'ready', name:'A Nexus'},
         getAutoHideRanges: () => ({mode:'all', ranges:[{start:0,end:25}]}),
@@ -116,6 +118,7 @@ test('pending Sloth-mode deferred hide is discarded instead of firing on a later
     const pending = new Map([['character:A.png:chat-a',[{start:0,end:5}]]]);
     const calls=[];
     const scope = {
+        legacyRotationEnabled, getCurrentStmbChatRef:()=>({type:'character',avatarUrl:'A.png'}),
         getStmbChatKeySafe: () => 'character:A.png:chat-a',
         deferredQueuedAutoHideRanges:pending,
         extension_settings:{STMemoryBooks:{moduleSettings:{nexusSceneRotationEnabled:false}}},
@@ -127,4 +130,26 @@ test('pending Sloth-mode deferred hide is discarded instead of firing on a later
     await fn();
     assert.equal(calls.length,0);
     assert.equal(pending.size,0);
+});
+
+test('explicit original disables both stored role assignments without changing them', () => {
+    const h=originHarness();
+    const a={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
+    const b={type:'character',avatarUrl:'B.png',fileName:'chat-b'};
+    h.settings.characterMemoryBooksModes={'A.png':'original'};
+    const snapshot=JSON.stringify(h.settings.nexusCharacterRoles);
+    assert.equal(h.resolve('memory',a,h.settings).state,'unassigned');
+    assert.equal(h.resolve('nexus',a,h.settings).state,'unassigned');
+    assert.equal(h.resolve('memory',b,h.settings).state,'ready');
+    h.settings.characterMemoryBooksModes['A.png']='sloth';
+    assert.equal(h.resolve('memory',a,h.settings).name,'A Memory');
+    assert.equal(JSON.stringify(h.settings.nexusCharacterRoles),snapshot);
+});
+test('default Sloth without role setup does not silently fall through to legacy saves', () => {
+    const h=originHarness();
+    const a={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
+    delete h.settings.nexusCharacterRoles['A.png'];
+    assert.equal(h.resolve('memory',a,h.settings).state,'mode-pending');
+    h.settings.characterMemoryBooksModes={'A.png':'original'};
+    assert.equal(h.resolve('memory',a,h.settings).state,'unassigned');
 });

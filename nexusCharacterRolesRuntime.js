@@ -4,6 +4,7 @@
 // Read-only runtime adapter for SillyTavern character-linked World Info.
 // Does not attach, create or edit lorebooks, and never copies chat progress.
 
+import { getMemoryBooksMode } from './memoryBooksMode.js';
 import { characters, this_chid } from '../../../../script.js';
 import { selected_group } from '../../../group-chats.js';
 import { world_info, world_names } from '../../../world-info.js';
@@ -43,6 +44,8 @@ export function getNexusRoleResolutionForChatRef(role, chatRef, settings = exten
         return { state: 'missing-character', name: '', role };
     }
     const avatar = String(chatRef.avatarUrl).trim();
+    const mode = getMemoryBooksMode(settings, chatRef);
+    if (mode === 'original') return { state: 'unassigned', name: '', role };
     const character = characters?.find(item => item?.avatar === avatar);
     if (!character) {
         return { state: 'missing-character', name: getCharacterNexusRoles(settings?.nexusCharacterRoles, avatar)[role] || '', role };
@@ -60,20 +63,19 @@ export function getNexusRoleResolutionForChatRef(role, chatRef, settings = exten
     if (result.state === 'ready' && isAssignedToAnotherNexusCharacter(settings, avatar, result.name)) {
         return { ...result, state: 'shared' };
     }
+    // Sloth is the default; never silently fall back to an ordinary book
+    // before the two roles have been configured.
+    if (result.state === 'unassigned') return { ...result, state: 'mode-pending' };
     return result;
 }
 
 export function getCurrentNexusRoleResolution(role, settings = extension_settings.STMemoryBooks) {
-    const { character, linkedBooks, worldNames } = getActiveNexusRoleContext(settings);
+    const { character } = getActiveNexusRoleContext(settings);
     if (!character) return { state: 'no-character', name: '', role };
     const currentRef = getCurrentStmbChatRef();
     if (currentRef?.type === 'character' && currentRef.avatarUrl === character.avatar &&
         String(currentRef.fileName || '').trim()) {
         return getNexusRoleResolutionForChatRef(role, currentRef, settings);
     }
-    return resolveCharacterNexusRole({
-        roles: settings?.nexusCharacterRoles,
-        avatar: character.avatar,
-        role, linkedBooks, worldNames,
-    });
+    return getNexusRoleResolutionForChatRef(role, {type:'character', avatarUrl:character.avatar}, settings);
 }

@@ -3,6 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { explicitMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
 import { readFileSync } from 'node:fs';
 
 const validation = readFileSync(new URL('./lorebookValidation.js', import.meta.url), 'utf8');
@@ -18,11 +20,12 @@ const sideFn=side.slice(sStart,sEnd);
 
 function validateHarness({
     role={state:'unassigned',name:''}, nexusRole=null, chatName='Chat-only',
-    manual=false, names=['Nexus','Memory','Chat-only'], override,
+    manual=false, names=['Nexus','Memory','Chat-only'], override, modeSettings={},
 }={}) {
     const loaded=[], popups=[];
     const scope={
-        extension_settings:{STMemoryBooks:{moduleSettings:{manualModeEnabled:manual,autoCreateLorebook:false}}},
+        explicitMemoryBooksMode, isManagedNexusWorld, getCurrentStmbChatRef:()=>({type:'character',avatarUrl:'A.png'}),
+        extension_settings:{STMemoryBooks:{moduleSettings:{manualModeEnabled:manual,autoCreateLorebook:false}, ...modeSettings}},
         getCurrentNexusRoleResolution:type=>type==='memory' ? role :
             (nexusRole || (role.state==='unassigned' ? {state:'unassigned',name:''} : {state:'ready',name:'Nexus'})),
         getSceneMarkers:()=>({manualLorebook:'Manual-only'}),
@@ -78,6 +81,8 @@ function sideHarness({memory={state:'ready',name:'Memory'},nexus={state:'ready',
     chatOverride='',templateOverride=''}={}) {
     const loaded=[];
     const scope={
+        explicitMemoryBooksMode, isManagedNexusWorld, getCurrentStmbChatRef:()=>({type:'character',avatarUrl:'A.png'}),
+        extension_settings:{STMemoryBooks:{}}, translate:x=>x,
         getCurrentNexusRoleResolution:role=>role==='nexus'?nexus:memory,
         getNexusRoleResolutionForChatRef:role=>role==='nexus'?nexus:memory,
         getStmbChatKey:ref=>ref?'character:origin':'character:current',
@@ -144,4 +149,12 @@ test('invalid chat-specific role cannot silently fall back to a Side Prompt chat
     const v=validateHarness({role:bad,nexusRole:bad});
     assert.equal((await v.fn()).valid,false);
     assert.equal(v.loaded.length,0);
+});
+
+test('original-mode validation protects existing Sloth books but permits a separate original book',async()=>{
+    const modeSettings={characterMemoryBooksModes:{'A.png':'original'},nexusCharacterRoles:{'A.png':{memory:'Memory',nexus:'Nexus'}}};
+    const h=validateHarness({modeSettings,chatName:'Memory'});
+    assert.equal((await h.fn()).valid,false);
+    assert.equal(h.loaded.length,0);
+    assert.equal((await h.fn({lorebookName:'Chat-only'})).name,'Chat-only');
 });

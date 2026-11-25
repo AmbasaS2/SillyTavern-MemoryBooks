@@ -1,6 +1,7 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { getMemoryBooksMode, setMemoryBooksMode, legacyRotationEnabled, moveMemoryBooksMode, removeMemoryBooksMode } from './memoryBooksMode.js';
 import { MEMORY_REMINDER_DEFAULTS, normalizeReminderInterval, createMemoryReminderController } from './memoryReminders.js';
 
 import {
@@ -67,14 +68,14 @@ import {
   setCharacterNexusRole, moveCharacterNexusRoles, removeCharacterNexusRoles,
 } from './nexusCharacterRoles.js';
 import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
-import { isAssignedToAnotherNexusCharacter, rememberNexusChatWorlds, scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
+import { isAssignedToAnotherNexusCharacter, isManagedNexusWorld, rememberNexusChatWorlds, scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
 import {
   getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames,
-  getSlothAutomaticProgress, invalidateSlothAutomaticProgress } from './nexusCollectorRuntime.js';
+  getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
@@ -716,6 +717,7 @@ const defaultSettings = {
   },
   characterMemoryBookLocks: {},
   nexusCharacterRoles: {},
+  characterMemoryBooksModes: {},
   nexusChatRoleOverrides: {},
   nexusChatScopedWorlds: {},
   titleFormat: DEFAULT_TITLE_FORMAT,
@@ -1326,7 +1328,8 @@ function getMemoryReminderController() {
       count: chat.length,
       settings: {
         ...(extension_settings[MODULE_NAME]?.moduleSettings || {}),
-        nexusSceneRotationEnabled: extension_settings[MODULE_NAME]?.moduleSettings?.nexusSceneRotationEnabled === true ||
+        nexusSceneRotationEnabled: legacyRotationEnabled(extension_settings[MODULE_NAME], getCurrentStmbChatRef()) ||
+          getMemoryBooksMode(extension_settings[MODULE_NAME], getCurrentStmbChatRef(), getStmbChatKey()) === 'sloth' ||
           ['ready','missing','detached','invalid-override'].includes(getCurrentNexusRoleResolution('memory', extension_settings[MODULE_NAME]).state) ||
           ['ready','missing','detached','invalid-override'].includes(getCurrentNexusRoleResolution('nexus', extension_settings[MODULE_NAME]).state),
       },
@@ -1605,7 +1608,7 @@ async function handleMessageReceived() {
     scheduleSceneButtonRefresh(false, true);
     await handleAutoSummaryMessageReceived();
     if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
-    await evaluateTrackers();
+    if (getStmbChatKey() === reminderChatKey && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef()) === 'original') await evaluateTrackers();
   } catch (error) {
     console.error(
       translate(
@@ -5743,7 +5746,7 @@ async function executeMemoryGeneration(
     // Check if memory previews are enabled and handle accordingly
     let finalMemoryResult = memoryResult;
 
-    if (settings.moduleSettings.showMemoryPreviews || settings.moduleSettings.nexusSceneRotationEnabled === true ||
+    if (settings.moduleSettings.showMemoryPreviews || legacyRotationEnabled(settings, memoryOriginSnapshot.chatRef) ||
         !['unassigned', 'no-character'].includes(
           getNexusRoleResolutionForChatRef('memory', memoryOriginSnapshot.chatRef, settings).state)) {
       // Clear working toast before showing preview popup
@@ -6374,7 +6377,7 @@ async function flushDeferredQueuedAutoHideRanges() {
   const settings = extension_settings.STMemoryBooks;
   const memoryRole = getCurrentNexusRoleResolution('memory', settings);
   const nexusRole = getCurrentNexusRoleResolution('nexus', settings);
-  if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+  if (legacyRotationEnabled(settings, getCurrentStmbChatRef()) ||
       [memoryRole, nexusRole].some(role => !['unassigned', 'no-character'].includes(role.state))) {
     // Suppress old pending hides, not merely postpone them until the mode changes.
     deferredQueuedAutoHideRanges.delete(chatKey);
@@ -6392,7 +6395,7 @@ async function flushDeferredQueuedAutoHideRanges() {
 async function applyQueuedMemoryAutoHide(job, memoryResult, settings) {
   const memoryRole = getNexusRoleResolutionForChatRef('memory', job.chatRef, settings);
   const nexusRole = getNexusRoleResolutionForChatRef('nexus', job.chatRef, settings);
-  if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+  if (legacyRotationEnabled(settings, job.chatRef) ||
       [memoryRole, nexusRole].some(role => !['unassigned', 'no-character'].includes(role.state))) return;
   const autoHidePlan = getAutoHideRanges(memoryResult, settings?.moduleSettings || {});
   if (autoHidePlan.mode === "none") return;
@@ -6531,7 +6534,7 @@ async function executeQueuedMemoryJob(job, jobContext) {
   jobContext.throwIfCancelled();
 
   let finalMemoryResult = memoryResult;
-  if (settings.moduleSettings?.showMemoryPreviews || settings.moduleSettings?.nexusSceneRotationEnabled === true ||
+  if (settings.moduleSettings?.showMemoryPreviews || legacyRotationEnabled(settings, job.chatRef) ||
       !['unassigned', 'no-character'].includes(
         getNexusRoleResolutionForChatRef('memory', job.chatRef, settings).state)) {
     const approval = await awaitStmbJobApproval(
@@ -9523,7 +9526,7 @@ async function maybePromptAutoConsolidation(targetTier, lorebookValidation = nul
 
   try {
     const settings = initializeSettings();
-    if (!settings?.moduleSettings?.autoConsolidationPromptEnabled) {
+    if (getMemoryBooksMode(settings, getCurrentStmbChatRef()) !== 'original' || !settings?.moduleSettings?.autoConsolidationPromptEnabled) {
       return emptyResult;
     }
 
@@ -9642,7 +9645,7 @@ async function maybePromptSelectedAutoConsolidation({
   lorebookValidation = null,
 } = {}) {
   const settings = initializeSettings();
-  if (!settings?.moduleSettings?.autoConsolidationPromptEnabled) {
+  if (getMemoryBooksMode(settings, getCurrentStmbChatRef()) !== 'original' || !settings?.moduleSettings?.autoConsolidationPromptEnabled) {
     return null;
   }
 
@@ -9705,6 +9708,10 @@ async function runPostConsolidationCommitFlow({
  * Show summary consolidation popup
  */
 async function showSummaryConsolidationPopup(popupOptions = {}) {
+  if (getMemoryBooksMode(initializeSettings(), getCurrentStmbChatRef()) !== 'original') {
+    toastr.info(translate('Choose Original Memory Books mode to use the original memory tools.', 'STMemoryBooks_ModeOriginalRequired'), 'STMemoryBooks');
+    return;
+  }
   const memoryBooksContext = getCurrentMemoryBooksContext();
   const applyCharacterFilters = !isCharacterAwarenessDisabled({}, memoryBooksContext);
   try {
@@ -11081,6 +11088,7 @@ function buildSlothTemplateData(settings) {
   const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
   const slothRoleNexus = getCurrentNexusRoleResolution('nexus', settings);
   const slothChatRef = getCurrentStmbChatRef();
+  const slothModeActive = getMemoryBooksMode(settings, slothChatRef, getStmbChatKey(slothChatRef)) === 'sloth';
   const slothChatOverrideAvailable = !!sloth.character &&
     slothChatRef?.type === 'character' &&
     slothChatRef.avatarUrl === sloth.character.avatar &&
@@ -11116,6 +11124,7 @@ function buildSlothTemplateData(settings) {
       isSlothProfile: index === slothProfileIndex,
     })),
     slothRoleActive,
+    slothModeActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
     slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
@@ -11442,7 +11451,7 @@ async function showSettingsPopup() {
           "Consolidate Memories",
           "STMemoryBooks_ConsolidateArcsButton",
         ),
-      classes: ["stmb-original-action"],
+      classes: ["stmb-original-action", "stmb-original-consolidate"],
       action: async () => {
         await showSummaryConsolidationPopup({ showGoBack: true });
       },
@@ -11488,6 +11497,8 @@ async function showSettingsPopup() {
     heading.setAttribute('autofocus', '');
     const showing = popup.show();
     mountSlothPromptLibraries(popup.content,settings);
+    syncMemoryBooksModeUi(popup.dlg, settings);
+    if (!slothData.slothModeActive) popup.dlg.querySelector('#stmb-original-tab')?.click();
     syncSlothAutomaticStatus();
     await showing;
   } catch (error) {
@@ -11592,6 +11603,10 @@ function getSlothProfileConfiguration(settings) {
 async function runSlothCollectionEntryPoint({ signal, onSaveStart } = {}) {
   const settings = initializeSettings();
   const ref = getCurrentStmbChatRef();
+  if (getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') {
+    toastr.warning(translate('Choose Sloth mode in Memory Books settings first.', 'STMemoryBooks_ModeSlothRequired'), 'STMemoryBooks');
+    return '';
+  }
   if (!ref?.fileName || (!canStartNexusSetup(ref,settings) && !['nexus','memory'].every(role=>
     getNexusRoleResolutionForChatRef(role,ref,settings).state === 'ready'))) {
     toastr.info(translate('Open a character chat and check Lorebook setup in the Sloth tab.', 'STMemoryBooks_SlothCollectUnavailable'),
@@ -11674,7 +11689,7 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   const rightToolbar = settings?.moduleSettings?.slothComposerPosition === 'right'
     ? document.getElementById('rightSendForm') : null;
   const anchor = rightToolbar ? null : document.querySelector('#leftSendForm #extensionsMenuButton');
-  if ((!rightToolbar && !anchor) || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
+  if ((!rightToolbar && !anchor) || ref?.type !== 'character' || !ref.fileName || getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth' || settings?.moduleSettings?.slothComposerEnabled === false) {
     existingSlot?.remove();
     return;
   }
@@ -11710,6 +11725,7 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
 
 async function runSlothSettingsAction(button, popupElement, settings) {
   if (cancelSlothCollectionFrom(button) || activeSlothCollectionButton) return;
+  if (getMemoryBooksMode(settings, getCurrentStmbChatRef(), getStmbChatKey()) !== 'sloth') return;
   if (popupElement.querySelector('button[data-stmb-sloth-action]:disabled')) return;
   const choice = popupElement.querySelector('#stmb-sloth-profile-select')?.value || '';
   const stConnectionProfileId = choice.startsWith('st:') ? choice.slice(3) : '';
@@ -11757,9 +11773,10 @@ function syncSlothAutomaticStatus() {
   if (!status || !bar) return;
   const settings = extension_settings.STMemoryBooks;
   const {enabled,mode,threshold} = getSlothAutomaticSettings(settings);
-  region.hidden = !enabled;
-  if (!enabled) return;
   const ref = getCurrentStmbChatRef();
+  const active = getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) === 'sloth';
+  region.hidden = !enabled || !active;
+  if (!enabled || !active) return;
   let message, reading = null;
   if (ref?.type !== 'character' || !ref.fileName) {
     message = translate('Open an individual character chat.', 'STMemoryBooks_SlothAutoOpenChat');
@@ -11797,7 +11814,7 @@ function syncSlothAutomaticStatus() {
 
 function slothRoleUiSignature(data) {
   // Do not include prompt/AI settings: their live DOM must survive role edits.
-  const keys = ['isGroupChat','slothCharacterAvailable','slothCharacterName','slothRoleActive',
+  const keys = ['isGroupChat','slothCharacterAvailable','slothCharacterName','slothRoleActive','slothModeActive',
     'slothFirstSetup','slothCanCollect','slothMissingCompanion','slothSharedBook',
     'slothChatOverrideAvailable','slothChatOverrideActive','slothChatOverrideInvalid',
     'slothLinkedBooksAvailable','slothRoleChoicesAvailable','slothHasWorldBooks','slothLinkedBooksOnly',
@@ -11875,6 +11892,7 @@ async function refreshSlothRoleControls({forceRoles=false} = {}) {
     }
   }
   rememberSlothRoleUi(popup,data);
+  syncMemoryBooksModeUi(popup.dlg, settings);
   syncSlothAutomaticStatus();
   content.scrollTop = scrollTop;
   if (focusId) {
@@ -11882,6 +11900,23 @@ async function refreshSlothRoleControls({forceRoles=false} = {}) {
     if (nextFocus && nextFocus !== document.activeElement) nextFocus.focus({preventScroll:true});
   }
   return true;
+}
+
+// The tab is a settings view, not a mode switch. Keep shared profile tools
+// accessible in the original tab while the selected mode controls operations.
+function syncMemoryBooksModeUi(root, settings = extension_settings.STMemoryBooks) {
+  const ref = getCurrentStmbChatRef();
+  const mode = getMemoryBooksMode(settings, ref, getStmbChatKey(ref));
+  const select = root.querySelector('#stmb-memorybooks-mode');
+  if (select) { select.value = mode; select.disabled = ref?.type !== 'character' || !ref.avatarUrl; }
+  const notice = root.querySelector('#stmb-sloth-mode-inactive');
+  if (notice) notice.hidden = mode === 'sloth';
+  const fields = root.querySelector('#stmb-sloth-panel');
+  if (fields) fields.dataset.modeActive = String(mode === 'sloth');
+  const legacy = root.querySelector('#stmb-legacy-rotation-settings');
+  if (legacy) legacy.hidden = mode !== 'sloth';
+  const consolidate = root.querySelector('.stmb-original-consolidate');
+  if (consolidate) consolidate.hidden = mode === 'sloth';
 }
 
 /** Setup event listeners for settings popups using full event delegation. */
@@ -12067,6 +12102,33 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   // Handle change events using delegation
   popupElement.addEventListener("change", async (e) => {
     const settings = initializeSettings();
+
+    if (e.target.matches('#stmb-memorybooks-mode')) {
+      const ref = getCurrentStmbChatRef();
+      if (currentPopupInstance?.stmbSlothChatKey !== getStmbChatKey(ref)) {
+        await refreshPopupContent();
+        return;
+      }
+      if (isMemoryProcessing() || isProcessingArc || hasActiveStmbJobs() || hasPendingProgress() || isSlothOperationBusy() || memoryRollbackChains.size || childMemoryRollbackInFlight.size || streamingProcessor) {
+        e.target.value = getMemoryBooksMode(settings, ref, getStmbChatKey(ref));
+        toastr.warning(translate('Finish the current memory operation before changing modes.', 'STMemoryBooks_ModeBusy'), 'STMemoryBooks');
+        return;
+      }
+      const next = e.target.value;
+      if (!setMemoryBooksMode(settings, ref, next)) return;
+      invalidateSlothAutomaticProgress();
+      invalidateTrackerCheckpoints();
+      await saveSettings();
+      syncSlothComposerButton(settings);
+      if (getStmbChatKey(ref) !== getStmbChatKey()) { await refreshPopupContent(); return; }
+      getMemoryReminderController().dismiss();
+      getMemoryReminderController().check();
+      await refreshPopupContent({loadOriginal:next === 'original'});
+      syncMemoryBooksModeUi(popupElement, settings);
+      await activateTab(next);
+      void refreshMemoryTierMacroCache();
+      return;
+    }
 
     if (e.target.matches("#stmb-narrator-mode-enabled")) {
       const context = getCurrentMemoryBooksContext();
@@ -13303,6 +13365,7 @@ async function refreshPopupContent({loadOriginal=false} = {}) {
     mountSlothPromptLibraries(content,settings);
     mountSlothCollectionFooter(popup);
     rememberSlothRoleUi(popup,slothData);
+    syncMemoryBooksModeUi(popup.dlg, settings);
     syncSlothAutomaticStatus();
     if (activeTab) selectMemoryBooksWorkspaceTab(popup.dlg, activeTab);
     for (const [id, open] of drawers) {
@@ -13924,6 +13987,7 @@ function queueDeletedMessageRollbackUnhideRecovery(chatKey, chatId) {
 async function executeMemoryAutoRollback({ chatKey, chatId, deletion, childBoundary = null }) {
   const isChildChatRollback = Number.isInteger(childBoundary) && childBoundary >= 0;
   const settings = initializeSettings();
+  if (getMemoryBooksMode(settings, getCurrentStmbChatRef()) !== 'original') return;
   const options = {
     autoRollbackEnabled: settings.moduleSettings?.autoRollbackEnabled === true,
     autoRollbackUpdateLastProcessed: settings.moduleSettings?.autoRollbackUpdateLastProcessed === true,
@@ -13949,7 +14013,8 @@ async function executeMemoryAutoRollback({ chatKey, chatId, deletion, childBound
   if (!isChildChatRollback && (!Number.isFinite(oldCheckpoint) || deletion.start > oldCheckpoint)) return;
   if (!await waitForMemoryRollbackIdle(chatKey)) return;
 
-  const states = await loadMemoryRollbackLorebooks(settings);
+  const states = (await loadMemoryRollbackLorebooks(settings)).filter(state =>
+    getCurrentStmbChatRef().type !== 'character' || !isManagedNexusWorld(settings, state.name));
   if (getStmbChatKey() !== chatKey || getMemoryRollbackChatId() !== chatId) return;
   const affectedPreview = states.flatMap(state => {
     const result = collectRollbackMemories(state.data, {
@@ -14269,6 +14334,7 @@ function setupEventListeners() {
       settings.characterMemoryBookLocks, oldAvatar, newAvatar, renamedCharacter?.name,
     );
     const movedSlothRoles = moveCharacterNexusRoles(settings.nexusCharacterRoles, oldAvatar, newAvatar);
+    const movedMode = moveMemoryBooksMode(settings, oldAvatar, newAvatar);
     const movedChatOverrides = moveNexusChatRoleOverrides(settings.nexusChatRoleOverrides, oldAvatar, newAvatar);
     const scoped = settings.nexusChatScopedWorlds;
     const movedScoped = Object.hasOwn(scoped, oldAvatar) && oldAvatar !== newAvatar;
@@ -14278,7 +14344,7 @@ function setupEventListeners() {
       }
       delete scoped[oldAvatar];
     }
-    if (movedMemoryLock || movedSlothRoles || movedChatOverrides || movedScoped) {
+    if (movedMemoryLock || movedSlothRoles || movedChatOverrides || movedScoped || movedMode) {
       saveSettingsDebounced();
       populateInlineButtons();
     }
@@ -14309,10 +14375,11 @@ function setupEventListeners() {
     const settings = initializeSettings();
     const removedMemoryLock = removeCharacterMemoryBookLock(settings.characterMemoryBookLocks, character.avatar);
     const removedSlothRoles = removeCharacterNexusRoles(settings.nexusCharacterRoles, character.avatar);
+    const removedMode = removeMemoryBooksMode(settings, character.avatar);
     const removedChatOverrides = removeNexusChatRoleOverrides(settings.nexusChatRoleOverrides, character.avatar);
     const removedScoped = Object.hasOwn(settings.nexusChatScopedWorlds, character.avatar);
     if (removedScoped) delete settings.nexusChatScopedWorlds[character.avatar];
-    if (removedMemoryLock || removedSlothRoles || removedChatOverrides || removedScoped) {
+    if (removedMemoryLock || removedSlothRoles || removedChatOverrides || removedScoped || removedMode) {
       saveSettingsDebounced();
       populateInlineButtons();
     }
@@ -14335,7 +14402,7 @@ function setupEventListeners() {
     refreshMemoryBoundaryUi();
     if (deletion.isTail) restoreNarratorCastFromTimeline();
     else refreshNarratorCastDrawer();
-    if (settings.moduleSettings?.autoRollbackEnabled) {
+    if (getMemoryBooksMode(settings, getCurrentStmbChatRef()) === 'original' && settings.moduleSettings?.autoRollbackEnabled) {
       queueMemoryAutoRollback({
         chatKey,
         chatId: getMemoryRollbackChatId(),
@@ -14387,7 +14454,7 @@ function setupEventListeners() {
     isDryRun = dryRun || false;
     clearTimeout(slothAutoTimer);
     slothGeneration = !dryRun && ['normal','continue','regenerate','swipe'].includes(type) ? {
-      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal',
+      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal' && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef(), getStmbChatKey()) === 'sloth',
     } : null;
     // Clear any prior persistent failure toast and error when a new generation starts
     try {

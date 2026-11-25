@@ -4,6 +4,7 @@
 // Execute the actual addMemoryToLorebook function body with SillyTavern I/O
 // replaced by spies. Does not mutate an installed lorebook or chat.
 
+import { legacyRotationEnabled, explicitMemoryBooksMode } from './memoryBooksMode.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -32,7 +33,7 @@ function harness({ failSave = false, bookName = 'Memory-Remus_Catherine', keywor
         showNotifications: false, autoHideMode: 'all',
     };
     const scope = {
-        structuredClone,
+        structuredClone, legacyRotationEnabled, explicitMemoryBooksMode, getCurrentStmbChatRef: () => ({type:'character',avatarUrl:'A.png'}),
         MODULE_NAME: 'STMemoryBooks',
         extension_settings: { STMemoryBooks: { moduleSettings } },
         i18n: (_key, fallback) => fallback,
@@ -124,8 +125,8 @@ test('Nexus target does not rotate or restrict other lorebook entries', async ()
 });
 test('Nexus mode forces a memory preview in both direct and queued generation', () => {
     const index = readFileSync(new URL('./index.js', import.meta.url), 'utf8');
-    assert.match(index, /settings\.moduleSettings\.showMemoryPreviews \|\| settings\.moduleSettings\.nexusSceneRotationEnabled === true/);
-    assert.match(index, /settings\.moduleSettings\?\.showMemoryPreviews \|\| settings\.moduleSettings\?\.nexusSceneRotationEnabled === true/);
+    assert.match(index, /settings\.moduleSettings\.showMemoryPreviews \|\| legacyRotationEnabled\(settings, memoryOriginSnapshot\.chatRef\)/);
+    assert.match(index, /settings\.moduleSettings\?\.showMemoryPreviews \|\| legacyRotationEnabled\(settings, job\.chatRef\)/);
 });
 
 test('arbitrarily named character Memory role still rotates latest three', async () => {

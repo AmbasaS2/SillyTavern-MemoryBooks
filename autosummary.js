@@ -1,6 +1,8 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { legacyRotationEnabled } from './memoryBooksMode.js';
+import { getCurrentStmbChatRef } from './stmbJobs.js';
 import { extension_settings } from '../../../extensions.js';
 import { chat, chat_metadata } from '../../../../script.js';
 import { METADATA_KEY } from '../../../world-info.js';
@@ -121,7 +123,7 @@ async function checkAutoSummaryTrigger() {
     try {
         if (hasPendingProgress()) return;
         const settings = extension_settings.STMemoryBooks;
-        if (settings?.moduleSettings?.nexusSceneRotationEnabled === true ||
+        if (legacyRotationEnabled(settings, getCurrentStmbChatRef()) ||
             getCurrentNexusRoleResolution('memory', settings).state !== 'unassigned' &&
             getCurrentNexusRoleResolution('memory', settings).state !== 'no-character') return;
         if (!settings?.moduleSettings?.autoSummaryEnabled) {

@@ -3,6 +3,7 @@
 //
 // Analyze the chat, confirm the collection plan, then stage and save its results.
 
+import { getMemoryBooksMode } from './memoryBooksMode.js';
 import { chat, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { hideChatMessageRange } from '../../../chats.js';
@@ -47,6 +48,7 @@ const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
 const stringify=value=>JSON.stringify(value);
 let collectorBusy=false;
+export function isSlothOperationBusy() { return collectorBusy; }
 const automaticByteBound = createAutomaticTokenUpperBound();
 let automaticReading = null;
 let automaticReadingRevision = 0;
@@ -77,7 +79,7 @@ function assertReviewedCache(name, ...allowed) {
 }
 
 export function canStartNexusSetup(ref = getCurrentStmbChatRef(), settings = extension_settings.STMemoryBooks) {
-    if (menu_type === 'create') return false;
+    if (menu_type === 'create' || getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') return false;
     return canInitializeNexusBooks(setupContext(ref,settings));
 }
 
@@ -866,6 +868,10 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if (automatic && (!automatic.enabled || getStmbChatKey(ref)!==automaticChatKey || ref?.type!=='character'))
             return {saved:false,reason:'inactive-chat'};
         if(ref.type!=='character')throw new Error('Sloth collection currently supports individual character chats only.');
+        if (getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') {
+            if (automatic) return {saved:false,reason:'mode-inactive'};
+            throw new Error(t('Choose Sloth mode in Memory Books settings first.', 'STMemoryBooks_ModeSlothRequired'));
+        }
         const roles={
             memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
             nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings),

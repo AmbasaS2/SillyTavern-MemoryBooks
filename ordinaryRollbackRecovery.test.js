@@ -1,3 +1,5 @@
+import { getMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -27,9 +29,10 @@ function harness(ranges, deletion, { scope = ROLLBACK_SCOPE_AFFECTED } = {}) {
     state.messages.splice(deletion.start, deletion.count);
     const context = vm.createContext({
         structuredClone, console, Number, Date, Map, Set,
+        getMemoryBooksMode, isManagedNexusWorld, getCurrentStmbChatRef:()=>({type:'character',avatarUrl:'Legacy.png'}),
         ROLLBACK_SCOPE_AFFECTED, ROLLBACK_SCOPE_FULL,
         chat: state.messages,
-        initializeSettings: () => ({ moduleSettings: {
+        initializeSettings: () => ({ characterMemoryBooksModes:{'Legacy.png':'original'}, moduleSettings: {
             autoRollbackEnabled: true, autoRollbackDeleteLastMemory: state.deleteMemories !== false,
             autoRollbackUpdateLastProcessed: state.updateCheckpoint === true,
             refreshEditor: false,

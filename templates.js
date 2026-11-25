@@ -14,11 +14,20 @@ export const settingsTemplate = Handlebars.compile(`
           <span class="stmb-current-character">{{slothCharacterName}}</span>
           {{/if}}
         </header>
+        <label class="stmb-mode-control" for="stmb-memorybooks-mode">
+          <span data-i18n="STMemoryBooks_ModeLabel">Usage mode (this character)</span>
+          <select id="stmb-memorybooks-mode" class="text_pole" {{#unless slothCharacterAvailable}}disabled{{/unless}}>
+            <option value="original" {{#unless slothModeActive}}selected{{/unless}} data-i18n="STMemoryBooks_OriginalTab">Original Memory Books</option>
+            <option value="sloth" {{#if slothModeActive}}selected{{/if}} {{#unless slothCharacterAvailable}}disabled{{/unless}}>For 게으름뱅이 🦥</option>
+          </select>
+        </label>
+        <small class="stmb-mode-help" data-i18n="STMemoryBooks_ModeHelp">Sloth is the default for individual characters. Tabs only change the settings view. Switching modes preserves saved settings and lorebooks; previously hidden messages stay hidden.</small>
         <div class="stmb-workspace-tabs" role="tablist" aria-label="Memory Books" data-i18n="[aria-label]STMemoryBooks_Settings">
           <button type="button" id="stmb-sloth-tab" role="tab" aria-selected="true" aria-controls="stmb-sloth-panel" data-stmb-workspace-tab="sloth">For 게으름뱅이 🦥</button>
           <button type="button" id="stmb-original-tab" role="tab" aria-selected="false" aria-controls="stmb-original-panel" tabindex="-1" data-stmb-workspace-tab="original" data-i18n="STMemoryBooks_OriginalTab">Original Memory Books</button>
         </div>
-        <section id="stmb-sloth-panel" class="stmb-tab-panel" role="tabpanel" aria-labelledby="stmb-sloth-tab">
+        <section id="stmb-sloth-panel" class="stmb-tab-panel" role="tabpanel" aria-labelledby="stmb-sloth-tab" data-mode-active="{{#if slothModeActive}}true{{else}}false{{/if}}">
+        <p id="stmb-sloth-mode-inactive" {{#if slothModeActive}}hidden{{/if}} data-i18n="STMemoryBooks_ModeSlothRequired">Choose Sloth mode in Memory Books settings first.</p>
         {{#unless isGroupChat}}
         <details id="stmb-sloth-lorebooks" open class="stmb-sloth-roles stmb-box stmb-workspace-drawer" aria-labelledby="stmb-sloth-roles-title">
           <summary id="stmb-sloth-roles-title">
@@ -559,7 +568,7 @@ export const generalSettingsTemplate = Handlebars.compile(`
             <input type="checkbox" id="stmb-refresh-editor" {{#if refreshEditor}}checked{{/if}}>
             <span data-i18n="STMemoryBooks_RefreshEditor">Refresh lorebook editor after adding memories</span>
         </label>
-        <div class="padding10 marginTop5 stmb-box">
+        <div id="stmb-legacy-rotation-settings" class="padding10 marginTop5 stmb-box" {{#unless slothModeActive}}hidden{{/unless}}>
             <label class="checkbox_label">
                 <input type="checkbox" id="stmb-nexus-scene-rotation" {{#if nexusSceneRotationEnabled}}checked{{/if}}>
                 <span data-i18n="STMemoryBooks_NexusRotationEnabled">🦥 Sloth · keep the three latest completed Scenes always on</span>

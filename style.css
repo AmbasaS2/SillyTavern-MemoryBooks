@@ -1548,3 +1548,12 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     .popup.stmb-popup .stmb-sloth-plan-item,
     .popup.stmb-popup .stmb-sloth-detail{padding:10px;}
 }
+
+/* Character mode selection; inactive Sloth settings cannot be interacted with. */
+.popup.stmb-popup .stmb-mode-control { display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px; margin:4px 0 0; text-align:start; }
+.popup.stmb-popup .stmb-mode-control > select { flex:1 1 13em; width:auto; min-width:0; margin:0; }
+.popup.stmb-popup .stmb-mode-help { display:block; margin:0 0 6px; text-align:start; opacity:.8; }
+.popup.stmb-popup #stmb-sloth-panel[data-mode-active="false"] > :not(#stmb-sloth-mode-inactive),
+.popup.stmb-popup #stmb-sloth-mode-inactive[hidden],
+.popup.stmb-popup #stmb-legacy-rotation-settings[hidden],
+.popup.stmb-popup .stmb-original-consolidate[hidden] { display:none; }

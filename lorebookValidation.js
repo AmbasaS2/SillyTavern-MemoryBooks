@@ -1,6 +1,9 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
+import { explicitMemoryBooksMode } from './memoryBooksMode.js';
+import { isManagedNexusWorld } from './nexusWorldInfoScope.js';
+import { getCurrentStmbChatRef } from './stmbJobs.js';
 import { chat_metadata } from "../../../../script.js";
 import { extension_settings } from "../../../extensions.js";
 import { Popup, POPUP_TYPE, POPUP_RESULT } from "../../../popup.js";
@@ -259,6 +262,10 @@ export async function validateLorebookRequirement(options = {}) {
   let attempts = 0;
 
   while (attempts < 3) {
+    if (lorebookName && explicitMemoryBooksMode(settings, getCurrentStmbChatRef()) === 'original' &&
+        isManagedNexusWorld(settings, lorebookName)) {
+      return {valid:false, handled:false, error:translate('Choose a separate original Memory Book. Existing Sloth lorebooks are protected.', 'STMemoryBooks_ModeSeparateBook')};
+    }
     let recoveryReason = null;
 
     if (!lorebookName) {
