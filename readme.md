@@ -7,7 +7,7 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTavern-MemoryBooks). This fork integrates my Sloth (게으름뱅이) memory workflow into Memory Books while retaining the original tools in a separate tab. **Usage mode is selected per character; tabs only switch the settings view.**
 
-[한국어 안내 ↓](#-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md) · [한국어 Notion 사용 설명서](https://app.notion.com/p/422a96b06fd481fd8667ed84f80f5452)
+[한국어 안내 ↓](#-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
 
 ## Start here — Memory Books in five minutes
 
@@ -26,7 +26,7 @@ Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTa
 > [!TIP]
 > Memory Books works on its own with native keyword/vector recall. Optional STLO selects existing lore with Jev and budgets; WorldInfo Info shows what activated; Lorebook Manager provides a reading library. None is required.
 
-[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) · [Four-extension workflow guide (Korean, bilingual diagrams)](https://app.notion.com/p/423a96b06fd48147be13ec0929ee088d)
+[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 The detailed sections below explain optional settings. Compatibility is version-dependent; it does not guarantee every third-party extension or device.
 
@@ -130,7 +130,7 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 > [!TIP]
 > 메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. STLO는 선택형 Jev와 예산 관리, 월드인포인포는 발동 확인, 로어북 매니저는 독립 서재를 제공합니다. 모두 선택입니다.
 
-[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) · [4개 확장 연동 사용설명서](https://app.notion.com/p/423a96b06fd48147be13ec0929ee088d)
+[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 아래에서 필요한 설정만 자세히 읽으세요. 지원 버전 기준이며 모든 기기·다른 확장 조합을 보장하는 것은 아닙니다.
 
