@@ -1533,16 +1533,18 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
     return filterAutomaticSidePromptSetItems(resolvedSet.runnable, 'onAfterMemory');
 }
 
-/** Prepare a manual, chat-scoped Sloth note in Nexus. */
-export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene, recallMode = 'disabled') {
+/** Prepare a reviewed Sloth note for the character's side lorebook. */
+export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene,
+    { recallMode = 'disabled', nexus, chatRef } = {}) {
     const task = createStmbInFlightTask('SidePrompts:reviewedSloth');
     try {
         const tpl = {key: preset.id, name: '🦥 '+preset.name};
-        const sidePromptHistory = getSidePromptHistory(tpl);
+        const sidePromptHistory = getSidePromptHistory(tpl, {}, [], chatRef);
         sidePromptHistory.legacyTitles = [];
-        const prior = resolveSidePromptHistory(original, sidePromptHistory).latest?.content || '';
-        const reference = buildSlothSideReference(savedScene, original);
-        const prompt = [preset.text, '\n=== REFERENCE TO AVOID DUPLICATES (NOT NEW EVIDENCE) ===', reference,
+        const prior = resolveSidePromptHistory(original, sidePromptHistory).latest?.content ??
+            resolveSidePromptHistory(nexus, sidePromptHistory).latest?.content ?? '';
+        const reference = buildSlothSideReference(savedScene, nexus);
+        const prompt = [preset.text, '\n=== EXISTING MEMORY FOR REFERENCE (NOT NEW EVIDENCE) ===', reference,
             '=== END REFERENCE ==='].join('\n');
         const contentPrompt = buildPrompt(prompt, prior, compiledScene, preset.responseFormat, [], {}, [],
             compiledScene ? null : savedScene.content);
@@ -1568,11 +1570,11 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         const title = getUnifiedSidePromptTitle(tpl);
         return {
             text,keywords,
-            stage: (content, reviewedKeywords = []) => stageLorebookEntriesBatch(lorebookName, original, [{
+            stage: (book, content, reviewedKeywords = []) => stageLorebookEntriesBatch(lorebookName, book, [{
                 title,content,sidePromptHistory,archiveOnly:recallMode === 'disabled',
-                entryOverrides:{position:0,outletName:'',ignoreBudget:false,constant:false,
+                entryOverrides:{position:0,outletName:'',ignoreBudget:false,constant:recallMode === 'constant',
                     vectorized:recallMode === 'vector',key:recallMode === 'keyword' ? reviewedKeywords : [],keysecondary:[]},
-                metadataUpdates:{STMB_slothSideNote:true,STMB_slothSideArchive:recallMode === 'disabled',
+                metadataUpdates:{STMB_slothSideNote:true,STMB_slothSideBook:true,STMB_slothSideArchive:recallMode === 'disabled',
                     [`STMB_sp_${tpl.key}_lastRunAt`]:new Date().toISOString()},
             }]).lorebookData,
         };

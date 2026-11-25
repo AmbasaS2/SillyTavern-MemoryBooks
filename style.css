@@ -1217,7 +1217,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-management-action small { line-height: 1.28; }
 
-#leftSendForm #stmb-sloth-composer-slot {
+:is(#leftSendForm, #rightSendForm) #stmb-sloth-composer-slot {
     flex: 0 0 auto;
     align-self: stretch;
     min-width: 24px;
@@ -1225,7 +1225,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     height: auto;
 }
 
-#leftSendForm #stmb-sloth-composer {
+:is(#leftSendForm, #rightSendForm) #stmb-sloth-composer {
     display: grid;
     place-items: center;
     align-self: stretch;
@@ -1240,8 +1240,8 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     white-space: nowrap;
     cursor: pointer;
 }
-#leftSendForm #stmb-sloth-composer-slot:focus-within { opacity: 1; }
-#leftSendForm #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
+:is(#leftSendForm, #rightSendForm) #stmb-sloth-composer-slot:focus-within { opacity: 1; }
+:is(#leftSendForm, #rightSendForm) #stmb-sloth-composer:disabled { opacity: .4; cursor: wait; }
 
 .popup.stmb-popup .stmb-prompt-library { display:grid; gap:5px; text-align:start; margin-block:7px; }
 .popup.stmb-popup .stmb-prompt-library :is(.stmb-prompt-heading,.stmb-prompt-selection,.stmb-prompt-tools) {
@@ -1274,6 +1274,19 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-prompt-expanded h3 { margin: 0 0 7px; }
 .popup.stmb-popup .stmb-prompt-expanded textarea { min-height: 7em; max-height: min(52dvh, 30rem); resize: vertical; }
 .popup.stmb-popup .stmb-sloth-side-review { max-height: 45dvh; }
+.popup.stmb-popup .stmb-sloth-side-choices {
+    display: grid;
+    gap: 4px;
+    margin: 8px 0 0;
+    padding: 6px 8px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+}
+.popup.stmb-popup .stmb-sloth-side-draft {
+    display: grid;
+    gap: 4px;
+    margin: 8px 0 0;
+}
 .popup.stmb-popup .stmb-prompt-library textarea[readonly] { opacity:.86; }
 .popup.stmb-popup .stmb-prompt-format summary { cursor:pointer; }
 .popup.stmb-popup .stmb-prompt-format[open] summary { margin-bottom:4px; }

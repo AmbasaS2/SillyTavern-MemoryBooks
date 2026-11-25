@@ -3,6 +3,7 @@
 
 import { getNexusChatRoleOverride } from './nexusChatRoleOverrides.js';
 import { getCharacterNexusRoles } from './nexusCharacterRoles.js';
+import { getSidePromptHistoryStreamKey } from './sidePromptHistory.js';
 
 const names = roles => [roles?.nexus, roles?.memory].filter(name => typeof name === 'string' && name.trim());
 
@@ -46,12 +47,32 @@ export function scopeNexusWorldInfo(lists, { settings, ref, chatKey, avatar }) {
     if (isSolo) for (const book of defaultBooks) managed.add(book);
     const sideChatKey = isSolo && ref.fileName ? JSON.stringify(['character',ref.avatarUrl,ref.fileName]) : null;
 
-    for (const entries of [lists.globalLore, lists.characterLore, lists.chatLore, lists.personaLore]) {
+    const entryLists = [lists.globalLore, lists.characterLore, lists.chatLore, lists.personaLore];
+    const dedicated = new Set();
+    const legacy = new Map();
+    for (const entries of entryLists) {
         if (!Array.isArray(entries)) continue;
         let writeIndex = 0;
         for (const entry of entries) {
             if (entry?.STMB_slothSideNote && (!sideChatKey || entry.STMB_sidePromptHistory?.chatKey !== sideChatKey)) continue;
-            if (!managed.has(entry?.world) || allowed.has(entry.world)) entries[writeIndex++] = entry;
+            if (managed.has(entry?.world) && !allowed.has(entry.world)) continue;
+            if (entry?.STMB_slothSideNote) {
+                const stream = getSidePromptHistoryStreamKey(entry.STMB_sidePromptHistory);
+                if (stream && entry.STMB_slothSideBook) dedicated.add(stream);
+                else if (stream) legacy.set(entry, stream);
+            }
+            entries[writeIndex++] = entry;
+        }
+        entries.length = writeIndex;
+    }
+    // A saved copy in Little Things supersedes that prompt's old Nexus note
+    // for this chat, including when the new copy is configured not to inject.
+    if (!dedicated.size || !legacy.size) return;
+    for (const entries of entryLists) {
+        if (!Array.isArray(entries)) continue;
+        let writeIndex = 0;
+        for (const entry of entries) {
+            if (!dedicated.has(legacy.get(entry))) entries[writeIndex++] = entry;
         }
         entries.length = writeIndex;
     }

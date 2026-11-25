@@ -149,7 +149,7 @@ export const settingsTemplate = Handlebars.compile(`
               <li data-i18n="STMemoryBooks_SlothCollectStepHide">Choose whether to hide the saved messages.</li>
               <li data-i18n="STMemoryBooks_SlothCollectStepSave">Confirm to start writing and saving the summaries.</li>
             </ol>
-            <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Start collection</button>
+            <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect memories</button>
           </div>
         </section>
         {{/if}}
@@ -176,11 +176,11 @@ export const settingsTemplate = Handlebars.compile(`
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Use the selected prompt to keep an additional record from a saved scene.</p>
+          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Create multiple prompts for additional records. The first save creates a separate Little Things lorebook for this character.</p>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}
-            <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Update Side Prompt</button>
+            <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Run Side Prompts</button>
             {{/if}}
           </div>
         </details>
@@ -207,7 +207,14 @@ export const settingsTemplate = Handlebars.compile(`
           <div class="stmb-sloth-advanced-fields">
             <label class="checkbox_label">
               <input id="stmb-sloth-composer-enabled" type="checkbox" {{#if slothComposerEnabled}}checked{{/if}}>
-              <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collect button next to the Extensions menu</span>
+              <span data-i18n="STMemoryBooks_SlothComposerToggle">Show the collection icon</span>
+            </label>
+            <label for="stmb-sloth-composer-position" class="stmb-sloth-inline-field">
+              <span data-i18n="STMemoryBooks_SlothComposerPosition">Collection icon position</span>
+              <select id="stmb-sloth-composer-position" class="text_pole">
+                <option value="left" {{#unless slothComposerOnRight}}selected{{/unless}} data-i18n="STMemoryBooks_SlothComposerLeft">Left · Extensions menu</option>
+                <option value="right" {{#if slothComposerOnRight}}selected{{/if}} data-i18n="STMemoryBooks_SlothComposerRight">Right · Send button</option>
+              </select>
             </label>
             <div class="stmb-sloth-inline-field stmb-sloth-icon-field">
               <span id="stmb-sloth-composer-icon-label" data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>

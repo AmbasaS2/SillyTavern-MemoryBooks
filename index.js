@@ -659,6 +659,7 @@ const defaultSettings = {
     slothSummaryReview: false,
     slothLinkedBooksOnly: true,
     slothComposerEnabled: true,
+    slothComposerPosition: "left",
     ...SLOTH_AUTOMATIC_DEFAULTS,
     slothHideRecent: DEFAULT_SLOTH_VISIBLE_TAIL,
     autoSummaryInterval: 50,
@@ -11067,6 +11068,7 @@ function buildSlothTemplateData(settings) {
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
+    slothComposerOnRight: settings.moduleSettings.slothComposerPosition === 'right',
     slothSummaryReview: settings.moduleSettings.slothSummaryReview === true,
     slothComposerIcon: slothComposerIcons.find(icon => icon.selected),
     slothComposerIcons,
@@ -11610,8 +11612,10 @@ async function runCancellableSlothButton(button, start) {
 function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   const existingSlot = document.getElementById('stmb-sloth-composer-slot');
   const ref = getCurrentStmbChatRef();
-  const extensionsMenu = document.querySelector('#leftSendForm #extensionsMenuButton');
-  if (!extensionsMenu || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
+  const sendButton = settings?.moduleSettings?.slothComposerPosition === 'right'
+    ? document.querySelector('#rightSendForm > #send_but') : null;
+  const anchor = sendButton || document.querySelector('#leftSendForm #extensionsMenuButton');
+  if (!anchor || ref?.type !== 'character' || !ref.fileName || settings?.moduleSettings?.slothComposerEnabled === false) {
     existingSlot?.remove();
     return;
   }
@@ -11637,8 +11641,12 @@ function syncSlothComposerButton(settings = extension_settings.STMemoryBooks) {
   }
   button.style.setProperty('--stmb-collect-size', getSlothComposerSize(settings?.moduleSettings?.slothComposerSize) + 'px');
   // Flex items with the same order are laid out in DOM order.
-  slot.style.order = getComputedStyle(extensionsMenu).order;
-  if (extensionsMenu.nextElementSibling !== slot) extensionsMenu.after(slot);
+  slot.style.order = getComputedStyle(anchor).order;
+  if (sendButton) {
+    if (sendButton.previousElementSibling !== slot) sendButton.before(slot);
+  } else if (anchor.nextElementSibling !== slot) {
+    anchor.after(slot);
+  }
 }
 
 async function runSlothSettingsAction(button, popupElement, settings) {
@@ -11654,8 +11662,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     companion: () => createSlothCompanion(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
-    followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId,
-      presetId:popupElement.querySelector('#stmb-side-prompt-choice')?.value }),
+    followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
     compress: () => runSlothSceneCompression({ profileIndex, stConnectionProfileId }),
   };
   const action = button.dataset.stmbSlothAction;
@@ -11918,6 +11925,12 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
     if (e.target.matches('#stmb-sloth-composer-enabled')) {
       settings.moduleSettings.slothComposerEnabled = e.target.checked;
+      syncSlothComposerButton(settings);
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('#stmb-sloth-composer-position')) {
+      settings.moduleSettings.slothComposerPosition = e.target.value === 'right' ? 'right' : 'left';
       syncSlothComposerButton(settings);
       await saveSettings();
       return;

@@ -53,7 +53,7 @@ Choose two distinct books already linked to this character, or confirm your firs
 
 ## Everyday use: roleplay, then collect memories
 
-1. Continue RP normally. When a significant event ends, press the collect icon beside the extension menu in the chat input row (or **Start collection** in Memory Books, or `/sloth-collect`).
+1. Press the collection icon in the chat input row, **Collect memories** in Memory Books, or `/sloth-collect`. Confirm the available message range to start analysis.
 2. The collection AI reads the not-yet-collected messages and proposes completed events. Check the suggested ranges and number of memories. Incomplete events can remain for a later collection.
 3. Choose whether to hide the successfully saved messages from the AI's active chat context, then approve. The AI writes the scene memories and updates relevant Nexus information.
 4. Continue your RP. The latest three completed scenes stay active; older ones become keyword or vector entries according to your settings. Their full stored memory text is retained.
@@ -65,9 +65,9 @@ Hide is optional and does not delete the chat history. Only successfully saved r
 | Section | When to use it |
 |---|---|
 | Automatic collection | Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages. |
-| Side Prompt | Create or select an additional record prompt, choose its instructions and optional response format, and use **Update Side Prompt**. Choose no injection, vector or keywords depending on whether the record is for personal reading or AI recall. |
+| Side Prompts | Save several prompts, each with its own instructions, optional response format and recall mode. Choose which prompts to run with a collection or run them separately on a saved scene. Approved results go to the character’s `Little Things - Character` lorebook. |
 | Manage existing memories | Review merging related scenes, splitting an existing scene, or shortening an event. Choose and review the changes instead of automatically replacing memories. |
-| Advanced settings | Show/hide the collect button, choose its icon and size (default 14 px), and set the number of recent collected messages to keep visible when Hide is selected (default 0). |
+| Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
 | Original Memory Books | Original scene-marker tools, profiles, prompts, consolidation and other original features. Use the original feature guides for that workflow. |
 
 Memory Books saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [the STLO fork](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [the Lorebook Manager fork](https://github.com/AmbasaS2/lore-manager). Both are optional.
@@ -121,7 +121,7 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 ## 평소 사용법: 롤플하고 사건이 끝나면 수집!
 
-1. 평소처럼 롤플합니다. 사건이 끝나거나 기억을 정리하고 싶을 때 입력창의 확장 메뉴 옆 **수집 버튼**을 누릅니다. 메모리북의 **기억 수집 시작** 또는 `/sloth-collect`로도 열 수 있습니다.
+1. 입력창의 **수집 아이콘**, 메모리북의 **기억 수집 하기** 또는 `/sloth-collect`를 사용합니다. 화면에 표시된 메시지 범위를 확인하면 분석을 시작합니다.
 2. AI가 아직 수집하지 않은 메시지를 읽고 완결된 사건을 나눠 제안합니다. 분석 범위와 저장할 기억의 개수를 확인하세요. 진행 중인 사건은 다음 수집에 남길 수 있습니다.
 3. **저장한 구간을 AI 대화 맥락에서 숨기기**를 사용할지 선택하고 승인합니다. AI가 사건별 기억을 작성하고 필요한 Nexus 정보를 갱신합니다.
 4. 다시 롤플하면 됩니다. 최근 완료 Scene 3개는 상시로, 오래된 Scene은 선택한 벡터 또는 키워드 방식으로 관리됩니다.
@@ -133,9 +133,9 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 | 설정 영역 | 활용법 |
 |---|---|
 | 자동 수집 | 기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다. |
-| 사이드 프롬프트 | 내가 원하는 추가 기록을 만들고 싶을 때 사용합니다. 프롬프트와 선택적 응답 형식을 저장하고 **사이드 프롬프트 갱신**을 누릅니다. 미주입·벡터·키워드를 골라 읽기용 기록과 RP에 반영할 기록을 구분합니다. |
+| 사이드 프롬프트 | 지시문, 응답 형식, 상시·벡터·키워드·미주입 방식을 프롬프트별로 저장합니다. 기억 수집 계획에서 함께 실행할 프롬프트를 체크하거나 저장한 장면에서 따로 실행합니다. 검토한 결과는 `Little Things - 캐릭터 이름` 로어북에 저장됩니다. |
 | 저장한 사건 수정 | 나뉜 사건 합치기, 한 기억을 사건별로 나누기, 사건 짧게 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 사용자가 대상과 변경안을 확인하는 작업입니다. |
-| 고급 설정 | 확장 메뉴 옆 수집 버튼 표시 여부, 아이콘 및 크기(기본 14px), Hide 시 수집한 메시지 중 최근 몇 개를 남길지(기본 0)를 설정합니다. |
+| 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
 | 기존 메모리북 | 원본의 구간 지정·프로필·프롬프트·압축·통합 등 기존 도구를 사용할 수 있습니다. |
 
 ### 다른 로어북 확장과 함께 사용하고 싶다면

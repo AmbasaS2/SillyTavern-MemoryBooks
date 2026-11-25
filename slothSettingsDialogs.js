@@ -24,7 +24,7 @@ async function askPresetName(title, initial = '') {
 
 function writePresetFile(record, format) {
     const data={format,version:1,name:record.name,text:record.text,
-        ...(format==='sloth-side-prompt'?{responseFormat:record.responseFormat||''}:{})};
+        ...(format==='sloth-side-prompt'?{responseFormat:record.responseFormat||'',recallMode:record.recallMode||'disabled'}:{})};
     const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
     const link=document.createElement('a');
     link.href=url;
@@ -60,6 +60,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         ${recall?`<label class="stmb-sloth-inline-field" for="${id('recall')}">${html(t('Side Prompt recall','SlothSideRecall'))}
           <select id="${id('recall')}" class="text_pole">
             <option value="disabled">${html(t('Do not inject','SlothRecallDisabled'))}</option>
+            <option value="constant">${html(t('Always include','SlothRecallConstant'))}</option>
             <option value="vector">${html(t('Vector','NexusRecallVector'))}</option>
             <option value="keyword">${html(t('Keywords','SlothRecallKeywords'))}</option>
           </select></label><small>${html(t('Applies when you update this Side Prompt.','SlothSideRecallHelp'))}</small>`:''}
@@ -78,6 +79,8 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const dirty=()=>editor.value!==current.text||(response?.value||'')!==(current.responseFormat||'');
     const setStatus=(message='')=>{find('status').textContent=message;};
     const sync=()=>{
+        select.disabled=busy;
+        if(recallSelect)recallSelect.disabled=busy||!current.id;
         button('save').disabled=busy||!editor.value.trim()||!(dirty()||(isSummary&&current.id!==appliedId));
         button('copy').disabled=busy||!editor.value.trim();
         button('rename').disabled=busy||!current.id||readOnly();
@@ -102,7 +105,6 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         }
         if(recallSelect) {
             recallSelect.value=recall.get(current.id);
-            recallSelect.disabled=!current.id;
         }
         sync();
     };
@@ -137,7 +139,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const name=await askPresetName(t('Save as new prompt','SlothPromptSaveAs'));
         if(name===null)return;
         if(!validName(name,'')) {toastr.warning(warning,'STMemoryBooks');return;}
-        await saveRecord({...draft,id:'',name});
+        await saveRecord({...draft,id:'',name,recallMode:recall?.get(draft.id)});
         drafts.delete('');
     };
     select.addEventListener('change',()=>{
@@ -171,7 +173,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         current=records.find(record=>record.id===appliedId)||records[0]||empty;
         render();
     }));
-    button('export').addEventListener('click',()=>writePresetFile(current,format));
+    button('export').addEventListener('click',()=>writePresetFile({...current,recallMode:recall?.get(current.id)},format));
     button('expand').addEventListener('click',()=>void run(async()=>{
         const readOnlyPrompt=readOnly();
         const overlay=markStmbPopup(new Popup(DOMPurify.sanitize(`<div class="stmb-prompt-expanded">
@@ -210,7 +212,8 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         for(let number=2;!validName(name,'');number++)name=`${label} (${number})`;
         if(dirty()) drafts.set(current.id,value());
         await saveRecord({id:'',name,text:data.text,
-            responseFormat:!isSummary&&typeof data.responseFormat==='string'?data.responseFormat:''});
+            responseFormat:!isSummary&&typeof data.responseFormat==='string'?data.responseFormat:'',
+            recallMode:!isSummary?normalizeSlothSideRecall(data.recallMode):undefined});
     }));
     render();
 }
@@ -247,7 +250,7 @@ export function mountSlothCollectionPrompts(target,settings) {
 export function mountSlothSidePromptSettings(target,settings) {
     const params=settings.moduleSettings;
     const records=getSlothSidePresets(settings).map(record=>({...record,
-        name:record.builtin?t('Little Things','SlothLittleThings'):record.name}));
+        name:record.builtin?t('Small details','SlothLittleThings'):record.name}));
     const write=async (presets,selected)=>{
         params.slothSidePresets=presets;
         params.slothSidePresetId=selected;
@@ -267,6 +270,8 @@ export function mountSlothSidePromptSettings(target,settings) {
             const id=draft.id||'sloth-'+randomId();
             const entries=records.filter(record=>!record.builtin&&record.id!==id);
             entries.push({id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat});
+            if(draft.recallMode!==undefined)params.slothSideRecallModes={...params.slothSideRecallModes,
+                [id]:normalizeSlothSideRecall(draft.recallMode)};
             await write(entries,activate?id:params.slothSidePresetId);
             return id;
         },

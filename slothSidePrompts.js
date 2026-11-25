@@ -6,7 +6,7 @@ import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
 export const SLOTH_NO_SIDE_DETAILS = '[[NO_NEW_DETAILS]]';
 
 export function normalizeSlothSideRecall(mode) {
-    return mode === 'vector' || mode === 'keyword' ? mode : 'disabled';
+    return ['constant', 'vector', 'keyword'].includes(mode) ? mode : 'disabled';
 }
 
 export function getSlothSideRecall(settings, id) {
@@ -46,6 +46,25 @@ export function getSlothSidePresets(settings) {
         typeof preset.text === 'string' && preset.text.trim()).map(({id,name,text,responseFormat}) =>
             ({id,name,text,responseFormat:typeof responseFormat === 'string' ? responseFormat : ''})) : [];
     return [LITTLE_THINGS, ...custom];
+}
+
+export function pickSlothSidePresets(settings, ids) {
+    const selected = new Set(ids);
+    return getSlothSidePresets(settings).filter(preset => selected.has(preset.id))
+        .map(preset => ({ ...preset, recall: getSlothSideRecall(settings, preset.id) }));
+}
+
+export function slothSideBookName(character, names, suffix) {
+    const label = String(character?.name || 'Character').normalize('NFC')
+        .replace(/[<>:"/\\|?*\u0000-\u001F]/gu, ' ').replace(/\s+/gu, ' ').trim();
+    const base = 'Little Things - ' + (Array.from(label).slice(0, 36).join('') || 'Character');
+    const folded = value => String(value).normalize('NFKC').toLowerCase();
+    return names.some(name => folded(name) === folded(base)) ? base + ' - ' + suffix : base;
+}
+
+export function slothSideBookOwner(book) {
+    const marker = book?.extensions?.stmbSlothSideBook;
+    return marker?.version === 1 && typeof marker.avatar === 'string' ? marker.avatar : '';
 }
 
 export function buildSlothSideReference(scene, nexus) {
