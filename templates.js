@@ -176,7 +176,7 @@ export const settingsTemplate = Handlebars.compile(`
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title" data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</summary>
-          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Save diaries and other records using your choice of lorebook for each prompt.</p>
+          <p data-i18n="STMemoryBooks_SlothSidePromptHelp">Check the prompts to use for this character and choose where to save each one.</p>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}

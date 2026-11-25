@@ -1,19 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canContinueSlothSideEntry, getSlothSidePresets, pickSlothSidePresets,
-    SLOTH_DIARY_ID, slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
+import { canContinueSlothSideEntry, getSlothSideDestination, getSlothSidePresets, pickSlothSidePresets,
+    SLOTH_CREATE_SIDE_BOOK, SLOTH_DIARY_ID, slothSideBookName, slothSideBookOwner } from './slothSidePrompts.js';
 import { scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
 
 test('one run can select independent Side Prompts, including an always-on custom prompt', () => {
     const npc = { id: 'sloth-abc', name: 'NPC', text: 'Record recurring characters.', responseFormat: 'Name and role' };
     const diary = { id: 'sloth-def', name: 'Diary', text: 'Write a diary.' };
+    const ref = { type: 'character', avatarUrl: 'mira.png', fileName: 'chat' };
+    const npcLink = JSON.stringify([ref.avatarUrl, npc.id]);
+    const diaryLink = JSON.stringify([ref.avatarUrl, diary.id]);
     const settings = { moduleSettings: { slothSidePresets: [npc, diary],
-        slothSideRecallModes: { [npc.id]: 'constant' } } };
-    assert.deepEqual(pickSlothSidePresets(settings, []), []);
-    const selected = pickSlothSidePresets(settings, [npc.id, npc.id, diary.id, 'unknown']);
-    const destination = { book: '', entry: null };
-    assert.deepEqual(selected, [{ ...npc, recall: 'constant', destination },
-        { ...diary, responseFormat: '', recall: 'disabled', destination }]);
+        slothSideRecallModes: { [npc.id]: 'constant' },
+        slothSideCharacterLinks: { [npcLink]: true, [diaryLink]: true },
+        slothSideBooks: { [npcLink]: 'Nexus', [diaryLink]: SLOTH_CREATE_SIDE_BOOK } } };
+    assert.deepEqual(pickSlothSidePresets(settings, [], ref), []);
+    const selected = pickSlothSidePresets(settings, [npc.id, npc.id, diary.id, 'unknown'], ref);
+    assert.deepEqual(selected, [
+        { ...npc, recall: 'constant', destination: { book: 'Nexus', create: false, entry: null } },
+        { ...diary, responseFormat: '', recall: 'disabled', destination: { book: '', create: true, entry: null } },
+    ]);
+    delete settings.moduleSettings.slothSideBooks[npcLink];
+    delete settings.moduleSettings.slothSideCharacterLinks[diaryLink];
+    assert.deepEqual(pickSlothSidePresets(settings, [npc.id, diary.id], ref), []);
+    assert.deepEqual(getSlothSideDestination(settings, npc.id, ref), { book: '', create: false, entry: null });
+    assert.deepEqual(pickSlothSidePresets(settings, [npc.id, diary.id], { ...ref, avatarUrl: 'other.png' }), []);
 });
 
 test('the canonical Diary uses character-specific books and chat-specific continuation targets', () => {
@@ -23,17 +34,17 @@ test('the canonical Diary uses character-specific books and chat-specific contin
     const entry = { book: 'Archive', uid: 5, title: 'My diary' };
     const settings = { moduleSettings: {
         slothSideBooks: { [JSON.stringify([avatar, SLOTH_DIARY_ID])]: 'Archive' },
+        slothSideCharacterLinks: { [JSON.stringify([avatar, SLOTH_DIARY_ID])]: true },
         slothSideEntries: { [JSON.stringify([avatar, fileName, SLOTH_DIARY_ID])]: entry },
     } };
     const [diary] = pickSlothSidePresets(settings, [SLOTH_DIARY_ID], ref);
     assert.match(diary.text, /PRIVATE DIARY as a first-person record/);
     assert.match(diary.responseFormat, /DIARY \(DON'T READ IT\) — \{\{char\}\}/u);
     assert.equal(diary.recall, 'disabled');
-    assert.deepEqual(diary.destination, { book: 'Archive', entry });
+    assert.deepEqual(diary.destination, { book: 'Archive', create: false, entry });
     assert.deepEqual(pickSlothSidePresets(settings, [SLOTH_DIARY_ID], { ...ref, fileName: 'chapter-b' })[0].destination,
-        { book: 'Archive', entry: null });
-    assert.deepEqual(pickSlothSidePresets(settings, [SLOTH_DIARY_ID], { ...ref, avatarUrl: 'other.png' })[0].destination,
-        { book: '', entry: null });
+        { book: 'Archive', create: false, entry: null });
+    assert.deepEqual(pickSlothSidePresets(settings, [SLOTH_DIARY_ID], { ...ref, avatarUrl: 'other.png' }), []);
     assert.ok(!getSlothSidePresets(settings).some(preset => preset.id === 'sloth-little-things'));
     const record = { uid: 5, comment: 'Private journal', content: 'Earlier diary.' };
     assert.ok(canContinueSlothSideEntry(record, SLOTH_DIARY_ID, ref));

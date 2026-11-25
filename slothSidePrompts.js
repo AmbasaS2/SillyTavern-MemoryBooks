@@ -28,6 +28,7 @@ export function normalizeSlothSideKeywords(value) {
 }
 
 export const SLOTH_DIARY_ID = 'sloth-diary';
+export const SLOTH_CREATE_SIDE_BOOK = ':little-things:';
 
 const DIARY = Object.freeze({
     id: SLOTH_DIARY_ID,
@@ -75,16 +76,28 @@ export function getSlothSidePresets(settings) {
 
 export function getSlothSideDestination(settings, id, ref) {
     const module = settings?.moduleSettings;
-    const book = module?.slothSideBooks?.[JSON.stringify([ref?.avatarUrl, id])] || '';
+    const choice = module?.slothSideBooks?.[JSON.stringify([ref?.avatarUrl, id])];
+    const create = choice === SLOTH_CREATE_SIDE_BOOK;
+    const book = !create && typeof choice === 'string' ? choice : '';
     const entry = module?.slothSideEntries?.[JSON.stringify([ref?.avatarUrl, ref?.fileName, id])];
-    return { book, entry: book && entry?.book === book ? entry : null };
+    return { book, create, entry: book && entry?.book === book ? entry : null };
+}
+
+export function isSlothSideLinked(settings, id, ref) {
+    return ref?.type === 'character' && !!ref.avatarUrl &&
+        settings?.moduleSettings?.slothSideCharacterLinks?.[JSON.stringify([ref.avatarUrl, id])] === true;
+}
+
+export function getRunnableSlothSidePresets(settings, ref) {
+    return getSlothSidePresets(settings).filter(preset => isSlothSideLinked(settings, preset.id, ref))
+        .map(preset => ({ ...preset, recall: getSlothSideRecall(settings, preset.id),
+            destination: getSlothSideDestination(settings, preset.id, ref) }))
+        .filter(({ destination }) => destination.book || destination.create);
 }
 
 export function pickSlothSidePresets(settings, ids, ref) {
     const selected = new Set(ids);
-    return getSlothSidePresets(settings).filter(preset => selected.has(preset.id))
-        .map(preset => ({ ...preset, recall: getSlothSideRecall(settings, preset.id),
-            destination: getSlothSideDestination(settings, preset.id, ref) }));
+    return getRunnableSlothSidePresets(settings, ref).filter(preset => selected.has(preset.id));
 }
 
 export function canContinueSlothSideEntry(entry, presetId, ref) {
