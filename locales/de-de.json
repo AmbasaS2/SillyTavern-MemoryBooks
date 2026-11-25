@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "Sammelintervall",
   "STMemoryBooks_SlothAutoHelp": "Sobald das Intervall erreicht ist, speichert eine neue Antwort abgeschlossene Ereignisse in Chats mit beiden Lorebooks. Nachrichten bleiben sichtbar.",
   "STMemoryBooks_SlothHideRecent": "Neueste gesammelte Nachrichten sichtbar lassen",
+  "STMemoryBooks_SlothHideHelpTitle": "So funktioniert das Ausblenden",
+  "STMemoryBooks_SlothHideHelp": "Wenn du Nachrichten nach der Sammlung ausblendest, blendet 0 alle diesmal gespeicherten Nachrichten aus. Bei 6 bleiben die letzten sechs gespeicherten Nachrichten sichtbar. Nicht gesammelte Nachrichten bleiben sichtbar.",
   "STMemoryBooks_SlothCommandHelp": "Öffnet denselben Sammelplan.",
   "STMemoryBooks_SlothCustomProfile": "Eigenes KI-Profil erstellen",
   "STMemoryBooks_SlothHideAfter": "Gespeicherte Chatnachrichten nach dem Sammeln ausblenden",

@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "수집 간격",
   "STMemoryBooks_SlothAutoHelp": "Nexus와 Memory가 연결된 채팅에서 설정한 간격만큼 새 내용이 쌓이면, 답변이 끝난 뒤 완결된 사건을 저장합니다. 원문은 계속 표시됩니다.",
   "STMemoryBooks_SlothHideRecent": "수집한 메시지 중 최근 몇 개를 남길까요?",
+  "STMemoryBooks_SlothHideHelpTitle": "숨기기 설정 안내",
+  "STMemoryBooks_SlothHideHelp": "‘수집 후 숨기기’를 선택했을 때 적용됩니다. 0개면 이번에 저장한 메시지를 모두 숨깁니다. 6개면 저장한 메시지 중 마지막 6개를 남깁니다. 아직 수집하지 않은 메시지는 계속 보입니다.",
   "STMemoryBooks_SlothCommandHelp": "기억 수집 계획을 엽니다.",
   "STMemoryBooks_SlothCustomProfile": "별도 AI 프로필 만들기",
   "STMemoryBooks_SlothHideAfter": "저장한 구간을 AI 대화 맥락에서 숨기기",

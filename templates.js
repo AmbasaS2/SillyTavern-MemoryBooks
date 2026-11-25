@@ -241,10 +241,20 @@ export const settingsTemplate = Handlebars.compile(`
               </select>
             </label>
             <hr class="stmb-sloth-settings-rule">
-            <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
-              <span data-i18n="STMemoryBooks_SlothHideRecent">Recent collected messages to keep visible</span>
-              <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
-            </label>
+            <div class="stmb-sloth-hide-setting">
+              <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
+                <span data-i18n="STMemoryBooks_SlothHideRecent">Recent collected messages to keep visible</span>
+                <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
+              </label>
+              <button id="stmb-sloth-hide-help-toggle" type="button" class="menu_button"
+                aria-expanded="false" aria-controls="stmb-sloth-hide-help" aria-label="How hiding works"
+                data-i18n="[aria-label]STMemoryBooks_SlothHideHelpTitle">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+              </button>
+              <small id="stmb-sloth-hide-help" data-i18n="STMemoryBooks_SlothHideHelp" hidden>
+                When you choose to hide messages after collection, 0 hides everything saved in that run. 6 keeps the last six saved messages visible. Messages that were not saved stay visible.
+              </small>
+            </div>
           </div>
         </details>
 

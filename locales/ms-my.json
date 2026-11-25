@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "Sela kutipan",
   "STMemoryBooks_SlothAutoHelp": "Apabila sela dicapai, balasan baharu menyimpan peristiwa selesai dalam sembang dengan kedua-dua buku terhubung. Mesej kekal kelihatan.",
   "STMemoryBooks_SlothHideRecent": "Mesej terkumpul terkini yang kekal kelihatan",
+  "STMemoryBooks_SlothHideHelpTitle": "Cara mesej disembunyikan",
+  "STMemoryBooks_SlothHideHelp": "Jika anda memilih untuk menyembunyikan mesej selepas pengumpulan, 0 menyembunyikan semua mesej yang disimpan kali ini. Dengan 6, enam mesej terakhir yang disimpan kekal kelihatan. Mesej yang belum dikumpulkan kekal kelihatan.",
   "STMemoryBooks_SlothCommandHelp": "Membuka pelan pengumpulan yang sama.",
   "STMemoryBooks_SlothCustomProfile": "Cipta profil AI tersuai",
   "STMemoryBooks_SlothHideAfter": "Sembunyikan mesej yang sudah disimpan",

@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "Intervalle de collecte",
   "STMemoryBooks_SlothAutoHelp": "Une fois l’intervalle atteint, une nouvelle réponse enregistre les événements terminés dans les discussions avec les deux livres liés. Les messages restent visibles.",
   "STMemoryBooks_SlothHideRecent": "Messages collectés récents à garder visibles",
+  "STMemoryBooks_SlothHideHelpTitle": "Comment masquer les messages",
+  "STMemoryBooks_SlothHideHelp": "Si vous choisissez de masquer les messages après la collecte, 0 masque tous les messages enregistrés cette fois-ci. Avec 6, les six derniers messages enregistrés restent visibles. Les messages qui n’ont pas été collectés restent visibles.",
   "STMemoryBooks_SlothCommandHelp": "Ouvre le même plan de collecte.",
   "STMemoryBooks_SlothCustomProfile": "Créer un profil IA personnalisé",
   "STMemoryBooks_SlothHideAfter": "Masquer les messages enregistrés après la collecte",

@@ -11784,9 +11784,24 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       closeSlothIconPicker(e.target,popupElement.querySelector('#stmb-sloth-icon-trigger'));
     }
   },true);
+  popupElement.addEventListener('keydown', e => {
+    const toggle = e.target.closest?.('#stmb-sloth-hide-help-toggle');
+    if (e.key === 'Enter' && toggle) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      toggle.click();
+    }
+  }, true);
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
+    const hideHelpToggle = e.target.closest?.('#stmb-sloth-hide-help-toggle');
+    if (hideHelpToggle) {
+      const help = popupElement.querySelector('#stmb-sloth-hide-help');
+      help.hidden = !help.hidden;
+      hideHelpToggle.setAttribute('aria-expanded', String(!help.hidden));
+      return;
+    }
     const iconTrigger = e.target.closest?.('#stmb-sloth-icon-trigger');
     if (iconTrigger) {
       e.preventDefault();

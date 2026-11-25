@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "收集間隔",
   "STMemoryBooks_SlothAutoHelp": "同時連接兩本世界書的聊天達到間隔後，會在新回覆結束時儲存已完成的事件。訊息會繼續顯示。",
   "STMemoryBooks_SlothHideRecent": "保留顯示的最新已收集訊息數",
+  "STMemoryBooks_SlothHideHelpTitle": "隱藏訊息說明",
+  "STMemoryBooks_SlothHideHelp": "選擇收集後隱藏訊息時，此設定才會生效。設為 0 會隱藏本次儲存的所有訊息。設為 6 會保留最後儲存的六則訊息。尚未收集的訊息仍然可見。",
   "STMemoryBooks_SlothCommandHelp": "開啟相同的收集計畫。",
   "STMemoryBooks_SlothCustomProfile": "建立自訂 AI 設定檔",
   "STMemoryBooks_SlothHideAfter": "收集後隱藏已儲存的聊天訊息",

@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "収集間隔",
   "STMemoryBooks_SlothAutoHelp": "両方のロアブックを接続したチャットで間隔に達すると、新しい応答の後に完結した出来事を保存します。メッセージは表示されたままです。",
   "STMemoryBooks_SlothHideRecent": "収集済みのうち表示を残す最新メッセージ数",
+  "STMemoryBooks_SlothHideHelpTitle": "メッセージ非表示の説明",
+  "STMemoryBooks_SlothHideHelp": "収集後にメッセージを非表示にする場合に適用されます。0 なら今回保存したメッセージをすべて非表示にします。6 なら保存したメッセージのうち最後の6件が表示されたままになります。未収集のメッセージはそのまま表示されます。",
   "STMemoryBooks_SlothCommandHelp": "同じ収集プランを開きます。",
   "STMemoryBooks_SlothCustomProfile": "カスタムAIプロファイルを作成",
   "STMemoryBooks_SlothHideAfter": "保存したメッセージを非表示にする",

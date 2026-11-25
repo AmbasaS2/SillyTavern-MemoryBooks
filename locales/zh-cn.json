@@ -82,6 +82,8 @@
   "STMemoryBooks_SlothAutoInterval": "收集间隔",
   "STMemoryBooks_SlothAutoHelp": "同时连接两本设定集的聊天达到间隔后，将在新回复结束时保存已完成的事件。消息会继续显示。",
   "STMemoryBooks_SlothHideRecent": "保留可见的最新已收集消息数",
+  "STMemoryBooks_SlothHideHelpTitle": "隐藏消息说明",
+  "STMemoryBooks_SlothHideHelp": "选择收集后隐藏消息时，此设置才会生效。设为 0 会隐藏本次保存的所有消息。设为 6 会保留最后保存的六条消息。尚未收集的消息仍然可见。",
   "STMemoryBooks_SlothCommandHelp": "打开相同的收集计划。",
   "STMemoryBooks_SlothCustomProfile": "创建自定义 AI 配置",
   "STMemoryBooks_SlothHideAfter": "收集后隐藏已保存的聊天消息",
