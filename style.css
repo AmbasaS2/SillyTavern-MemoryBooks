@@ -1282,6 +1282,17 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     display: flex; align-items: center; flex-wrap: wrap; gap: 0 3px; min-width: 0;
 }
 .popup.stmb-popup .stmb-sloth-help-row > label { margin: 0; }
+/* Keep help glyphs compact; the existing transparent button chrome is unchanged. */
+.popup.stmb-popup #stmb-sloth-panel .stmb-sloth-info {
+    min-width: 16px; min-height: 24px; padding: 0 1px; font-size: .8em;
+}
+.popup.stmb-popup .stmb-sloth-select-row > .stmb-sloth-help-row {
+    flex-wrap: nowrap;
+}
+.popup.stmb-popup .stmb-sloth-select-row > .stmb-sloth-help-row > label {
+    min-width: 0; overflow-wrap: anywhere;
+}
+
 
 .popup.stmb-popup .stmb-side-cards { display: grid; gap: 6px; min-width: 0; }
 .popup.stmb-popup .stmb-side-row.stmb-prompt-library {

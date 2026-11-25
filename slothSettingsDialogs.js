@@ -9,7 +9,7 @@ import { escapeHtml } from '../../../utils.js';
 import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
 import { SLOTH_DEFAULT_SUMMARY_PROMPT } from './nexusSlothScenePrompt.js';
 import { getSlothSideDestination, getSlothSidePresets, getSlothSideRecall,
-    isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK } from './slothSidePrompts.js';
+    isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK, slothSideBookName } from './slothSidePrompts.js';
 import { getActiveNexusRoleContext } from './nexusCharacterRolesRuntime.js';
 import { getCurrentStmbChatRef, getStmbChatKey } from './stmbJobs.js';
 import { getSlothSideContinuationOptions } from './nexusCollectorRuntime.js';
@@ -46,7 +46,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const icon = (name,glyph,label) => actionButton(name,glyph,label);
     const bookLabel=t('Save to lorebook','SlothSideDestination');
     const unassignedBook=t('Choose a lorebook','SlothUnassigned');
-    const automaticBook=t('Little Things (create if needed)','SlothSideAutoBook');
+    const automaticBook=()=>t('Create lorebook [{{book}}]','SlothSideAutoBook').replace('{{book}}',()=>destination.automaticName());
     const entryLabel=t('Entry to continue','SlothSideEntryTarget');
     const automaticEntry=t('Find matching entry automatically','SlothSideAutoEntry');
     const editButtons = icon('save','fa-floppy-disk',t('Save','Save')) +
@@ -137,7 +137,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const books=destination.books();
         if(book&&!books.includes(book))books.push(book);
         bookSelect.replaceChildren(new Option(unassignedBook,''), ...books.map(name=>new Option(name,name)),
-            new Option(automaticBook,SLOTH_CREATE_SIDE_BOOK));
+            new Option(automaticBook(),SLOTH_CREATE_SIDE_BOOK));
         bookSelect.value=create ? SLOTH_CREATE_SIDE_BOOK : book;
         entryButton.hidden=!destination.enabled||!book;
         entryButton.textContent=entryLabel+(entry ? ' · '+entry.title : '');
@@ -145,7 +145,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const info=find('destination-help-toggle');
         const helpText=!destination.enabled
             ? t('Open a character chat to choose a lorebook.','SlothSideOpenChat')
-            : create ? t('The first approved save connects Little Things to this character.','SlothSideAutoBookHelp')
+            : create ? t('The first approved save creates and links the Side Prompt lorebook, or reuses this character’s existing dedicated lorebook.','SlothSideAutoBookHelp')
             : book ? t('Existing lorebook links stay as configured. Choose an entry to continue an older record.','SlothSideExistingBookHelp')
             : '';
         if(help.textContent!==helpText) {
@@ -366,6 +366,7 @@ export function mountSlothSidePromptSettings(target,settings) {
     const destination={
         enabled,
         books:()=>[...new Set(getActiveNexusRoleContext(settings).worldNames)],
+        automaticName:()=>slothSideBookName(getActiveNexusRoleContext(settings).character, [], '', t('MemoryBook Side Prompt','SlothSideBookSuffix')),
         get:id=>getSlothSideDestination(settings,id,ref),
         setBook:async(id,book)=>{
             verifyChat();
@@ -508,9 +509,9 @@ export function mountSlothSidePromptSettings(target,settings) {
         const choice=destination.get(record.id);
         return isSlothSideLinked(settings,record.id,ref)||choice.book||choice.create;
     }).map(record=>record.id);
-    (selected.length?selected:['']).forEach((id,index)=>{
+    (selected.length?selected:['']).forEach(id=>{
         const record=rows.some(row=>row.record?.id===id)?null:available.find(item=>item.id===id);
-        addCard(record||null,index===0);
+        addCard(record||null,false);
     });
     add.addEventListener('click',async()=>{
         add.disabled=true;

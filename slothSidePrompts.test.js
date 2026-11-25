@@ -53,11 +53,12 @@ test('the canonical Diary uses character-specific books and chat-specific contin
     assert.ok(!canContinueSlothSideEntry({ ...record, comment: 'Core Memory' }, SLOTH_DIARY_ID, ref));
 });
 
-test('Little Things has a character-readable name and does not take an unrelated existing name', () => {
+test('Dedicated Side Prompt books have character-readable names and avoid unrelated existing names', () => {
     const character = { name: '캐서린 / Mira' };
-    assert.equal(slothSideBookName(character, [], 'ababcd'), 'Little Things - 캐서린 Mira');
-    assert.equal(slothSideBookName(character, ['little things - 캐서린 mira'], 'ababcd'),
-        'Little Things - 캐서린 Mira - ababcd');
+    assert.equal(slothSideBookName(character, [], 'ababcd'), '캐서린 Mira-MemoryBook Side Prompt');
+    assert.equal(slothSideBookName(character, ['캐서린 mira-memorybook side prompt'], 'ababcd'),
+        '캐서린 Mira-MemoryBook Side Prompt - ababcd');
+    assert.equal(slothSideBookName(character, [], '', '메모리북 사이드 프롬프트'), '캐서린 Mira-메모리북 사이드 프롬프트');
     assert.equal(slothSideBookOwner({ extensions: { stmbSlothSideBook: { version: 1, avatar: 'mira.png' } } }), 'mira.png');
     assert.equal(slothSideBookOwner({ extensions: { stmbSlothSideBook: { version: 2, avatar: 'mira.png' } } }), '');
 });

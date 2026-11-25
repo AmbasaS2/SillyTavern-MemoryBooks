@@ -114,10 +114,10 @@ export function canContinueSlothSideEntry(entry, presetId, ref) {
     return !chatId || String(chatId).replace(/\.jsonl$/iu, '') === ref.fileName;
 }
 
-export function slothSideBookName(character, names, suffix) {
+export function slothSideBookName(character, names = [], suffix = '', bookSuffix = 'MemoryBook Side Prompt') {
     const label = String(character?.name || 'Character').normalize('NFC')
         .replace(/[<>:"/\\|?*\u0000-\u001F]/gu, ' ').replace(/\s+/gu, ' ').trim();
-    const base = 'Little Things - ' + (Array.from(label).slice(0, 36).join('') || 'Character');
+    const base = (Array.from(label).slice(0, 36).join('') || 'Character') + '-' + bookSuffix;
     const folded = value => String(value).normalize('NFKC').toLowerCase();
     return names.some(name => folded(name) === folded(base)) ? base + ' - ' + suffix : base;
 }

@@ -242,8 +242,11 @@ function sidePromptCheckboxes(presets, label) {
     return '<fieldset class="stmb-sloth-side-choices"><legend>' + html(label) + '</legend>' +
         presets.map(preset => {
             const { book } = preset.destination;
+            const destinationLabel = book || t('Create lorebook [{{book}}]', 'STMemoryBooks_SlothSideAutoBook')
+                .replace('{{book}}', () => slothSideBookName(getActiveNexusRoleContext().character, [], '',
+                    t('MemoryBook Side Prompt', 'STMemoryBooks_SlothSideBookSuffix')));
             return '<label class="checkbox_label"><input type="checkbox" name="stmb-side-prompt" value="' +
-                html(preset.id) + '"><span>' + html(sidePromptName(preset) + ' · ' + (book || 'Little Things')) + '</span></label>';
+                html(preset.id) + '"><span>' + html(sidePromptName(preset) + ' · ' + destinationLabel) + '</span></label>';
         }).join('') + '</fieldset>';
 }
 
@@ -272,15 +275,16 @@ async function resolveSlothSideBook(ref, books, {book: selected, create}, signal
     }
     if (!create) throw new Error('Choose a lorebook for this Side Prompt.');
     const owned = books.filter(book => slothSideBookOwner(book) === ref.avatarUrl);
-    if (owned.length > 1) throw new Error('More than one Little Things lorebook is linked to this character.');
+    if (owned.length > 1) throw new Error('More than one dedicated Side Prompt lorebook is linked to this character.');
     if (owned.length) {
         const name = owned[0].file_id;
         const original = await loadServerWorld(name, signal);
-        if (slothSideBookOwner(original) !== ref.avatarUrl) throw new Error('Little Things ownership changed.');
+        if (slothSideBookOwner(original) !== ref.avatarUrl) throw new Error('Side Prompt lorebook ownership changed.');
         return { name, original, isNew: false, autoLink: true };
     }
     const suffix = Array.from(crypto.getRandomValues(new Uint8Array(3)), byte => byte.toString(16).padStart(2, '0')).join('');
-    const name = slothSideBookName(getActiveNexusRoleContext().character, books.map(book => book.file_id), suffix);
+    const name = slothSideBookName(getActiveNexusRoleContext().character, books.map(book => book.file_id), suffix,
+        t('MemoryBook Side Prompt', 'STMemoryBooks_SlothSideBookSuffix'));
     return { name, original: { entries: {}, extensions: { stmbSlothSideBook: { version: 1, avatar: ref.avatarUrl } } },
         isNew: true, autoLink: true };
 }
@@ -301,7 +305,7 @@ async function ensureSlothSideBookLink(ref, name, verifyOrigin) {
     await saveSettings();
     const stored = await readNexusSetupSettings();
     if (!getLinkedCharacterWorlds({ character, worldInfo: stored.world }).includes(name)) {
-        throw new Error('Little Things was saved, but its character link could not be verified.');
+        throw new Error('The Side Prompt lorebook was saved, but its character link could not be verified.');
     }
 }
 
@@ -316,7 +320,7 @@ async function saveSlothSideBook({ ref, destination, staged, verifyOrigin }) {
             verifyUnbound: async () => {
                 if ((await listSlothSideBooks()).some(book =>
                     slothSideBookOwner(book) === ref.avatarUrl && book.file_id !== name)) {
-                    throw new Error('Little Things was already created in another session. Try again.');
+                    throw new Error('The dedicated Side Prompt lorebook was already created in another session. Try again.');
                 }
             },
         })
