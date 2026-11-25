@@ -21,15 +21,18 @@ export const settingsTemplate = Handlebars.compile(`
         <section id="stmb-sloth-panel" class="stmb-tab-panel" role="tabpanel" aria-labelledby="stmb-sloth-tab">
         {{#unless isGroupChat}}
         <details id="stmb-sloth-lorebooks" open class="stmb-sloth-roles stmb-box stmb-workspace-drawer" aria-labelledby="stmb-sloth-roles-title">
-          <summary id="stmb-sloth-roles-title" data-i18n="STMemoryBooks_SlothRolesTitle">Lorebook setup</summary>
+          <summary id="stmb-sloth-roles-title">
+            <span data-i18n="STMemoryBooks_SlothRolesTitle">Lorebook setup</span>
+            {{#if slothCharacterAvailable}}{{#if slothLinkedBooksAvailable}}{{#unless slothRoleActive}}<button type="button" id="stmb-sloth-roles-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-roles-help" aria-label="Lorebook setup" data-i18n="[aria-label]STMemoryBooks_SlothRolesTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>{{/unless}}{{else}}{{#if slothFirstSetup}}<button type="button" id="stmb-sloth-roles-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-roles-help" aria-label="Lorebook setup" data-i18n="[aria-label]STMemoryBooks_SlothRolesTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>{{/if}}{{/if}}{{/if}}
+          </summary>
           {{#if slothCharacterAvailable}}
             {{#if slothLinkedBooksAvailable}}
               {{#unless slothRoleActive}}
-                <p data-i18n="STMemoryBooks_SlothRolesDescription">Choose the existing books to use for Nexus and Memory.</p>
+                <small id="stmb-sloth-roles-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothRolesDescription" hidden>Choose the existing books to use for Nexus and Memory.</small>
               {{/unless}}
             {{else}}
               {{#if slothFirstSetup}}
-              <p data-i18n="STMemoryBooks_SlothNoBooksYet">Nexus and Memory will be created and linked when you confirm your first collection.</p>
+              <small id="stmb-sloth-roles-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothNoBooksYet" hidden>Nexus and Memory will be created and linked when you confirm your first collection.</small>
               {{else}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
               {{/if}}
@@ -87,11 +90,14 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
             {{/if}}
             {{#if slothChatOverrideAvailable}}
-            <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
-              <input id="stmb-sloth-chat-override" type="checkbox" {{#if slothChatOverrideActive}}checked{{/if}}>
-              <span data-i18n="STMemoryBooks_SlothChatOverride">Choose books for this chat only</span>
-            </label>
-            <small data-i18n="STMemoryBooks_SlothChatOverrideHelp">Other chats still use the character's default books.</small>
+            <div class="stmb-sloth-help-row">
+              <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-chat-override">
+                <input id="stmb-sloth-chat-override" type="checkbox" aria-describedby="stmb-sloth-chat-override-help" {{#if slothChatOverrideActive}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_SlothChatOverride">Choose books for this chat only</span>
+              </label>
+              <button type="button" id="stmb-sloth-chat-override-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-chat-override-help" aria-label="Choose books for this chat only" data-i18n="[aria-label]STMemoryBooks_SlothChatOverride"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+            </div>
+            <small id="stmb-sloth-chat-override-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothChatOverrideHelp" hidden>Other chats still use the character's default books.</small>
             {{/if}}
             {{#if slothChatOverrideInvalid}}
             <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
@@ -123,38 +129,44 @@ export const settingsTemplate = Handlebars.compile(`
                 {{/each}}
             </select>
         </label>
-        <label for="stmb-sloth-memory-recall" class="stmb-sloth-select-row">
-          <span data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory conversion</span>
-          <select id="stmb-sloth-memory-recall" class="text_pole">
+        <div class="stmb-sloth-select-row">
+          <span class="stmb-sloth-help-row"><label for="stmb-sloth-memory-recall" data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory conversion</label>
+          <button type="button" id="stmb-sloth-native-recall-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-native-recall-help" aria-label="Older memory conversion" data-i18n="[aria-label]STMemoryBooks_SlothMemoryRecall"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></span>
+          <select id="stmb-sloth-memory-recall" class="text_pole" aria-describedby="stmb-sloth-native-recall-help">
             <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
             <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
           </select>
-        </label>
-        <small id="stmb-sloth-native-recall-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp">The next collection converts older memories to the selected type. The latest three stay always on.</small>
-        <label class="checkbox_label">
-          <input id="stmb-sloth-summary-review" type="checkbox" aria-describedby="stmb-sloth-summary-review-help" {{#if slothSummaryReview}}checked{{/if}}>
-          <span data-i18n="STMemoryBooks_SlothSummaryReview">Review and retry summaries</span>
-        </label>
-        <small id="stmb-sloth-summary-review-help" data-i18n="STMemoryBooks_SlothSummaryReviewHelp">Check for major omissions or distortions and repair them with up to one extra AI request.</small>
+        </div>
+        <small id="stmb-sloth-native-recall-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp" hidden>The next collection converts older memories to the selected type. The latest three stay always on.</small>
+        <div class="stmb-sloth-help-row">
+          <label class="checkbox_label">
+            <input id="stmb-sloth-summary-review" type="checkbox" aria-describedby="stmb-sloth-summary-review-help" {{#if slothSummaryReview}}checked{{/if}}>
+            <span data-i18n="STMemoryBooks_SlothSummaryReview">Review and retry summaries</span>
+          </label>
+          <button type="button" id="stmb-sloth-summary-review-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-summary-review-help" aria-label="Review and retry summaries" data-i18n="[aria-label]STMemoryBooks_SlothSummaryReview"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+        </div>
+        <small id="stmb-sloth-summary-review-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSummaryReviewHelp" hidden>Check for major omissions or distortions and repair them with up to one extra AI request.</small>
         <div data-stmb-prompt-library-slot="summary"></div>
         </details>
         {{/if}}
         {{#if slothCanCollect}}
         <section class="stmb-workspace-panel stmb-collection" aria-labelledby="stmb-collection-title">
           <div class="stmb-collection-action">
-            <h3 id="stmb-collection-title" data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</h3>
+            <h3 id="stmb-collection-title"><span data-i18n="STMemoryBooks_SlothCollectionTitle">Collect memories</span> <button type="button" id="stmb-sloth-manual-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-manual-help" aria-label="Collect memories" data-i18n="[aria-label]STMemoryBooks_SlothCollectionTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></h3>
+            <div id="stmb-sloth-manual-help" class="stmb-sloth-help" hidden>
             <p data-i18n="STMemoryBooks_SlothManualHelp">The AI finds events to summarize in messages you have not collected yet.</p>
             <ol class="stmb-collection-steps">
               <li data-i18n="STMemoryBooks_SlothCollectStepRange">Check the collection range and number of memories.</li>
               <li data-i18n="STMemoryBooks_SlothCollectStepHide">Choose whether to hide the saved messages.</li>
               <li data-i18n="STMemoryBooks_SlothCollectStepSave">Confirm to start writing and saving the summaries.</li>
             </ol>
+            </div>
             <button type="button" class="menu_button" data-stmb-sloth-action="collect" data-i18n="STMemoryBooks_SlothCollectButton">Collect memories</button>
           </div>
         </section>
         {{/if}}
         <details id="stmb-sloth-auto" class="stmb-workspace-panel stmb-workspace-drawer">
-          <summary data-i18n="STMemoryBooks_SlothAutoTitle">Automatic collection</summary>
+          <summary><span data-i18n="STMemoryBooks_SlothAutoTitle">Automatic collection</span> <button type="button" id="stmb-sloth-auto-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-auto-help" aria-label="Automatic collection" data-i18n="[aria-label]STMemoryBooks_SlothAutoTitle"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></summary>
           <div class="stmb-sloth-auto-fields">
             <label class="checkbox_label">
               <input id="stmb-sloth-auto-enabled" type="checkbox" {{#if slothAutoEnabled}}checked{{/if}}>
@@ -171,18 +183,18 @@ export const settingsTemplate = Handlebars.compile(`
               <span data-i18n="STMemoryBooks_SlothAutoInterval">Collect every</span>
               <input id="stmb-sloth-auto-interval" type="number" min="1" max="{{slothAutoIntervalMax}}" class="text_pole" value="{{slothAutoInterval}}">
             </label>
-            <small data-i18n="STMemoryBooks_SlothAutoHelp">In chats with Nexus and Memory linked, completed events are saved after a reply once enough unsaved messages accumulate. Messages stay visible.</small>
+            <small id="stmb-sloth-auto-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothAutoHelp" hidden>In chats with Nexus and Memory linked, completed events are saved after a reply once enough unsaved messages accumulate. Messages stay visible.</small>
           </div>
         </details>
         <details id="stmb-sloth-side-prompts" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-side-title">
           <summary id="stmb-sloth-side-title">
             <span data-i18n="STMemoryBooks_Compaction_TypeSidePrompt">Side Prompt</span>
-            <button type="button" id="stmb-sloth-side-help-toggle" class="menu_button" aria-expanded="false" aria-controls="stmb-sloth-side-help"
+            <button type="button" id="stmb-sloth-side-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-side-help"
               aria-label="Side Prompt help" data-i18n="[aria-label]STMemoryBooks_SlothSideHelpTitle">
               <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
             </button>
           </summary>
-          <small id="stmb-sloth-side-help" data-i18n="STMemoryBooks_SlothSidePromptHelp" hidden>Checked Side Prompts are linked only to the current character, not automatically to other characters. Choose a destination lorebook for each prompt.</small>
+          <small id="stmb-sloth-side-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSidePromptHelp" hidden>Checked Side Prompts are linked only to the current character, not automatically to other characters. Choose a destination lorebook for each prompt.</small>
           <div data-stmb-prompt-library-slot="side"></div>
           <div class="stmb-sloth-controls">
             {{#if slothRoleActive}}
@@ -195,15 +207,15 @@ export const settingsTemplate = Handlebars.compile(`
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
               <div class="stmb-management-action">
-              <button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button>
-              <small data-i18n="STMemoryBooks_SlothMergeHelp">Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
+              <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+              <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
               </div><div class="stmb-management-action">
-              <button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button>
-              <small data-i18n="STMemoryBooks_SlothSplitHelp">Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
+              <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button> <button type="button" id="stmb-sloth-split-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-split-help" aria-label="Review splitting a Scene" data-i18n="[aria-label]STMemoryBooks_SlothSplitButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+              <small id="stmb-sloth-split-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSplitHelp" hidden>Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
               </div>
               <div class="stmb-management-action">
-                <button type="button" class="menu_button" data-stmb-sloth-action="compress" data-i18n="STMemoryBooks_SlothCompress">Shorten an event</button>
-                <small data-i18n="STMemoryBooks_SlothCompressHelp">Choose what to keep and review the shorter memory.</small>
+                <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="compress" data-i18n="STMemoryBooks_SlothCompress">Shorten an event</button> <button type="button" id="stmb-sloth-compress-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-compress-help" aria-label="Shorten an event" data-i18n="[aria-label]STMemoryBooks_SlothCompress"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+                <small id="stmb-sloth-compress-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothCompressHelp" hidden>Choose what to keep and review the shorter memory.</small>
               </div>
             </div>
           </details>
@@ -224,7 +236,7 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
             <div class="stmb-sloth-inline-field stmb-sloth-icon-field">
               <span id="stmb-sloth-composer-icon-label" data-i18n="STMemoryBooks_SlothComposerIcon">Collect button icon</span>
-              <button type="button" id="stmb-sloth-icon-trigger" class="menu_button" aria-labelledby="stmb-sloth-composer-icon-label"
+              <button type="button" id="stmb-sloth-icon-trigger" class="stmb-sloth-icon-only" aria-labelledby="stmb-sloth-composer-icon-label"
                 aria-expanded="false" aria-controls="stmb-sloth-icon-popover" title="{{slothComposerIcon.title}}">
                 <i class="fa-solid fa-{{slothComposerIcon.id}}" aria-hidden="true"></i>
               </button>
@@ -252,12 +264,12 @@ export const settingsTemplate = Handlebars.compile(`
                 <span data-i18n="STMemoryBooks_SlothHideRecent">Recent collected messages to keep visible</span>
                 <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">
               </label>
-              <button id="stmb-sloth-hide-help-toggle" type="button" class="menu_button"
+              <button id="stmb-sloth-hide-help-toggle" type="button" class="stmb-sloth-info"
                 aria-expanded="false" aria-controls="stmb-sloth-hide-help" aria-label="How hiding works"
                 data-i18n="[aria-label]STMemoryBooks_SlothHideHelpTitle">
                 <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
               </button>
-              <small id="stmb-sloth-hide-help" data-i18n="STMemoryBooks_SlothHideHelp" hidden>
+              <small id="stmb-sloth-hide-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothHideHelp" hidden>
                 When you choose to hide messages after collection, 0 hides everything saved in that run. 6 keeps the last six saved messages visible. Messages that were not saved stay visible.
               </small>
             </div>

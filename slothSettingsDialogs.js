@@ -76,11 +76,13 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
             <option value="vector">${html(t('Vector','NexusRecallVector'))}</option>
             <option value="keyword">${html(t('Keywords','SlothRecallKeywords'))}</option>
           </select></label>`:''}
-        ${destination?`<label class="stmb-sloth-inline-field" for="${id('book')}">${html(bookLabel)}
-          <select id="${id('book')}" class="text_pole"></select></label>`:''}
+        ${destination?`<div class="stmb-sloth-destination-field">
+          <span class="stmb-sloth-help-row"><label for="${id('book')}">${html(bookLabel)}</label>
+          <button type="button" class="stmb-sloth-info" id="${id('destination-help-toggle')}" aria-expanded="false" aria-controls="${id('destination-help')}" aria-label="${html(bookLabel)}" hidden><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></span>
+          <select id="${id('book')}" class="text_pole" aria-describedby="${id('destination-help')}"></select></div>`:''}
         ${card?'</div>':''}
         ${destination?`<button type="button" class="menu_button stmb-sloth-side-target" id="${id('entry')}" hidden></button>
-          <small id="${id('destination-help')}"></small>`:''}
+          <small class="stmb-sloth-help" id="${id('destination-help')}" hidden></small>`:''}
         <small class="stmb-prompt-status" id="${id('status')}" role="status" aria-live="polite"></small>
         <input type="file" id="${id('file')}" accept=".json,application/json" hidden>
         ${card?'</div>':''}`);
@@ -139,11 +141,19 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         bookSelect.value=create ? SLOTH_CREATE_SIDE_BOOK : book;
         entryButton.hidden=!destination.enabled||!book;
         entryButton.textContent=entryLabel+(entry ? ' · '+entry.title : '');
-        find('destination-help').textContent=!destination.enabled
+        const help=find('destination-help');
+        const info=find('destination-help-toggle');
+        const helpText=!destination.enabled
             ? t('Open a character chat to choose a lorebook.','SlothSideOpenChat')
             : create ? t('The first approved save connects Little Things to this character.','SlothSideAutoBookHelp')
             : book ? t('Existing lorebook links stay as configured. Choose an entry to continue an older record.','SlothSideExistingBookHelp')
             : '';
+        if(help.textContent!==helpText) {
+            help.textContent=helpText;
+            help.hidden=true;
+            info.setAttribute('aria-expanded','false');
+        }
+        info.hidden=!helpText;
     };
     const renderChoices=()=>{
         const choices=card?[empty,...card.choices()]:records;
@@ -395,23 +405,6 @@ export function mountSlothSidePromptSettings(target,settings) {
         if(params.slothSideRecallModes)delete params.slothSideRecallModes[id];
         await saveSettings();
     };
-    const section=target.closest('#stmb-sloth-side-prompts');
-    const info=section?.querySelector('#stmb-sloth-side-help-toggle');
-    const help=section?.querySelector('#stmb-sloth-side-help');
-    if(info&&help) {
-        const setHelp=visible=>{
-            help.hidden=!visible;
-            info.setAttribute('aria-expanded',String(visible));
-        };
-        info.addEventListener('click',event=>{
-            event.preventDefault();
-            event.stopPropagation();
-            const visible=help.hidden;
-            if(visible)section.open=true;
-            setHelp(visible);
-        });
-        section.addEventListener('toggle',()=>{if(!section.open)setHelp(false);});
-    }
     const list=document.createElement('div');
     list.className='stmb-side-cards';
     const add=document.createElement('button');

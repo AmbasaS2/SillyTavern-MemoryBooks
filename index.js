@@ -11783,9 +11783,17 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     if (e.target.id === 'stmb-sloth-icon-popover' && e.newState === 'closed') {
       closeSlothIconPicker(e.target,popupElement.querySelector('#stmb-sloth-icon-trigger'));
     }
+    if (e.target.matches?.('#stmb-sloth-panel details:not([open])')) {
+      const info = e.target.querySelector(':scope > summary .stmb-sloth-info');
+      const help = info && popupElement.querySelector('#' + CSS.escape(info.getAttribute('aria-controls')));
+      if (help) {
+        help.hidden = true;
+        info.setAttribute('aria-expanded', 'false');
+      }
+    }
   },true);
   popupElement.addEventListener('keydown', e => {
-    const toggle = e.target.closest?.('#stmb-sloth-hide-help-toggle');
+    const toggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info');
     if (e.key === 'Enter' && toggle) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -11795,11 +11803,17 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
-    const hideHelpToggle = e.target.closest?.('#stmb-sloth-hide-help-toggle');
-    if (hideHelpToggle) {
-      const help = popupElement.querySelector('#stmb-sloth-hide-help');
-      help.hidden = !help.hidden;
-      hideHelpToggle.setAttribute('aria-expanded', String(!help.hidden));
+    const infoToggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info');
+    if (infoToggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      const help = popupElement.querySelector('#' + CSS.escape(infoToggle.getAttribute('aria-controls')));
+      if (!help) return;
+      const visible = help.hidden;
+      const drawer = infoToggle.closest('summary')?.parentElement;
+      if (visible && drawer?.tagName === 'DETAILS') drawer.open = true;
+      help.hidden = !visible;
+      infoToggle.setAttribute('aria-expanded', String(visible));
       return;
     }
     const iconTrigger = e.target.closest?.('#stmb-sloth-icon-trigger');
