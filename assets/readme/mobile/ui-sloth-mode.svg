@@ -4,8 +4,8 @@
 <rect x="0" y="0" width="480" height="287" rx="13" fill="#f0f3f3"/>
 <rect x="12" y="12" width="456" height="263" rx="12" fill="#ffffff" stroke="#d9e0e5" stroke-width="1"/>
 <path d="M27 31h7l1 2 1-2h7v15h-7l-1 2-1-2h-7z M35 33v15" fill="none" stroke="#a07b50" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="55" y="35" font-size="18" font-weight="650" fill="#293440" text-anchor="start">게으름뱅이 메모리북</text>
-<text x="55" y="53" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Memory Books: Sloth</text>
+<text x="55" y="35" font-size="18" font-weight="650" fill="#293440" text-anchor="start">게으름뱅이의 메모리북</text>
+<text x="55" y="53" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Sloth's Memory Books</text>
 <path d="M440 33l10 10m0 -10l-10 10" fill="none" stroke="#687681" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
 <path d="M24 66L456 66" fill="none" stroke="#d9e0e5" stroke-width="1" stroke-linecap="round"/>
 <text x="28" y="93" font-size="16" font-weight="650" fill="#293440" text-anchor="start">Seraphina</text>
