@@ -3,11 +3,11 @@ Copyright (C) 2024–2026 Aiko Hanasaki
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# 📕 Memory Books
+# 📕 Memory Books: Sloth
 
 Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTavern-MemoryBooks). This fork integrates my Sloth (게으름뱅이) memory workflow into Memory Books while retaining the original tools in a separate tab. **Usage mode is selected per character; tabs only switch the settings view.**
 
-[한국어 안내 ↓](#-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
+[한국어 안내 ↓](#-게으름뱅이-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
 
 ## 📥 Installation
 
@@ -31,7 +31,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## ⚡ Quick start
 
-**Current version: 9.4.0-ambasa.1.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
+**Current version: 9.4.0-ambasa.2.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
 
 <details>
 <summary>View the workflow</summary>
@@ -42,7 +42,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 **Set up once**
 
-1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books → Usage mode → Sloth (default). Group chats use Original mode.
+1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books: Sloth → Usage mode → Sloth (default). Group chats use Original mode.
 2. Assign distinct Nexus and Memory books or create them on approved first collection if no books are linked. Use chat-only assignments for different AU histories.
 3. Select a collection AI profile, choose Keyword or Vector for older scenes, and leave automatic collection off for your first try. Vector recall requires native vector setup.
 **During everyday RP**
@@ -52,9 +52,9 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## 📖 How to use
 
-### 1. Set up Memory Books once
+### 1. Set up Memory Books: Sloth once
 
-Reload and open an individual character chat. Open **Memory Books** from the extension menu. Check **Usage mode (this character) → For 게으름뱅이 🦥** (default in one-to-one chats), then open the Sloth settings tab. Run only one Memory Books installation at a time.
+Reload and open an individual character chat. Open **Memory Books: Sloth** from the extension menu. Check **Usage mode (this character) → For 게으름뱅이 🦥** (default in one-to-one chats), then open the Sloth settings tab. Run only one Memory Books installation at a time.
 
 **The mode selector controls what runs; the two tabs only change the visible settings.** Switching mode keeps existing settings, lorebooks and previously hidden messages. Original workflow operations and automatic collection are mode-gated.
 
@@ -94,7 +94,7 @@ Start with the built-in Sloth prompt. View it, copy it to customize the instruct
 
 <p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="Collect and rotate memories / 기억 수집 흐름" width="860" /></p>
 
-1. Press the collection icon in the chat input row, **Collect memories** in Memory Books, or `/sloth-collect`. Confirm the available message range to start analysis.
+1. Press the collection icon in the chat input row, **Collect memories** in Memory Books: Sloth, or `/sloth-collect`. Confirm the available message range to start analysis.
 2. The collection AI reads the not-yet-collected messages and proposes completed events. Check the suggested ranges and number of memories. Incomplete events can remain for a later collection.
 3. Choose whether to hide the successfully saved messages from the AI's active chat context, then approve. The AI writes and saves the scene memories and relevant Nexus updates. Incomplete or unverifiable outputs may be retried or skipped; check the saved memories.
 4. Continue your RP. The latest three completed scenes stay active; older ones become keyword or vector entries according to your settings. Their full stored memory text is retained.
@@ -129,22 +129,24 @@ Show or hide the collection icon, place it next to Extensions or Send, choose it
 **Original Memory Books**  
 Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools.
 
-Memory Books saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [the STLO fork](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [the Lorebook Manager fork](https://github.com/AmbasaS2/lore-manager). Both are optional.
+Memory Books: Sloth saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [Lorebook Ordering: Curator](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [Lorebook Manager: Reading Nook](https://github.com/AmbasaS2/lore-manager). Both are optional.
 
 Collection, review, and side-prompt generation use AI requests; their cost and results depend on your provider, model, and chat size. Saved memories and chat excerpts may be sent to the selected AI provider. Back up existing data before switching or changing book assignments.
 
 ## 🧩 Works well with
 
 > [!TIP]
-> Memory Books works on its own with native keyword/vector recall. Optional STLO selects existing lore with Jev and budgets; WorldInfo Info shows what activated; Lorebook Manager provides a reading library. None is required.
+> Memory Books: Sloth works on its own with native keyword/vector recall. Optional Lorebook Ordering: Curator selects existing lore with Jev and budgets; WorldInfo Info: Insight shows what activated; Lorebook Manager: Reading Nook provides a reading library. None is required.
 
-[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
+[Lorebook Ordering: Curator / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager: Reading Nook / 로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info: Insight / 월드인포인포 인사이트](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 The detailed sections below explain optional settings. Compatibility is version-dependent; it does not guarantee every third-party extension or device.
 
 ---
 
-# 📕 메모리북
+<a id="-메모리북"></a>
+
+# 📕 게으름뱅이 메모리북
 
 [원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이 메모리북 시스템을 확장 자체에 넣은 포크입니다. 1:1 캐릭터는 기본적으로 게으름뱅이 모드입니다. **사용 모드 (현재 캐릭터)**가 실제 동작을 결정하며 탭은 설정 화면만 바꿉니다. 기존 메모리북을 사용하려면 사용 모드에서 선택하세요.
 
@@ -167,11 +169,11 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## ⚡ 간단 사용 설명
 
-**현재 버전: 9.4.0-ambasa.1.** 롤플이 길어져도 사건과 지금의 관계를 잊지 않도록 Nexus(핵심 정보와 현재 상태)와 Memory(완료된 사건)를 분리해 저장합니다. 실제 호출은 실리태번이 담당합니다. 원본 모드는 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
+**현재 버전: 9.4.0-ambasa.2.** 롤플이 길어져도 사건과 지금의 관계를 잊지 않도록 Nexus(핵심 정보와 현재 상태)와 Memory(완료된 사건)를 분리해 저장합니다. 실제 호출은 실리태번이 담당합니다. 원본 모드는 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
 
 **처음 한 번만 설정하기**
 
-1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → Memory Books → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
+1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → 게으름뱅이 메모리북 → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
 2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 승인 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
 3. 수집 AI 프로필과 이전 기억의 키워드/벡터 전환 방식을 고릅니다. 첫 수집은 자동 수집을 끄고 수동으로 해 보세요. 벡터는 ST 자체 설정이 필요합니다.
 **평소 롤플할 때**
@@ -181,9 +183,9 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## 📖 사용 설명서
 
-### 1. 처음 한 번: 메모리북 설정
+### 1. 처음 한 번: 게으름뱅이 메모리북 설정
 
-1:1 캐릭터 채팅 → 확장 메뉴 → **Memory Books** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
+1:1 캐릭터 채팅 → 확장 메뉴 → **게으름뱅이 메모리북** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
 
 **모드와 탭은 다릅니다.** 모드를 변경해도 기존 로어북과 설정은 유지되며, 이전에 Hide한 메시지는 자동으로 복원되지 않습니다.
 
@@ -263,14 +265,14 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 ## 🧩 함께 쓰면 좋은 확장
 
 > [!TIP]
-> 메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. STLO는 선택형 Jev와 예산 관리, 월드인포인포는 발동 확인, 로어북 매니저는 독립 서재를 제공합니다. 모두 선택입니다.
+> 게으름뱅이 메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. 로어북 예산 관리기는 선택형 Jev와 예산 관리, 월드인포인포 인사이트는 발동 확인, 로어북 매니저 리딩 누크는 독립 서재를 제공합니다. 모두 선택입니다.
 
-[STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager / 로어북 매니저](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info / 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
+[Lorebook Ordering: Curator / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager: Reading Nook / 로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info: Insight / 월드인포인포 인사이트](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 아래에서 필요한 설정만 자세히 읽으세요. 지원 버전 기준이며 모든 기기·다른 확장 조합을 보장하는 것은 아닙니다.
 
-- **[STLO 포크](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)**: 메모리북의 토큰 예산을 제한하고 상시 기억을 보호하거나, 제브로 현재 장면에 필요한 오래된 기억을 골라 불러올 수 있습니다. 제브 설정은 STLO에 있습니다.
-- **[로어북 매니저 포크](https://github.com/AmbasaS2/lore-manager)**: 저장한 Memory를 일기장처럼 찾아 읽고 번역하거나 원문을 수정할 수 있습니다.
+- **[로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)**: 메모리북의 토큰 예산을 제한하고 상시 기억을 보호하거나, 제브로 현재 장면에 필요한 오래된 기억을 골라 불러올 수 있습니다. 제브 설정은 STLO에 있습니다.
+- **[로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager)**: 저장한 Memory를 일기장처럼 찾아 읽고 번역하거나 원문을 수정할 수 있습니다.
 
 둘 다 필수 확장은 아닙니다. 수집·검증·사이드 프롬프트 작성에는 AI 호출이 발생하며 비용과 결과는 사용 모델·채팅 길이에 따라 달라집니다. 수집용 AI 제공자에게 채팅 및 기억 내용이 전달될 수 있다는 점을 고려해 주세요.
 
