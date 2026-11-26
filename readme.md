@@ -34,7 +34,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 **Current version: 9.4.0-ambasa.1.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
 
 <details>
-<summary>View the illustrated workflow</summary>
+<summary>View the workflow</summary>
 
 <p align="center"><img src="assets/readme/mobile/quickstart-and-integration-mobile.svg" alt="Bilingual mobile quick-start and optional integrations" width="860"></p>
 
@@ -276,7 +276,7 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 
 ---
 
-**Documentation basis / 안내 기준:** main [`8bcf2d0`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/8bcf2d05529278d4802742e9a19dedceaf6e5717) (2026-11-25), upstream manifest 9.4.0. Illustrations are bilingual UI guides, not live screenshots. Installed SillyTavern and live provider integration are not verified by this documentation update.
+**Documentation basis / 안내 기준:** main [`8bcf2d0`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/8bcf2d05529278d4802742e9a19dedceaf6e5717) (2026-11-25), upstream manifest 9.4.0. Installed SillyTavern and live provider integration are not verified by this documentation update.
 
 ## Original Memory Books documentation / 원본 기능 안내
 
