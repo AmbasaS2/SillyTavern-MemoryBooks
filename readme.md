@@ -3,11 +3,11 @@ Copyright (C) 2024–2026 Aiko Hanasaki
 SPDX-License-Identifier: AGPL-3.0-only
 -->
 
-# 📕 Memory Books: Sloth
+# 📕 Sloth's Memory Books
 
 Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTavern-MemoryBooks). This fork integrates my Sloth (게으름뱅이) memory workflow into Memory Books while retaining the original tools in a separate tab. **Usage mode is selected per character; tabs only switch the settings view.**
 
-[한국어 안내 ↓](#-게으름뱅이-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
+[한국어 안내 ↓](#-게으름뱅이의-메모리북) · [Original Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) · [Original feature guides](./Start_Here.md)
 
 ## 📥 Installation
 
@@ -54,10 +54,10 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 > The bilingual illustrations are simplified UI mock-ups based on the extension controls in SillyTavern, not screenshots. Values and lorebooks are illustrative examples.
 
-### 1. Set up Memory Books: Sloth once
+### 1. Set up Sloth's Memory Books once
 
 1. Reload and open a one-to-one character chat.
-2. Extensions → **Memory Books: Sloth**.
+2. Extensions → **Sloth's Memory Books**.
 3. Check **Usage mode (this character) → For 게으름뱅이 🦥** (default), then open the Sloth settings tab.
 
 > [!IMPORTANT]
@@ -112,7 +112,7 @@ Nexus keeps its core state active; additional records follow their configured re
 Use one of these:
 
 - The collection icon in the chat input row.
-- **Collect memories** in Memory Books: Sloth.
+- **Collect memories** in Sloth's Memory Books.
 - `/sloth-collect`.
 
 Confirm the available message range to start analysis.
@@ -213,7 +213,7 @@ Normal Nexus updates no longer require literal quotation receipts (since 9.4.0-a
 - Hide requires a verified collection receipt.
 - Side Prompt drafts have a separate review/edit step.
 
-Memory Books: Sloth saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [Lorebook Ordering: Curator](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [Lorebook Manager: Reading Nook](https://github.com/AmbasaS2/lore-manager). Both are optional.
+Sloth's Memory Books saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [Lorebook Ordering for Sloths](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [Sloth the Lorebook Manager](https://github.com/AmbasaS2/lore-manager). Both are optional.
 
 > [!NOTE]
 > **AI usage:** collection, review and Side Prompt generation use AI requests. Cost and results depend on the provider, model and chat size. Saved memories and chat excerpts may be sent to the selected provider.
@@ -223,9 +223,9 @@ Memory Books: Sloth saves memories; it does not itself choose Jev recall during 
 ## 🧩 Works well with
 
 > [!TIP]
-> Memory Books: Sloth works on its own with native keyword/vector recall. Optional Lorebook Ordering: Curator selects existing lore with Jev and budgets; WorldInfo Info: Insight shows what activated; Lorebook Manager: Reading Nook provides a reading library. None is required.
+> Sloth's Memory Books works on its own with native keyword/vector recall. Optional Lorebook Ordering for Sloths selects existing lore with Jev and budgets; WorldInfo Info of Sloth shows what activated; Sloth the Lorebook Manager provides a reading library. None is required.
 
-[Lorebook Ordering: Curator / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager: Reading Nook / 로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info: Insight / 월드인포인포 인사이트](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
+[Lorebook Ordering for Sloths / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Sloth the Lorebook Manager / 로어북 매니저 나무늘보씨](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info of Sloth / 나무늘보의 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 The detailed sections below explain optional settings. Compatibility is version-dependent; it does not guarantee every third-party extension or device.
 
@@ -233,9 +233,9 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 <a id="-메모리북"></a>
 
-# 📕 게으름뱅이 메모리북
+# 📕 게으름뱅이의 메모리북
 
-[원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이 메모리북 시스템을 확장 자체에 넣은 포크입니다. 1:1 캐릭터는 기본적으로 게으름뱅이 모드입니다. **사용 모드 (현재 캐릭터)**가 실제 동작을 결정하며 탭은 설정 화면만 바꿉니다. 기존 메모리북을 사용하려면 사용 모드에서 선택하세요.
+[원본 Memory Books](https://github.com/aikohanasaki/SillyTavern-MemoryBooks)를 기반으로 제가 사용하던 게으름뱅이의 메모리북 시스템을 확장 자체에 넣은 포크입니다. 1:1 캐릭터는 기본적으로 게으름뱅이 모드입니다. **사용 모드 (현재 캐릭터)**가 실제 동작을 결정하며 탭은 설정 화면만 바꿉니다. 기존 메모리북을 사용하려면 사용 모드에서 선택하세요.
 
 ## 📥 다운로드
 
@@ -279,7 +279,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 > 안내 이미지는 실제 실리태번 확장의 조작 화면을 바탕으로 정리한 한영 병기 UI 목업입니다. 설정값과 로어북은 이해를 돕기 위한 예시입니다.
 
-### 1. 처음 한 번: 게으름뱅이 메모리북 설정
+### 1. 처음 한 번: 게으름뱅이의 메모리북 설정
 
 1:1 캐릭터 채팅 → 확장 메뉴 → **메모리 북** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
 
@@ -443,14 +443,14 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 ## 🧩 함께 쓰면 좋은 확장
 
 > [!TIP]
-> 게으름뱅이 메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. 로어북 예산 관리기는 선택형 Jev와 예산 관리, 월드인포인포 인사이트는 발동 확인, 로어북 매니저 리딩 누크는 독립 서재를 제공합니다. 모두 선택입니다.
+> 게으름뱅이의 메모리북 단독으로 기억 수집과 ST 기본 호출을 사용할 수 있습니다. 로어북 예산 관리기는 선택형 Jev와 예산 관리, 나무늘보의 월드인포인포는 발동 확인, 로어북 매니저 나무늘보씨는 독립 서재를 제공합니다. 모두 선택입니다.
 
-[Lorebook Ordering: Curator / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Lorebook Manager: Reading Nook / 로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info: Insight / 월드인포인포 인사이트](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
+[Lorebook Ordering for Sloths / 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) · [Sloth the Lorebook Manager / 로어북 매니저 나무늘보씨](https://github.com/AmbasaS2/lore-manager) · [WorldInfo Info of Sloth / 나무늘보의 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
 아래에서 필요한 설정만 자세히 읽으세요. 지원 버전 기준이며 모든 기기·다른 확장 조합을 보장하는 것은 아닙니다.
 
 - **[로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)**: 메모리북의 토큰 예산을 제한하고 상시 기억을 보호하거나, 제브로 현재 장면에 필요한 오래된 기억을 골라 불러올 수 있습니다. 제브 설정은 STLO에 있습니다.
-- **[로어북 매니저 리딩 누크](https://github.com/AmbasaS2/lore-manager)**: 저장한 Memory를 일기장처럼 찾아 읽고 번역하거나 원문을 수정할 수 있습니다.
+- **[로어북 매니저 나무늘보씨](https://github.com/AmbasaS2/lore-manager)**: 저장한 Memory를 일기장처럼 찾아 읽고 번역하거나 원문을 수정할 수 있습니다.
 
 둘 다 필수 확장이 아닙니다.
 

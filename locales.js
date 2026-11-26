@@ -174,7 +174,7 @@ export const localeData_en = {
     'STMemoryBooks_Regeneration_Approve': 'Approve replacement',
 
     // Main Settings Header
-    'STMemoryBooks_Settings': '📕 Memory Books: Sloth',
+    'STMemoryBooks_Settings': '📕 Sloth\'s Memory Books',
     'STMemoryBooks_HelpGuidesSummary': 'Help & Guides',
     'STMemoryBooks_AIReferenceManualOption': 'Download the Memory Books AI Reference Manual, upload it to your preferred assistant, and ask it questions about Memory Books.',
     'STMemoryBooks_DownloadAIReferenceManual': 'Download AI Reference Manual (.md)',

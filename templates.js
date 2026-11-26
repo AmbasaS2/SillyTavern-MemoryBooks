@@ -9,7 +9,7 @@ import { Handlebars } from '../../../../lib.js';
 export const settingsTemplate = Handlebars.compile(`
     <div class="stmb-workspace">
         <header class="stmb-workspace-header">
-          <h2 data-i18n="STMemoryBooks_Settings">📕 Memory Books: Sloth</h2>
+          <h2 data-i18n="STMemoryBooks_Settings">📕 Sloth's Memory Books</h2>
           {{#if slothCharacterAvailable}}
           <span class="stmb-current-character">{{slothCharacterName}}</span>
           {{/if}}
@@ -22,7 +22,7 @@ export const settingsTemplate = Handlebars.compile(`
           </select>
         </label>
         <small class="stmb-mode-help" data-i18n="STMemoryBooks_ModeHelp">Sloth is the default for individual characters. Tabs only change the settings view. Switching modes preserves saved settings and lorebooks; previously hidden messages stay hidden.</small>
-        <div class="stmb-workspace-tabs" role="tablist" aria-label="Memory Books: Sloth" data-i18n="[aria-label]STMemoryBooks_Settings">
+        <div class="stmb-workspace-tabs" role="tablist" aria-label="Sloth's Memory Books" data-i18n="[aria-label]STMemoryBooks_Settings">
           <button type="button" id="stmb-sloth-tab" role="tab" aria-selected="true" aria-controls="stmb-sloth-panel" data-stmb-workspace-tab="sloth">For 게으름뱅이 🦥</button>
           <button type="button" id="stmb-original-tab" role="tab" aria-selected="false" aria-controls="stmb-original-panel" tabindex="-1" data-stmb-workspace-tab="original" data-i18n="STMemoryBooks_OriginalTab">Original Memory Books</button>
         </div>

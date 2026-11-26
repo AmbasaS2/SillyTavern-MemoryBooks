@@ -9731,7 +9731,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
     if (!lorebookValidation?.valid || !lorebookName) {
       toastr.info(
         "No memory lorebook currently assigned, no memories found.",
-        "Memory Books: Sloth",
+        "Sloth's Memory Books",
       );
       // Keep rendering the popup with empty data so the UI can render
       lorebookName = null;

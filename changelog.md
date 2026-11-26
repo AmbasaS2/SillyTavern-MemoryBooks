@@ -7,6 +7,9 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ← [Back to README](readme.md)
 
+## Fork branding update (2026-11-26)
+- Renamed the fork to Sloth's Memory Books (게으름뱅이의 메모리북). Existing modes, menus, commands, data and install URL are unchanged.
+
 ## v9.4.0 (November 4, 2026)
 - Added configurable timeout to constants.js.
 
