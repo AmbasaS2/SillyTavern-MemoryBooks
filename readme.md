@@ -36,7 +36,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 <details>
 <summary>View the workflow</summary>
 
-<p align="center"><img src="assets/readme/mobile/quickstart-and-integration-mobile.svg" alt="Bilingual mobile quick-start and optional integrations" width="860"></p>
+<p align="center"><img src="assets/readme/mobile/quickstart-and-integration-mobile.svg" alt="Bilingual mobile quick-start and optional integrations" width="520"></p>
 
 </details>
 
@@ -58,13 +58,13 @@ Reload and open an individual character chat. Open **Memory Books: Sloth** from 
 
 **The mode selector controls what runs; the two tabs only change the visible settings.** Switching mode keeps existing settings, lorebooks and previously hidden messages. Original workflow operations and automatic collection are mode-gated.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="Sloth settings and usage mode / 게으름뱅이 설정" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="Sloth settings and usage mode / 게으름뱅이 설정" width="520" /></p>
 
 #### 1. Lorebook setup
 
 The Sloth workflow separates two SillyTavern lorebook roles:
 
-<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus and Memory roles / 두 로어북 역할" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus and Memory roles / 두 로어북 역할" width="520" /></p>
 
 **Nexus**  
 Key facts, ongoing state and continuity information; core state is kept active, with additional records managed according to their recall settings.
@@ -92,7 +92,7 @@ Start with the built-in Sloth prompt. View it, copy it to customize the instruct
 
 ### 2. Everyday use: roleplay, then collect memories
 
-<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="Collect and rotate memories / 기억 수집 흐름" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="Collect and rotate memories / 기억 수집 흐름" width="520" /></p>
 
 1. Press the collection icon in the chat input row, **Collect memories** in Memory Books: Sloth, or `/sloth-collect`. Confirm the available message range to start analysis.
 2. The collection AI reads the not-yet-collected messages and proposes completed events. Check the suggested ranges and number of memories. Incomplete events can remain for a later collection.
@@ -189,13 +189,13 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 **모드와 탭은 다릅니다.** 모드를 변경해도 기존 로어북과 설정은 유지되며, 이전에 Hide한 메시지는 자동으로 복원되지 않습니다.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="게으름뱅이 설정 및 사용 모드 / Sloth settings" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="게으름뱅이 설정 및 사용 모드 / Sloth settings" width="520" /></p>
 
 #### 1. 로어북 준비
 
 게으름뱅이 시스템은 로어북을 두 역할로 나눠 사용합니다.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus와 Memory / Two roles" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus와 Memory / Two roles" width="520" /></p>
 
 **Nexus · 핵심 정보와 현재 상태**  
 캐릭터와의 관계, 지속되는 사실, 현재 상태 등 앞으로의 롤플에 필요한 정보. 핵심 상태는 상시로 유지하고 추가 기록은 설정한 호출 방식을 따릅니다.
@@ -225,7 +225,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ### 2. 평소 사용법: 롤플하고 사건이 끝나면 수집!
 
-<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="기억 수집 흐름 / Collection workflow" width="860" /></p>
+<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="기억 수집 흐름 / Collection workflow" width="520" /></p>
 
 1. 입력창의 **수집 아이콘**, 메모리북의 **기억 수집 하기** 또는 `/sloth-collect`를 사용합니다. 화면에 표시된 메시지 범위를 확인하면 분석을 시작합니다.
 2. AI가 아직 수집하지 않은 메시지를 읽고 완결된 사건을 나눠 제안합니다. 분석 범위와 저장할 기억의 개수를 확인하세요. 진행 중인 사건은 다음 수집에 남길 수 있습니다.
