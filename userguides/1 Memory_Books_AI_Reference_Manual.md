@@ -6,7 +6,8 @@ SPDX-License-Identifier: AGPL-3.0-only
 # Memory Books: Complete AI Reference Manual
 
 **Product:** SillyTavern Memory Books (STMB)  
-**Reference version:** v8.5.0, August 1, 2026  
+**Upstream reference baseline:** v8.5.0, August 1, 2026  
+**Fork note (2026-11-27):** Sloth's Memory Books main was reviewed at `9.4.0-ambasa.3`. For Sloth collection, consult the [current bilingual README](../readme.md) and [current main status](../AMBASA_NEXUS_DEV.md#current-main-status--2026-11-27-kst) first. This manual primarily describes the original workflow and retains its historical upstream reference version; where fork behavior differs, the current fork documentation and code take precedence.  
 **Purpose:** A single, dense source of truth for an AI assistant that teaches, explains, and troubleshoots Memory Books.
 
 ---

@@ -2,7 +2,31 @@
 
 Project: [AmbasaS2/SillyTavern-MemoryBooks](https://github.com/AmbasaS2/SillyTavern-MemoryBooks), forked from [aikohanasaki/SillyTavern-MemoryBooks](https://github.com/aikohanasaki/SillyTavern-MemoryBooks) v9.4.0 / `5a79f667` (AGPL-3.0).
 
-This branch is **unfinished development**, not a released or verified SillyTavern extension. `main` and the upstream source must remain unchanged until the full collector is tested.
+## Current main status — 2026-11-27 (KST)
+
+Reviewed source baseline: [main `0883ddc`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/0883ddc24b3e689fe997a674ab98f63e938a3a63), manifest `9.4.0-ambasa.3`, display name **Sloth's Memory Books**. See [current bilingual guide](./readme.md). Main already includes the Sloth workflow and compiled JS/CSS. The November 23 development-branch sections below are retained as historical records; their old branch names, release restrictions, tests, and incomplete-feature lists are **not** the current project state.
+
+- **Purpose:** replace recurring manual chat/JSON memory updates inside SillyTavern, while keeping Original mode available. Sloth is for individual character chats; group chats use Original mode. Nexus and Memory are roles, not mandatory filename prefixes.
+- **Current workflow:** select two linked, distinct books (or initialize them on approved first collection), select a collection AI, analyze uncollected source, review the event plan, then generate and save Scenes and Nexus deltas. The normal manual path uses one plan request and one combined writing request; optional review and selected retries can add requests. There is no separate final editable Scene/Nexus draft dialog in normal collection. Automatic collection is opt-in and does not automatically Hide.
+- **Nexus:** reuse recognized existing combined Long-Term Memory/continuity and LT/NPC entries where possible; first setup may create separate Core Memory and Current Continuity entries. Preserve protected/disabled entries and special Outlets. Normal Nexus updates no longer require literal chat quotation receipts; structural checks and optimistic write/read-back remain. Two-book saves use compensating rollback, not an atomic server transaction.
+- **Memory:** new collection uses causal event boundaries, Timeline / Scene / Result, source ranges and recent-three rotation. Older recall is vector or keyword by configuration. Jev retrieval belongs to the optional STLO fork, not this extension.
+- **Verification history:** the November 26 side-prompt commit [`b010ca3`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/b010ca3bc4fb87410f3cb6254fcf51c2d42a225b) was recorded as passing 543 Node tests and a Bun build. Earlier isolated browser tests and real-model trials are historical evidence, not a fresh test of this HEAD. Live installed-device behavior and semantic model accuracy are not guaranteed.
+
+### Open compatibility checks for replacing manual memory updates
+
+These are source-review findings, not completed fixes:
+
+1. `stageMemoryScenes` in `nexusCollectionPolicy.js` rotates active entries with both `stmemorybooks === true` and `STMB_sourceRanges`, plus recognized merge/split history. A previously hand-authored complete Scene without those markers can retain its old constant flag when new Scenes arrive. Verify/import the old completed Scene set and ordering without blindly changing unrelated or disabled entries; add a mixed legacy/new rotation regression.
+2. `activeSource` in `nexusCollectorRuntime.js` excludes hidden/system messages and verified Sloth collection receipts / matching `STMB_sourceRanges`. It intentionally does not treat old `STMB_start/end` or a legacy processed checkpoint alone as collection proof. Previously summarized but still-visible messages may therefore be collected again. A reviewed legacy boundary or provenance import is needed for a seamless handoff; never invent a receipt or Hide uncertain ranges.
+3. Model completion judgments and Nexus delta coverage are imperfect. A structurally valid Scene can be saved (and optionally hidden) while some Nexus changes are skipped. Keep Hide optional; inspect saved Scene and Nexus content, especially at migration and on incomplete events. Test old/manual and new collections with a copied chat and both books before trusting unattended use. Prompt parity, original-data preservation and actual injection must be checked separately.
+
+Historical development log follows. Do not treat its old draft-only, no-main, or not-implemented statements as present instructions.
+
+---
+
+## Historical development log — 2026-11-23 onward
+
+The following text describes earlier development snapshots and is preserved for provenance.
 
 ## Naming
 

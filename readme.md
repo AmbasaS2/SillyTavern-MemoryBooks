@@ -89,6 +89,8 @@ Nexus keeps its core state active; additional records follow their configured re
 
 > [!CAUTION]
 > Back up and check existing books before assigning roles. Do not accidentally connect another character's memories.
+>
+> When switching from hand-authored memories, verify the already summarized message ranges and the always-on flags of your older Scenes before the first collection. Older `STMB_start/end` fields alone are not a Sloth collection receipt; visible old messages may be collected again. Scenes without Sloth source metadata may not join automatic recent-three rotation. Test on a copy first. See [current compatibility notes](./AMBASA_NEXUS_DEV.md#open-compatibility-checks-for-replacing-manual-memory-updates).
 
 #### 2. Collection settings
 
@@ -305,6 +307,9 @@ The detailed sections below explain optional settings. Compatibility is version-
 - 이미 연결된 책이 있다면: 서로 다른 책 두 권 지정.
 - 연결된 책이 없다면: 첫 수집 승인 시 두 권 생성·연결.
 - 한 권만 있다면: 부족한 책 만들기.
+
+> [!CAUTION]
+> 수동으로 작성해 온 기억을 이어받을 때는 기존 요약 범위와 Scene의 상시 설정을 먼저 확인하세요. 기존 `STMB_start/end`만으로는 수집 완료로 인정되지 않아 화면에 남은 이전 원문을 다시 수집할 수 있고, Sloth 출처 메타데이터가 없는 Scene은 최근 3개 자동 회전에 포함되지 않을 수 있습니다. 처음에는 사본에서 확인하세요. [현재 호환성 기록](./AMBASA_NEXUS_DEV.md#open-compatibility-checks-for-replacing-manual-memory-updates)
 
 > [!TIP]
 > 같은 캐릭터로 여러 AU를 진행한다면 **이 채팅에만 로어북 따로 지정**을 사용하세요. 다른 채팅의 기본 책은 유지됩니다.
