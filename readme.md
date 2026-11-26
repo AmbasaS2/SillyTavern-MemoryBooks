@@ -36,7 +36,6 @@ If you prefer the original manual or consolidation workflow, select **Original M
 <details>
 <summary>View the workflow</summary>
 
-<p align="center"><img src="assets/readme/mobile/quickstart-and-integration-mobile.svg" alt="Bilingual mobile quick-start and optional integrations" width="520"></p>
 
 </details>
 
@@ -52,19 +51,21 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## 📖 How to use
 
+> Screenshots show the installed extension in an isolated SillyTavern 1.19.1 test instance with sample lorebooks. No external AI request or personal chat data was used.
+
 ### 1. Set up Memory Books: Sloth once
 
 Reload and open an individual character chat. Open **Memory Books: Sloth** from the extension menu. Check **Usage mode (this character) → For 게으름뱅이 🦥** (default in one-to-one chats), then open the Sloth settings tab. Run only one Memory Books installation at a time.
 
 **The mode selector controls what runs; the two tabs only change the visible settings.** Switching mode keeps existing settings, lorebooks and previously hidden messages. Original workflow operations and automatic collection are mode-gated.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="Sloth settings and usage mode / 게으름뱅이 설정" width="520" /></p>
+<p align="left"><img src="assets/readme/mobile/actual-sloth-settings.jpg" alt="Actual Sloth mode selector and workspace tabs" width="400" /></p>
 
 #### 1. Lorebook setup
 
 The Sloth workflow separates two SillyTavern lorebook roles:
 
-<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus and Memory roles / 두 로어북 역할" width="520" /></p>
+<p align="left"><img src="assets/readme/mobile/actual-lorebook-roles.jpg" alt="Actual Nexus and Memory role selectors" width="400" /></p>
 
 **Nexus**  
 Key facts, ongoing state and continuity information; core state is kept active, with additional records managed according to their recall settings.
@@ -75,6 +76,8 @@ Individual completed events, preserved as separate entries instead of repeatedly
 Choose two distinct books already linked to this character, or confirm your first collection to create and link the two books if the character has no linked books. If only one role is assigned, use the missing-book creation option. Use **Choose books for this chat only** if different chats with the same character need separate histories. Back up and check existing books before assigning their roles; do not assign another character's memories by mistake.
 
 #### 2. Collection settings
+
+<p align="left"><img src="assets/readme/mobile/actual-collection-settings.jpg" alt="Actual memory collection settings" width="400" /></p>
 
 **Memory collection AI**  
 Select a saved SillyTavern Chat Completion connection profile or Memory Books AI profile. Your RP model is not switched.
@@ -92,7 +95,6 @@ Start with the built-in Sloth prompt. View it, copy it to customize the instruct
 
 ### 2. Everyday use: roleplay, then collect memories
 
-<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="Collect and rotate memories / 기억 수집 흐름" width="520" /></p>
 
 1. Press the collection icon in the chat input row, **Collect memories** in Memory Books: Sloth, or `/sloth-collect`. Confirm the available message range to start analysis.
 2. The collection AI reads the not-yet-collected messages and proposes completed events. Check the suggested ranges and number of memories. Incomplete events can remain for a later collection.
@@ -183,19 +185,21 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## 📖 사용 설명서
 
+> 아래 화면은 실리태번 1.19.1 테스트 환경에서 실제 확장을 열어 예시 로어북으로 캡처했습니다. 외부 AI 호출이나 개인 대화 데이터는 사용하지 않았습니다.
+
 ### 1. 처음 한 번: 게으름뱅이 메모리북 설정
 
 1:1 캐릭터 채팅 → 확장 메뉴 → **게으름뱅이 메모리북** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
 
 **모드와 탭은 다릅니다.** 모드를 변경해도 기존 로어북과 설정은 유지되며, 이전에 Hide한 메시지는 자동으로 복원되지 않습니다.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-settings-mobile.svg" alt="게으름뱅이 설정 및 사용 모드 / Sloth settings" width="520" /></p>
+<p align="left"><img src="assets/readme/mobile/actual-sloth-settings.jpg" alt="Actual Sloth mode selector and workspace tabs" width="400" /></p>
 
 #### 1. 로어북 준비
 
 게으름뱅이 시스템은 로어북을 두 역할로 나눠 사용합니다.
 
-<p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus와 Memory / Two roles" width="520" /></p>
+<p align="left"><img src="assets/readme/mobile/actual-lorebook-roles.jpg" alt="Actual Nexus and Memory role selectors" width="400" /></p>
 
 **Nexus · 핵심 정보와 현재 상태**  
 캐릭터와의 관계, 지속되는 사실, 현재 상태 등 앞으로의 롤플에 필요한 정보. 핵심 상태는 상시로 유지하고 추가 기록은 설정한 호출 방식을 따릅니다.
@@ -208,6 +212,8 @@ The detailed sections below explain optional settings. Compatibility is version-
 같은 캐릭터와 여러 채팅에서 서로 다른 이야기를 진행한다면 **이 채팅에만 로어북 따로 지정**을 사용하세요. 다른 채팅의 기본 책은 유지됩니다.
 
 #### 2. 수집 설정
+
+<p align="left"><img src="assets/readme/mobile/actual-collection-settings.jpg" alt="Actual memory collection settings" width="400" /></p>
 
 **수집에 사용할 AI**  
 기억 정리에 사용할 실리태번 채팅 완성 연결 프로필 또는 메모리북 AI 프로필을 선택합니다. RP 모델을 바꾸지 않습니다.
@@ -225,7 +231,6 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ### 2. 평소 사용법: 롤플하고 사건이 끝나면 수집!
 
-<p align="center"><img src="assets/readme/mobile/memory-books-workflow-mobile.svg" alt="기억 수집 흐름 / Collection workflow" width="520" /></p>
 
 1. 입력창의 **수집 아이콘**, 메모리북의 **기억 수집 하기** 또는 `/sloth-collect`를 사용합니다. 화면에 표시된 메시지 범위를 확인하면 분석을 시작합니다.
 2. AI가 아직 수집하지 않은 메시지를 읽고 완결된 사건을 나눠 제안합니다. 분석 범위와 저장할 기억의 개수를 확인하세요. 진행 중인 사건은 다음 수집에 남길 수 있습니다.
