@@ -66,21 +66,27 @@ The Sloth workflow separates two SillyTavern lorebook roles:
 
 <p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus and Memory roles / 두 로어북 역할" width="860" /></p>
 
-| Book | What goes in it |
-|---|---|
-| **Nexus** | Key facts, ongoing state and continuity information; core state is kept active, with additional records managed according to their recall settings. |
-| **Memory** | Individual completed events, preserved as separate entries instead of repeatedly merging the whole history. |
+**Nexus**  
+Key facts, ongoing state and continuity information; core state is kept active, with additional records managed according to their recall settings.
+
+**Memory**  
+Individual completed events, preserved as separate entries instead of repeatedly merging the whole history.
 
 Choose two distinct books already linked to this character, or confirm your first collection to create and link the two books if the character has no linked books. If only one role is assigned, use the missing-book creation option. Use **Choose books for this chat only** if different chats with the same character need separate histories. Back up and check existing books before assigning their roles; do not assign another character's memories by mistake.
 
 ### 2. Collection settings
 
-| Control | How to use it |
-|---|---|
-| Memory collection AI | Select a saved SillyTavern Chat Completion connection profile or Memory Books AI profile. Your RP model is not switched. |
-| Older memory conversion | Choose **Vector** or **Keywords**. On the next collection, older scene entries change to this type; the latest three completed scenes stay always on. Vector mode requires SillyTavern's vector storage to be configured. |
-| Review and retry summaries | Optional, off by default. Checks for major omissions or distortions and can make one additional AI request. |
-| Summary prompt | Start with the built-in Sloth prompt. View it, copy it to customize the instructions, save named presets or import/export a compatible JSON preset. |
+**Memory collection AI**  
+Select a saved SillyTavern Chat Completion connection profile or Memory Books AI profile. Your RP model is not switched.
+
+**Older memory conversion**  
+Choose **Vector** or **Keywords**. On the next collection, older scene entries change to this type; the latest three completed scenes stay always on. Vector mode requires SillyTavern's vector storage to be configured.
+
+**Review and retry summaries**  
+Optional, off by default. Checks for major omissions or distortions and can make one additional AI request.
+
+**Summary prompt**  
+Start with the built-in Sloth prompt. View it, copy it to customize the instructions, save named presets or import/export a compatible JSON preset.
 
 **Start with a collection AI and the default prompt.** You can leave automatic collection off while trying the manual workflow.
 
@@ -108,13 +114,20 @@ Normal Nexus updates no longer require literal quotation receipts in 9.4.0-ambas
 
 ## Other settings and tools
 
-| Section | When to use it |
-|---|---|
-| Automatic collection | Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages. |
-| Side Prompts | Choose a prompt in the empty slot and add slots as needed. Built-in examples: Diary, NPC Directory (including minor supporting characters), and Memorable Quotes (verbatim source dialogue). All default to no injection; each can independently use no injection, always-on, vector, or keywords, including custom prompts. Keyword suggestions can be edited before saving. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book). |
-| Manage existing memories | Review merging causally related completed scenes, splitting a completed scene with verifiable original message ranges, or shortening a long event. Choose and inspect changes; preserve original records where archived and back up before editing. |
-| Advanced settings | Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding. |
-| Original Memory Books | Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools. |
+**Automatic collection**  
+Turn on **Collect memories automatically** and choose a token or message interval. Default is off; initial interval values are 50,000 tokens / 50 messages. Once enough unsaved content accumulates, collection runs after a reply in eligible chats with both books linked. It does not automatically hide messages.
+
+**Side Prompts**  
+Choose a prompt in the empty slot and add slots as needed. Built-in examples: Diary, NPC Directory (including minor supporting characters), and Memorable Quotes (verbatim source dialogue). All default to no injection; each can independently use no injection, always-on, vector, or keywords, including custom prompts. Keyword suggestions can be edited before saving. Check the prompts to use for the character and choose a lorebook for each. You can continue an older entry or choose Create lorebook to create the character’s dedicated Side Prompt book on the first approved save (or reuse its existing dedicated book).
+
+**Manage existing memories**  
+Review merging causally related completed scenes, splitting a completed scene with verifiable original message ranges, or shortening a long event. Choose and inspect changes; preserve original records where archived and back up before editing.
+
+**Advanced settings**  
+Show or hide the collection icon, place it next to Extensions or Send, choose its size (default 14 px), and choose how many recent collected messages to keep visible when hiding.
+
+**Original Memory Books**  
+Select Original in Usage mode to run its scene-marker, consolidation and other original workflows. The tab remains available for shared profile/settings tools.
 
 Memory Books saves memories; it does not itself choose Jev recall during RP. For optional scene-aware lore selection and per-book budgets, see [the STLO fork](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering). To read or edit the resulting lorebooks like a diary, see [the Lorebook Manager fork](https://github.com/AmbasaS2/lore-manager). Both are optional.
 
@@ -177,10 +190,11 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 <p align="center"><img src="assets/readme/mobile/memory-books-roles-mobile.svg" alt="Nexus와 Memory / Two roles" width="860" /></p>
 
-| 로어북 | 저장하는 내용 |
-|---|---|
-| **Nexus · 핵심 정보와 현재 상태** | 캐릭터와의 관계, 지속되는 사실, 현재 상태 등 앞으로의 롤플에 필요한 정보. 핵심 상태는 상시로 유지하고 추가 기록은 설정한 호출 방식을 따릅니다. |
-| **Memory · 기억할 장면** | 롤플에서 실제로 일어난 사건을 장면별로 저장합니다. 이전 기억을 삭제하거나 모두 한 덩어리로 합치지 않습니다. |
+**Nexus · 핵심 정보와 현재 상태**  
+캐릭터와의 관계, 지속되는 사실, 현재 상태 등 앞으로의 롤플에 필요한 정보. 핵심 상태는 상시로 유지하고 추가 기록은 설정한 호출 방식을 따릅니다.
+
+**Memory · 기억할 장면**  
+롤플에서 실제로 일어난 사건을 장면별로 저장합니다. 이전 기억을 삭제하거나 모두 한 덩어리로 합치지 않습니다.
 
 이미 캐릭터에게 연결된 책이 있다면 Nexus와 Memory에 서로 다른 책을 지정합니다. 연결된 책이 없는 새 캐릭터는 첫 수집을 승인할 때 두 권을 생성·연결할 수 있습니다. 한 권만 지정되어 있다면 부족한 책 만들기 기능을 사용하세요.
 
@@ -188,12 +202,17 @@ Collection, review, and side-prompt generation use AI requests; their cost and r
 
 ### 2. 수집 설정
 
-| 설정 | 언제, 어떻게 쓰나요? |
-|---|---|
-| 수집에 사용할 AI | 기억 정리에 사용할 실리태번 채팅 완성 연결 프로필 또는 메모리북 AI 프로필을 선택합니다. RP 모델을 바꾸지 않습니다. |
-| 이전 기억 전환 방식 | 벡터 또는 키워드를 선택합니다. 다음 수집 때 오래된 기억을 해당 방식으로 전환하고 최근 기억 3개는 파란불로 유지합니다. 벡터를 쓰려면 실리태번 벡터 저장소를 별도로 설정하세요. |
-| 요약 검증 및 재시도 | 큰 누락이나 왜곡을 검사할 때 켭니다. 기본 꺼짐이며 AI 호출이 최대 한 번 추가될 수 있습니다. |
-| 사용할 요약 프롬프트 | 기본 게으름뱅이 프롬프트로 시작하세요. 전체 보기, 복사 후 수정, 이름 변경, 저장, 호환 JSON 가져오기·내보내기가 가능합니다. |
+**수집에 사용할 AI**  
+기억 정리에 사용할 실리태번 채팅 완성 연결 프로필 또는 메모리북 AI 프로필을 선택합니다. RP 모델을 바꾸지 않습니다.
+
+**이전 기억 전환 방식**  
+벡터 또는 키워드를 선택합니다. 다음 수집 때 오래된 기억을 해당 방식으로 전환하고 최근 기억 3개는 파란불로 유지합니다. 벡터를 쓰려면 실리태번 벡터 저장소를 별도로 설정하세요.
+
+**요약 검증 및 재시도**  
+큰 누락이나 왜곡을 검사할 때 켭니다. 기본 꺼짐이며 AI 호출이 최대 한 번 추가될 수 있습니다.
+
+**사용할 요약 프롬프트**  
+기본 게으름뱅이 프롬프트로 시작하세요. 전체 보기, 복사 후 수정, 이름 변경, 저장, 호환 JSON 가져오기·내보내기가 가능합니다.
 
 처음에는 수집 AI만 정하고 기본 프롬프트로 수동 수집을 한 번 해 보세요.
 
@@ -221,13 +240,20 @@ Hide는 채팅 원문 삭제가 아닙니다. 저장된 범위만 AI가 읽는 �
 
 ## 나머지 설정은 필요할 때만!
 
-| 설정 영역 | 활용법 |
-|---|---|
-| 자동 수집 | 기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다. |
-| 사이드 프롬프트 | 빈 칸에서 기본 예시인 일기·NPC 등장인물록(조연 포함)·명대사 모음(실제 발화 그대로) 또는 사용자 프롬프트를 고릅니다. 기본은 미주입이며 각 프롬프트에서 미주입·상시·벡터·키워드를 독립적으로 선택할 수 있습니다. 키워드는 저장 검토 화면에서 수정할 수 있습니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다. |
-| 저장한 사건 수정 | 인과적으로 연결된 완료 사건 합치기, 원래 메시지 범위와 순서를 확인할 수 있는 사건 나누기, 긴 사건 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 대상과 변경안을 확인하는 작업이며 기존 기록을 백업합니다. |
-| 고급 설정 | 수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다. |
-| 기존 메모리북 | 사용 모드를 기존 메모리북으로 변경해야 원본의 구간 지정·압축·통합 등 작업이 실행됩니다. 탭은 공유 프로필·설정 열람에도 사용할 수 있습니다. |
+**자동 수집**  
+기본 꺼짐. 새 미수집 내용이 일정 토큰 또는 채팅 개수만큼 쌓이면 답변 후 자동으로 완결 사건을 수집합니다. 기본 간격은 50,000토큰 / 50개 메시지이며 직접 변경할 수 있습니다. Nexus·Memory가 연결된 채팅에서 작동하며 자동으로 Hide하지 않습니다.
+
+**사이드 프롬프트**  
+빈 칸에서 기본 예시인 일기·NPC 등장인물록(조연 포함)·명대사 모음(실제 발화 그대로) 또는 사용자 프롬프트를 고릅니다. 기본은 미주입이며 각 프롬프트에서 미주입·상시·벡터·키워드를 독립적으로 선택할 수 있습니다. 키워드는 저장 검토 화면에서 수정할 수 있습니다. 필요한 만큼 칸을 추가하고, 이 캐릭터에서 쓸 프롬프트에 체크한 뒤 각각 저장할 로어북을 고릅니다. 기존 항목에 이어 쓰거나, 로어북 생성하기 [캐릭터 이름-메모리북 사이드 프롬프트]를 선택해 필요한 책을 첫 승인 저장 때 만들 수 있습니다.
+
+**저장한 사건 수정**  
+인과적으로 연결된 완료 사건 합치기, 원래 메시지 범위와 순서를 확인할 수 있는 사건 나누기, 긴 사건 줄이기를 필요할 때 사용합니다. 자동 통합이 아니라 대상과 변경안을 확인하는 작업이며 기존 기록을 백업합니다.
+
+**고급 설정**  
+수집 아이콘 표시 여부, 확장 메뉴 옆 또는 전송 버튼 옆 위치, 크기(기본 14px), Hide 시 남길 메시지 수(기본 0)를 설정합니다.
+
+**기존 메모리북**  
+사용 모드를 기존 메모리북으로 변경해야 원본의 구간 지정·압축·통합 등 작업이 실행됩니다. 탭은 공유 프로필·설정 열람에도 사용할 수 있습니다.
 
 ### 다른 로어북 확장과 함께 사용하고 싶다면
 
