@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="353" viewBox="0 0 480 353" role="img">
+<title>Nexus와 Memory 지정 목업 / Role selectors</title>
+<style>text{font-family:'Noto Sans CJK KR', 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;} .t{font-size:19px;font-weight:650;fill:#293440} .en{font-size:13px;fill:#687681}</style>
+<rect x="0" y="0" width="480" height="353" rx="13" fill="#f0f3f3"/>
+<rect x="12" y="12" width="456" height="329" rx="12" fill="#ffffff" stroke="#d9e0e5" stroke-width="1"/>
+<path d="M27 31h7l1 2 1-2h7v15h-7l-1 2-1-2h-7z M35 33v15" fill="none" stroke="#a07b50" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="55" y="35" font-size="18" font-weight="650" fill="#293440" text-anchor="start">로어북 준비</text>
+<text x="55" y="53" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Lorebook setup</text>
+<path d="M440 33l10 10m0 -10l-10 10" fill="none" stroke="#687681" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M24 66L456 66" fill="none" stroke="#d9e0e5" stroke-width="1" stroke-linecap="round"/>
+<text x="28" y="103" font-size="15" font-weight="650" fill="#293440" text-anchor="start">Nexus · 핵심 정보와 현재 상태</text>
+<text x="28" y="121" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Nexus · lasting knowledge and current state</text>
+<rect x="28" y="131" width="424" height="42" rx="6" fill="#f3f6f8" stroke="#d9e0e5" stroke-width="1"/>
+<text x="40" y="157" font-size="16" font-weight="400" fill="#293440" text-anchor="start">Nexus</text>
+<path d="M433 149l4 4 4 -4" fill="none" stroke="#687681" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="28" y="194" font-size="15" font-weight="650" fill="#293440" text-anchor="start">Memory · 기억할 장면</text>
+<text x="28" y="212" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Memory · completed event scenes</text>
+<rect x="28" y="222" width="424" height="42" rx="6" fill="#f3f6f8" stroke="#d9e0e5" stroke-width="1"/>
+<text x="40" y="248" font-size="16" font-weight="400" fill="#293440" text-anchor="start">Memory</text>
+<path d="M433 240l4 4 4 -4" fill="none" stroke="#687681" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="29" y="282" width="19" height="19" rx="4" fill="#a07b50" stroke="#a07b50" stroke-width="1.4"/>
+<path d="M33.5 291.5l4 4 8-8" fill="none" stroke="#ffffff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="58" y="298" font-size="16" font-weight="650" fill="#293440" text-anchor="start">이 캐릭터에 연결된 로어북만 보기</text>
+<text x="58" y="316" font-size="13" font-weight="400" fill="#687681" text-anchor="start">Show only linked lorebooks</text>
+</svg>

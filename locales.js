@@ -934,7 +934,7 @@ export const localeData_en = {
     'STMemoryBooks_ThisSidePromptGoingForward': 'This side prompt going forward',
 
     // General / Menu
-    'STMemoryBooks_MenuItem': 'Memory Books: Sloth',
+    'STMemoryBooks_MenuItem': 'Memory Books',
     'STMemoryBooks_OK': 'OK',
     'STMemoryBooks_Apply': 'Apply',
     'STMemoryBooks_Close': 'Close',

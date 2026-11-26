@@ -31,7 +31,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## ⚡ Quick start
 
-**Current version: 9.4.0-ambasa.2.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
+**Current version: 9.4.0-ambasa.3.** Turn completed RP events into reusable memories. Sloth mode separates Nexus (ongoing continuity) and Memory (completed events). It saves lore; SillyTavern recalls it. The original mode remains available per character; tabs only switch the visible settings.
 
 <details>
 <summary>View the workflow</summary>
@@ -41,7 +41,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 **Set up once**
 
-1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books: Sloth → Usage mode → Sloth (default). Group chats use Original mode.
+1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books → Usage mode → Sloth (default). Group chats use Original mode.
 2. Assign distinct Nexus and Memory books or create them on approved first collection if no books are linked. Use chat-only assignments for different AU histories.
 3. Select a collection AI profile, choose Keyword or Vector for older scenes, and leave automatic collection off for your first try. Vector recall requires native vector setup.
 **During everyday RP**
@@ -51,7 +51,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## 📖 How to use
 
-> Screenshots show the installed extension in an isolated SillyTavern 1.19.1 test instance with sample lorebooks. No external AI request or personal chat data was used.
+> The bilingual illustrations are simplified UI mock-ups based on the extension controls in SillyTavern, not screenshots. Values and lorebooks are illustrative examples.
 
 ### 1. Set up Memory Books: Sloth once
 
@@ -59,13 +59,13 @@ Reload and open an individual character chat. Open **Memory Books: Sloth** from 
 
 **The mode selector controls what runs; the two tabs only change the visible settings.** Switching mode keeps existing settings, lorebooks and previously hidden messages. Original workflow operations and automatic collection are mode-gated.
 
-<p align="left"><img src="assets/readme/mobile/actual-sloth-settings.jpg" alt="Actual Sloth mode selector and workspace tabs" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-sloth-mode.svg" alt="사용 모드와 설정 탭 / Usage mode and settings tabs" width="400" /></p>
 
 #### 1. Lorebook setup
 
 The Sloth workflow separates two SillyTavern lorebook roles:
 
-<p align="left"><img src="assets/readme/mobile/actual-lorebook-roles.jpg" alt="Actual Nexus and Memory role selectors" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-lorebook-roles.svg" alt="Nexus·Memory 역할 지정 / Lorebook roles" width="400" /></p>
 
 **Nexus**  
 Key facts, ongoing state and continuity information; core state is kept active, with additional records managed according to their recall settings.
@@ -77,7 +77,7 @@ Choose two distinct books already linked to this character, or confirm your firs
 
 #### 2. Collection settings
 
-<p align="left"><img src="assets/readme/mobile/actual-collection-settings.jpg" alt="Actual memory collection settings" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-collection-settings.svg" alt="수집 설정 / Collection settings" width="400" /></p>
 
 **Memory collection AI**  
 Select a saved SillyTavern Chat Completion connection profile or Memory Books AI profile. Your RP model is not switched.
@@ -171,11 +171,11 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## ⚡ 간단 사용 설명
 
-**현재 버전: 9.4.0-ambasa.2.** 롤플이 길어져도 사건과 지금의 관계를 잊지 않도록 Nexus(핵심 정보와 현재 상태)와 Memory(완료된 사건)를 분리해 저장합니다. 실제 호출은 실리태번이 담당합니다. 원본 모드는 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
+**현재 버전: 9.4.0-ambasa.3.** 롤플이 길어져도 사건과 지금의 관계를 잊지 않도록 Nexus(핵심 정보와 현재 상태)와 Memory(완료된 사건)를 분리해 저장합니다. 실제 호출은 실리태번이 담당합니다. 원본 모드는 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
 
 **처음 한 번만 설정하기**
 
-1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → 게으름뱅이 메모리북 → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
+1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → 메모리 북 → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
 2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 승인 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
 3. 수집 AI 프로필과 이전 기억의 키워드/벡터 전환 방식을 고릅니다. 첫 수집은 자동 수집을 끄고 수동으로 해 보세요. 벡터는 ST 자체 설정이 필요합니다.
 **평소 롤플할 때**
@@ -185,21 +185,21 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## 📖 사용 설명서
 
-> 아래 화면은 실리태번 1.19.1 테스트 환경에서 실제 확장을 열어 예시 로어북으로 캡처했습니다. 외부 AI 호출이나 개인 대화 데이터는 사용하지 않았습니다.
+> 안내 이미지는 실제 실리태번 확장의 조작 화면을 바탕으로 정리한 한영 병기 UI 목업입니다. 설정값과 로어북은 이해를 돕기 위한 예시입니다.
 
 ### 1. 처음 한 번: 게으름뱅이 메모리북 설정
 
-1:1 캐릭터 채팅 → 확장 메뉴 → **게으름뱅이 메모리북** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
+1:1 캐릭터 채팅 → 확장 메뉴 → **메모리 북** → **사용 모드 (현재 캐릭터) → For 게으름뱅이 🦥**를 확인하고 게으름뱅이 탭을 엽니다.
 
 **모드와 탭은 다릅니다.** 모드를 변경해도 기존 로어북과 설정은 유지되며, 이전에 Hide한 메시지는 자동으로 복원되지 않습니다.
 
-<p align="left"><img src="assets/readme/mobile/actual-sloth-settings.jpg" alt="Actual Sloth mode selector and workspace tabs" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-sloth-mode.svg" alt="사용 모드와 설정 탭 / Usage mode and settings tabs" width="400" /></p>
 
 #### 1. 로어북 준비
 
 게으름뱅이 시스템은 로어북을 두 역할로 나눠 사용합니다.
 
-<p align="left"><img src="assets/readme/mobile/actual-lorebook-roles.jpg" alt="Actual Nexus and Memory role selectors" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-lorebook-roles.svg" alt="Nexus·Memory 역할 지정 / Lorebook roles" width="400" /></p>
 
 **Nexus · 핵심 정보와 현재 상태**  
 캐릭터와의 관계, 지속되는 사실, 현재 상태 등 앞으로의 롤플에 필요한 정보. 핵심 상태는 상시로 유지하고 추가 기록은 설정한 호출 방식을 따릅니다.
@@ -213,7 +213,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 #### 2. 수집 설정
 
-<p align="left"><img src="assets/readme/mobile/actual-collection-settings.jpg" alt="Actual memory collection settings" width="400" /></p>
+<p align="left"><img src="assets/readme/mobile/ui-collection-settings.svg" alt="수집 설정 / Collection settings" width="400" /></p>
 
 **수집에 사용할 AI**  
 기억 정리에 사용할 실리태번 채팅 완성 연결 프로필 또는 메모리북 AI 프로필을 선택합니다. RP 모델을 바꾸지 않습니다.

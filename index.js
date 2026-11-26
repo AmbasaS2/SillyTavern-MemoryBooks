@@ -13690,7 +13690,7 @@ function createUI() {
         <div id="stmb-menu-item-container" class="extension_container interactable" tabindex="0">
             <div id="stmb-menu-item" class="list-group-item flex-container flexGap5 interactable" tabindex="0">
                 <div class="fa-fw fa-solid fa-book extensionsMenuExtensionButton"></div>
-                <span data-i18n="STMemoryBooks_MenuItem">Memory Books: Sloth</span>
+                <span data-i18n="STMemoryBooks_MenuItem">Memory Books</span>
             </div>
         </div>
         `,
