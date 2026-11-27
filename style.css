@@ -280,14 +280,6 @@
     }
 }
 
-/* --- MAIN EXTENSION MENU BUTTON --- */
-#stmb-menu-item i {
-    margin-right: 8px;
-    width: 16px;
-    text-align: center;
-}
-
-
 /* --- SCENE PREVIEW STYLING --- */
 .stmb-help-drawer {
     margin: 0 0 10px;
@@ -486,8 +478,8 @@ p.stmb-help-drawer-copy {
     }
 }
 
-/* Ensure Select2 dropdown is above modals/overlays */
-.select2-container--open { z-index: 2147483647 !important; }
+/* Keep only Memory Books Select2 dropdowns above their own popup content. */
+.popup:has(select[id^="stmb-"].select2-hidden-accessible) .select2-container--open { z-index: 2147483647 !important; }
 
 /* STMB popup action buttons wrap as whole buttons, not inside labels. */
 .popup.stmb-popup .popup-controls {
