@@ -68,7 +68,7 @@ test('exact same-entry duplicate removes one copy, while semantic or cross-entry
     const cross={...dup,refs:[{uid:1,quote:lt},{uid:2,quote:lt}],change:{type:'dedupe',uid:1,paragraph:lt}};
     const report=validateSlothHealthReview(buildSlothHealthCatalog(book),{findings:[cross]});
     assert.equal(report.findings[0].change,null);
-    book.entries[2].content='## First\n'+lt+'\n\n'+lt;
+    book.entries[2].content='## First\n\n'+lt+'\n\n'+lt;
     assert.throws(()=>stageSlothHealthReviewChange(book,dup),/advice only/);
 });
 test('protected, stale, ambiguous, constant or unquoted LT targets cannot be staged',()=>{
@@ -149,7 +149,8 @@ test('health runtime preserves pending recovery, refuses stale roles or snapshot
     assert.equal(h.book().entries[1].content,rule);
 });
 test('health analysis uses exactly one guarded request; opening the original health panel is still read-only',async()=>{
-    const segment=readSlice(ai,'export async function suggestSlothNexusHealthReview(','const originalMessages=').replace('export async','async');
+    const start=ai.indexOf('export async function suggestSlothNexusHealthReview(');assert.ok(start>=0);
+    const segment=ai.slice(start).replace('export async','async');
     let calls=0;
     const analyze=vm.runInNewContext(segment+'\nsuggestSlothNexusHealthReview',{
         buildSlothHealthReviewPrompt,validateSlothHealthReview,

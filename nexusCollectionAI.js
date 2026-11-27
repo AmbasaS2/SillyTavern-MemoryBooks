@@ -148,14 +148,6 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},ve
         return parse(text,phase);
     };
 }
-// User-triggered maintenance only, not part of collection statistics.
-export async function suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,language}){
-    const prompt=buildSlothHealthReviewPrompt(catalog,language);
-    const ask=requester(profile,settings,signal,true,()=>{},verifyOrigin);
-    const raw=await ask(prompt,'Nexus health review');
-    verifyOrigin();
-    return validateSlothHealthReview(catalog,raw);
-}
 const originalMessages=messages=>messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date}));
 const compact=messages=>JSON.stringify(originalMessages(messages));
@@ -936,4 +928,13 @@ export async function suggestSlothSceneSplit({
     if(!Array.isArray(answer.parts))throw new Error('Split plan response has no parts array.');
     if(!answer.parts.length)return null;
     return validateNexusSceneSplitProposal(plan,answer,messages);
+}
+
+// User-triggered maintenance only, not part of collection statistics.
+export async function suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,language}){
+    const prompt=buildSlothHealthReviewPrompt(catalog,language);
+    const ask=requester(profile,settings,signal,true,()=>{},verifyOrigin);
+    const raw=await ask(prompt,'Nexus health review');
+    verifyOrigin();
+    return validateSlothHealthReview(catalog,raw);
 }
