@@ -1972,5 +1972,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "선택된 Memory에 이미 담긴 범위만 채팅 메시지 번호로 입력하세요. 예시는 0-18, 22-25입니다. 비워 두고 저장하면 범위를 해제합니다.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "이전에 확인한 메시지가 변경되었습니다. 기억 관리에서 범위를 다시 확인하거나 해제하세요.",
   "STMemoryBooks_SlothRenameRetry": "로어북 연결 갱신이 보류되었습니다. 원래 채팅에서 이 알림을 눌러 다시 시도하세요. 저장된 채팅이 변경되었다면 먼저 새로고침하세요.",
-  "STMemoryBooks_SlothRenameOriginalChat": "로어북 연결 갱신을 다시 시도하기 전에 원래 채팅으로 돌아가세요."
+  "STMemoryBooks_SlothRenameOriginalChat": "로어북 연결 갱신을 다시 시도하기 전에 원래 채팅으로 돌아가세요.",
+  "STMemoryBooks_SlothHealthTitle": "Nexus 건강검진",
+  "STMemoryBooks_SlothHealthMixed": "복합 역할",
+  "STMemoryBooks_SlothHealthOther": "기타",
+  "STMemoryBooks_SlothHealthProtected": "보호 항목",
+  "STMemoryBooks_SlothHealthHelp": "현재 토크나이저로 저장 본문을 추정한 읽기 전용 현황입니다. 상시 설정은 실제 주입을 보증하지 않습니다. 삭제하거나 재분류하지 않습니다.",
+  "STMemoryBooks_SlothHealthTotal": "저장 본문",
+  "STMemoryBooks_SlothHealthAlways": "상시 설정",
+  "STMemoryBooks_SlothHealthDuplicates": "중복 문단",
+  "STMemoryBooks_SlothHealthUnknown": "미계측: ",
+  "STMemoryBooks_SlothHealthRole": "역할",
+  "STMemoryBooks_SlothHealthEntries": "항목 수",
+  "STMemoryBooks_SlothHealthInspect": "크기순으로 항목 살펴보기",
+  "STMemoryBooks_SlothHealthChoose": "항목 선택",
+  "STMemoryBooks_SlothHealthRepeatHelp": "완전히 같은 문단은 검토 단서일 뿐, 의미가 불필요하게 중복되었다는 증거는 아닙니다.",
+  "STMemoryBooks_SlothHealthHelpLabel": "토큰 수치 안내",
+  "STMemoryBooks_SlothCapacityExceeded": "예상 수집량(입력 {{input}} + 출력 {{output}} + 여유 {{reserve}})이 안전한 컨텍스트 한도 {{limit}}토큰을 넘습니다. AI 요청은 보내지 않았습니다. 더 큰 컨텍스트의 모델을 선택하거나 수집 범위를 줄여 주세요.",
+  "STMemoryBooks_SlothCapacityUnknown": "선택한 수집 모델의 컨텍스트 한도를 확인할 수 없어 큰 요청(입력 약 {{input}}토큰)을 보내지 않았습니다. 한도를 알 수 있는 모델이나 적절한 컨텍스트 설정의 연결 프로필을 선택해 주세요."
 }

@@ -4,8 +4,10 @@
 import { requestCompletion } from './stmemory.js';
 import { getCurrentApiInfo, getUIModelSettings, normalizeCompletionSource,
     resolveEffectiveConnectionFromProfile } from './utils.js';
-import { oai_settings } from '../../../openai.js';
-import { getMaxContextSize } from '../../../../script.js';
+import { oai_settings, model_list } from '../../../openai.js';
+import { getMaxContextSize, getRequestHeaders } from '../../../../script.js';
+import { translate } from '../../../i18n.js';
+import { resolveSlothCapacity, assessSlothCapacity, isSlothGemma31 } from './slothCollectionCapacity.js';
 import { getTokenCountAsync } from '../../../tokenizers.js';
 import { getContext } from '../../../extensions.js';
 import { getSelectedConnectionProfile } from './connectionProfileRequest.js';
@@ -69,7 +71,59 @@ function resolveConnection(profile) {
         useChatCompletionService:!!profile?.useChatCompletionService && conn.api!=='full-manual',
         chatCompletionPreset:String(profile?.chatCompletionPreset||'').trim()};
 }
-function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{}) {
+// The request has already resolved its actual profile and output limit.
+// ST's model catalog belongs to the active provider; do not borrow a
+// different provider's limit or an unrelated active RP context slider.
+async function preflightSingleSlothCollection(request,signal){
+    const {api,model,body,connection,selectedCustomConnection,chatCompletionPreset}=request;
+    const active=getCurrentApiInfo();
+    const activeApi=normalizeCompletionSource(active.completionSource||active.api||'openai');
+    const activeModel=activeApi==='nanogpt'?oai_settings.nanogpt_model:getUIModelSettings().model;
+    const cleanUrl=value=>String(value||'').trim().replace(/\/+$/u,'');
+    const customUrl=connection?.profile?.['custom-connection']?.settings?.custom_url||
+        connection?.profile?.['api-url']||selectedCustomConnection?.customUrl||body.custom_url;
+    const catalogMatches=api===activeApi&&api!=='full-manual'&&
+        (api!=='custom'||cleanUrl(customUrl)===cleanUrl(oai_settings.custom_url))&&
+        !connection?.profile?.proxy&&!body.reverse_proxy;
+    const presetName=connection?.profile?.preset||chatCompletionPreset;
+    let configuredLimit;
+    if(presetName){
+        try{configuredLimit=getContext()?.getPresetManager?.('openai')?.getCompletionPresetByName?.(presetName)?.openai_max_context;}
+        catch{/* No unrelated RP context fallback for a distinct profile. */}
+    }else if(!connection&&catalogMatches&&model===activeModel){
+        configuredLimit=getMaxContextSize();
+    }
+    const {limit}=resolveSlothCapacity({model,catalog:model_list,catalogMatches,configuredLimit});
+    const prompt=body.messages.map(message=>String(message.content||'')).join('\n\n');
+    const outputTokens=Math.max(...['max_tokens','max_completion_tokens','max_output_tokens','max_new_tokens']
+        .map(key=>Number(body[key])||0));
+    let inputTokens;
+    try{
+        if(isSlothGemma31(model)){
+            // Local ST count endpoint, not a generation call. It returns a
+            // single count rather than a potentially enormous token array.
+            const response=await fetch('/api/tokenizers/openai/count?model=gemma',{
+                method:'POST',headers:getRequestHeaders(),body:JSON.stringify(body.messages),signal});
+            if(response.ok)inputTokens=(await response.json()).token_count;
+        }else{
+            inputTokens=await getTokenCountAsync(prompt);
+        }
+    }catch{/* Fall back to the conservative estimate. */}
+    signal?.throwIfAborted();
+    const budget=assessSlothCapacity({prompt,inputTokens,outputTokens,limit});
+    if(budget.blocked){
+        const source=limit?
+            'Estimated collection (input {{input}} + output {{output}} + reserve {{reserve}}) exceeds the safe context limit of {{limit}} tokens. No AI request was sent. Select a larger-context model or reduce the collection range.':
+            'The selected collection model has an unknown context limit. The large request (about {{input}} input tokens) was not sent. Select a model with a known limit or a connection profile with an appropriate context setting.';
+        const key=limit?'STMemoryBooks_SlothCapacityExceeded':'STMemoryBooks_SlothCapacityUnknown';
+        const message=translate(source,key).replace(/\{\{(input|output|reserve|limit)\}\}/gu,(_,field)=>Number(budget[field]).toLocaleString());
+        throw Object.assign(new Error(message),{code:'STMB_SLOTH_INPUT_BUDGET',budget});
+    }
+    if(!limit)console.warn('🦥 STMemoryBooks','Collection model context limit is unknown; input is estimated.');
+    return budget;
+}
+
+function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},verifyOrigin=()=>{}) {
     const connection=resolveConnection(profile);
     const extra={},max=Number.parseInt(settings?.moduleSettings?.maxTokens,10);
     if(Number.isFinite(max)&&max>0)extra.max_tokens=max;
@@ -80,10 +134,15 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{}) {
     }
     return async (prompt,phase,parse=parseStrictJSON)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
-        const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt});
+        let estimate=null;
+        const beforeRequest=phase==='Single collection'||phase==='Summary review'?async request=>{
+            estimate=await preflightSingleSlothCollection(request,signal);
+            verifyOrigin();
+        }:null;
+        const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt,...(beforeRequest?{beforeRequest}:{})});
         if(signal?.aborted)throw new Error('Collection cancelled.');
         if(full?.error)throw new Error(phase+': the selected provider returned an error instead of a draft.',{cause:full.error});
-        onUsage(full?.usage,phase);
+        onUsage(full?.usage,phase,estimate);
         return parse(text,phase);
     };
 }
@@ -387,7 +446,7 @@ async function nexusStateEvidenceFor(messages, ask) {
     return payload;
 }
 
-function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource}) {
+function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource,characterContextIncluded=false}) {
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const {roles,legacyLayout,protected:protectedEntry}=describeNexusCollectionEntry(e);
         return {uid:e.uid,title:e.comment,body:protectedEntry?'[protected; not included]':e.content,
@@ -405,8 +464,9 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
-            'The following character card is reference for disambiguation only. New memories must reflect the actual chat:',
-            characterContext,
+            ...(characterContextIncluded?
+                ['The character card reference above is for disambiguation only. New memories must reflect the actual chat.']:
+                ['The following character card is reference for disambiguation only. New memories must reflect the actual chat:',characterContext]),
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
@@ -620,17 +680,17 @@ export async function composeSingleSlothCollection(options) {
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
-        slothNexusGuidance({nexus,settings,initial,characterContext,partialSource}),
+        slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
         'For each Nexus edit set risk to ordinary or sensitive. Mark changes to relationships, commitments, boundaries, secrets, or who knows what as sensitive. Core changes, Current Continuity retirement and Knowledge Boundaries changes also require evidence. For sensitive changes include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three quotes, each at most 240 characters; cite both the condition and actual answer when needed. Use only current source IDs, and copy the quote directly from that message. Ordinary edits need no evidence. Reconfirmed facts need no edit.',
-        'Original source IDs: '+JSON.stringify(ids),
-        'Original source messages:',compact(messages),
+        'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
-    const ask=requester(profile,settings,signal,true,(usage,phase)=>{
+    const ask=requester(profile,settings,signal,true,(usage,phase,estimate)=>{
         if(phase!=='Single collection')return;
         const count=usage?.prompt_tokens??usage?.input_tokens;
         if(Number.isFinite(count)&&count>=0){inputTokens=count;inputTokensExact=true;}
-    });
+        else if(Number.isFinite(estimate?.input))inputTokens=estimate.input;
+    },verifyOrigin);
     const replayed=typeof rawDraft==='string';
     const raw=replayed ? parseSingleSlothCollectionDraft(rawDraft) :
         await ask(prompt,'Single collection',async (response,phase)=>{

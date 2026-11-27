@@ -1942,5 +1942,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "只输入所选 Memory 已涵盖的消息范围。请使用聊天消息编号，例如 0-18, 22-25。留空即可清除这些范围。",
   "STMemoryBooks_SlothLegacyCoverageChanged": "之前核对过的消息发生了变化。请在管理现有记忆中重新核对或清除范围。",
   "STMemoryBooks_SlothRenameRetry": "世界书链接更新尚未完成。点击此通知，在原聊天中重试。如果已保存的聊天发生变化，请先重新加载。",
-  "STMemoryBooks_SlothRenameOriginalChat": "重试世界书链接更新前，请返回原聊天。"
+  "STMemoryBooks_SlothRenameOriginalChat": "重试世界书链接更新前，请返回原聊天。",
+  "STMemoryBooks_SlothHealthTitle": "Nexus 健康检查",
+  "STMemoryBooks_SlothHealthMixed": "混合角色",
+  "STMemoryBooks_SlothHealthOther": "其他",
+  "STMemoryBooks_SlothHealthProtected": "受保护",
+  "STMemoryBooks_SlothHealthHelp": "使用当前分词器估算已保存正文的只读快照。常驻标记不代表实际注入。不会删除或重新分类任何内容。",
+  "STMemoryBooks_SlothHealthTotal": "已保存",
+  "STMemoryBooks_SlothHealthAlways": "常驻设置",
+  "STMemoryBooks_SlothHealthDuplicates": "重复段落",
+  "STMemoryBooks_SlothHealthUnknown": "未计数：",
+  "STMemoryBooks_SlothHealthRole": "角色",
+  "STMemoryBooks_SlothHealthEntries": "条目数",
+  "STMemoryBooks_SlothHealthInspect": "按大小查看条目",
+  "STMemoryBooks_SlothHealthChoose": "选择条目",
+  "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落仅供核查，并非语义冗余的证明。",
+  "STMemoryBooks_SlothHealthHelpLabel": "计数说明",
+  "STMemoryBooks_SlothCapacityExceeded": "预计收集量（输入 {{input}} + 输出 {{output}} + 余量 {{reserve}}）超过安全上下文上限 {{limit}} 词元。未发送 AI 请求。请选择上下文更大的模型或缩小收集范围。",
+  "STMemoryBooks_SlothCapacityUnknown": "所选收集模型的上下文上限未知，未发送大型请求（预计输入 {{input}} 词元）。请选择上限已知的模型或具有合适上下文设置的连接配置。"
 }

@@ -1939,5 +1939,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Informe apenas os intervalos já cobertos pelo livro Memory selecionado. Use os números das mensagens, por exemplo 0-18, 22-25. Deixe em branco para apagar esses intervalos.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "As mensagens revisadas foram alteradas. Revise ou apague os intervalos em Gerenciar memórias existentes.",
   "STMemoryBooks_SlothRenameRetry": "A atualização dos vínculos dos lorebooks está pendente. Clique nesta notificação para tentar novamente no chat original. Se o chat salvo mudou, recarregue-o primeiro.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Volte ao chat original antes de tentar novamente atualizar os vínculos dos lorebooks."
+  "STMemoryBooks_SlothRenameOriginalChat": "Volte ao chat original antes de tentar novamente atualizar os vínculos dos lorebooks.",
+  "STMemoryBooks_SlothHealthTitle": "Diagnóstico do Nexus",
+  "STMemoryBooks_SlothHealthMixed": "Papéis mistos",
+  "STMemoryBooks_SlothHealthOther": "Outros",
+  "STMemoryBooks_SlothHealthProtected": "Protegidos",
+  "STMemoryBooks_SlothHealthHelp": "Visão somente leitura do texto armazenado, estimada com o tokenizador atual. As marcas de ativação permanente não comprovam a injeção real. Nada é excluído ou reclassificado.",
+  "STMemoryBooks_SlothHealthTotal": "Armazenado",
+  "STMemoryBooks_SlothHealthAlways": "Sempre ativo",
+  "STMemoryBooks_SlothHealthDuplicates": "Parágrafos idênticos",
+  "STMemoryBooks_SlothHealthUnknown": "Não contado: ",
+  "STMemoryBooks_SlothHealthRole": "Papel",
+  "STMemoryBooks_SlothHealthEntries": "Entradas",
+  "STMemoryBooks_SlothHealthInspect": "Examinar entradas por tamanho",
+  "STMemoryBooks_SlothHealthChoose": "Escolher uma entrada",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Parágrafos idênticos são pistas para revisão, não prova de redundância semântica.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Sobre estes valores",
+  "STMemoryBooks_SlothCapacityExceeded": "A coleta estimada (entrada {{input}} + saída {{output}} + reserva {{reserve}}) excede o limite seguro de {{limit}} tokens. Nenhuma solicitação de IA foi enviada. Escolha um modelo com contexto maior ou reduza o intervalo da coleta.",
+  "STMemoryBooks_SlothCapacityUnknown": "O limite de contexto do modelo de coleta é desconhecido. A solicitação grande (aprox. {{input}} tokens de entrada) não foi enviada. Escolha um modelo com limite conhecido ou um perfil com contexto adequado."
 }

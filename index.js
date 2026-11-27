@@ -74,7 +74,7 @@ import {
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
-  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
+  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage, showSlothNexusHealth,
   beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename, finishPendingSlothLorebookRenames,
   hasPendingSlothSideRename, SLOTH_RENAME_RETRIED_EVENT,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft,
@@ -11838,6 +11838,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
       runNexusCollector({ profileIndex, stConnectionProfileId, ...controls })),
     companion: () => createSlothCompanion(),
     'recall-apply': () => applySlothNexusRecallSettings(),
+    'nexus-health': () => showSlothNexusHealth(),
     'legacy-coverage': () => reviewSlothLegacyCoverage(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
