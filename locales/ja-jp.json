@@ -1940,5 +1940,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "提案されたNexusの変更を確認・編集できます。原文の根拠チェックは維持されます。",
   "STMemoryBooks_SlothLegacyCoverage": "要約済みのメッセージを確認",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "選択した Memory に保存済みのメッセージ範囲だけを入力してください。チャットのメッセージ番号を使用します（例 0-18, 22-25）。空欄で保存すると範囲を解除します。",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "確認済みのメッセージが変更されました。「既存の記憶を管理」で範囲を再確認するか解除してください。"
+  "STMemoryBooks_SlothLegacyCoverageChanged": "確認済みのメッセージが変更されました。「既存の記憶を管理」で範囲を再確認するか解除してください。",
+  "STMemoryBooks_SlothRenameRetry": "ロアブックのリンク更新が保留中です。元のチャットで再試行するにはこの通知をクリックしてください。保存済みチャットが変更された場合は先に再読み込みしてください。",
+  "STMemoryBooks_SlothRenameOriginalChat": "ロアブックのリンク更新を再試行する前に、元のチャットに戻ってください。"
 }

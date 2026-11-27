@@ -1940,5 +1940,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "審核或修改提議的 Nexus 變更；原文證據檢查仍會執行。",
   "STMemoryBooks_SlothLegacyCoverage": "核對已摘要的訊息",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "只輸入所選 Memory 已涵蓋的訊息範圍。請使用聊天訊息編號，例如 0-18, 22-25。留空即可清除這些範圍。",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "先前核對過的訊息有變更。請在管理現有記憶中重新核對或清除範圍。"
+  "STMemoryBooks_SlothLegacyCoverageChanged": "先前核對過的訊息有變更。請在管理現有記憶中重新核對或清除範圍。",
+  "STMemoryBooks_SlothRenameRetry": "世界書連結更新尚未完成。點擊此通知，在原聊天中重試。如果已儲存的聊天已變更，請先重新載入。",
+  "STMemoryBooks_SlothRenameOriginalChat": "重試世界書連結更新前，請返回原聊天。"
 }

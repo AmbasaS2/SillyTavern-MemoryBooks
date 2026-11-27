@@ -1937,5 +1937,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "Revise ou edite a alteração proposta no Nexus. A verificação das fontes continua ativa.",
   "STMemoryBooks_SlothLegacyCoverage": "Revisar mensagens já resumidas",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Informe apenas os intervalos já cobertos pelo livro Memory selecionado. Use os números das mensagens, por exemplo 0-18, 22-25. Deixe em branco para apagar esses intervalos.",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "As mensagens revisadas foram alteradas. Revise ou apague os intervalos em Gerenciar memórias existentes."
+  "STMemoryBooks_SlothLegacyCoverageChanged": "As mensagens revisadas foram alteradas. Revise ou apague os intervalos em Gerenciar memórias existentes.",
+  "STMemoryBooks_SlothRenameRetry": "A atualização dos vínculos dos lorebooks está pendente. Clique nesta notificação para tentar novamente no chat original. Se o chat salvo mudou, recarregue-o primeiro.",
+  "STMemoryBooks_SlothRenameOriginalChat": "Volte ao chat original antes de tentar novamente atualizar os vínculos dos lorebooks."
 }

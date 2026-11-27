@@ -1101,8 +1101,11 @@ export async function patchStmbMetadataForChatRef(chatRef, patcher) {
         const previous = metadata.STMemoryBooks;
         const current = previous && typeof previous === 'object' ? { ...previous } : {};
         const patched = await patcher(current);
-        if (!isProgressChatLoaded(chatRef) || getContext().chatMetadata !== metadata || metadata.STMemoryBooks !== previous) {
-            throw new Error('Chat metadata changed during the update.');
+        if (!isProgressChatLoaded(chatRef)) throw new Error('Chat metadata changed during the update.');
+        if (getContext().chatMetadata !== metadata || metadata.STMemoryBooks !== previous) {
+            // No write has occurred. Only a caller repeating its complete
+            // server verification on the same chat may retry this conflict.
+            throw Object.assign(new Error('Chat metadata changed during the update.'), {code:'STMB_METADATA_REPLACED'});
         }
         metadata.STMemoryBooks = patched && typeof patched === 'object' ? patched : current;
         await getContext().saveMetadata();

@@ -76,6 +76,7 @@ import {
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
   beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename, finishPendingSlothLorebookRenames,
+  hasPendingSlothSideRename, SLOTH_RENAME_RETRIED_EVENT,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft,
   refreshSlothPaidDraft, isSlothRecoveryUnavailable } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
@@ -11702,6 +11703,12 @@ async function runSlothCollectionEntryPoint({ signal, onSaveStart } = {}) {
     toastr.warning(translate('Choose Sloth mode in Memory Books settings first.', 'STMemoryBooks_ModeSlothRequired'), 'STMemoryBooks');
     return '';
   }
+  // Resume an interrupted rename before checking its temporarily stale roles.
+  // This click never starts an AI request while recovery is pending.
+  if (hasPendingSlothSideRename(ref)) {
+    await retrySlothSideRenames();
+    return '';
+  }
   if (!ref?.fileName || (!canStartNexusSetup(ref,settings) && !['nexus','memory'].every(role=>
     getNexusRoleResolutionForChatRef(role,ref,settings).state === 'ready'))) {
     toastr.info(translate('Open a character chat and check Lorebook setup in the Sloth tab.', 'STMemoryBooks_SlothCollectUnavailable'),
@@ -14574,6 +14581,7 @@ function setupEventListeners() {
     populateInlineButtons();
     void refreshSlothRoleControls({forceRoles:true});
   };
+  eventSource.on(SLOTH_RENAME_RETRIED_EVENT,refreshAfterSlothRename);
   let slothRenameCheckTimer=null;
   let slothRenameCheckRevision=0;
   function scheduleSlothRenameCheck(remaining=20) {
