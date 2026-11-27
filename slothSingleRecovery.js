@@ -139,7 +139,8 @@ function sourceFor(row,sourceIds) {
         }
     } else {
         const raw=row?.segments??row?.ranges??(row?.start!==undefined&&row?.end!==undefined?{start:row.start,end:row.end}:null);
-        const pairs=Array.isArray(raw) && !(raw.length===2&&raw.every(v=>int(v)!==null))?raw:[raw];
+        const pairs=typeof raw==='string'&&raw.includes(',') ? raw.split(',') :
+            Array.isArray(raw) && !(raw.length===2&&raw.every(v=>int(v)!==null))?raw:[raw];
         for (const value of pairs) {
             const pair=readRange(value);
             if (!pair||pair[0]===null||pair[1]===null||pair[0]>pair[1]) { invalid=true;unknown=true;continue; }
@@ -165,17 +166,19 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
     let uncertain=raw.recoveryUncertain===true || !Array.isArray(raw.events) ||
         (Object.hasOwn(raw,'deferred')&&!Array.isArray(raw.deferred));
     let invalidScenes=0;
-    const postpone=(row,range,reason)=>{
+    const postpone=(row,range,reason,explicitOpen=false)=>{
         uncertain ||= range.unknown;
-        if (range.ids.length) deferred.push({title:text(row?.title),reason,segments:collectionRanges(range.ids),messageIds:range.ids});
+        if (range.ids.length) deferred.push({title:text(row?.title),reason,explicitOpen,
+            segments:collectionRanges(range.ids),messageIds:range.ids});
     };
     for (const [i,row] of (Array.isArray(raw.events)?raw.events:[]).entries()) {
         const range=sourceFor(row,sourceIds);
-        const complete=row?.complete===true||row?.complete==='true';
+        const complete=row?.complete===true||text(row?.complete).toLowerCase()==='true';
+        const explicitlyOpen=row?.complete===false||text(row?.complete).toLowerCase()==='false';
         const result=text(row?.result);
         if (!complete||range.invalid||!result) {
             if (complete) invalidScenes++;
-            postpone(row,range,text(row?.reason)||'Unfinished or unverified incident.');
+            postpone(row,range,text(row?.reason)||'Unfinished or unverified incident.',explicitlyOpen);
             continue;
         }
         const title=(text(row.title)||result).slice(0,180);
@@ -189,13 +192,26 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
     for (const row of Array.isArray(raw.deferred)?raw.deferred:[]) {
         const range=sourceFor(row,sourceIds);
         // Even a malformed range may contain real pending IDs; retain them.
-        postpone(row,range,text(row?.reason)||'Unfinished or unclassified incident.');
+        postpone(row,range,text(row?.reason)||'Unfinished or unclassified incident.',true);
     }
-    const assigned=new Set([...events,...deferred].flatMap(event=>event.messageIds));
+    // A duplicate classification of the SAME incident as both finished and
+    // open is not a completed memory. Do not infer closure from its prose.
+    // Distinct scenes may legitimately share only a boundary message.
+    const completed=events.filter(event=>{
+        const conflicting=deferred.some(open=>open.explicitOpen&&(
+            JSON.stringify(open.messageIds)===JSON.stringify(event.messageIds) ||
+            (open.title&&open.title.toLowerCase()===event.title.toLowerCase()&&
+                event.messageIds.some(id=>open.messageIds.includes(id)))));
+        if (!conflicting) return true;
+        invalidScenes++;
+        deferred.push({...event,reason:'Conflicting completed and unfinished classification.'});
+        return false;
+    });
+    const assigned=new Set([...completed,...deferred].flatMap(event=>event.messageIds));
     const missing=sourceIds.filter(id=>!assigned.has(id));
     if (missing.length) deferred.push({reason:'Unclassified source.',unclassified:true,segments:collectionRanges(missing),messageIds:missing});
-    events.sort((a,b)=>a.end-b.end);
-    return {events,deferred,sourceIds:[...sourceIds],start:sourceIds[0],end:sourceIds.at(-1),
+    completed.sort((a,b)=>a.end-b.end);
+    return {events:completed,deferred,sourceIds:[...sourceIds],start:sourceIds[0],end:sourceIds.at(-1),
         fullyCollected:!uncertain&&!deferred.length,uncertain,invalidScenes};
 }
 
@@ -217,4 +233,11 @@ export function finalizeSingleSlothScenes(plan,drafts) {
         scenes.push({...draft,collectedRanges:collectionRanges(event.messageIds.filter(id=>!pending.has(id)))});
     }
     return {scenes,skippedScenes:plan.invalidScenes+skipped.length,pendingRanges:collectionRanges([...pending])};
+}
+
+// Draft reuse is deliberately bound to the original chat, source, and both
+// lorebook snapshots. Never apply a paid draft to a different branch or book.
+export function sameSlothDraftBinding(record,binding) {
+    return record?.version===1 && typeof record.raw==='string' &&
+        JSON.stringify(record.binding)===JSON.stringify(binding);
 }

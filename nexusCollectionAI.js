@@ -630,7 +630,7 @@ export async function composeSingleSlothCollection(options) {
         timeline:oneLine(event?.timeline)||'Unknown',result:oneLine(event?.result)}));
     const drafts=readSlothBatchScenes({scenes:rows},plan.events);
     let reviewFailed=false;
-    if(reviewSummaries&&plan.events.length){
+    if(reviewSummaries&&!replayed&&plan.events.length){
         try {
             const repairs=await reviewSlothSceneDrafts({events:plan.events,messages,scenes:drafts,settings,ask});
             for(const [id,repair] of repairs)drafts.set(id,repair);

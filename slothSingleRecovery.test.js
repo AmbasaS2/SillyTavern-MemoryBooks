@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes} from './slothSingleRecovery.js';
+import {parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,sameSlothDraftBinding} from './slothSingleRecovery.js';
 
 const event=(segments,title='Letter')=>({title,complete:true,segments,scene:'She read the letter.',result:'The letter was read.',timeline:'Unknown'});
 const open=segments=>({complete:false,segments,reason:'Awaiting an answer.'});
@@ -72,4 +72,21 @@ test('duplicate complete rows are written once without blocking unrelated events
     const out=finalize(p);
     assert.equal(out.scenes.length,2);
     assert.deepEqual(out.pendingRanges,[]);
+});
+
+test('an incident explicitly classified both complete and open is not fabricated as finished',()=>{
+    const p=plan({events:[event([0,1]),event([2,5],'Conflict'),open([2,5])]});
+    const out=finalize(p);
+    assert.equal(out.scenes.length,1);
+    assert.deepEqual(out.scenes[0].collectedRanges,[[0,1]]);
+    assert.deepEqual(out.pendingRanges,[[2,5]]);
+    assert.equal(out.skippedScenes,1);
+});
+test('a saved raw response can only be replayed for identical source and books',()=>{
+    const binding={chatKey:'chat-a',roles:{nexus:'N',memory:'M'},source:[1,2],fingerprint:'original',books:['a','b']};
+    const record={version:1,binding,raw:'{"events":[]}'};
+    assert.equal(sameSlothDraftBinding(record,structuredClone(binding)),true);
+    assert.equal(sameSlothDraftBinding(record,{...binding,chatKey:'chat-b'}),false);
+    assert.equal(sameSlothDraftBinding(record,{...binding,books:['a','changed']}),false);
+    assert.equal(sameSlothDraftBinding(record,{...binding,fingerprint:'changed'}),false);
 });
