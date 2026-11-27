@@ -23,7 +23,7 @@ jobs:
         run: |
           node --check index.build.js
           test -s index.build.js.map
-          grep -q '🦥' index.build.js
+          node --input-type=module -e 'import fs from "node:fs"; const raw=fs.readFileSync("index.build.js","utf8"); const decoded=raw.replace(/\\u\{([0-9a-f]+)\}|\\u([0-9a-f]{4})/gi,(_,cp,unit)=>cp?String.fromCodePoint(parseInt(cp,16)):String.fromCharCode(parseInt(unit,16))); if(!decoded.includes(String.fromCodePoint(0x1f9a5))) throw Error("Missing compiled Sloth branding"); console.log("Verified Sloth branding in compiled JS (literal or Unicode escape)");'
       - name: Commit verified assets on the validation branch only
         run: |
           git config user.name 'github-actions[bot]'
