@@ -664,7 +664,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2,onRequestMetric=null}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=3,onRequestMetric=null}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -672,17 +672,21 @@ export async function composeSingleSlothCollection(options) {
     const prompt=[
         DEFAULT_SLOTH_COLLECTION_PROMPTS.plan.replace(
             'Use whole messages and assign each original ID exactly once. When one message closes an incident and briefly opens another, assign it to the action it primarily carries and do not list it twice.',
-            'Use actual original message IDs as evidence. A message that closes one incident and opens another may belong to both. Keep both causal boundaries; distinguish completed outcomes from unfinished incidents.'),
+            'Use actual original message IDs as evidence. A message that closes one incident and opens another may belong to both. Keep both causal boundaries; distinguish completed outcomes from unfinished incidents.')
+            .replace('Outline the fewest complete memories that preserve the consequential outcomes.',
+                'Identify every distinct consequential outcome before deciding how many memories to write.')
+            .replace('Merge candidate memories if one supplies the cause, reaction, escalation, correction, answer, or repair of the other. Ask whether a future reader could understand the significance of each outcome without the other memory. If either explanation starts with "this answered what happened in the previous memory," keep them together. Split only if BOTH sides have a distinct initiating situation and an independently useful, completed outcome. Time, message count, activity, and tokens do not define a cut.',
+                'Keep the setup, reaction, correction, answer and repair of ONE driving issue together. Preserve a separate incident when it has a distinct initiating situation and its own completed consequence, even if it shares a topic, participants, location, or emotional context. A brief reference to the earlier event can make it self-contained. Time, message count, activity, and tokens do not define a cut.'),
         getActiveSlothSummaryPreset(settings).text,
         'Perform causal event classification, complete Scene writing, and minimal Nexus patches in this ONE response. Return only one complete JSON object.',
         'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]},{"title":"open incident","complete":false,"reason":"why still open","segments":[[2,3]]}],"edits":[]}.',
         'Return one row per causal incident in events. Complete events contain their own Scene and Result. Open incidents have complete:false; leave their outcome pending. Use inclusive source ranges with real original IDs. Shared boundary messages are allowed when they support distinct incidents. Do not duplicate the same incident. Keep all essential details and return complete JSON within the output budget.',
-        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences.',
+        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Keep the actual last action and response within the assigned IDs; cite the exact ending phrase at its real message ID. Preserve each distinct agreement, condition, refusal, choice and specific apology in its own clause with actor, recipient and observed response. Keep exact quantities, units and frequency, including in Nexus edits. Let a source-supported sensory detail, silence, hesitation or gesture carry the emotional meaning alongside the consequential action; distinguish shown reactions from inferred feelings.',
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
-        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Other edits retain the existing structural checks.',
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite evidence for every LT replace_exact and for LT creates or additions concerning promises, agreements, boundaries, permission, secrecy, or relationship status, whether the subject appears in its title or the new claim. Quote the exact quantity and unit when relevant. Ordinary LT additions need no extra evidence. A quote is a source reference, not permission to infer beyond it.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
