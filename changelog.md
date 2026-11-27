@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ← [Back to README](readme.md)
 
+## v9.4.0-ambasa.7 (November 27, 2026) — Sloth fork
+- Move Memory Workshop below Advanced settings and use compact icon actions grouped by purpose rather than AI/manual.
+- Render selected memory previews as sanitized Markdown. Reuse WorldInfo Info's exact read-only Lorebook Manager translation lookup, with a single on-demand current-book file read per overview and an original/translation switch.
+- No new observers, polling, background rendering, AI requests, tokenization or memory writes. Node 662/662, Bun build and four isolated Chrome layout checks passed. Live installed translation data and latency were not measured.
+
 ## v9.4.0-ambasa.6 (November 27, 2026) — Sloth fork
 - Group all existing memory-maintenance tools under Memory Workshop; rename the AI tool and previously summarized range registration for clarity.
 - Only Lorebook setup starts expanded. Align drawer headers, arrows and Workshop action widths using native disclosure and scoped CSS, with no new observer, polling or render handler.
