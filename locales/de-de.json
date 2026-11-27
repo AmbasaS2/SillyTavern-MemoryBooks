@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "Einträge nach Größe prüfen",
   "STMemoryBooks_SlothHealthChoose": "Eintrag auswählen",
   "STMemoryBooks_SlothHealthRepeatHelp": "Identische Absätze sind Hinweise zur Prüfung, kein Beweis für inhaltliche Redundanz.",
-  "STMemoryBooks_SlothHealthHelpLabel": "Info zu diesen Werten"
+  "STMemoryBooks_SlothHealthHelpLabel": "Info zu diesen Werten",
+  "STMemoryBooks_SlothCapacityExceeded": "Die geschätzte Sammlung (Eingabe {{input}} + Ausgabe {{output}} + Reserve {{reserve}}) überschreitet die sichere Kontextgrenze von {{limit}} Tokens. Es wurde keine KI-Anfrage gesendet. Wähle ein Modell mit größerem Kontext oder verkleinere den Sammlungsumfang.",
+  "STMemoryBooks_SlothCapacityUnknown": "Das Kontextlimit des gewählten Sammlungsmodells ist unbekannt. Die große Anfrage (ca. {{input}} Eingabetokens) wurde nicht gesendet. Wähle ein Modell mit bekanntem Limit oder ein Verbindungsprofil mit passender Kontexteinstellung."
 }

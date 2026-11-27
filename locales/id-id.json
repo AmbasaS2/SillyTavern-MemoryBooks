@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "Periksa entri berdasarkan ukuran",
   "STMemoryBooks_SlothHealthChoose": "Pilih entri",
   "STMemoryBooks_SlothHealthRepeatHelp": "Paragraf identik adalah petunjuk pemeriksaan, bukan bukti makna yang berlebihan.",
-  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini"
+  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini",
+  "STMemoryBooks_SlothCapacityExceeded": "Perkiraan pengumpulan (masukan {{input}} + keluaran {{output}} + cadangan {{reserve}}) melampaui batas konteks aman {{limit}} token. Tidak ada permintaan AI dikirim. Pilih model dengan konteks lebih besar atau kurangi rentang pengumpulan.",
+  "STMemoryBooks_SlothCapacityUnknown": "Batas konteks model pengumpulan tidak diketahui. Permintaan besar (sekitar {{input}} token masukan) tidak dikirim. Pilih model dengan batas yang diketahui atau profil dengan konteks yang sesuai."
 }

@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "按大小查看条目",
   "STMemoryBooks_SlothHealthChoose": "选择条目",
   "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落仅供核查，并非语义冗余的证明。",
-  "STMemoryBooks_SlothHealthHelpLabel": "计数说明"
+  "STMemoryBooks_SlothHealthHelpLabel": "计数说明",
+  "STMemoryBooks_SlothCapacityExceeded": "预计收集量（输入 {{input}} + 输出 {{output}} + 余量 {{reserve}}）超过安全上下文上限 {{limit}} 词元。未发送 AI 请求。请选择上下文更大的模型或缩小收集范围。",
+  "STMemoryBooks_SlothCapacityUnknown": "所选收集模型的上下文上限未知，未发送大型请求（预计输入 {{input}} 词元）。请选择上限已知的模型或具有合适上下文设置的连接配置。"
 }

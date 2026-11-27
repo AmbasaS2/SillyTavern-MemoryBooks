@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "Просмотр записей по размеру",
   "STMemoryBooks_SlothHealthChoose": "Выберите запись",
   "STMemoryBooks_SlothHealthRepeatHelp": "Совпадающие абзацы — повод для проверки, а не доказательство смысловой избыточности.",
-  "STMemoryBooks_SlothHealthHelpLabel": "Об этих значениях"
+  "STMemoryBooks_SlothHealthHelpLabel": "Об этих значениях",
+  "STMemoryBooks_SlothCapacityExceeded": "Оценка сбора (ввод {{input}} + вывод {{output}} + резерв {{reserve}}) превышает безопасный предел контекста {{limit}} токенов. Запрос к ИИ не отправлен. Выберите модель с большим контекстом или уменьшите диапазон сбора.",
+  "STMemoryBooks_SlothCapacityUnknown": "Лимит контекста модели сбора неизвестен. Большой запрос (около {{input}} входных токенов) не отправлен. Выберите модель с известным пределом или профиль с подходящим контекстом."
 }

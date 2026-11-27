@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "Revisar entradas por tamaño",
   "STMemoryBooks_SlothHealthChoose": "Elegir una entrada",
   "STMemoryBooks_SlothHealthRepeatHelp": "Los párrafos idénticos son pistas para revisar, no prueba de redundancia semántica.",
-  "STMemoryBooks_SlothHealthHelpLabel": "Información sobre estas cifras"
+  "STMemoryBooks_SlothHealthHelpLabel": "Información sobre estas cifras",
+  "STMemoryBooks_SlothCapacityExceeded": "La recopilación estimada (entrada {{input}} + salida {{output}} + reserva {{reserve}}) supera el límite seguro de {{limit}} tokens. No se envió ninguna solicitud de IA. Elige un modelo con más contexto o reduce el intervalo de recopilación.",
+  "STMemoryBooks_SlothCapacityUnknown": "Se desconoce el límite del modelo de recopilación elegido. No se envió la solicitud grande (aprox. {{input}} tokens de entrada). Elige un modelo con límite conocido o un perfil con un contexto adecuado."
 }

@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "サイズ順に項目を確認",
   "STMemoryBooks_SlothHealthChoose": "項目を選択",
   "STMemoryBooks_SlothHealthRepeatHelp": "完全一致する段落は確認の手掛かりであり、意味の重複を証明するものではありません。",
-  "STMemoryBooks_SlothHealthHelpLabel": "計測値について"
+  "STMemoryBooks_SlothHealthHelpLabel": "計測値について",
+  "STMemoryBooks_SlothCapacityExceeded": "収集の推定量（入力 {{input}} + 出力 {{output}} + 余裕 {{reserve}}）が安全なコンテキスト上限 {{limit}} トークンを超えます。AIへの送信は行っていません。より大きなコンテキストのモデルを選ぶか、収集範囲を小さくしてください。",
+  "STMemoryBooks_SlothCapacityUnknown": "収集モデルのコンテキスト上限が不明です。大きなリクエスト（入力約 {{input}} トークン）は送信しませんでした。上限が判明しているモデル、または適切なコンテキスト設定の接続プロファイルを選んでください。"
 }

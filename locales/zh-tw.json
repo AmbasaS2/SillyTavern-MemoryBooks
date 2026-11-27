@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "按大小查看項目",
   "STMemoryBooks_SlothHealthChoose": "選擇項目",
   "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落僅供核查，並非語意冗餘的證明。",
-  "STMemoryBooks_SlothHealthHelpLabel": "計數說明"
+  "STMemoryBooks_SlothHealthHelpLabel": "計數說明",
+  "STMemoryBooks_SlothCapacityExceeded": "預估收集量（輸入 {{input}} + 輸出 {{output}} + 餘量 {{reserve}}）超過安全上下文上限 {{limit}} 權杖。未傳送 AI 請求。請選擇上下文更大的模型或縮小收集範圍。",
+  "STMemoryBooks_SlothCapacityUnknown": "所選收集模型的上下文上限未知，未傳送大型請求（預估輸入 {{input}} 權杖）。請選擇上限已知的模型或具備適當上下文設定的連線設定檔。"
 }

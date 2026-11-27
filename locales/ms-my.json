@@ -1957,5 +1957,7 @@
   "STMemoryBooks_SlothHealthInspect": "Semak entri mengikut saiz",
   "STMemoryBooks_SlothHealthChoose": "Pilih entri",
   "STMemoryBooks_SlothHealthRepeatHelp": "Perenggan serupa sepenuhnya ialah petunjuk semakan, bukan bukti pertindihan makna.",
-  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini"
+  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini",
+  "STMemoryBooks_SlothCapacityExceeded": "Anggaran pengumpulan (input {{input}} + output {{output}} + rizab {{reserve}}) melebihi had konteks selamat {{limit}} token. Tiada permintaan AI dihantar. Pilih model dengan konteks lebih besar atau kecilkan julat pengumpulan.",
+  "STMemoryBooks_SlothCapacityUnknown": "Had konteks model pengumpulan tidak diketahui. Permintaan besar (kira-kira {{input}} token input) tidak dihantar. Pilih model dengan had diketahui atau profil dengan konteks yang sesuai."
 }

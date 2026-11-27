@@ -476,6 +476,7 @@ export async function sendRawCompletionRequest({
     useChatCompletionService = false,
     chatCompletionPreset = '',
     singleAttempt = false,
+    beforeRequest = null,
 }) {
     let url = getCurrentCompletionEndpoint();
     let headers = getRequestHeaders();
@@ -638,6 +639,10 @@ export async function sendRawCompletionRequest({
         body.vertexai_express_project_id = oai_settings?.vertexai_express_project_id || '';
     }
 
+    if(beforeRequest){
+        await beforeRequest({api,model:effectiveModel,body,connection,selectedCustomConnection,chatCompletionPreset});
+        signal?.throwIfAborted();
+    }
     let chatCompletionServiceError = null;
     if (api !== 'full-manual' && (useChatCompletionService || stConnectionProfileId)) {
         const routedFallbackBody = applyOpenRouterRoutingSettings(body, oai_settings);
@@ -709,6 +714,7 @@ export async function requestCompletion({
     useChatCompletionService = false,
     chatCompletionPreset = '',
     singleAttempt = false,
+    beforeRequest = null,
 }) {
     // Delegate all provider-specific shaping to sendRawCompletionRequest which already
     // handles: full-manual, custom (custom_model_id  oai_settings.custom_url), and normal providers.
@@ -728,6 +734,7 @@ export async function requestCompletion({
         useChatCompletionService,
         chatCompletionPreset,
         singleAttempt,
+        beforeRequest,
     });
 }
 
