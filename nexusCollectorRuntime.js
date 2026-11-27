@@ -33,6 +33,7 @@ import { inspectNexusSceneSplit, inspectNexusSceneSplitAvailability, validateNex
     stageNexusSceneSplit } from './nexusSceneSplit.js';
 import { markStmbPopup } from './utils.js';
 import { getLinkedCharacterWorlds, getCharacterNexusRoles, setCharacterNexusRole } from './nexusCharacterRoles.js';
+import { autoLinkCharacterBooks, getCharacterAuxBooks, isSlothRoleSyncPending } from './nexusAuxLinks.js';
 import { canInitializeNexusBooks, getNexusCompanionPlan, initialNexusBookNames,
     commitInitialNexusBooks } from './nexusInitialSetup.js';
 import { compileScene, createSceneRequest } from './chatcompile.js';
@@ -228,7 +229,7 @@ function assertReviewedCache(name, ...allowed) {
 }
 
 export function canStartNexusSetup(ref = getCurrentStmbChatRef(), settings = extension_settings.STMemoryBooks) {
-    if (menu_type === 'create' || getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') return false;
+    if (isSlothRoleSyncPending() || !autoLinkCharacterBooks(settings) || menu_type === 'create' || getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') return false;
     return canInitializeNexusBooks(setupContext(ref,settings));
 }
 
@@ -238,7 +239,7 @@ function setupContext(ref,settings) {
 }
 
 export function getSlothCompanion(ref, settings) {
-    if (menu_type === 'create') return null;
+    if (isSlothRoleSyncPending() || !autoLinkCharacterBooks(settings) || menu_type === 'create') return null;
     const plan = getNexusCompanionPlan(setupContext(ref, settings));
     return plan && getNexusRoleResolutionForChatRef(plan.existingRole, ref, settings).state === 'ready' ? plan : null;
 }
@@ -305,14 +306,14 @@ async function saveInitialNexusCollection(states, {ref, roleNames, checkOrigin, 
         },
         withLocks:withBothWriteLanes,
         link:async()=>{
-            await charUpdateAddAuxWorld(ref.avatarUrl,states.map(state=>state.name));
+            await charUpdateAddAuxWorld(ref.avatarUrl,Object.values(roleNames));
             settings.nexusCharacterRoles ||= {};
             setCharacterNexusRole(settings.nexusCharacterRoles,ref.avatarUrl,'nexus',roleNames.nexus);
             setCharacterNexusRole(settings.nexusCharacterRoles,ref.avatarUrl,'memory',roleNames.memory);
             await saveSettings();
             const stored=await readNexusSetupSettings();
             const assigned=getCharacterNexusRoles(stored.extensions?.nexusCharacterRoles,ref.avatarUrl);
-            const linked=getLinkedCharacterWorlds({character,worldInfo:stored.world});
+            const linked=getCharacterAuxBooks(stored.world,ref.avatarUrl.replace(/\.[^/.]+$/, ''));
             if(!['nexus','memory'].every(role=>assigned[role]===roleNames[role] && linked.includes(roleNames[role]))) {
                 throw new Error('The new lorebooks were saved, but their character links could not be verified.');
             }
@@ -1591,7 +1592,7 @@ function collectionProfile(settings, profileIndex, stConnectionProfileId) {
 }
 
 export async function runNexusCollector({profileIndex, stConnectionProfileId, automaticChatKey='', signal, onSaveStart}={}) {
-    if(collectorBusy) {
+    if(collectorBusy || isSlothRoleSyncPending()) {
         if (automaticChatKey) return {saved:false,reason:'busy'};
         throw new Error('A Sloth collection is already in progress.');
     }

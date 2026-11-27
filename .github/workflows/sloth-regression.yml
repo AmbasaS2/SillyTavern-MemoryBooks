@@ -1,0 +1,31 @@
+name: Memory Books regression
+on:
+  push:
+    branches: [main, fix/character-aux-lorebooks-20261128]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: node --test
+      - run: bun run build
+      - run: node --check index.build.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-memory-books-bundle
+          path: |
+            index.build.js
+            index.build.js.map
+            style.build.css
+          retention-days: 7

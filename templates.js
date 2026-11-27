@@ -59,7 +59,7 @@ export const settingsTemplate = Handlebars.compile(`
                     <option value="{{name}}" {{#if selected}}selected{{/if}} {{#if disabled}}disabled{{/if}}>{{name}}</option>
                     {{/each}}
                     {{#if slothUnlinkedBooks}}
-                    <optgroup label="Unlinked lorebooks" data-i18n="[label]STMemoryBooks_SlothUnlinkedBooks" disabled>
+                    <optgroup label="Unlinked lorebooks" data-i18n="[label]STMemoryBooks_SlothUnlinkedBooks" {{#unless slothAutoLinkCharacterBooks}}disabled{{/unless}}>
                       {{#each slothUnlinkedBooks}}<option value="{{this}}">{{this}}</option>{{/each}}
                     </optgroup>
                     {{/if}}
@@ -76,7 +76,7 @@ export const settingsTemplate = Handlebars.compile(`
                     <option value="{{name}}" {{#if selected}}selected{{/if}} {{#if disabled}}disabled{{/if}}>{{name}}</option>
                     {{/each}}
                     {{#if slothUnlinkedBooks}}
-                    <optgroup label="Unlinked lorebooks" data-i18n="[label]STMemoryBooks_SlothUnlinkedBooks" disabled>
+                    <optgroup label="Unlinked lorebooks" data-i18n="[label]STMemoryBooks_SlothUnlinkedBooks" {{#unless slothAutoLinkCharacterBooks}}disabled{{/unless}}>
                       {{#each slothUnlinkedBooks}}<option value="{{this}}">{{this}}</option>{{/each}}
                     </optgroup>
                     {{/if}}
@@ -91,6 +91,14 @@ export const settingsTemplate = Handlebars.compile(`
               {{else}}{{#if slothMemoryMissing}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothMissingRole">A selected book is no longer linked to this character. Reconnect it or choose another.</p>
               {{/if}}{{/if}}
+            {{/if}}
+            <label class="checkbox_label stmb-sloth-chat-override" for="stmb-sloth-auto-link-character-books">
+              <input id="stmb-sloth-auto-link-character-books" type="checkbox" aria-describedby="stmb-sloth-auto-link-help" {{#if slothAutoLinkCharacterBooks}}checked{{/if}}>
+              <span data-i18n="STMemoryBooks_SlothAutoLinkCharacterBooks">Automatically sync character lorebooks</span>
+            </label>
+            <small id="stmb-sloth-auto-link-help" data-i18n="STMemoryBooks_SlothAutoLinkCharacterBooksHelp">Assigning or clearing Nexus and Memory also updates the character's auxiliary lorebooks.</small>
+            {{#if slothCanReconnect}}
+            <button type="button" id="stmb-sloth-reconnect-role-books" class="menu_button" data-i18n="STMemoryBooks_SlothAutoLinkReconnect">Reconnect selected lorebooks</button>
             {{/if}}
             {{#if slothHasWorldBooks}}
             <label class="checkbox_label stmb-sloth-chat-override">
