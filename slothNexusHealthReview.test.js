@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
 import {buildSlothHealthCatalog,buildSlothHealthReviewPrompt,validateSlothHealthReview,stageSlothHealthReviewChange,stageSlothHealthReviewBatch} from './slothNexusHealthReview.js';
 
 const para='Mara attended the autumn lantern festival.';
@@ -96,4 +98,72 @@ test('one approval can combine independent exact moves without losing other Core
     const before=JSON.stringify(book);
     assert.throws(()=>stageSlothHealthReviewBatch(book,[first,conflicting]),/citation/);
     assert.equal(JSON.stringify(book),before);
+});
+
+const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
+const ai=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
+const readSlice=(src,a,b)=>{const start=src.indexOf(a),end=src.indexOf(b,start+1);assert.ok(start>=0&&end>start);return src.slice(start,end);};
+function host({consent=true,approve=true,pending=false,latePending=false,stale=false,changeRole=false}={}){
+    let book=mk(),busy=false,requests=0,reads=0,recoveryReads=0,writes=0,previews=0;
+    const original=JSON.stringify(book),ref={type:'character',avatarUrl:'a.png',fileName:'chat-a'};
+    const run=vm.runInNewContext(readSlice(source,'export async function runSlothNexusHealthReview(','async function settleSlothAutoAttempt(').replace('export async','async')+'\nrunSlothNexusHealthReview',{
+        collectorBusy:busy,structuredClone,stringify:JSON.stringify,html:String,t:s=>s,healthReviewLabel:(_k,s)=>s,
+        extension_settings:{STMemoryBooks:{moduleSettings:{},profiles:[{}]}},getCurrentStmbChatRef:()=>ref,
+        getNexusRoleResolutionForChatRef:kind=>({name:kind}),getMemoryBooksMode:()=> 'sloth',getStmbChatKey:()=> 'a',
+        assertSlothBookRoles:()=>{if(changeRole&&requests)throw Error('roles changed');},assertSideRenameReady:()=>{},
+        collectionProfile:()=>({}),getNexusRecallModes:()=>({lt:'vector'}),Popup:function(){},markStmbPopup:p=>p,
+        POPUP_TYPE:{CONFIRM:1},POPUP_RESULT:{AFFIRMATIVE:1},showCollectionPopup:async()=>consent?1:0,
+        refreshSlothPaidDraft:async()=>{recoveryReads++;return pending||latePending&&recoveryReads>1?{}:null;},
+        loadServerWorld:async()=>{reads++;return structuredClone(book);},assertReviewedCache:()=>{},
+        buildSlothHealthCatalog,stageSlothHealthReviewBatch,
+        suggestSlothNexusHealthReview:async({catalog})=>{
+            requests++;
+            if(stale)book.entries[1].content+=' External edit.';
+            return validateSlothHealthReview(catalog,{findings:[move()]});
+        },
+        showSlothHealthReviewFindings:async({review,original,moduleSettings})=>{
+            previews++;if(!approve)return null;
+            const findings=review.findings;
+            return {findings,changes:stageSlothHealthReviewBatch(original,findings,{moduleSettings}).changes};
+        },
+        createWorldInfoEntry:(_name,b)=>{let n=0;while(Object.hasOwn(b.entries,n))n++;return b.entries[n]={uid:n};},
+        commitSlothNexusMigration:async(state,opts)=>{
+            opts.verifyOrigin();assert.deepEqual(state.original,book);book=structuredClone(state.staged);writes++;
+        },
+        saveWorldInfo:()=>{},worldInfoCache:new Map(),withStmbWriteLane:async(_key,task)=>task(),reloadEditor:()=>{},
+        toastr:{success(){},info(){}},console,
+    });
+    return {run,stats:()=>({requests,reads,recoveryReads,writes,previews}),book:()=>book,original};
+}
+test('health runtime never generates before consent and never writes before explicit review approval',async()=>{
+    let h=host({consent:false});assert.equal((await h.run()).saved,false);assert.equal(h.stats().requests,0);assert.equal(h.stats().reads,0);
+    h=host({approve:false});assert.equal((await h.run()).saved,false);assert.equal(h.stats().requests,1);assert.equal(h.stats().writes,0);
+    assert.equal(JSON.stringify(h.book()),h.original);
+});
+test('health runtime preserves pending recovery, refuses stale roles or snapshot and applies one approved transaction',async()=>{
+    let h=host({pending:true});await assert.rejects(h.run(),/pending collection recovery/);assert.equal(h.stats().requests,0);
+    h=host({latePending:true});await assert.rejects(h.run(),/pending collection recovery/);assert.equal(h.stats().writes,0);
+    h=host({stale:true});await assert.rejects(h.run(),/Nexus changed/);assert.equal(h.stats().previews,0);assert.equal(h.stats().writes,0);
+    h=host({changeRole:true});await assert.rejects(h.run(),/roles changed/);assert.equal(h.stats().writes,0);
+    h=host();assert.equal((await h.run()).saved,true);assert.equal(h.stats().requests,1);assert.equal(h.stats().writes,1);
+    assert.equal(h.book().entries[1].content,rule);
+});
+test('health analysis uses exactly one guarded request; opening the original health panel is still read-only',async()=>{
+    const segment=readSlice(ai,'export async function suggestSlothNexusHealthReview(','const originalMessages=').replace('export async','async');
+    let calls=0;
+    const analyze=vm.runInNewContext(segment+'\nsuggestSlothNexusHealthReview',{
+        buildSlothHealthReviewPrompt,validateSlothHealthReview,
+        requester:(_p,_s,_sig,singleAttempt,_usage,verifyOrigin)=>{
+            assert.equal(singleAttempt,true);
+            return async(prompt,phase)=>{calls++;verifyOrigin();assert.equal(phase,'Nexus health review');assert.doesNotMatch(prompt,/PROTECTED_SECRET/);return {findings:[move()]};};
+        }
+    });
+    const result=await analyze({catalog:buildSlothHealthCatalog(mk()),verifyOrigin:()=>{}});
+    assert.equal(calls,1);assert.equal(result.findings.length,1);
+    assert.match(ai,/\['Single collection','Summary review','Nexus health review'\]\.includes\(phase\)/);
+    const ordinary=readSlice(source,'export async function showSlothNexusHealth(','export async function applySlothNexusRecallSettings(');
+    assert.doesNotMatch(ordinary,/suggestSlothNexusHealthReview|commitSlothNexusMigration|requestCompletion/);
+    const dialog=readFileSync(new URL('./slothNexusHealthReviewDialog.js',import.meta.url),'utf8');
+    assert.match(dialog,/onClosing:.*Boolean\(approved\)/);assert.match(dialog,/stageSlothHealthReviewBatch/);
+    assert.doesNotMatch(dialog,/requestCompletion|saveWorldInfo|MutationObserver|setInterval|requestAnimationFrame/);
 });
