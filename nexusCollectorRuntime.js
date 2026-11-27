@@ -115,7 +115,7 @@ async function rememberPaidSlothDraft(ref,binding,raw,details={},baseline) {
             cacheSlothRecovery(key,saved);
             slothPaidDrafts.delete(key);
         }catch(error){
-            console.warn('Paid Sloth response is retained only in this browser session.',error);
+            console.warn('🦥 STMemoryBooks', 'Paid Sloth response is retained only in this browser session.',error);
             toastr.warning(t('Could not save the recovery file. The received response is retained in this tab only; copy it before refreshing.',
                 'STMemoryBooks_SlothRecoveryWriteFailed'),'STMemoryBooks',{preventDuplicates:true,timeOut:0,extendedTimeOut:0});
         }
@@ -137,7 +137,7 @@ async function forgetPaidSlothDraft(ref,record) {
             cacheSlothRecovery(key,saved);
             slothPaidDrafts.delete(key);
         }catch(error){
-            console.warn('Collection saved; independent recovery record could not be cleared.',error);
+            console.warn('🦥 STMemoryBooks', 'Collection saved; independent recovery record could not be cleared.',error);
             toastr.warning(t('Collection was saved, but the recovery file could not be cleared. Review the retained response before another request.',
                 'STMemoryBooks_SlothRecoveryClearFailed'),'STMemoryBooks');
         }
@@ -313,7 +313,7 @@ async function saveInitialNexusCollection(states, {ref, roleNames, checkOrigin, 
             }
         },
     });
-    await updateWorldInfoList().catch(error=>console.warn('New lorebooks saved; editor list refresh failed.',error));
+    await updateWorldInfoList().catch(error=>console.warn('🦥 STMemoryBooks', 'New lorebooks saved; editor list refresh failed.',error));
     return result;
 }
 
@@ -615,7 +615,7 @@ async function processSlothSideRenames() {
                 resetCache:(book,data)=>worldInfoCache.set(book,structuredClone(data)),
                 operation:'Side Prompt update',
             });
-                try { await Promise.resolve(reloadEditor(name)); } catch (error) { console.warn(error); }
+                try { await Promise.resolve(reloadEditor(name)); } catch (error) { console.warn('🦥 STMemoryBooks', error); }
             }
         }
         verifyOrigin();
@@ -636,7 +636,7 @@ function clearSideRenameFailureNotice() {
 }
 
 function reportSideRenameFailure(error) {
-    console.warn('Memory Books Side Prompt identity migration stopped:',error);
+    console.warn('🦥 STMemoryBooks', 'Memory Books Side Prompt identity migration stopped:',error);
     clearSideRenameFailureNotice();
     sideRenameFailureNotice=toastr.warning(t('Lorebook link update is pending. Click this notification to retry in the original chat. If the saved chat changed, reload it first.',
         'STMemoryBooks_SlothRenameRetry'),'STMemoryBooks',{
@@ -688,7 +688,7 @@ export function retrySlothSideRenames() {
         await processSlothSideRenames();
         clearSideRenameFailureNotice();
         try { await eventSource.emit(SLOTH_RENAME_RETRIED_EVENT); }
-        catch(error){console.warn('Memory Books rename UI refresh failed:',error);}
+        catch(error){console.warn('🦥 STMemoryBooks', 'Memory Books rename UI refresh failed:',error);}
         return true;
     }).catch(error=>{reportSideRenameFailure(error);return false;}).finally(()=>{
         sideRenameRunning--;
@@ -853,7 +853,7 @@ async function saveSlothSideBook({ ref, destination, staged, verifyOrigin }) {
         if (isNew) await updateWorldInfoList();
         await Promise.resolve(reloadEditor(name));
     } catch (error) {
-        console.warn('Sloth Side Prompt editor refresh failed', error);
+        console.warn('🦥 STMemoryBooks', 'Sloth Side Prompt editor refresh failed', error);
     }
     return result;
 }
@@ -943,7 +943,7 @@ async function runReviewedSlothSidePrompts({ ref, roles, presets, source, profil
         } catch (error) {
             verifyDestinations();
             failed.push(sidePromptName(preset));
-            console.warn('Sloth Side Prompt could not be generated:', preset.id, error);
+            console.warn('🦥 STMemoryBooks', 'Sloth Side Prompt could not be generated:', preset.id, error);
         }
     }
     if (failed.length) toastr.warning(t('Could not write: {{names}}', 'STMemoryBooks_SlothSideFailed')
@@ -975,7 +975,7 @@ async function runReviewedSlothSidePrompts({ ref, roles, presets, source, profil
                 .replace('{{book}}', name), 'STMemoryBooks');
         } catch (error) {
             verifyDestinations();
-            console.warn('Sloth Side Prompts could not save to', name, error);
+            console.warn('🦥 STMemoryBooks', 'Sloth Side Prompts could not save to', name, error);
             toastr.error(t('Could not save to {{book}}. Check the lorebook and try again.',
                 'STMemoryBooks_SlothSideSaveFailed').replace('{{book}}', name), 'STMemoryBooks');
         }
@@ -1360,7 +1360,7 @@ async function settleSlothAutoAttempt(ref,attempt,status) {
                 stringify(current.books)!==stringify(attempt.books)) return markers;
             return {...markers,slothAutomatic:{...current,status}};
         });
-    } catch(error) { console.warn('Automatic collection status could not be saved.',error); }
+    } catch(error) { console.warn('🦥 STMemoryBooks', 'Automatic collection status could not be saved.',error); }
     invalidateSlothAutomaticProgress();
 }
 
@@ -1680,7 +1680,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 receiptVerified=true;
                 if (!automatic || autoWindow) invalidateSlothAutomaticProgress();
             } catch (error) {
-                console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
+                console.warn('🦥 STMemoryBooks', 'Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
         if(!needsRecovery&&scenes.length&&!receiptVerified) recoveryVerified=await persistPartial();
@@ -1703,14 +1703,14 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 hiddenMessages=hideRanges.reduce((count,[start,end])=>count+end-start+1,0);
             } catch (error) {
                 hiddenMessages=null; // no claim about an unverified partial Hide
-                console.warn('Memory saved; Sloth Hide stopped.',error);
+                console.warn('🦥 STMemoryBooks', 'Memory saved; Sloth Hide stopped.',error);
                 toastr.warning(t('The memories are saved. Check which messages were hidden before trying again.',
                     'STMemoryBooks_SlothHideInterrupted'),'STMemoryBooks');
             }
         }
         for(const {name} of states){
             try{await Promise.resolve(reloadEditor(name));}
-            catch(error){console.warn('Memory Books editor refresh failed.',error);}
+            catch(error){console.warn('🦥 STMemoryBooks', 'Memory Books editor refresh failed.',error);}
         }
         if (!needsRecovery&&(!scenes.length||receiptVerified)) await forgetPaidSlothDraft(ref,activeDraft);
         await settleSlothAutoAttempt(attemptedRef,attemptedAuto,needsRecovery||scenes.length&&!receiptVerified?'recovery':'saved');
@@ -1748,7 +1748,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     source:{ids,entry:{content:savedEntries.map(entry=>entry.content).join('\n\n')}}});
                 sidePromptsSaved=side.count??0;
             } catch (error) {
-                console.warn('Memories saved; Side Prompts stopped.',error);
+                console.warn('🦥 STMemoryBooks', 'Memories saved; Side Prompts stopped.',error);
                 if(!signal?.aborted) toastr.warning(t('Memory is saved. Run Side Prompts again from a saved scene.',
                     'STMemoryBooks_SlothSideAfterFailure'),'STMemoryBooks');
             }
@@ -1835,7 +1835,7 @@ export async function runSlothSceneCompression({ profileIndex, stConnectionProfi
             withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),verifyBeforeWrite:assertReviewedCache,
             resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),operation:'Shorten saved Scene',
         });
-        await Promise.resolve(reloadEditor(roles.memory)).catch(error=>console.warn('Sloth editor refresh failed.',error));
+        await Promise.resolve(reloadEditor(roles.memory)).catch(error=>console.warn('🦥 STMemoryBooks', 'Sloth editor refresh failed.',error));
         toastr.success(t('The shortened event was saved.','STMemoryBooks_SlothCompressSaved'),'STMemoryBooks');
         return {saved:true};
     } finally {
@@ -2019,7 +2019,7 @@ export async function runNexusSceneMerge({profileIndex, stConnectionProfileId}={
             operation:'Memory Scene merge',
         });
         try {await Promise.resolve(reloadEditor(names.memory));}
-        catch(error){console.warn('Sloth Memory Scene merge editor refresh failed',error);}
+        catch(error){console.warn('🦥 STMemoryBooks', 'Sloth Memory Scene merge editor refresh failed',error);}
         toastr.success(t('Reviewed Scene merge saved in Memory. The original is archived; no chat messages were hidden.',
             'STMemoryBooks_SlothMergeSaved'),'🦥 STMemoryBooks');
         return {saved:true,sourceUids:staged.plan.sourceUids,result};
@@ -2269,10 +2269,12 @@ export async function runNexusSceneSplit({profileIndex, stConnectionProfileId}={
             operation:'Memory Scene split',
         });
         try{await Promise.resolve(reloadEditor(names.memory));}
-        catch(error){console.warn('Sloth Memory split editor refresh failed:',error);}
+        catch(error){console.warn('🦥 STMemoryBooks', 'Sloth Memory split editor refresh failed:',error);}
         toastr.success(t('Reviewed Scene split saved to Memory. The original was archived, with no chat messages hidden.',
             'STMemoryBooks_SlothSplitSaved'),'🦥 STMemoryBooks');
         return {saved:true,retiredUid:sourcePlan.sourceUid,
             newUids:staged.writes.map(x=>x.uid),result};
     }finally{collectorBusy=false;}
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

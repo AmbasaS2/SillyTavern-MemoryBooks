@@ -51,7 +51,7 @@ export const STMB_SIDE_PROMPT_TITLE_SUFFIX = ' (STMB SidePrompt)';
 
 function reportSidePromptHistoryConflict(err, name) {
     if (err?.type !== 'StmbSidePromptHistoryConflict') return false;
-    console.warn(`${MODULE_NAME}: Side prompt history unresolved for "${name}":`, err);
+    console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Side prompt history unresolved for "${name}":`, err);
     toastr.error(translate('Side-prompt history is ambiguous. No changes were saved.', 'STMemoryBooks_SidePromptHistoryConflict'), 'STMemoryBooks', { preventDuplicates: true });
     return true;
 }
@@ -60,7 +60,7 @@ function reportSidePromptHistoryConflict(err, name) {
 let previewQueue = Promise.resolve();
 function enqueuePreview(task) {
     previewQueue = previewQueue.then(task).catch(err => {
-        console.warn(`${MODULE_NAME}: preview task failed`, err);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: preview task failed`, err);
     });
     return previewQueue;
 }
@@ -106,7 +106,7 @@ async function tryLoadOverrideLorebook(lorebookName, source, tpl) {
             return { name: lorebookName, data, source };
         }
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Failed to load ${source} lorebook override for "${tpl?.name || tpl?.key || 'unknown'}":`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to load ${source} lorebook override for "${tpl?.name || tpl?.key || 'unknown'}":`, error);
     }
 
     return null;
@@ -246,7 +246,7 @@ async function resolveSidePromptAdditionalContextEntries(tpl) {
 
     const setting = await getContextSetting(contextSettingKey);
     if (!setting) {
-        console.warn(`${MODULE_NAME}: Selected side prompt context setting was not found: ${contextSettingKey}`);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Selected side prompt context setting was not found: ${contextSettingKey}`);
         try {
             toastr.warning(
                 translate('Selected context setting was not found. Continuing without Additional Context.', 'STMemoryBooks_ContextSettings_MissingSelectedWarning'),
@@ -259,7 +259,7 @@ async function resolveSidePromptAdditionalContextEntries(tpl) {
 
     const resolved = await resolveContextSettingEntries(setting);
     if (resolved.skipped?.length > 0) {
-        console.warn(`${MODULE_NAME}: Skipped ${resolved.skipped.length} stale side prompt context setting entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Skipped ${resolved.skipped.length} stale side prompt context setting entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
         try {
             toastr.warning(
                 translate('Some additional context entries could not be loaded and were skipped.', 'STMemoryBooks_Profile_AlsoIncludeSkipped'),
@@ -338,7 +338,7 @@ function buildPrompt(templatePrompt, priorContent, compiledScene, responseFormat
             return applySelectedRegex(finalPrompt, selectedKeys, { throwOnError: true });
         }
     } catch (e) {
-        console.warn('STMemoryBooks: sideprompt outgoing regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: sideprompt outgoing regex application failed', e);
         throw e;
     }
 
@@ -364,7 +364,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
         reverseProxy = !!overrides.reverseProxy;
         useChatCompletionService = !!overrides.useChatCompletionService && api !== 'full-manual';
         chatCompletionPreset = useChatCompletionService ? String(overrides.chatCompletionPreset || '').trim() : '';
-        console.debug(`${MODULE_NAME}: runLLM using overrides api=${api} model=${model} temp=${temperature}`);
+        console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: runLLM using overrides api=${api} model=${model} temp=${temperature}`);
     } else {
         const apiInfo = getCurrentApiInfo();
         const modelInfo = getUIModelSettings();
@@ -374,7 +374,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
         reverseProxy = false;
         useChatCompletionService = false;
         chatCompletionPreset = '';
-        console.debug(`${MODULE_NAME}: runLLM using UI settings api=${api} model=${model} temp=${temperature}`);
+        console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: runLLM using UI settings api=${api} model=${model} temp=${temperature}`);
     }
 
     const extra = (overrides && typeof overrides.extra === 'object' && overrides.extra)
@@ -415,7 +415,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
             return applySelectedRegex(text || '', selectedKeys);
         }
     } catch (e) {
-        console.warn('STMemoryBooks: sideprompt incoming regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: sideprompt incoming regex application failed', e);
     }
 
     return text || '';
@@ -441,7 +441,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
             const extra = rawConn && typeof rawConn.extra === 'object' && rawConn.extra ? rawConn.extra : undefined;
             const useChatCompletionService = !!profile.useChatCompletionService && api !== 'full-manual';
             const chatCompletionPreset = useChatCompletionService ? String(profile.chatCompletionPreset || '').trim() : '';
-            console.debug(`${MODULE_NAME}: resolveSidePromptConnection using provided profile api=${api} model=${model} temp=${temperature}`);
+            console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection using provided profile api=${api} model=${model} temp=${temperature}`);
             return { api, model, temperature, endpoint, apiKey, connectionProfileId, reverseProxy, extra, useChatCompletionService, chatCompletionPreset };
         }
 
@@ -463,7 +463,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
                 const reverseProxy = !!over?.connection?.reverseProxy;
                 const useChatCompletionService = !!over?.useChatCompletionService;
                 const chatCompletionPreset = useChatCompletionService ? String(over?.chatCompletionPreset || '').trim() : '';
-                console.debug(`${MODULE_NAME}: resolveSidePromptConnection using UI via template override profile index=${idxOverride} api=${api} model=${model} temp=${temperature}`);
+                console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection using UI via template override profile index=${idxOverride} api=${api} model=${model} temp=${temperature}`);
                 return { api, model, temperature, reverseProxy, useChatCompletionService, chatCompletionPreset };
             } else {
                 const conn = over?.connection || {};
@@ -477,7 +477,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
                 const extra = conn && typeof conn.extra === 'object' && conn.extra ? conn.extra : undefined;
                 const useChatCompletionService = !!over?.useChatCompletionService && api !== 'full-manual';
                 const chatCompletionPreset = useChatCompletionService ? String(over?.chatCompletionPreset || '').trim() : '';
-                console.debug(`${MODULE_NAME}: resolveSidePromptConnection using template override profile index=${idxOverride} api=${api} model=${model} temp=${temperature}`);
+                console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection using template override profile index=${idxOverride} api=${api} model=${model} temp=${temperature}`);
                 return { api, model, temperature, endpoint, apiKey, connectionProfileId, reverseProxy, extra, useChatCompletionService, chatCompletionPreset };
             }
         }
@@ -491,7 +491,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
             const api = normalizeCompletionSource(apiInfo.completionSource || apiInfo.api || 'openai');
             const model = modelInfo.model || '';
             const temperature = modelInfo.temperature ?? 0.7;
-            console.debug(`${MODULE_NAME}: resolveSidePromptConnection fallback to UI (no profiles) api=${api} model=${model} temp=${temperature}`);
+            console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection fallback to UI (no profiles) api=${api} model=${model} temp=${temperature}`);
             return { api, model, temperature, reverseProxy: false };
         }
         if (!Number.isFinite(idx) || idx < 0 || idx >= profiles.length) idx = 0;
@@ -507,7 +507,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
             const reverseProxy = !!def?.connection?.reverseProxy;
             const useChatCompletionService = !!def?.useChatCompletionService;
             const chatCompletionPreset = useChatCompletionService ? String(def?.chatCompletionPreset || '').trim() : '';
-            console.debug(`${MODULE_NAME}: resolveSidePromptConnection using UI via dynamic default profile api=${api} model=${model} temp=${temperature}`);
+            console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection using UI via dynamic default profile api=${api} model=${model} temp=${temperature}`);
             return { api, model, temperature, reverseProxy, useChatCompletionService, chatCompletionPreset };
         } else {
             const conn = def?.connection || {};
@@ -521,7 +521,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
             const extra = conn && typeof conn.extra === 'object' && conn.extra ? conn.extra : undefined;
             const useChatCompletionService = !!def?.useChatCompletionService && api !== 'full-manual';
             const chatCompletionPreset = useChatCompletionService ? String(def?.chatCompletionPreset || '').trim() : '';
-            console.debug(`${MODULE_NAME}: resolveSidePromptConnection using default profile api=${api} model=${model} temp=${temperature}`);
+            console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection using default profile api=${api} model=${model} temp=${temperature}`);
             return { api, model, temperature, endpoint, apiKey, connectionProfileId, reverseProxy, extra, useChatCompletionService, chatCompletionPreset };
         }
     } catch (err) {
@@ -531,7 +531,7 @@ export function resolveSidePromptConnection(profile = null, options = {}) {
         const api = normalizeCompletionSource(apiInfo.completionSource || apiInfo.api || 'openai');
         const model = modelInfo.model || '';
         const temperature = modelInfo.temperature ?? 0.7;
-        console.warn(`${MODULE_NAME}: resolveSidePromptConnection error; falling back to UI`, err);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: resolveSidePromptConnection error; falling back to UI`, err);
         return { api, model, temperature, reverseProxy: false };
     }
 }
@@ -823,7 +823,7 @@ function ensureSidePromptTextNotBlank(text, tpl, trigger) {
     if (String(text ?? '').trim()) return true;
 
     const name = String(tpl?.name || 'Unknown');
-    console.error(`${MODULE_NAME}: SidePrompt returned blank content; skipping save`, {
+    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt returned blank content; skipping save`, {
         trigger,
         name,
         key: tpl?.key || null,
@@ -908,11 +908,11 @@ async function resolveSidePromptPreview({
 function logSkippedSetItems(skipped = [], context = 'set') {
     for (const item of skipped || []) {
         if (item.reason === 'missing-set') {
-            console.warn(`${MODULE_NAME}: Side prompt set not found: ${item.setKey || 'unknown'}`);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Side prompt set not found: ${item.setKey || 'unknown'}`);
         } else if (item.reason === 'missing-template') {
-            console.warn(`${MODULE_NAME}: Side prompt set item skipped because template is missing:`, item.item);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Side prompt set item skipped because template is missing:`, item.item);
         } else if (item.reason === 'missing-macros') {
-            console.warn(`${MODULE_NAME}: Side prompt set item skipped because macros are unresolved:`, {
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Side prompt set item skipped because macros are unresolved:`, {
                 context,
                 name: item.tpl?.name || item.item?.promptKey || 'unknown',
                 missing: item.missingRuntimeMacros,
@@ -1141,7 +1141,7 @@ async function executeQueuedSidePromptBatchJob(job, context) {
     for (const result of generationResults) {
         const name = result.item?.displayName || result.tpl?.name || 'unknown';
         if (!result.ok) {
-            console.error(`${MODULE_NAME}: queued batch LLM failed for "${name}":`, result.error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: queued batch LLM failed for "${name}":`, result.error);
             results.push({ name, ok: false, error: result.error });
             continue;
         }
@@ -1365,7 +1365,7 @@ export async function evaluateTrackers() {
             try {
                 lore = await resolveSidePromptLorebook(tpl);
             } catch (err) {
-                console.warn(`${MODULE_NAME}: Unable to resolve lorebook for interval sideprompt "${displayName || 'unknown'}":`, err);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Unable to resolve lorebook for interval sideprompt "${displayName || 'unknown'}":`, err);
                 continue;
             }
 
@@ -1408,7 +1408,7 @@ export async function evaluateTrackers() {
             try {
                 compiled = await compileRange(boundedStart, currentLast);
             } catch (err) {
-                console.warn(`${MODULE_NAME}: Interval compile failed:`, err);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Interval compile failed:`, err);
                 continue;
             }
 
@@ -1438,7 +1438,7 @@ export async function evaluateTrackers() {
                     trigger: 'onInterval',
                     setMeta: runItem.set ? { setKey: runItem.set.key, setName: runItem.set.name, itemId: runItem.item?.id || '' } : null,
                 }));
-                console.log(`${MODULE_NAME}: Interval sideprompt queued`, {
+                console.log('🦥 STMemoryBooks', `${MODULE_NAME}: Interval sideprompt queued`, {
                     name: displayName,
                     key: tpl.key,
                     range: `${boundedStart}-${currentLast}`,
@@ -1450,7 +1450,7 @@ export async function evaluateTrackers() {
             let resultText = '';
             const runEpoch = getStmbStopEpoch();
             try {
-                console.log(`${MODULE_NAME}: SidePrompt attempt`, {
+                console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt attempt`, {
                     trigger: 'onInterval',
                     name: displayName,
                     key: tpl.key,
@@ -1468,7 +1468,7 @@ export async function evaluateTrackers() {
                 });
             } catch (err) {
                 if (isStmbStopError(err)) return;
-                console.error(`${MODULE_NAME}: Interval sideprompt LLM failed:`, err);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Interval sideprompt LLM failed:`, err);
                 toastr.error(__st_t_tag`SidePrompt "${displayName}" failed: ${err.message}`, 'STMemoryBooks');
                 continue;
             }
@@ -1491,13 +1491,13 @@ export async function evaluateTrackers() {
                     retryTaskLabel: `SidePrompt:onInterval:retry:${tpl?.key || tpl?.name || 'unknown'}`,
                 });
                 if (!previewResult.approved) {
-                    console.log(`${MODULE_NAME}: SidePrompt "${tpl.name}" canceled in preview; skipping save`);
+                    console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt "${tpl.name}" canceled in preview; skipping save`);
                     continue;
                 }
                 resultText = previewResult.text;
             } catch (previewErr) {
                 if (isStmbStopError(previewErr)) return;
-                console.warn(`${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
             }
 
             if (!ensureSidePromptTextNotBlank(resultText, tpl, 'onInterval')) continue;
@@ -1526,7 +1526,7 @@ export async function evaluateTrackers() {
                     ),
                     refreshEditor: extension_settings?.STMemoryBooks?.moduleSettings?.refreshEditor !== false,
                 }));
-                console.log(`${MODULE_NAME}: SidePrompt success`, {
+                console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt success`, {
                     trigger: 'onInterval',
                     name: displayName,
                     key: tpl.key,
@@ -1534,7 +1534,7 @@ export async function evaluateTrackers() {
                     contentChars: resultText.length,
                 });
             } catch (err) {
-                console.error(`${MODULE_NAME}: Interval sideprompt upsert failed:`, err);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Interval sideprompt upsert failed:`, err);
                 toastr.error(__st_t_tag`Failed to update sideprompt entry "${tpl.name}"`, 'STMemoryBooks');
                 continue;
             }
@@ -1701,7 +1701,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
 
         // Determine default connection to use for side prompts
         const defaultOverrides = resolveSidePromptConnection(profile);
-        console.debug(`${MODULE_NAME}: runAfterMemory default overrides api=${defaultOverrides.api} model=${defaultOverrides.model} temp=${defaultOverrides.temperature}`);
+        console.debug('🦥 STMemoryBooks', `${MODULE_NAME}: runAfterMemory default overrides api=${defaultOverrides.api} model=${defaultOverrides.model} temp=${defaultOverrides.temperature}`);
         const settings = extension_settings?.STMemoryBooks;
         const refreshEditor = settings?.moduleSettings?.refreshEditor !== false;
         const showNotifications = settings?.moduleSettings?.showNotifications !== false;
@@ -1789,7 +1789,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
                         fallbackKinds: ['plotpoints', 'scoreboard'],
                         runtimeMacros: runItem.runtimeMacros,
                     });
-                    console.log(`${MODULE_NAME}: SidePrompt attempt`, {
+                    console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt attempt`, {
                         trigger: 'onAfterMemory',
                         name: runItem.name || tpl.name,
                         key: tpl.key,
@@ -1819,7 +1819,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
                         return { ok: false, runItem, tpl, error: e, cancelled: false };
                     }
                     if (!isStmbStopError(e)) {
-                        console.error(`${MODULE_NAME}: Wave LLM failed for "${tpl.name}":`, e);
+                        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Wave LLM failed for "${tpl.name}":`, e);
                     }
                     return { ok: false, runItem, tpl, error: e, cancelled: isStmbStopError(e) };
                 }
@@ -1865,7 +1865,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
                     textToSave = previewResult.text;
                 } catch (previewErr) {
                     if (isStmbStopError(previewErr)) return;
-                    console.warn(`${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
+                    console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
                 }
 
                 if (approved) {
@@ -1921,7 +1921,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
                         if (showNotifications) {
                             toastr.success(__st_t_tag`SidePrompt "${name}" updated.`, 'STMemoryBooks');
                         }
-                        console.log(`${MODULE_NAME}: SidePrompt success`, {
+                        console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt success`, {
                             trigger: 'onAfterMemory',
                             name,
                             saved: true,
@@ -1929,7 +1929,7 @@ export async function runAfterMemory(compiledScene, profile = null, options = {}
                     }
                 } catch (saveErr) {
                     if (isStmbStopError(saveErr)) return;
-                    console.error(`${MODULE_NAME}: Wave save failed:`, saveErr);
+                    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Wave save failed:`, saveErr);
                     toastr.error(translate('Failed to save SidePrompt updates for this wave', 'STMemoryBooks_Toast_FailedToSaveWave'), 'STMemoryBooks');
                     // Mark these as failed since they were not persisted
                     for (const name of group.names) {
@@ -2080,7 +2080,7 @@ export async function runSidePrompt(args) {
         // Call LLM
         let resultText = '';
         try {
-            console.log(`${MODULE_NAME}: SidePrompt attempt`, {
+            console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt attempt`, {
                 trigger: 'manual',
                 name: tpl.name,
                 key: tpl.key,
@@ -2116,7 +2116,7 @@ export async function runSidePrompt(args) {
                 }
                 resultText = previewResult.text;
             } catch (previewErr) {
-                console.warn(`${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Preview step failed; proceeding without preview`, previewErr);
             }
             throwIfStmbStopped(runEpoch);
             if (!ensureSidePromptTextNotBlank(resultText, tpl, 'manual')) return '';
@@ -2141,7 +2141,7 @@ export async function runSidePrompt(args) {
                 ),
                 refreshEditor: extension_settings?.STMemoryBooks?.moduleSettings?.refreshEditor !== false,
             }));
-            console.log(`${MODULE_NAME}: SidePrompt success`, {
+            console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt success`, {
                 trigger: 'manual',
                 name: tpl.name,
                 key: tpl.key,
@@ -2150,7 +2150,7 @@ export async function runSidePrompt(args) {
             });
             } catch (err) {
                 if (isStmbStopError(err)) return '';
-                console.error(`${MODULE_NAME}: /sideprompt failed:`, err);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: /sideprompt failed:`, err);
                 toastr.error(__st_t_tag`SidePrompt "${tpl.name}" failed: ${err.message}`, 'STMemoryBooks');
                 return '';
             }
@@ -2248,7 +2248,7 @@ export async function runSidePromptSet(args, options = {}) {
                     lore = await resolveSidePromptLorebook(runItem.tpl);
                     loreByItemId.set(runItem.item.id, lore);
                 } catch (err) {
-                    console.warn(`${MODULE_NAME}: Unable to resolve lorebook for side prompt set item "${runItem.name}":`, err);
+                    console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Unable to resolve lorebook for side prompt set item "${runItem.name}":`, err);
                     continue;
                 }
                 let existing;
@@ -2312,7 +2312,7 @@ export async function runSidePromptSet(args, options = {}) {
                 } catch (err) {
                     failCount++;
                     if (reportSidePromptHistoryConflict(err, runItem.name)) continue;
-                    console.error(`${MODULE_NAME}: side prompt set item queueing failed:`, err);
+                    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: side prompt set item queueing failed:`, err);
                     toastr.error(__st_t_tag`SidePrompt "${runItem.name}" failed: ${err.message}`, 'STMemoryBooks');
                 }
             }
@@ -2340,7 +2340,7 @@ export async function runSidePromptSet(args, options = {}) {
                     runtimeMacros: runItem.runtimeMacros,
                 });
 
-                console.log(`${MODULE_NAME}: SidePrompt attempt`, {
+                console.log('🦥 STMemoryBooks', `${MODULE_NAME}: SidePrompt attempt`, {
                     trigger: options?.macroMode ? 'macroset' : 'sideprompt-set',
                     set: set.name,
                     name: runItem.name,
@@ -2411,7 +2411,7 @@ export async function runSidePromptSet(args, options = {}) {
                 if (isStmbStopError(err)) return '';
                 failCount++;
                 if (reportSidePromptHistoryConflict(err, runItem.name)) continue;
-                console.error(`${MODULE_NAME}: side prompt set item failed:`, err);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: side prompt set item failed:`, err);
                 toastr.error(__st_t_tag`SidePrompt "${runItem.name}" failed: ${err.message}`, 'STMemoryBooks');
             }
         }
@@ -2427,9 +2427,11 @@ export async function runSidePromptSet(args, options = {}) {
         return '';
     } catch (outer) {
         if (isStmbStopError(outer)) return '';
-        console.error(`${MODULE_NAME}: /sideprompt-set failed:`, outer);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: /sideprompt-set failed:`, outer);
         return '';
     } finally {
         parentTask.finish();
     }
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

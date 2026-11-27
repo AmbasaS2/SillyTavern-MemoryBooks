@@ -1,0 +1,3 @@
+# Sloth notification branding — validation candidate
+
+Baseline: 976cb7608041b6b96b2f46b30788240fe63c6db2. Covers 16 runtime modules and 494 references to notification methods. Existing bodies, severity, timeouts, click/retry callbacks and toast handles are preserved; no global mutation. Existing console emissions in these modules and three recovery dialog headings are branded. Pure forwarding/locale/clear tests passed in the implementation environment. Rebuild with Bun and run the repository regression tests before deploying. No manifest version change until build passes. Do not merge over concurrent main work.

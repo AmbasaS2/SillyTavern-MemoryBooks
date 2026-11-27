@@ -93,7 +93,7 @@ function setupSortableList(list) {
             handle: '.stmb-context-setting-drag',
         });
     } catch (error) {
-        console.warn('STMemoryBooks: Failed to initialize context setting sorting', error);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Failed to initialize context setting sorting', error);
     }
 }
 
@@ -171,7 +171,7 @@ async function populateEntrySelect(select, lorebookName) {
         ].join('');
         select.disabled = false;
     } catch (error) {
-        console.warn('STMemoryBooks: Failed to load entries for context setting picker', error);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Failed to load entries for context setting picker', error);
         select.innerHTML = `<option value="">${escapeHtml(translate('Failed to load entries', 'STMemoryBooks_Profile_AlsoIncludeLoadFailed'))}</option>`;
     }
 }
@@ -371,7 +371,7 @@ export async function showContextSettingsPopup() {
             toastr.success(translate('Context settings imported.', 'STMemoryBooks_ContextSettings_Imported'), 'STMemoryBooks');
             await refreshContextSettingsPopup(popup);
         } catch (error) {
-            console.error('STMemoryBooks: Context settings import failed:', error);
+            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Context settings import failed:', error);
             toastr.error(tr('STMemoryBooks_ContextSettings_ImportFailed', 'Failed to import context settings: {{message}}', { message: error?.message || 'Unknown error' }), 'STMemoryBooks');
         } finally {
             event.target.value = '';
@@ -482,3 +482,5 @@ export async function maybePromptForMigratedContextSetting(profile, options = {}
 
     return await showContextSelectionPrompt({ profile, blocking: !!options.blocking });
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

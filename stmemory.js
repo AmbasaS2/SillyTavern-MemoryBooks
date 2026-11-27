@@ -99,13 +99,13 @@ export function applySelectedRegex(inputText, selectedKeys, { throwOnError = fal
                 if (throwOnError && typeof out !== 'string') throw new Error('Outgoing regex returned non-text output');
             } catch (e) {
                 if (throwOnError) throw e;
-                console.warn('applySelectedRegex: script failed', i, e);
+                console.warn('🦥 STMemoryBooks', 'applySelectedRegex: script failed', i, e);
             }
         }
         return out;
     } catch (e) {
         if (throwOnError) throw e;
-        console.warn('applySelectedRegex failed', e);
+        console.warn('🦥 STMemoryBooks', 'applySelectedRegex failed', e);
         return inputText;
     }
 }
@@ -342,14 +342,14 @@ function getChatCompletionServiceOrNull() {
         }
     } catch (error) {
         if (!hasWarnedMissingChatCompletionService) {
-            console.warn(`${MODULE_NAME}: ChatCompletionService is unavailable; falling back to STMB request path.`, error);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: ChatCompletionService is unavailable; falling back to STMB request path.`, error);
             hasWarnedMissingChatCompletionService = true;
         }
         return null;
     }
 
     if (!hasWarnedMissingChatCompletionService) {
-        console.warn(`${MODULE_NAME}: ChatCompletionService is unavailable; falling back to STMB request path.`);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: ChatCompletionService is unavailable; falling back to STMB request path.`);
         hasWarnedMissingChatCompletionService = true;
     }
     return null;
@@ -380,7 +380,7 @@ async function sendViaChatCompletionService(body, signal, presetName = '', conne
             full = await service.processRequest(serviceBody, { presetName: normalizedPresetName }, false, signal);
         } else {
             if (normalizedPresetName && typeof service.processRequest !== 'function') {
-                console.warn(`${MODULE_NAME}: ChatCompletionService.processRequest is unavailable; falling back to sendRequest.`);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: ChatCompletionService.processRequest is unavailable; falling back to sendRequest.`);
             }
             const routedServiceBody = applyOpenRouterRoutingSettings(serviceBody, oai_settings);
             full = await service.sendRequest(routedServiceBody, false, signal);
@@ -428,7 +428,7 @@ async function sendViaChatCompletionService(body, signal, presetName = '', conne
             // ST wraps connection-profile provider failures in a generic error.
             throw error?.cause instanceof Error ? error.cause : error;
         }
-        console.warn(`${MODULE_NAME}: ChatCompletionService request failed; falling back to STMB request path.`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: ChatCompletionService request failed; falling back to STMB request path.`, error);
         return { result: null, error };
     }
     return {
@@ -969,7 +969,7 @@ function makeAIError(code, message, recoverable = true) {
     err.code = code;
     err.recoverable = recoverable; // recoverable = fixable locally without re-asking
     try {
-        console.debug(`STMemoryBooks: AIResponseError code=${code} recoverable=${recoverable}: ${message}`);
+        console.debug('🦥 STMemoryBooks', `STMemoryBooks: AIResponseError code=${code} recoverable=${recoverable}: ${message}`);
     } catch {}
     return err;
 }
@@ -992,7 +992,7 @@ export function parseAIJsonResponse(aiResponse) {
             cleanResponse = applySelectedRegex(cleanResponse, selectedKeys);
         }
     } catch (e) {
-        console.warn('STMemoryBooks: incoming regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: incoming regex application failed', e);
     }
 
     // Check for new Claude structured format first
@@ -1255,7 +1255,7 @@ async function generateMemoryWithAI(promptString, profile, options = {}) {
                 throw error;
             }
 
-            console.warn(`${MODULE_NAME}: Structured-output request failed; retrying as plain-text completion.`, error);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Structured-output request failed; retrying as plain-text completion.`, error);
             aiResponse = await sendRawCompletionRequest({
                 ...requestOptions,
                 jsonSchema: null,
@@ -1471,7 +1471,7 @@ async function resolveAdditionalContextEntries(profile, compiledScene = null) {
 
         const setting = await getContextSetting(contextSettingKey);
         if (!setting) {
-            console.warn(`${MODULE_NAME}: Selected context setting was not found: ${contextSettingKey}`);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Selected context setting was not found: ${contextSettingKey}`);
             try {
                 toastr.warning(
                     translate('Selected context setting was not found. Continuing without Additional Context.', 'STMemoryBooks_ContextSettings_MissingSelectedWarning'),
@@ -1484,7 +1484,7 @@ async function resolveAdditionalContextEntries(profile, compiledScene = null) {
 
         const resolved = await resolveContextSettingEntries(setting);
         if (resolved.skipped?.length > 0) {
-            console.warn(`${MODULE_NAME}: Skipped ${resolved.skipped.length} stale context setting entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Skipped ${resolved.skipped.length} stale context setting entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
             try {
                 toastr.warning(
                     translate('Some additional context entries could not be loaded and were skipped.', 'STMemoryBooks_Profile_AlsoIncludeSkipped'),
@@ -1510,7 +1510,7 @@ async function resolveAdditionalContextEntries(profile, compiledScene = null) {
     } catch {}
     const resolved = await resolveContextSettingEntriesFromRefs(refs);
     if (resolved.skipped?.length > 0) {
-        console.warn(`${MODULE_NAME}: Skipped ${resolved.skipped.length} stale legacy additional context entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Skipped ${resolved.skipped.length} stale legacy additional context entr${resolved.skipped.length === 1 ? 'y' : 'ies'}`, resolved.skipped);
         try {
             toastr.warning(
                 translate('Some additional context entries could not be loaded and were skipped.', 'STMemoryBooks_Profile_AlsoIncludeSkipped'),
@@ -1666,7 +1666,7 @@ async function buildPrompt(compiledScene, profile) {
             return applySelectedRegex(finalPrompt, selectedKeys, { throwOnError: true });
         }
     } catch (e) {
-        console.warn('STMemoryBooks: outgoing regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: outgoing regex application failed', e);
         throw e;
     }
     return finalPrompt;
@@ -1694,3 +1694,5 @@ function processJsonResult(jsonResult, compiledScene) {
         suggestedKeys: cleanKeywords
     };
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

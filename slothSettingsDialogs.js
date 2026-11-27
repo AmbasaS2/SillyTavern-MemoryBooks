@@ -187,7 +187,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         sync();
         try { await task(); }
         catch(error) {
-            console.warn('Memory Books could not update a prompt preset.',error);
+            console.warn('🦥 STMemoryBooks', 'Memory Books could not update a prompt preset.',error);
             toastr.error(t('Failed to save settings. Please try again.','FailedToSaveSettings'),'STMemoryBooks');
         } finally {busy=false;sync();}
     };
@@ -439,7 +439,7 @@ export function mountSlothSidePromptSettings(target,settings) {
         else delete params.slothSideCharacterLinks[key];
     };
     const reportSettingsError=error=>{
-        console.warn('Memory Books could not change a Side Prompt slot.',error);
+        console.warn('🦥 STMemoryBooks', 'Memory Books could not change a Side Prompt slot.',error);
         toastr.error(t('Failed to save settings. Please try again.','FailedToSaveSettings'),'STMemoryBooks');
     };
     const refreshRemoveButtons=()=>rows.forEach(row=>{row.remove.hidden=rows.length===1;});
@@ -530,3 +530,5 @@ export function mountSlothSidePromptSettings(target,settings) {
         finally {add.disabled=false;}
     });
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

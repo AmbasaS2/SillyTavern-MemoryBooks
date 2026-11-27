@@ -380,7 +380,7 @@ async function getEffectivePromptAsync(profile, targetKind = "") {
       return await SummaryPromptManager.getPrompt(profile.preset);
     }
   } catch (e) {
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: getEffectivePromptAsync fallback due to error:",
         "index.warn.getEffectivePromptAsync",
@@ -1451,7 +1451,7 @@ function scheduleSceneButtonRefresh(full = false, boundary = false) {
       if (messages.length) updateNewMessageButtonStates(messages);
       if (messages.length || boundaryRefresh) refreshMemoryBoundaryUi();
     } catch (error) {
-      console.error(translate(
+      console.error('🦥 STMemoryBooks', translate(
         "STMemoryBooks: Error updating button states:",
         "index.error.updatingButtonStates",
       ), error);
@@ -1544,7 +1544,7 @@ async function maybePromptContextSettingForChatOpen() {
     await maybePromptForMigratedContextSetting(profile, { blocking: false });
     lastContextPromptChatKey = chatKey;
   } catch (error) {
-    console.warn("STMemoryBooks: Context setting chat-open prompt failed:", error);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: Context setting chat-open prompt failed:", error);
   } finally {
     if (contextPromptInFlightChatKey === chatKey) {
       contextPromptInFlightChatKey = null;
@@ -1556,7 +1556,7 @@ function refreshSlothRecoveryForCurrentChat() {
   const ref=getCurrentStmbChatRef(),key=getStmbChatKey(ref);
   if(ref?.type!=='character'||!ref.avatarUrl||!ref.fileName||
       getMemoryBooksMode(extension_settings.STMemoryBooks,ref,key)!=='sloth')return;
-  void refreshSlothPaidDraft(ref).catch(error=>console.warn('Sloth recovery lookup failed:',error))
+  void refreshSlothPaidDraft(ref).catch(error=>console.warn('🦥 STMemoryBooks', 'Sloth recovery lookup failed:',error))
     .finally(()=>{if(getStmbChatKey()===key)syncSlothAutomaticStatus();});
 }
 
@@ -1571,7 +1571,7 @@ async function handleChatChanged(chatId) {
   progressChatLoaded();
   await getBranchLorebookController().handleChatChanged(chatId);
   if (getStmbChatKey() !== originChatKey) return;
-  console.log(
+  console.log('🦥 STMemoryBooks', 
     translate(
       "STMemoryBooks: Chat changed - updating scene state",
       "index.log.chatChanged",
@@ -1602,7 +1602,7 @@ async function handleChatChanged(chatId) {
   setTimeout(() => {
     if (getStmbChatKey() !== originChatKey) return;
     flushDeferredQueuedAutoHideRanges().catch((error) => {
-      console.warn("STMemoryBooks: deferred auto-hide flush failed:", error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: deferred auto-hide flush failed:", error);
     });
   }, UI_SETTINGS.CHAT_OBSERVER_DEBOUNCE_MS);
 }
@@ -1616,7 +1616,7 @@ function validateAndCleanupSceneMarkers() {
 
   // Check if we have orphaned scene markers (scene markers without active memory creation)
   if (sceneStart !== null || sceneEnd !== null) {
-    console.log(
+    console.log('🦥 STMemoryBooks', 
       __st_t_tag`Found orphaned scene markers: start=${sceneStart}, end=${sceneEnd}`,
     );
 
@@ -1643,7 +1643,7 @@ async function handleMessageReceived() {
     checkMemoryReminders({ notify: true });
     await evaluateTrackers();
   } catch (error) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: Error in handleMessageReceived:",
         "index.error.handleMessageReceived",
@@ -1665,7 +1665,7 @@ function handleStmbJobStateChanged() {
       if (getStmbChatKey() === reminderChatKey) checkMemoryReminders({ notify: true });
     })
     .catch((error) => {
-      console.warn("STMemoryBooks: auto-summary retry after job idle failed:", error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: auto-summary retry after job idle failed:", error);
     })
     .finally(() => {
       autoSummaryJobRetryInFlight = false;
@@ -1681,7 +1681,7 @@ async function handleCreateMemoryCommand(namedArgs, unnamedArgs) {
   // from running inside initiateMemoryCreation).
   const markers = getSceneMarkers() || {};
   if (markers.sceneStart == null || markers.sceneEnd == null) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: No scene markers set for createMemory command",
         "index.error.noSceneMarkersForCreate",
@@ -2095,7 +2095,7 @@ async function handleStmbCatchupCommand(namedArgs) {
       translate("STMemoryBooks", "index.toast.title"),
     );
   } catch (error) {
-    console.error("STMemoryBooks: /stmb-catchup failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: /stmb-catchup failed:", error);
     toastr.error(
       __st_t_tag`Failed to run /stmb-catchup: ${error.message}`,
       translate("STMemoryBooks", "index.toast.title"),
@@ -2174,7 +2174,7 @@ async function handleNextMemoryCommand(namedArgs, unnamedArgs) {
     setSceneRange(sceneStart, sceneEnd);
     await initiateMemoryCreation();
   } catch (error) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: /nextmemory failed:",
         "index.error.nextMemoryFailed",
@@ -2229,7 +2229,7 @@ async function handleStmbStopCommand(namedArgs, unnamedArgs) {
     }
   }
   toastr.info(msg, "STMemoryBooks");
-  console.log(`STMemoryBooks: ${msg}`);
+  console.log('🦥 STMemoryBooks', `STMemoryBooks: ${msg}`);
   return "";
 }
 
@@ -2364,7 +2364,7 @@ async function handleSidePromptToggle(namedArgs, unnamedArgs, enabled) {
       translate("STMemoryBooks", "index.toast.title"),
     );
   } catch (e) {
-    console.error("STMemoryBooks: sideprompt enable/disable failed:", e);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: sideprompt enable/disable failed:", e);
     toastr.error(
       __st_t_tag`Failed to toggle side prompt: ${e.message}`,
       translate("STMemoryBooks", "index.toast.title"),
@@ -2412,7 +2412,7 @@ async function refreshSidePromptCache() {
     sidePromptSetNameCache = settledSets
       .filter((result) => {
         if (result.status === "fulfilled") return true;
-        console.warn(
+        console.warn('🦥 STMemoryBooks', 
           translate(
             "STMemoryBooks: side prompt cache refresh failed",
             "index.warn.sidePromptCacheRefreshFailed",
@@ -2423,7 +2423,7 @@ async function refreshSidePromptCache() {
       })
       .map((result) => result.value);
   } catch (e) {
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: side prompt cache refresh failed",
         "index.warn.sidePromptCacheRefreshFailed",
@@ -2633,7 +2633,7 @@ function initializeSettings() {
         extension_settings.STMemoryBooks.defaultProfile += 1;
       }
 
-      console.log(
+      console.log('🦥 STMemoryBooks', 
         __st_t_tag`${MODULE_NAME}: Added dynamic profile for existing installation (migration to v3)`,
       );
     }
@@ -2664,7 +2664,7 @@ function initializeSettings() {
     };
 
     extension_settings.STMemoryBooks.profiles = [dynamicProfile];
-    console.log(
+    console.log('🦥 STMemoryBooks', 
       __st_t_tag`${MODULE_NAME}: Created dynamic profile for fresh installation`,
     );
   }
@@ -2676,7 +2676,7 @@ function initializeSettings() {
     extension_settings.STMemoryBooks,
   );
   if (profileValidation.fixes.length > 0) {
-    console.log(
+    console.log('🦥 STMemoryBooks', 
       __st_t_tag`${MODULE_NAME}: Applied profile fixes:`,
       profileValidation.fixes,
     );
@@ -2950,7 +2950,7 @@ function validateSettings(settings) {
   ) {
     // If both are somehow true, prioritize manual mode (since it was added first)
     settings.moduleSettings.autoCreateLorebook = false;
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       translate(
         "STMemoryBooks: Both manualModeEnabled and autoCreateLorebook were true - setting autoCreateLorebook to false",
         "index.warn.mutualExclusion",
@@ -2960,14 +2960,14 @@ function validateSettings(settings) {
 
   // Migrate to version 2 if needed (JSON-based architecture)
   if (!settings.migrationVersion || settings.migrationVersion < 2) {
-    console.log(
+    console.log('🦥 STMemoryBooks', 
       __st_t_tag`${MODULE_NAME}: Migrating to JSON-based architecture (v2)`,
     );
     settings.migrationVersion = 2;
     // Update any old tool-based prompts to JSON prompts
     settings.profiles.forEach((profile) => {
       if (profile.prompt && profile.prompt.includes("createMemory")) {
-        console.log(
+        console.log('🦥 STMemoryBooks', 
           __st_t_tag`${MODULE_NAME}: Updating profile "${profile.name}" to use JSON output`,
         );
         profile.prompt = getDefaultPrompt(); // Reset to new JSON-based default
@@ -3664,7 +3664,7 @@ async function rollbackManualGroupLorebookWrites(writtenEntries, lorebookDataByN
     try {
       await Promise.resolve(reloadEditor(lorebookName));
     } catch (e) {
-      console.warn(`STMemoryBooks: reloadEditor failed after rolling back "${lorebookName}":`, e);
+      console.warn('🦥 STMemoryBooks', `STMemoryBooks: reloadEditor failed after rolling back "${lorebookName}":`, e);
     }
   }
 }
@@ -4092,7 +4092,7 @@ async function addMemoryToManualGroupLorebooks(memoryResult, lorebookValidation,
     try {
       await rollbackManualGroupLorebookWrites(writtenEntries, lorebookDataByName, inclusionGroup);
     } catch (rollbackError) {
-      console.error("STMemoryBooks: Failed to roll back partial manual group lorebook writes:", rollbackError);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to roll back partial manual group lorebook writes:", rollbackError);
       return {
         success: false,
         error: error.message,
@@ -4258,18 +4258,18 @@ async function showAndGetMemorySettings(
     };
 
     if (profileSettings.useDynamicSTSettings) {
-      console.log(
+      console.log('🦥 STMemoryBooks', 
         "STMemoryBooks: Using dynamic ST settings profile - current settings:",
         profileSettings.effectiveConnection,
       );
     } else {
-      console.log(
+      console.log('🦥 STMemoryBooks', 
         "STMemoryBooks: Using current SillyTavern settings override for memory creation",
       );
     }
   } else {
     profileSettings.effectiveConnection = { ...profileSettings.connection };
-    console.log(
+    console.log('🦥 STMemoryBooks', 
       "STMemoryBooks: Using profile connection settings for memory creation",
     );
   }
@@ -4525,7 +4525,7 @@ async function refreshLorebookRegenerationActions() {
         : getRegenerationDisabledMessage(eligibility);
     }
   } catch (error) {
-    console.warn('Memory Books could not refresh regeneration actions.', error);
+    console.warn('🦥 STMemoryBooks', 'Memory Books could not refresh regeneration actions.', error);
   } finally {
     regenerationRunning = false;
     if (regenerationFullRefresh || pendingRegenerationRows.size) queueLorebookRegenerationRefresh();
@@ -4774,7 +4774,7 @@ async function prepareBaseRegenerationDraft(lorebookName, lorebookData, entry, e
   });
   if (!visibility.ok) {
     if (visibility.error) {
-      console.warn("STMemoryBooks: regeneration /unhide failed:", visibility.error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: regeneration /unhide failed:", visibility.error);
     }
     await showRegenerationVisibilityGuidance(eligibility.sceneStart, eligibility.sceneEnd);
     return null;
@@ -5017,7 +5017,7 @@ async function prepareSidePromptRegenerationDraft(entry, eligibility, options = 
     });
   if (!visibility.ok) {
     if (visibility.error) {
-      console.warn("STMemoryBooks: side-prompt regeneration /unhide failed:", visibility.error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: side-prompt regeneration /unhide failed:", visibility.error);
     }
     await showRegenerationVisibilityGuidance(
       eligibility.sceneStart,
@@ -5183,7 +5183,7 @@ async function commitRegeneratedLorebookEntry({
       try {
         await Promise.resolve(reloadEditor(lorebookName));
       } catch (error) {
-        console.warn("STMemoryBooks: regenerated entry was saved, but the lorebook editor did not refresh:", error);
+        console.warn('🦥 STMemoryBooks', "STMemoryBooks: regenerated entry was saved, but the lorebook editor did not refresh:", error);
       }
     }
   });
@@ -5436,7 +5436,7 @@ async function handleLorebookEntryRegeneration(button) {
       try {
         await Promise.resolve(reloadEditor(lorebookName));
       } catch (error) {
-        console.warn("STMemoryBooks: linked entries were saved, but the group lorebook editor did not refresh:", error);
+        console.warn('🦥 STMemoryBooks', "STMemoryBooks: linked entries were saved, but the group lorebook editor did not refresh:", error);
       }
     }
     toastr.success(
@@ -5457,7 +5457,7 @@ async function handleLorebookEntryRegeneration(button) {
   } catch (error) {
     if (!isStmbStopError(error)) {
       toastr.clear();
-      console.error("STMemoryBooks: entry regeneration failed:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: entry regeneration failed:", error);
       const sidePromptError = error?.code === "STMB_SIDE_PROMPT_TEMPLATE_MISSING"
         ? translate(
             "The side-prompt template used for this run no longer exists.",
@@ -5659,7 +5659,7 @@ async function executeMemoryGeneration(
               }
             }
           } catch (e) {
-            console.warn(
+            console.warn('🦥 STMemoryBooks', 
               "STMemoryBooks: Failed to save lorebook during recursion conversion:",
               e,
             );
@@ -5676,7 +5676,7 @@ async function executeMemoryGeneration(
       }
     }
   } catch (e) {
-    console.warn("STMemoryBooks: convertExistingRecursion check failed:", e);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: convertExistingRecursion check failed:", e);
   }
 
   const maxRetries = MEMORY_GENERATION.MAX_RETRIES;
@@ -5768,7 +5768,7 @@ async function executeMemoryGeneration(
             "STMemoryBooks",
           );
         }
-        console.log(
+        console.log('🦥 STMemoryBooks', 
           `STMemoryBooks: Including ${memoryFetchResult.actualCount} previous memories as context`,
         );
       } else {
@@ -5869,7 +5869,7 @@ async function executeMemoryGeneration(
       } else if (previewResult.action === "edit") {
         // User edited the data, validate and use edited version
         if (!previewResult.memoryData) {
-          console.error("STMemoryBooks: Edit action missing memoryData");
+          console.error('🦥 STMemoryBooks', "STMemoryBooks: Edit action missing memoryData");
           toastr.error(
             translate(
               "Unable to retrieve edited memory data",
@@ -5885,7 +5885,7 @@ async function executeMemoryGeneration(
           !previewResult.memoryData.extractedTitle ||
           !previewResult.memoryData.content
         ) {
-          console.error(
+          console.error('🦥 STMemoryBooks', 
             "STMemoryBooks: Edited memory data missing required fields",
           );
           toastr.error(
@@ -5901,7 +5901,7 @@ async function executeMemoryGeneration(
         finalMemoryResult = previewResult.memoryData;
       } else {
         // Unexpected action, use original data as fallback
-        console.warn(
+        console.warn('🦥 STMemoryBooks', 
           `STMemoryBooks: Unexpected preview action: ${previewResult.action}`,
         );
         finalMemoryResult = memoryResult;
@@ -5978,7 +5978,7 @@ async function executeMemoryGeneration(
         profileSettings?.effectiveConnection ||
         profileSettings?.connection ||
         {};
-      console.debug("STMemoryBooks: Passing profile to runAfterMemory", {
+      console.debug('🦥 STMemoryBooks', "STMemoryBooks: Passing profile to runAfterMemory", {
         api: connDbg.api,
         model: connDbg.model,
         temperature: connDbg.temperature,
@@ -5991,14 +5991,14 @@ async function executeMemoryGeneration(
         settings,
       });
     } catch (e) {
-      console.warn("STMemoryBooks: runAfterMemory failed:", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: runAfterMemory failed:", e);
     }
     try {
       await runClipReviewAfterMemory(compiledScene, profileSettings, {
         lorebookNames: getMemoryWriteResultLorebookNames(addResult, lorebookValidation?.name),
       });
     } catch (e) {
-      console.warn("STMemoryBooks: Memory Assistance after memory failed:", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Memory Assistance after memory failed:", e);
     }
     throwIfStmbStopped(runEpoch);
 
@@ -6010,7 +6010,7 @@ async function executeMemoryGeneration(
       saveMetadataForCurrentContext();
       refreshMemoryBoundaryUi();
     } catch (e) {
-      console.warn(
+      console.warn('🦥 STMemoryBooks', 
         "STMemoryBooks: Failed to update highestMemoryProcessed baseline:",
         e,
       );
@@ -6045,7 +6045,7 @@ async function executeMemoryGeneration(
     if (isStmbStopError(error)) {
       return false;
     }
-    console.error("STMemoryBooks: Error creating memory:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error creating memory:", error);
 
     // Determine if we should retry
     const shouldRetry = retryCount < maxRetries && isRetryableError(error);
@@ -6146,7 +6146,7 @@ async function executeMemoryGeneration(
           try {
             showFailedAIResponsePopup(lastFailedAIError);
           } catch (e) {
-            console.error(e);
+            console.error('🦥 STMemoryBooks', e);
           }
         });
     } else if (error.name === "InvalidProfileError") {
@@ -6233,7 +6233,7 @@ async function resolveAdditionalContextSnapshot(profileSettings, options = {}) {
         saveSettingsDebounced();
       }
     } catch (error) {
-      console.warn("STMemoryBooks: Legacy Additional Context migration attempt failed:", error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Legacy Additional Context migration attempt failed:", error);
     }
     const resolved = await resolveContextSettingEntriesFromRefs(profileSettings.additionalContextEntries);
     showSkippedAdditionalContextWarning(resolved.skipped);
@@ -6432,7 +6432,7 @@ async function applyQueuedAutoHideRanges(chatRef, ranges) {
   try {
     await runAutoHideRangesForCurrentChat(safeRanges);
   } catch (error) {
-    console.warn("STMemoryBooks: queued auto-hide failed:", error);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: queued auto-hide failed:", error);
   }
 }
 
@@ -6454,7 +6454,7 @@ async function flushDeferredQueuedAutoHideRanges() {
     await runAutoHideRangesForCurrentChat(ranges);
     deferredQueuedAutoHideRanges.delete(chatKey);
   } catch (error) {
-    console.warn("STMemoryBooks: deferred queued auto-hide failed:", error);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: deferred queued auto-hide failed:", error);
   }
 }
 
@@ -6467,7 +6467,7 @@ async function applyQueuedMemoryAutoHide(job, memoryResult, settings) {
   if (autoHidePlan.mode === "none") return;
 
   if (autoHidePlan.invalidRange) {
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       "STMemoryBooks: queued auto-hide skipped - invalid scene range:",
       autoHidePlan.rawRange,
     );
@@ -6535,7 +6535,7 @@ async function completeQueuedMemoryPostSave({
         retryJobSnapshots,
       });
     } catch (error) {
-      console.warn("STMemoryBooks: queued after-memory side prompts failed:", error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: queued after-memory side prompts failed:", error);
     }
   }
 
@@ -7156,7 +7156,7 @@ async function showConsolidationRecoveryPopup() {
     ${item.status === 'needsReview' ? `<button type="button" class="menu_button stmb-dismiss-consolidation">${escapeHtml(translate('Dismiss after review', 'STMemoryBooks_Consolidation_DismissAction'))}</button>` : ''}
     ${item.status === 'needsReview' ? '' : `<button type="button" class="menu_button stmb-resume-consolidation">${escapeHtml(translate('Resume', 'STMemoryBooks_Consolidation_Resume'))}</button>`}
   </div>`).join('');
-  const popup = new Popup(DOMPurify.sanitize(`<h3>${escapeHtml(translate('Consolidation recovery', 'STMemoryBooks_Consolidation_RecoveryTitle'))}</h3><div id="stmb-recovery-list">${rows}</div>`),
+  const popup = new Popup(DOMPurify.sanitize(`<h3>🦥 ${escapeHtml(translate('Consolidation recovery', 'STMemoryBooks_Consolidation_RecoveryTitle'))}</h3><div id="stmb-recovery-list">${rows}</div>`),
     POPUP_TYPE.TEXT, '', { wide: true, large: true, allowVerticalScrolling: true, okButton: false,
       cancelButton: translate('Close', 'STMemoryBooks_Close') });
   markStmbPopup(popup);
@@ -7263,7 +7263,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
         try {
           await executeSlashCommands(`/unhide ${markers.sceneStart}-${markers.sceneEnd}`);
         } catch (e) {
-          console.warn("STMemoryBooks: /unhide command failed or unavailable:", e);
+          console.warn('🦥 STMemoryBooks', "STMemoryBooks: /unhide command failed or unavailable:", e);
         }
       }
     }
@@ -7271,7 +7271,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
     // All the validation and processing logic
     const sceneData = await getSceneData();
     if (!sceneData) {
-      console.error("STMemoryBooks: No scene selected for memory initiation");
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: No scene selected for memory initiation");
       const markers = getSceneMarkers() || {};
       const selectedMessages = Number.isInteger(markers.sceneStart)
         && Number.isInteger(markers.sceneEnd)
@@ -7292,7 +7292,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
     const lorebookValidation = await validateLorebook();
     if (!lorebookValidation.valid) {
       if (!lorebookValidation.handled) {
-        console.error(
+        console.error('🦥 STMemoryBooks', 
           "STMemoryBooks: Lorebook validation failed:",
           lorebookValidation.error,
         );
@@ -7319,7 +7319,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
           void showSettingsPopup();
         }
       } catch (e) {
-        console.warn("STMemoryBooks: Failed to refresh manual group lorebook UI:", e);
+        console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to refresh manual group lorebook UI:", e);
       }
       isProcessingMemory = false;
       return false;
@@ -7343,11 +7343,11 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
           const ns = Number(newStart);
           const ne = Number(newEnd);
           // Detailed overlap diagnostics
-          console.debug(
+          console.debug('🦥 STMemoryBooks', 
             `STMemoryBooks: OverlapCheck new=[${ns}-${ne}] existing="${mem.title}" [${s}-${e}] cond1(ns<=e)=${ns <= e} cond2(ne>=s)=${ne >= s}`,
           );
           if (ns <= e && ne >= s) {
-            console.error(
+            console.error('🦥 STMemoryBooks', 
               `STMemoryBooks: Scene overlap detected with memory: ${mem.title} [${s}-${e}] vs new [${ns}-${ne}]`,
             );
             toastr.error(
@@ -7412,7 +7412,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
       { memoryOriginSnapshot },
     );
   } catch (error) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       "STMemoryBooks: Critical error during memory initiation:",
       error,
     );
@@ -7774,7 +7774,7 @@ function renderManualGroupLorebookBindings(container, stmbData) {
           saveMetadataForCurrentContext();
           assignedLorebook = selectedLorebook;
         } catch (error) {
-          console.error("STMemoryBooks: Failed to assign character lorebook:", error);
+          console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to assign character lorebook:", error);
           select.value = currentLorebook;
           toastr.error(error?.message || String(error), "STMemoryBooks");
           return;
@@ -7791,7 +7791,7 @@ function renderManualGroupLorebookBindings(container, stmbData) {
         try {
           await refreshPopupContent();
         } catch (error) {
-          console.warn("STMemoryBooks: Assignment updated, but popup refresh failed:", error);
+          console.warn('🦥 STMemoryBooks', "STMemoryBooks: Assignment updated, but popup refresh failed:", error);
         }
       } finally {
         row.classList.remove("stmb-processing");
@@ -7906,7 +7906,7 @@ function populateInlineButtons() {
               refreshPopupContent();
             }
           } catch (error) {
-            console.error(
+            console.error('🦥 STMemoryBooks', 
               "STMemoryBooks: Error selecting manual lorebook:",
               error,
             );
@@ -7950,7 +7950,7 @@ function populateInlineButtons() {
               "STMemoryBooks",
             );
           } catch (error) {
-            console.error(
+            console.error('🦥 STMemoryBooks', 
               "STMemoryBooks: Error clearing manual lorebook:",
               error,
             );
@@ -8059,7 +8059,7 @@ function populateInlineButtons() {
 
           await editProfile(settings, selectedIndex, refreshPopupContent);
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error in edit profile:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error in edit profile:`, error);
           toastr.error(
             translate(
               "Failed to edit profile",
@@ -8077,7 +8077,7 @@ function populateInlineButtons() {
         try {
           await newProfile(settings, refreshPopupContent);
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error in new profile:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error in new profile:`, error);
           toastr.error(
             translate(
               "Failed to create profile",
@@ -8101,7 +8101,7 @@ function populateInlineButtons() {
           const selectedIndex = readIntInput(profileSelect, settings.defaultProfile ?? 0);
           await deleteProfile(settings, selectedIndex, refreshPopupContent);
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error in delete profile:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error in delete profile:`, error);
           toastr.error(
             translate(
               "Failed to delete profile",
@@ -8124,7 +8124,7 @@ function populateInlineButtons() {
         try {
           exportProfiles(settings);
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error in export profiles:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error in export profiles:`, error);
           toastr.error(
             translate(
               "Failed to export profiles",
@@ -8181,7 +8181,7 @@ function populateInlineButtons() {
         try {
           await showPromptManagerPopup();
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening prompt manager:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening prompt manager:`, error);
           toastr.error(
             translate(
               "Failed to open Summary Prompt Manager",
@@ -8204,7 +8204,7 @@ function populateInlineButtons() {
         try {
           await showArcPromptManagerPopup();
         } catch (error) {
-          console.error(
+          console.error('🦥 STMemoryBooks', 
             `${MODULE_NAME}: Error opening Consolidation Prompt Manager:`,
             error,
           );
@@ -8225,7 +8225,7 @@ function populateInlineButtons() {
         try {
           await showSidePromptsPopup();
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening Trackers & Side Prompts Manager:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening Trackers & Side Prompts Manager:`, error);
           toastr.error(
             translate(
               "Failed to open Trackers & Side Prompts Manager",
@@ -8243,7 +8243,7 @@ function populateInlineButtons() {
         try {
           await showContextSettingsPopup();
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening Context Settings:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening Context Settings:`, error);
           toastr.error(
             translate(
               "Failed to open Context Settings",
@@ -8261,7 +8261,7 @@ function populateInlineButtons() {
         try {
           await showStmbEntryReviewPopup({ showGoBack: true });
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening Compaction:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening Compaction:`, error);
           toastr.error(
             translate(
               "Failed to open Compaction",
@@ -8279,7 +8279,7 @@ function populateInlineButtons() {
         try {
           await showTopicalClipPopup({ showGoBack: true });
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening Topical Clip:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening Topical Clip:`, error);
           toastr.error(
             translate(
               "Failed to open Topical Clip",
@@ -8302,7 +8302,7 @@ function populateInlineButtons() {
         try {
           await showClipReviewSuggestionsPopup({ showGoBack: true });
         } catch (error) {
-          console.error(`${MODULE_NAME}: Error opening Memory Assistance Suggestions:`, error);
+          console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening Memory Assistance Suggestions:`, error);
           toastr.error(translate("Failed to open Memory Assistance Suggestions", "STMemoryBooks_ClipReview_OpenFailed"), "STMemoryBooks");
         }
       },
@@ -8425,7 +8425,7 @@ async function showPromptManagerPopup() {
 
     if (await popup.show() !== POPUP_RESULT.AFFIRMATIVE) summaryPromptViewSort.reset();
   } catch (error) {
-    console.error("STMemoryBooks: Error showing prompt manager:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error showing prompt manager:", error);
     toastr.error(
       translate(
         "Failed to open Summary Prompt Manager",
@@ -8593,7 +8593,7 @@ function setupPromptManagerEventHandlers(popup) {
           await showPromptManagerPopup();
         }
       } catch (error) {
-        console.error(
+        console.error('🦥 STMemoryBooks', 
           "STMemoryBooks: Error recreating built-in prompts:",
           error,
         );
@@ -8760,7 +8760,7 @@ async function createNewPreset(popup) {
       popup.completeAffirmative();
       await showPromptManagerPopup();
     } catch (error) {
-      console.error("STMemoryBooks: Error creating preset:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Error creating preset:", error);
       toastr.error(
         translate(
           "Failed to create preset",
@@ -8843,7 +8843,7 @@ async function editPreset(popup, presetKey) {
       await showPromptManagerPopup();
     }
   } catch (error) {
-    console.error("STMemoryBooks: Error editing preset:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error editing preset:", error);
     toastr.error(
       translate("Failed to edit preset", "STMemoryBooks_FailedToEditPreset"),
       "STMemoryBooks",
@@ -8871,7 +8871,7 @@ async function duplicatePreset(popup, presetKey) {
     popup.completeAffirmative();
     await showPromptManagerPopup();
   } catch (error) {
-    console.error("STMemoryBooks: Error duplicating preset:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error duplicating preset:", error);
     toastr.error(
       translate(
         "Failed to duplicate preset",
@@ -8922,7 +8922,7 @@ async function deletePreset(popup, presetKey) {
       popup.completeAffirmative();
       await showPromptManagerPopup();
     } catch (error) {
-      console.error("STMemoryBooks: Error deleting preset:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Error deleting preset:", error);
       toastr.error(
         translate(
           "Failed to delete preset",
@@ -8955,7 +8955,7 @@ async function exportPrompts() {
       "STMemoryBooks",
     );
   } catch (error) {
-    console.error("STMemoryBooks: Error exporting prompts:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error exporting prompts:", error);
     toastr.error(
       translate(
         "Failed to export prompts",
@@ -8990,7 +8990,7 @@ async function importPrompts(event, popup) {
     popup.completeAffirmative();
     await showPromptManagerPopup();
   } catch (error) {
-    console.error("STMemoryBooks: Error importing prompts:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error importing prompts:", error);
     toastr.error(
       __st_t_tag`Failed to import prompts: ${error.message}`,
       "STMemoryBooks",
@@ -9099,7 +9099,7 @@ async function showArcPromptManagerPopup() {
 
     if (await popup.show() !== POPUP_RESULT.AFFIRMATIVE) consolidationPromptViewSort.reset();
   } catch (error) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       "STMemoryBooks: Error showing Consolidation Prompt Manager:",
       error,
     );
@@ -9190,7 +9190,7 @@ function setupArcPromptManagerEventHandlers(popup) {
       );
       window.dispatchEvent(new CustomEvent("stmb-arc-presets-updated"));
     } catch (error) {
-      console.error("STMemoryBooks: Error setting default arc preset:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Error setting default arc preset:", error);
       toastr.error(
         translate(
           "Failed to set default consolidation prompt",
@@ -9258,7 +9258,7 @@ function setupArcPromptManagerEventHandlers(popup) {
           await showArcPromptManagerPopup();
         }
       } catch (error) {
-        console.error(
+        console.error('🦥 STMemoryBooks', 
           "STMemoryBooks: Error recreating built-in arc prompts:",
           error,
         );
@@ -9328,7 +9328,7 @@ async function createNewArcPreset(popup) {
       popup.completeAffirmative();
       await showArcPromptManagerPopup();
     } catch (error) {
-      console.error("STMemoryBooks: Error creating arc preset:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Error creating arc preset:", error);
       toastr.error(
         translate(
           "Failed to create preset",
@@ -9399,7 +9399,7 @@ async function editArcPreset(popup, presetKey) {
       await showArcPromptManagerPopup();
     }
   } catch (error) {
-    console.error("STMemoryBooks: Error editing arc preset:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error editing arc preset:", error);
     toastr.error(
       translate("Failed to edit preset", "STMemoryBooks_FailedToEditPreset"),
       "STMemoryBooks",
@@ -9421,7 +9421,7 @@ async function duplicateArcPreset(popup, presetKey) {
     popup.completeAffirmative();
     await showArcPromptManagerPopup();
   } catch (error) {
-    console.error("STMemoryBooks: Error duplicating arc preset:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error duplicating arc preset:", error);
     toastr.error(
       translate(
         "Failed to duplicate preset",
@@ -9463,7 +9463,7 @@ async function deleteArcPreset(popup, presetKey) {
       popup.completeAffirmative();
       await showArcPromptManagerPopup();
     } catch (error) {
-      console.error("STMemoryBooks: Error deleting arc preset:", error);
+      console.error('🦥 STMemoryBooks', "STMemoryBooks: Error deleting arc preset:", error);
       toastr.error(
         translate(
           "Failed to delete preset",
@@ -9493,7 +9493,7 @@ async function exportArcPrompts() {
       "STMemoryBooks",
     );
   } catch (error) {
-    console.error("STMemoryBooks: Error exporting arc prompts:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error exporting arc prompts:", error);
     toastr.error(
       translate(
         "Failed to export prompts",
@@ -9521,7 +9521,7 @@ async function importArcPrompts(event, popup) {
     popup.completeAffirmative();
     await showArcPromptManagerPopup();
   } catch (error) {
-    console.error("STMemoryBooks: Error importing arc prompts:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error importing arc prompts:", error);
     toastr.error(
       __st_t_tag`Failed to import prompts: ${error.message}`,
       "STMemoryBooks",
@@ -9701,7 +9701,7 @@ async function maybePromptAutoConsolidation(targetTier, lorebookValidation = nul
       requiredMin,
     };
   } catch (error) {
-    console.error("STMemoryBooks: Auto-consolidation prompt check failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Auto-consolidation prompt check failed:", error);
     return { ...emptyResult, error };
   }
 }
@@ -10034,7 +10034,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
         try {
           persistSummaryConsolidationPopupSettings(popup?.dlg);
         } catch (error) {
-          console.error(
+          console.error('🦥 STMemoryBooks', 
             "STMemoryBooks: Failed to save consolidation popup settings:",
             error,
           );
@@ -10237,7 +10237,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
           allEntries = Object.values(lorebookData.entries || {});
         } catch (error) {
           if (loadSequence !== sourceLorebookLoadSequence) return;
-          console.error(
+          console.error('🦥 STMemoryBooks', 
             `STMemoryBooks: Failed to load consolidation Memory Book "${selectedLorebookName}":`,
             error,
           );
@@ -10405,7 +10405,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
             "STMemoryBooks",
           );
         } catch (err) {
-          console.error("STMemoryBooks: Arc prompts rebuild failed:", err);
+          console.error('🦥 STMemoryBooks', "STMemoryBooks: Arc prompts rebuild failed:", err);
           toastr.error(
             __st_t_tag`Failed to rebuild consolidation prompts: ${err.message}`,
             "STMemoryBooks",
@@ -10892,7 +10892,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
               try {
                 showFailedSummaryResponsePopup(lastFailedArcError);
               } catch (e3) {
-                console.error(e3);
+                console.error('🦥 STMemoryBooks', e3);
               }
             },
           },
@@ -10951,7 +10951,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
             try {
               showFailedSummaryResponsePopup(lastFailedArcError);
             } catch (e3) {
-              console.error(e3);
+              console.error('🦥 STMemoryBooks', e3);
             }
           },
         },
@@ -10959,7 +10959,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
       try {
         showFailedSummaryResponsePopup(lastFailedArcError);
       } catch (e2) {
-        console.error(e2);
+        console.error('🦥 STMemoryBooks', e2);
       }
       return;
     }
@@ -11102,7 +11102,7 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
       );
     }
   } catch (error) {
-    console.error("STMemoryBooks: showSummaryConsolidationPopup failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: showSummaryConsolidationPopup failed:", error);
     toastr.error(
       __st_t_tag`Failed to open consolidate popup: ${error.message}`,
       "STMemoryBooks",
@@ -11141,7 +11141,7 @@ function initializeSettingsPopupSelect2(popupInstance = currentPopupInstance) {
         dropdownParent: window.jQuery(popupInstance.dlg),
       });
     } catch (error) {
-      console.warn(
+      console.warn('🦥 STMemoryBooks', 
         "STMemoryBooks: Settings Select2 initialization failed (using native select)",
         error,
       );
@@ -11290,7 +11290,7 @@ async function buildSettingsTemplateData({ includeSidePromptSets = false } = {})
       });
     });
   } catch (e) {
-    console.warn("STMemoryBooks: Failed to enumerate Regex scripts for UI", e);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to enumerate Regex scripts for UI", e);
   }
 
   const selectedProfile = settings.profiles[settings.defaultProfile];
@@ -11531,7 +11531,7 @@ async function showSettingsPopup() {
         if (profileSelect) {
           selectedProfileIndex =
             parseInt(profileSelect.value) || settings.defaultProfile;
-          console.log(
+          console.log('🦥 STMemoryBooks', 
             `STMemoryBooks: Using profile index ${selectedProfileIndex} (${settings.profiles[selectedProfileIndex]?.name}) from main popup selection`,
           );
         }
@@ -11598,7 +11598,7 @@ async function showSettingsPopup() {
     syncSlothAutomaticStatus();
     await showing;
   } catch (error) {
-    console.error("STMemoryBooks: Error showing settings popup:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error showing settings popup:", error);
     currentPopupInstance = null;
   }
 }
@@ -11624,7 +11624,7 @@ async function showGeneralSettingsPopup(options = {}) {
     }
     await popup.show();
   } catch (error) {
-    console.error("STMemoryBooks: Error showing general settings popup:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error showing general settings popup:", error);
     toastr.error(
       translate(
         "Failed to open settings",
@@ -11652,7 +11652,7 @@ async function showAutomaticMemoriesSettingsPopup() {
     initializeSettingsPopupSelect2(popup);
     await popup.show();
   } catch (error) {
-    console.error("STMemoryBooks: Error showing automatic memories settings popup:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error showing automatic memories settings popup:", error);
     toastr.error(
       translate(
         "Failed to open Automatic Memories settings",
@@ -11720,7 +11720,7 @@ async function runSlothCollectionEntryPoint({ signal, onSaveStart } = {}) {
     if (result?.saved) await refreshSlothRoleControls();
   } catch (error) {
     if (signal?.aborted) throw error;
-    console.error('Sloth operation stopped:', error);
+    console.error('🦥 STMemoryBooks', 'Sloth operation stopped:', error);
     toastr.error(error.message, 'STMemoryBooks', {timeOut:8500});
   }
   return '';
@@ -11769,7 +11769,7 @@ async function runCancellableSlothButton(button, start) {
       toastr.info(translate('Memory collection canceled.','STMemoryBooks_SlothCollectionCanceled'),
         'STMemoryBooks',{timeOut:2500});
     } else {
-      console.error('Sloth operation stopped:',error);
+      console.error('🦥 STMemoryBooks', 'Sloth operation stopped:',error);
       toastr.error(error?.message || String(error),'STMemoryBooks',{timeOut:8500});
     }
   } finally {
@@ -11854,7 +11854,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
       if (currentPopupInstance?.dlg === popupElement) await refreshSlothRoleControls();
     }
   } catch (error) {
-    console.error('Sloth operation stopped:', error);
+    console.error('🦥 STMemoryBooks', 'Sloth operation stopped:', error);
     toastr.error(error?.message || String(error), 'STMemoryBooks', { timeOut: 10000 });
   } finally {
     for (const item of buttons) item.disabled = false;
@@ -12198,7 +12198,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     originalSettingsPrepared = true;
     void reconcileCurrentManualGroupStloFilters(initializeSettings()).catch(error => {
       originalSettingsPrepared = false;
-      console.warn('STMemoryBooks: Could not prepare original STLO filters.',error);
+      console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Could not prepare original STLO filters.',error);
       toastr.warning(error?.message || String(error),'STMemoryBooks');
     });
   };
@@ -12323,7 +12323,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       try {
         await showRegexSelectionPopup();
       } catch (err) {
-        console.warn("STMemoryBooks: showRegexSelectionPopup failed", err);
+        console.warn('🦥 STMemoryBooks', "STMemoryBooks: showRegexSelectionPopup failed", err);
       }
       return;
     }
@@ -12690,7 +12690,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
         settings.moduleSettings.selectedRegexOutgoing = values;
         saveSettingsDebounced();
       } catch (err) {
-        console.warn(
+        console.warn('🦥 STMemoryBooks', 
           "STMemoryBooks: failed to save selectedRegexOutgoing",
           err,
         );
@@ -12705,7 +12705,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
         settings.moduleSettings.selectedRegexIncoming = values;
         saveSettingsDebounced();
       } catch (err) {
-        console.warn(
+        console.warn('🦥 STMemoryBooks', 
           "STMemoryBooks: failed to save selectedRegexIncoming",
           err,
         );
@@ -12717,7 +12717,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       try {
         importProfiles(e, settings, refreshPopupContent);
       } catch (error) {
-        console.error(`${MODULE_NAME}: Error in import profiles:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error in import profiles:`, error);
         toastr.error(
           translate(
             "Failed to import profiles",
@@ -13561,7 +13561,7 @@ function handleSettingsFormPopupClose(popup) {
   try {
     persistMainPopupSettings(popup.dlg);
   } catch (error) {
-    console.error("STMemoryBooks: Failed to save settings:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to save settings:", error);
     toastr.warning(
       translate(
         "Failed to save settings. Please try again.",
@@ -13656,7 +13656,7 @@ async function refreshPopupContent({loadOriginal=false} = {}) {
     }
     return true;
   } catch (error) {
-    console.error("STMemoryBooks: Error refreshing popup content:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Error refreshing popup content:", error);
     if (loadOriginal && popup === currentPopupInstance && popup.dlg.open) {
       toastr.error(translate('Settings could not load. Close and reopen Memory Books.','STMemoryBooks_SlothLoadingFailed'),'STMemoryBooks');
     }
@@ -13955,7 +13955,7 @@ function createUI() {
     extensionsMenu.append(menuItem);
     applyLocale(menuItem[0]);
   } else {
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       "STMemoryBooks: Extensions menu not found - retrying initialization",
     );
   }
@@ -13986,7 +13986,7 @@ async function loadMemoryRollbackLorebooks(settings, namesOverride = null, { ski
       }
     } catch (error) {
       if (!skipUnavailable) throw error;
-      console.warn("STMemoryBooks: Skipping unavailable Memory Book during rollback unhide recovery:", name, error);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Skipping unavailable Memory Book during rollback unhide recovery:", name, error);
       continue;
     }
     states.push({
@@ -14229,7 +14229,7 @@ function queueDeletedMessageRollbackUnhideRecovery(chatKey, chatId) {
   const current = previous.catch(() => {}).then(() => recoverDeletedMessageRollbackUnhide(chatKey, chatId));
   memoryRollbackChains.set(chatKey, current);
   current.catch(error => {
-    console.error("STMemoryBooks: Message rollback unhide recovery failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Message rollback unhide recovery failed:", error);
     toastr.error(error?.message || String(error), translate("Memory rollback failed", "STMemoryBooks_AutoRollback_Failed"), {
       timeOut: 0, extendedTimeOut: 0,
     });
@@ -14452,7 +14452,7 @@ async function executeMemoryAutoRollback({ chatKey, chatId, deletion, childBound
       try {
         await Promise.resolve(reloadEditor(state.name));
       } catch (error) {
-        console.warn(`STMemoryBooks: rollback saved ${state.name}, but its editor did not refresh:`, error);
+        console.warn('🦥 STMemoryBooks', `STMemoryBooks: rollback saved ${state.name}, but its editor did not refresh:`, error);
       }
     }
   }
@@ -14529,7 +14529,7 @@ async function executeChildChatAutoRollback({ chatId, boundary }) {
   try {
     await current;
   } catch (error) {
-    console.error("STMemoryBooks: Branch/checkpoint auto-rollback failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Branch/checkpoint auto-rollback failed:", error);
     toastr.error(error?.message || String(error), translate("Memory rollback failed", "STMemoryBooks_AutoRollback_Failed"), {
       timeOut: 0,
       extendedTimeOut: 0,
@@ -14546,7 +14546,7 @@ function queueMemoryAutoRollback({ chatKey, chatId, deletion }) {
     executeMemoryAutoRollback({ chatKey, chatId, deletion }));
   memoryRollbackChains.set(chatKey, current);
   current.catch(error => {
-    console.error("STMemoryBooks: Memory auto-rollback failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Memory auto-rollback failed:", error);
     toastr.error(error?.message || String(error), translate("Memory rollback failed", "STMemoryBooks_AutoRollback_Failed"), {
       timeOut: 0,
       extendedTimeOut: 0,
@@ -14593,7 +14593,7 @@ function setupEventListeners() {
         const result=await finishPendingSlothLorebookRenames();
         pending=result.pending;
         if(result.changed)refreshAfterSlothRename();
-      }catch(error){console.warn('Memory Books lorebook rename verification stopped:',error);}
+      }catch(error){console.warn('🦥 STMemoryBooks', 'Memory Books lorebook rename verification stopped:',error);}
       if(revision===slothRenameCheckRevision&&pending&&remaining-->1)
         slothRenameCheckTimer=setTimeout(check,500);
     };
@@ -14611,7 +14611,7 @@ function setupEventListeners() {
     const name = getCurrentLorebookEditorName();
     void finishSlothLorebookRename(name, world_names).then(changed => {
       if(changed)refreshAfterSlothRename();
-    }).catch(error => console.warn('Memory Books lorebook rename verification stopped:', error));
+    }).catch(error => console.warn('🦥 STMemoryBooks', 'Memory Books lorebook rename verification stopped:', error));
     scheduleSlothRenameCheck();
   });
   eventSource.on(event_types.CHARACTER_RENAMED, async (oldAvatar, newAvatar) => {
@@ -14789,7 +14789,7 @@ function setupEventListeners() {
             ...getSlothProfileConfiguration(extension_settings.STMemoryBooks),automaticChatKey:completed.key,
           });
           if (outcome?.saved) await refreshSlothRoleControls();
-        } catch (error) { console.warn('Automatic Sloth collection stopped:',error); }
+        } catch (error) { console.warn('🦥 STMemoryBooks', 'Automatic Sloth collection stopped:',error); }
         finally { syncSlothAutomaticStatus(); }
       }, 900);
     }
@@ -15133,7 +15133,7 @@ async function applyManualFixedJson(correctedRaw) {
 
     try {
       const connDbg = profile.effectiveConnection || profile.connection || {};
-      console.debug("STMemoryBooks: Passing profile to runAfterMemory", {
+      console.debug('🦥 STMemoryBooks', "STMemoryBooks: Passing profile to runAfterMemory", {
         api: connDbg.api,
         model: connDbg.model,
         temperature: connDbg.temperature,
@@ -15146,14 +15146,14 @@ async function applyManualFixedJson(correctedRaw) {
         settings,
       });
     } catch (e) {
-      console.warn("STMemoryBooks: runAfterMemory failed:", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: runAfterMemory failed:", e);
     }
     try {
       await runClipReviewAfterMemory(compiledScene, profile, {
         lorebookNames: getMemoryWriteResultLorebookNames(addResult, context.lorebookValidation?.name),
       });
     } catch (e) {
-      console.warn("STMemoryBooks: Memory Assistance after memory failed:", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Memory Assistance after memory failed:", e);
     }
     throwIfStmbStopped(runEpoch);
 
@@ -15164,7 +15164,7 @@ async function applyManualFixedJson(correctedRaw) {
       saveMetadataForCurrentContext();
       refreshMemoryBoundaryUi();
     } catch (e) {
-      console.warn(
+      console.warn('🦥 STMemoryBooks', 
         "STMemoryBooks: Failed to update highestMemoryProcessed baseline:",
         e,
       );
@@ -15190,7 +15190,7 @@ async function applyManualFixedJson(correctedRaw) {
     if (isStmbStopError(error)) {
       return;
     }
-    console.error("STMemoryBooks: Manual JSON repair failed:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Manual JSON repair failed:", error);
     toastr.error(
       __st_t_tag`Failed to create memory from corrected JSON: ${error.message}`,
       "STMemoryBooks",
@@ -15420,7 +15420,7 @@ async function applyManualFixedSummaryJson(correctedRaw) {
     if (isStmbStopError(e)) {
       return;
     }
-    console.error("STMemoryBooks: applyManualFixedSummaryJson failed:", e);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: applyManualFixedSummaryJson failed:", e);
     toastr.error(
       __st_t_tag`Failed to apply corrected summary JSON: ${e.message}`,
       "STMemoryBooks",
@@ -15519,7 +15519,7 @@ function showFailedSummaryResponsePopup(error) {
     const prefill = rawPrimary ? extractArcFieldsFromText(rawPrimary) : null;
 
     let content = "";
-    content += `<h3>${esc(translate("Review Failed Summary Response", "STMemoryBooks_ReviewFailedArc_Title"))}</h3>`;
+    content += `<h3>🦥 ${esc(translate("Review Failed Summary Response", "STMemoryBooks_ReviewFailedArc_Title"))}</h3>`;
     content += `<div><strong>${esc(translate("Error", "STMemoryBooks_ReviewFailedArc_ErrorLabel"))}:</strong> ${message}</div>`;
     if (code) {
       content += `<div><strong>${esc(translate("Code", "STMemoryBooks_ReviewFailedArc_CodeLabel"))}:</strong> ${code}</div>`;
@@ -15677,7 +15677,7 @@ function showFailedSummaryResponsePopup(error) {
 
     void popup.show();
   } catch (e) {
-    console.error("STMemoryBooks: Failed to show failed summary response popup:", e);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to show failed summary response popup:", e);
   }
 }
 
@@ -15701,7 +15701,7 @@ function showFailedAIResponsePopup(error) {
       !!lastFailedAIContext?.compiledScene &&
       !!lastFailedAIContext?.lorebookValidation?.valid;
     let content = "";
-    content += `<h3>${esc(translate("Review Failed AI Response", "STMemoryBooks_ReviewFailedAI_Title"))}</h3>`;
+    content += `<h3>🦥 ${esc(translate("Review Failed AI Response", "STMemoryBooks_ReviewFailedAI_Title"))}</h3>`;
     content += `<div class="world_entry_form_control">`;
     content += `<div><strong>${esc(translate("Error", "STMemoryBooks_ReviewFailedAI_ErrorLabel"))}:</strong> ${message}</div>`;
     if (code)
@@ -15790,7 +15790,7 @@ function showFailedAIResponsePopup(error) {
     // Now show the popup
     void popup.show();
   } catch (e) {
-    console.error("STMemoryBooks: Failed to show failed AI response popup:", e);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to show failed AI response popup:", e);
   }
 }
 
@@ -15813,7 +15813,7 @@ async function init() {
         addLocaleData(current, jsonData);
       }
     } catch (e) {
-      console.warn("STMemoryBooks: Failed to load JSON locale bundle:", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to load JSON locale bundle:", e);
     }
 
     // Merge statically-bundled locales (English fallback, and any inline bundles)
@@ -15831,7 +15831,7 @@ async function init() {
       }
     }
   } catch (e) {
-    console.warn("STMemoryBooks: Failed to merge plugin locales:", e);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to merge plugin locales:", e);
   }
   // Wait for SillyTavern to be ready
   let attempts = 0;
@@ -15880,7 +15880,7 @@ async function init() {
   });
 
   if (!profileValidation.valid) {
-    console.warn(
+    console.warn('🦥 STMemoryBooks', 
       "STMemoryBooks: Profile validation issues found:",
       profileValidation.issues,
     );
@@ -15895,10 +15895,10 @@ async function init() {
       saveSettingsDebounced();
     }
     if (migrationResult.migrated > 0) {
-      console.log("STMemoryBooks: Migrated profile Additional Context into context settings:", migrationResult);
+      console.log('🦥 STMemoryBooks', "STMemoryBooks: Migrated profile Additional Context into context settings:", migrationResult);
     }
   } catch (error) {
-    console.warn("STMemoryBooks: Failed to migrate Additional Context into context settings; legacy profile entries remain available.", error);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to migrate Additional Context into context settings; legacy profile entries remain available.", error);
   }
 
   // Initialize scene state
@@ -15910,7 +15910,7 @@ async function init() {
   try {
     initializeChatObserver();
   } catch (error) {
-    console.error("STMemoryBooks: Failed to initialize chat observer:", error);
+    console.error('🦥 STMemoryBooks', "STMemoryBooks: Failed to initialize chat observer:", error);
     toastr.error(
       translate(
         "STMemoryBooks: Failed to initialize chat monitoring. Please refresh the page.",
@@ -15950,7 +15950,7 @@ async function init() {
     processExistingMessages();
     void maybePromptContextSettingForChatOpen();
   } catch (error) {
-    console.error(
+    console.error('🦥 STMemoryBooks', 
       "STMemoryBooks: Error processing existing messages during init:",
       error,
     );
@@ -15975,7 +15975,7 @@ function buildFlatRegexOptions() {
       list.push({ key, label });
     });
   } catch (e) {
-    console.warn("STMemoryBooks: buildFlatRegexOptions failed", e);
+    console.warn('🦥 STMemoryBooks', "STMemoryBooks: buildFlatRegexOptions failed", e);
   }
   return list;
 }
@@ -16058,7 +16058,7 @@ async function showRegexSelectionPopup() {
         });
       }
     } catch (e) {
-      console.warn(
+      console.warn('🦥 STMemoryBooks', 
         "STMemoryBooks: Select2 initialization failed (using native selects)",
         e,
       );
@@ -16086,7 +16086,7 @@ async function showRegexSelectionPopup() {
         "STMemoryBooks",
       );
     } catch (e) {
-      console.warn("STMemoryBooks: Failed to save regex selections", e);
+      console.warn('🦥 STMemoryBooks', "STMemoryBooks: Failed to save regex selections", e);
       toastr.error(
         translate(
           "Failed to save regex selections",
@@ -16106,3 +16106,5 @@ $(document).ready(() => {
   // Fallback initialization
   setTimeout(init, 2000);
 });
+
+import { slothToastr as toastr } from './sloth-notifications.js';
