@@ -24,7 +24,7 @@ export function requiresSlothLtEvidence(edit,nexus){
 
 // v4 evaluates additions by the changed claim, not an existing title.
 // Limited lexical signals are review triggers, not proof of a fact.
-const INDIRECT_LT_EN=/\b(?:(?:from now on|henceforth)|(?:gave|gives)\s+(?:\w+\s+){0,3}(?:his|her|their)\s+word|(?:will|would|shall|must|has to|had to)\s+(?:\w+\s+){0,7}(?:first|before|until|unless|only if|each time|every time|always|never)\b|(?:will|would|must)\s+(?:always|never)\b|(?:left|leaves|leave)\s+(?:the |her |his |their )?(?:choice|decision)\s+to\b|(?:it is|it was|it's)\s+up to\b|(?:knows|knew|learned|heard)\s+(?:that\b|about\b|(?:the |a )?(?:code|password|secret|truth)\b)|(?:does not|doesn't|did not|didn't|never)\s+(?:know|hear|learn|disclose|tell)\b)/iu;
+const INDIRECT_LT_EN=/\b(?:(?:from now on|henceforth)|(?:gave|gives)\s+(?:\w+\s+){0,3}(?:his|her|their)\s+word|(?:will|would|shall|must|has to|had to)\s+(?:\w+\s+){0,7}(?:first|before|until|unless|only if|each time|every time|always|never)\b|(?:will|would|must)\s+(?:always|never)\b|(?:left|leaves|leave)\s+(?:the |her |his |their )?(?:choice|decision)\s+to\b|(?:it is|it was|it's|(?:the|her|his|their)\s+(?:decision|choice)\s+(?:is|was))\s+up to\b|(?:knows|knew|learned|heard)\s+(?:that\b|about\b|(?:the |a )?(?:code|password|secret|truth)\b)|(?:does not|doesn't|did not|didn't|never)\s+(?:know|hear|learn|disclose|tell)\b)/iu;
 const INDIRECT_LT_CJK=/(?:하기로 했|하기로 한|하기 전[에엔]?\s*(?:먼저|반드시)|앞으로는|할 때마다|(?:에게|한테)\s*(?:결정권|선택권)|(?:알지|듣지)\s*못했|(?:알지|듣지)\s*않았|することにした|今後は|する前に|するたびに|知らなかった|聞いていなかった|从今以后|每次都|之前必须|由.{1,16}决定|并不知道|没有听到)/u;
 function importantLtDelta(text){
     const value=String(text??'');
