@@ -1,0 +1,47 @@
+name: Four Sloth extensions contract regression
+on:
+  push:
+    branches: [verify/sloth-four-extension-contracts-20261127]
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: memory
+      - uses: actions/checkout@v4
+        with:
+          repository: AmbasaS2/SillyTavern-WorldInfoInfo
+          ref: dab99ca6683ea373172c4929bccb64db1ea95478
+          path: info
+      - uses: actions/checkout@v4
+        with:
+          repository: AmbasaS2/SillyTavern-LorebookOrdering
+          ref: 80e6ec4fae87146ba8fab8d28225742b887cfb75
+          path: ordering
+      - uses: actions/checkout@v4
+        with:
+          repository: AmbasaS2/lore-manager
+          ref: 3242559015e6e83392614a57e696adaff9ea9568
+          path: manager
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test memory/ci/sloth-suite-contracts.mjs
+      - working-directory: manager
+        run: npm install --no-save --no-package-lock jsdom@26 jquery@3 rrweb-cssom
+      - name: Exercise actual Info client through Manager reader fixtures
+        working-directory: manager
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const path='tests/ambasa-v65-worldinfoinfo-link.test.cjs';
+          let s=fs.readFileSync(path,'utf8');
+          s=s.replace('const loadLibrary = async', "const client = async () => import(pathToFileURL(join(root, '..', 'info', 'lore-library-link.js')).href);\nconst loadLibrary = async");
+          s=s.replace('dom, win, lib, stats, data, before,', "dom, win, lib, stats, data, before,\n        async openViaInfo(book, uid) { const {tryOpenInLoreLibrary}=await client(); return tryOpenInLoreLibrary({world:book,uid},true,{apiVersion:1,openEntry:({book,uid})=>lib.openEntry(book,uid)}); },");
+          s=s.replaceAll('f.lib.openEntry(', 'f.openViaInfo(');
+          fs.writeFileSync('tests/sloth-suite-reader.test.cjs',s);
+          NODE
+          node --test tests/sloth-suite-reader.test.cjs

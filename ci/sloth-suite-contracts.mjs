@@ -1,0 +1,55 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import * as mb from '../lore-manager-translations.js';
+import * as wi from '../../info/lore-manager-translations.js';
+import {translationBookPath,TRANSLATION_STORE_FORMAT} from '../../manager/translation-storage.js';
+import {setNexusChatRoleOverride} from '../nexusChatRoleOverrides.js';
+import {scopeNexusWorldInfo} from '../nexusWorldInfoScope.js';
+import {prepareJevRecall,jevEntryKey} from '../../ordering/jevRecall.mjs';
+import {createTokenLedger} from '../../ordering/jevMetrics.mjs';
+import {connectStloMetrics} from '../../info/stlo-metrics-link.mjs';
+
+test('actual Manager writer path and both reader implementations agree for Korean, Unicode and same-title books',async()=>{
+    assert.equal(readFileSync(new URL('../lore-manager-translations.js',import.meta.url),'utf8'),readFileSync(new URL('../../info/lore-manager-translations.js',import.meta.url),'utf8'));
+    for(const book of ['일반 세계관','A Rose & A Rose','🦊狐🦊','A','B','é','é']){
+        const path=translationBookPath(book);
+        for(const api of [mb,wi]){
+            assert.equal(api.managerTranslationBookPath(book),path);
+            const snapshot={format:TRANSLATION_STORE_FORMAT,book,revision:1,records:{},pairs:{}};
+            let calls=0;
+            assert.deepEqual(await api.readManagerTranslationBook(book,async(url,options)=>{
+                calls++;assert.equal(url,path);assert.equal(options.cache,'no-store');
+                return {ok:true,json:async()=>snapshot};
+            }),snapshot);
+            assert.equal(calls,1);
+        }
+    }
+});
+test('Memory Books AU scope excludes other chats before actual Jev candidate preparation',()=>{
+    const avatar='A.png',ref={type:'character',avatarUrl:avatar,fileName:'au'},chatKey='character:A.png:au';
+    const settings={nexusCharacterRoles:{[avatar]:{nexus:'A Nexus',memory:'A Memory'},'B.png':{nexus:'B Nexus',memory:'B Memory'}},nexusChatRoleOverrides:{},nexusChatScopedWorlds:{}};
+    setNexusChatRoleOverride(settings.nexusChatRoleOverrides,ref,chatKey,{nexus:'AU Nexus',memory:'AU Memory'});
+    const entry=(world,uid,props={})=>({world,uid,position:0,content:world+' '+uid,vectorized:true,...props});
+    const correct=entry('AU Memory',3),recent=entry('AU Memory',4,{constant:true}),outlet=entry('AU Nexus',5,{position:7,outletName:'PanelAssets'});
+    const lists={globalLore:[entry('B Memory',1)],characterLore:[entry('A Memory',1),correct,recent,outlet],chatLore:[entry('AU Memory',6,{disable:true})],personaLore:[]};
+    scopeNexusWorldInfo(lists,{settings,ref,avatar,chatKey});
+    const all=Object.values(lists).flat();
+    assert.deepEqual(all.map(jevEntryKey),[correct,recent,outlet,entry('AU Memory',6)].map(jevEntryKey));
+    const prepared=prepareJevRecall(all,new Set(['AU Nexus','AU Memory','A Memory','B Memory']),[{name:'A',mes:'Remember our last meeting?'}]);
+    assert.deepEqual([...prepared.candidates.keys()],[jevEntryKey(correct)]);
+});
+test('actual Ordering ledger and WorldInfo Info consumer share exact count and invalidate stale generation',async()=>{
+    const ledger=createTokenLedger(),generation={},tokenizer='test-tokenizer';
+    let active=true,calls=0,fallbacks=0;
+    const bridge={version:1,context:()=>active?{generation,tokenizer}:null,
+        lookup:d=>ledger.lookup(d),measure:d=>ledger.measure(d,()=>{calls++;return 13;},()=>active)};
+    const link=connectStloMetrics(()=>bridge);
+    const entry={world:'AU Memory',uid:3};
+    const fallback=()=>{fallbacks++;return 99;};
+    assert.deepEqual(await Promise.all([link.count(entry,'scene\n',fallback,()=>true),link.count(entry,'scene\n',fallback,()=>true)]),[13,13]);
+    assert.equal(calls,1);assert.equal(fallbacks,0);
+    active=false;
+    assert.equal(await link.count(entry,'scene\n',fallback,()=>true),99);
+    assert.equal(fallbacks,1);
+});
