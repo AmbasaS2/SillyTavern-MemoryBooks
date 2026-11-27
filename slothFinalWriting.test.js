@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import { SLOTH_R07_OPENING, SLOTH_R07_CLOSING, SLOTH_R07_DISPLAY_TEXT } from './slothR07Prompt.js';
 const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
 test('single collection uses the new writing guidance for the built-in preset and keeps custom presets',()=>{
     const single=source.slice(source.indexOf('export async function composeSingleSlothCollection('),source.indexOf('export async function retryApprovedSlothScenes('));
@@ -12,9 +13,12 @@ test('single collection uses the new writing guidance for the built-in preset an
     assert.match(single,/each person’s decision and responsibility, and the specific act acknowledged in an apology/);
     assert.match(single,/original unit, counted action or object and speaker/);
     assert.match(single,/same source-supported wording in Scene, Result and Nexus/);
-    assert.match(single,/a later unsolicited action with the later reaction/);
-    assert.match(single,/each distinct apology, including whether contact occurred without asking/);
-    assert.match(single,/leave the final unanswered exchange open/);
+    assert.match(SLOTH_R07_DISPLAY_TEXT,/a later unsolicited action with the later reaction/);
+    assert.match(SLOTH_R07_DISPLAY_TEXT,/each distinct apology, including whether contact occurred without asking/);
+    assert.match(SLOTH_R07_CLOSING,/leave the final unanswered exchange open/);
+    assert.equal(SLOTH_R07_DISPLAY_TEXT,[...SLOTH_R07_OPENING.slice(1),SLOTH_R07_CLOSING].join('\n\n'));
+    assert.match(single,/useBuiltInWriting \? SLOTH_R07_OPENING/);
+    assert.match(single,/useBuiltInWriting \? \[SLOTH_R07_CLOSING\]/);
     assert.match(single,/evidencePolicyVersion=4/);
     assert.doesNotMatch(single,/silently enumerate every independent change/i);
 });

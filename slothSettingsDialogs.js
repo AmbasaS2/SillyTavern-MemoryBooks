@@ -7,7 +7,7 @@ import { Popup, POPUP_RESULT, POPUP_TYPE } from '../../../popup.js';
 import { translate } from '../../../i18n.js';
 import { escapeHtml } from '../../../utils.js';
 import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
-import { SLOTH_DEFAULT_SUMMARY_PROMPT } from './nexusSlothScenePrompt.js';
+import { SLOTH_R07_DISPLAY_TEXT } from './slothR07Prompt.js';
 import { getSlothSideDestination, getSlothSidePresets, getSlothSideRecall,
     isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK, slothSideBookName, SLOTH_DIARY_ID, SLOTH_NPC_DIRECTORY_ID, SLOTH_QUOTES_ID } from './slothSidePrompts.js';
 import { getActiveNexusRoleContext } from './nexusCharacterRolesRuntime.js';
@@ -334,7 +334,7 @@ const randomId=()=>Array.from(crypto.getRandomValues(new Uint32Array(4)),value=>
 export function mountSlothCollectionPrompts(target,settings) {
     const params=settings.moduleSettings;
     const active=getActiveSlothSummaryPreset(settings);
-    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('🦥 Prompt (Default)','SlothPromptDefault'),text:SLOTH_DEFAULT_SUMMARY_PROMPT,builtin:true},
+    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('🦥 Prompt (Default)','SlothPromptDefault'),text:SLOTH_R07_DISPLAY_TEXT,builtin:true},
         ...getSlothSummaryPresets(settings).map(preset=>({...preset}))];
     if(active.id==='previous'&&!records.some(preset=>preset.id===active.id)) {
         records.push({...active,name:t('Previous instructions','SlothPromptPrevious')});

@@ -24,6 +24,7 @@ import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js'
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
+import { SLOTH_R07_OPENING, SLOTH_R07_CLOSING } from './slothR07Prompt.js';
 import { getCompressibleScene, getSlothCompressionInstructions, stageSlothSceneCompression } from './nexusSceneCompression.js';
 import { isCompletedSceneEntry, sceneNumberFromTitle } from './nexusSceneRotation.js';
 
@@ -671,7 +672,7 @@ export async function composeSingleSlothCollection(options) {
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
         .slice(-3).map(e=>({title:e.comment,result:String(e.content).split(/^\s*(?:\*\*Result\*\*|#{1,6}\s+Result)\s*$/im).at(-1).trim()}));
     const preset=getActiveSlothSummaryPreset(settings);
-    const useBuiltInWriting=preset.id==='builtin';
+    const useBuiltInWriting=preset.id==='builtin'||preset.usesR07Writing===true;
     let source;
     if(useBuiltInWriting&&messages.length){
         const sectionSize=Math.ceil(messages.length/4),sections=[];
@@ -685,13 +686,7 @@ export async function composeSingleSlothCollection(options) {
         source=compact(messages);
     }
     const prompt=[
-        ...(useBuiltInWriting ? [
-            'Roleplay Memory Books event planner. STRICT JSON only.',
-            "Write durable chronological Scene memories covering the complete eligible source window. Use the early, middle and late reading sections in order. Older recap titles and Nexus are continuity context and can overlap the source. They establish no collection boundary. Treat brief changes of activity as part of the same incident when they continue the same question; keep an independent incident when it has its own cause, exchange and outcome. Ongoing events and the final unresolved tension do not erase earlier completed outcomes.",
-            "Write from the actual dialogue and physical action. In every consequential exchange, the Scene should tell the reader who initiated, what the other person actually did or said, and what changed. Introduce the original speaker or chooser by name before reporting an answer, then report the partner's response separately. If the same action happens twice under different circumstances, distinguish both: a reply that was asked for, how it was received at the time, and a later unsolicited action with the later reaction. Preserve mixed feelings and moments of silence when the source shows them. A gesture of closeness or a gift cannot retrospectively resolve the earlier exchange.",
-            "Use short exact dialogue anchors inside connected prose to keep the most important actions precise. In a central disagreement or negotiation, anchor separate sentences in the speaker's own words for: the omission and specifically when or how they should have asked or told the other person; the other person's own right to choose and any shared responsibility; each distinct apology, including whether contact occurred without asking and continued after a reaction; explicit conditions and what each party agreed, refused or merely left possible. Use exact short phrases for significant counts and preserve the verb, participants and unit in the surrounding prose. If the source counts how often two people do something, write that repeated action, never a count of the objects produced. If one request has several different quantities or conditions, keep all of them with the correct speaker. Cut scene-setting or repeated material before cutting these links. Use sensory details where they establish the moment or a shift, and keep private knowledge separate from what other people heard.",
-            "Write direct past-tense Scene and Result. Let Result record the last supported effect without overstating feeling, agreement or repair. Use a short continuous source quotation about the actual outcome and its message ID in closure, with the original language and punctuation. Keep genuine unfinished events open. Use an attested date or Unknown and established names. Record only useful, minimal Nexus changes. Preserve exactly the same facts, agency, limits and units there as in the Scene.",
-        ] : [
+        ...(useBuiltInWriting ? SLOTH_R07_OPENING : [
             DEFAULT_SLOTH_COLLECTION_PROMPTS.plan.replace(
                 'Use whole messages and assign each original ID exactly once. When one message closes an incident and briefly opens another, assign it to the action it primarily carries and do not list it twice.',
                 'Use actual original message IDs as evidence. A message that closes one incident and opens another may belong to both. Keep both causal boundaries; distinguish completed outcomes from unfinished incidents.'),
@@ -709,7 +704,7 @@ export async function composeSingleSlothCollection(options) {
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
         'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every Anchor (kind lt) replace_exact and any newly stated Anchor promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For Anchor additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
         'Original source messages (use each record’s id as its original message number):',source,
-        ...(useBuiltInWriting ? ["Tell the story from the first eligible section, in order. In the main negotiation, put the short source phrases for each distinct apology, the actual choice, any shared responsibility, and every separately counted condition inside the written Scene. Connect them in prose with their speakers and responses. Keep standalone completed episodes even where historic recaps describe them, and leave the final unanswered exchange open."] : []),
+        ...(useBuiltInWriting ? [SLOTH_R07_CLOSING] : []),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
     const ask=requester(profile,settings,signal,true,(usage,phase,estimate)=>{

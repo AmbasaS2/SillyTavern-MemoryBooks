@@ -8,7 +8,7 @@
     "author": "aikohanasaki",
     "version": "9.4.0-ambasa.7",
     "license": "AGPL-3.0",
-    "homePage": "https://github.com/aikohanasaki/SillyTavern-MemoryBooks",
+    "homePage": "https://github.com/AmbasaS2/SillyTavern-MemoryBooks",
     "auto_update": true,
     "description": "Creates and saves chat memories and trackers to SillyTavern lorebooks with keywords and numbered titles. Localized in multiple languages."
 }
