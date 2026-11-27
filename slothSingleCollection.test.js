@@ -18,10 +18,11 @@ test('single collection sends the source once, reads active Nexus and only recen
         scene:'She opened the letter and he read it aloud.',result:'They read the letter.',keywords:['letter']}],
         deferred:[{reason:'Question unanswered',segments:[[3,3]]}],edits:[]};
     const calls=[];
+    let preset={id:'custom',text:'Summary'};
     const run=vm.runInNewContext(extract('function readSlothBatchScenes(', '\n/**')+'\n'+
         extract('export async function composeSingleSlothCollection(', '\nexport async function retryApprovedSlothScenes(')
             .replace('export async','async')+'\ncomposeSingleSlothCollection',{
-        DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
+        DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>preset,
         SCENE_KEYWORD_GUIDANCE:'Recall',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         isCompletedSceneEntry,sceneNumberFromTitle,validateNexusEventPlan,validateSlothSceneResponse,
         parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,joinSlothRecoveryScenes,buildSlothPendingDraft,
@@ -34,6 +35,8 @@ test('single collection sends the source once, reads active Nexus and only recen
     const result=await run(opt);
     assert.equal(calls.length,1);
     assert.equal(calls[0].split(messages[0].mes).length,2);
+    assert.match(calls[0],/Summary/);
+    assert.doesNotMatch(calls[0],/Reading section/);
     assert.match(calls[0],/Core reference/);assert.match(calls[0],/Outcome4/);
     assert.doesNotMatch(calls[0],/Outcome1|PrivateScene/);
     assert.equal(result.scenes.length,1);assert.equal(result.plan.deferred.length,1);
@@ -54,6 +57,16 @@ test('single collection sends the source once, reads active Nexus and only recen
     assert.equal(partialReplay.scenes.length,1);
     assert.equal(partialReplay.scenes[0].content,recovered.scenes[0].content);
     assert.deepEqual(Array.from(partialReplay.scenes[0].collectedRanges.flat()),[1,2]);
+    preset={id:'builtin',text:'Old built-in summary'};
+    const fullSource=[...messages,...Array.from({length:93},(_,i)=>({id:i+4,mes:'Message '+(i+4)}))];
+    await run({...opt,messages:fullSource});
+    const builtInRequest=calls.at(-1);
+    const sections=[...builtInRequest.matchAll(/^Reading section \d+ of 4 \| original IDs .*\n(\[.*\])$/gm)];
+    assert.equal(sections.length,4);
+    assert.deepEqual(sections.flatMap(([,json])=>JSON.parse(json)),fullSource);
+    assert.match(builtInRequest,/titles do not establish source coverage/);
+    assert.match(builtInRequest,/Tell the story from the first eligible section/);
+    assert.doesNotMatch(builtInRequest,/Old built-in summary/);
 });
 test('Nexus recall settings are independent; uninjected entries remain updateable and legacy NPC off resumes collection',()=>{
     const entries={entries:{}};
