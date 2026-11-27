@@ -75,7 +75,7 @@ import {
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
-  beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename,
+  beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename, finishPendingSlothLorebookRenames,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
@@ -14485,8 +14485,31 @@ function setupEventListeners() {
     if(event.target?.closest?.('#world_popup_name_button'))
       beginSlothLorebookRename(getCurrentLorebookEditorName(),world_names);
   },true);
+  const refreshAfterSlothRename=()=>{
+    invalidateSlothAutomaticProgress();
+    populateInlineButtons();
+    void refreshSlothRoleControls({forceRoles:true});
+  };
+  let slothRenameCheckTimer=null;
+  let slothRenameCheckRevision=0;
+  function scheduleSlothRenameCheck(remaining=20) {
+    const revision=++slothRenameCheckRevision;
+    clearTimeout(slothRenameCheckTimer);
+    const check=async()=>{
+      let pending=true;
+      try {
+        const result=await finishPendingSlothLorebookRenames();
+        pending=result.pending;
+        if(result.changed)refreshAfterSlothRename();
+      }catch(error){console.warn('Memory Books lorebook rename verification stopped:',error);}
+      if(revision===slothRenameCheckRevision&&pending&&remaining-->1)
+        slothRenameCheckTimer=setTimeout(check,500);
+    };
+    slothRenameCheckTimer=setTimeout(check,350);
+  }
   eventSource.on(event_types.WORLDINFO_UPDATED, (name, data) => {
-    observeSlothLorebookSave(name, data, world_names, getCurrentLorebookEditorName());
+    if(observeSlothLorebookSave(name, data, world_names, getCurrentLorebookEditorName()))
+      scheduleSlothRenameCheck();
     invalidateTrackerCheckpoints();
     updateMemoryTierMacroCache(name, data);
     if (name === getCurrentLorebookEditorName()) scheduleLorebookRegenerationActionsRefresh();
@@ -14495,11 +14518,9 @@ function setupEventListeners() {
   $(document).on('change', '#world_editor_select', () => {
     const name = getCurrentLorebookEditorName();
     void finishSlothLorebookRename(name, world_names).then(changed => {
-      if (!changed) return;
-      invalidateSlothAutomaticProgress();
-      populateInlineButtons();
-      void refreshSlothRoleControls({forceRoles:true});
+      if(changed)refreshAfterSlothRename();
     }).catch(error => console.warn('Memory Books lorebook rename verification stopped:', error));
+    scheduleSlothRenameCheck();
   });
   eventSource.on(event_types.CHARACTER_RENAMED, async (oldAvatar, newAvatar) => {
     const settings = initializeSettings();

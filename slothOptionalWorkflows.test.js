@@ -33,7 +33,7 @@ test('a saved partial window leaves the unread messages due without replacing a 
         assertOrigin:()=>{},
         stringify:JSON.stringify,
         readReviewedChat:async()=>markers.slothCollection,
-        patchStmbMetadataForChatRef:async (_ref,patch)=>{markers=patch(markers);},
+        patchVerifiedSlothMetadata:async (_ref,patch)=>{markers=patch(markers);},
     });
     const collect=()=>update({},[{segments:[[0,4]]}],{},books,[0,4],'fingerprint',{attempt,through:9});
     await collect();

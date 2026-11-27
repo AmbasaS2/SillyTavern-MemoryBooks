@@ -82,6 +82,7 @@ test('the collection receipt is tied to persisted source and is reread after met
     let metadataWrites = 0;
     const checks = {
         stringify: JSON.stringify,
+        chat:turns,t:s=>s,
         fingerprintSlothChat,
         getRequestHeaders: () => ({}),
         getStmbChatKey: () => 'character:A.png:chat-a',
@@ -92,7 +93,7 @@ test('the collection receipt is tied to persisted source and is reread after met
         },
         patchStmbMetadataForChatRef: async (_origin, patch) => {
             metadataWrites++;
-            stored = patch(stored);
+            stored = await patch(stored);
         },
     };
     const first = source.indexOf('async function readStoredSlothChat(');
