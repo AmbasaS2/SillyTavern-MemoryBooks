@@ -1351,7 +1351,7 @@ export async function showSlothNexusHealth(){
         const chooser=(attribute,label,placeholder)=>'<select class="text_pole" '+attribute+' aria-label="'+html(label)+
             '"><option value="">'+html(placeholder)+'</option></select>';
         const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-nexus-health">'+
-            '<header class="stmb-health-heading"><h3>'+html(tr('Title','Nexus health check'))+
+            '<header class="stmb-health-heading"><h3>'+html(tr('Title','Memory overview'))+
             '</h3><button type="button" class="stmb-health-info stmb-sloth-info" data-health-help-toggle aria-expanded="false" aria-controls="stmb-health-help" title="'+
             html(helpLabel)+'" aria-label="'+html(helpLabel)+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
             '<p class="stmb-health-book">'+html(roles.nexus)+'</p><p id="stmb-health-help" class="stmb-health-help" hidden>'+
@@ -1468,8 +1468,8 @@ export async function runSlothNexusHealthReview({profileIndex,stConnectionProfil
         };
         verifyOrigin();
         const confirmation=markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>'+
-            html(tr('Title','AI Nexus health review'))+'</h3><p>'+
-            html(tr('Consent','Send eligible active Nexus memory text to the selected collection AI once for review? No chat messages are sent. Nothing changes until you approve a specific preview. Provider costs may apply.'))+
+            html(tr('Title','Memory Workshop'))+'</h3><p>'+
+            html(tr('Consent','Analyze memories with AI? Active Nexus memories are sent to the selected AI. Chats are not sent. Only approved changes are saved. AI usage may apply.'))+
             '</p><small>'+html(tr('Excluded','Protected, disabled and archived source entries are excluded.'))+'</small></div>',
             POPUP_TYPE.CONFIRM,'',{wide:false,allowVerticalScrolling:true,
                 okButton:tr('Analyze','Analyze with AI'),cancelButton:t('Cancel','STMemoryBooks_Cancel')}));

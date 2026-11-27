@@ -11842,8 +11842,8 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     'nexus-health': () => showSlothNexusHealth(),
     'nexus-health-review': () => runCancellableSlothButton(button, controls =>
       runSlothNexusHealthReview({profileIndex,stConnectionProfileId,...controls}),{
-        cancel:translate('Cancel health review','STMemoryBooks_SlothHealthReviewCancel'),
-        cancelled:translate('Health review canceled.','STMemoryBooks_SlothHealthReviewCancelled'),
+        cancel:translate('Cancel memory workshop','STMemoryBooks_SlothHealthReviewCancel'),
+        cancelled:translate('Memory workshop canceled.','STMemoryBooks_SlothHealthReviewCancelled'),
       }),
     'collection-stats': () => showSlothCollectionStats(),
     'legacy-coverage': () => reviewSlothLegacyCoverage(),

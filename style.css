@@ -1677,17 +1677,40 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-stats-phase{margin-top:5px;padding-top:5px;border-top:1px solid var(--SmartThemeBorderColor)}
 .popup.stmb-popup .stmb-stats-phase summary{cursor:pointer;font-size:.88em}
 
-/* Sloth: explicit semantic health review, one selected preview. */
-.popup.stmb-popup.stmb-health-review-popup{width:560px;max-height:min(90dvh,calc(100dvh - 2em));min-height:0}
-.popup.stmb-popup .stmb-health-review{min-width:0;text-align:start;gap:9px;--stmb-health-border:var(--SmartThemeBorderColor);--stmb-health-border:color-mix(in srgb,var(--SmartThemeBorderColor) 45%,var(--SmartThemeBodyColor) 55%)}
+/* Sloth: Memory Workshop. Compact changed-paragraph list, scoped to the popup. */
+.popup.stmb-popup.stmb-health-review-popup{width:540px;max-width:calc(100vw - 24px);max-height:min(90dvh,calc(100dvh - 2em));min-height:0}
+.popup.stmb-popup .stmb-health-review{min-width:0;text-align:start;gap:14px;--stmb-workshop-divider:var(--SmartThemeBorderColor);--stmb-workshop-divider:color-mix(in srgb,var(--SmartThemeBodyColor) 20%,transparent)}
+.popup.stmb-popup .stmb-health-review *{box-sizing:border-box}
 .popup.stmb-popup .stmb-health-review h3,.popup.stmb-popup .stmb-health-review h4,.popup.stmb-popup .stmb-health-review p{margin:0}
-.popup.stmb-popup .stmb-health-review select{width:100%;min-width:0}
-.popup.stmb-popup .stmb-health-review [data-health-review-body]{display:flex;flex-direction:column;gap:8px;min-width:0}
-.popup.stmb-popup .stmb-health-review pre{margin:5px 0;padding:7px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:26dvh;overflow:auto;border-inline-start:2px solid var(--stmb-health-border);font-size:.88em}
-.popup.stmb-popup .stmb-health-review-change h4{margin-bottom:6px;overflow-wrap:anywhere}
-
-.popup.stmb-popup .stmb-health-review-choice{padding:7px 2px;align-items:center;gap:6px;text-align:start}
-.popup.stmb-popup .stmb-health-review [data-health-review-plan] .stmb-health-review-change{margin-top:8px}
-
-.popup.stmb-popup .stmb-health-review [data-health-core-ack]{flex:none}
-.popup.stmb-popup .stmb-health-review [data-health-review-plan]>details>p{margin:6px 0;line-height:1.4}
+.popup.stmb-popup .stmb-workshop-heading{display:flex;align-items:center;gap:8px;min-width:0}
+.popup.stmb-popup .stmb-workshop-heading h3{flex:1;font-size:1.1em;text-align:start}
+.popup.stmb-popup .stmb-workshop-heading .stmb-health-info{margin-inline-start:auto}
+.popup.stmb-popup .stmb-workshop-help{font-size:.85em;line-height:1.5;opacity:.88}
+.popup.stmb-popup .stmb-workshop-help p{margin-top:8px}
+.popup.stmb-popup .stmb-workshop-help[hidden]{display:none!important}
+.popup.stmb-popup .stmb-workshop-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.popup.stmb-popup .stmb-workshop-metrics>div{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:8px;background:var(--SmartThemeBlurTintColor);min-width:0}
+.popup.stmb-popup .stmb-workshop-metrics span,.popup.stmb-popup .stmb-workshop-muted{font-size:.82em;opacity:.78}
+.popup.stmb-popup .stmb-workshop-metrics strong{font-size:1.45em;line-height:1.15;font-variant-numeric:tabular-nums}
+.popup.stmb-popup .stmb-workshop-list{display:flex;flex-direction:column;gap:0;min-width:0}
+.popup.stmb-popup .stmb-workshop-item{padding:12px 0;border-top:1px solid var(--stmb-workshop-divider);display:flex;flex-direction:column;gap:7px;min-width:0}
+.popup.stmb-popup .stmb-workshop-item-header{display:flex;align-items:center;gap:9px;min-width:0}
+.popup.stmb-popup .stmb-workshop-item-header>input,.popup.stmb-popup .stmb-workshop-confirm>input{flex:none;width:16px;height:16px;margin:0}
+.popup.stmb-popup .stmb-workshop-item-header strong{font-size:.94em;font-weight:600}
+.popup.stmb-popup .stmb-workshop-item-header>small{margin-inline-start:auto}
+.popup.stmb-popup .stmb-workshop-quote,.popup.stmb-popup .stmb-workshop-full-text{font-family:inherit;font-size:.9em;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.popup.stmb-popup .stmb-workshop-quote{margin-inline-start:25px}
+.popup.stmb-popup .stmb-workshop-route{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.8em;margin-inline-start:25px;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-workshop-route>span{background:var(--SmartThemeBlurTintColor);border-radius:5px;padding:3px 7px;max-width:100%;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-workshop-evidence{margin-inline-start:25px;font-size:.85em;min-width:0}
+.popup.stmb-popup .stmb-workshop-evidence summary,.popup.stmb-popup .stmb-workshop-preview summary{cursor:pointer;font-size:.88em;opacity:.82}
+.popup.stmb-popup .stmb-workshop-reference{margin:9px 0;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-workshop-reference .stmb-workshop-quote{margin:4px 0 0}
+.popup.stmb-popup .stmb-workshop-reason{font-size:.88em;line-height:1.5}
+.popup.stmb-popup .stmb-workshop-preview{padding-top:8px;border-top:1px solid var(--stmb-workshop-divider)}
+.popup.stmb-popup .stmb-workshop-full-entry{padding:10px 0;display:flex;flex-direction:column;gap:6px}
+.popup.stmb-popup .stmb-workshop-full-entry h4{font-size:.94em;font-weight:600;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-workshop-full-entry h4 small{font-weight:400;opacity:.78}
+.popup.stmb-popup .stmb-workshop-full-text{padding-inline-start:8px;border-inline-start:2px solid var(--stmb-workshop-divider);max-height:26dvh;overflow:auto}
+.popup.stmb-popup .stmb-workshop-confirm{margin-top:12px;gap:8px;align-items:center;font-size:.9em;line-height:1.4;text-align:start}
+@media(max-width:480px){.popup.stmb-popup .stmb-health-review{gap:10px}.popup.stmb-popup .stmb-workshop-item{padding:10px 0}.popup.stmb-popup .stmb-workshop-route{gap:5px}}

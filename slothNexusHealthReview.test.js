@@ -211,5 +211,9 @@ test('health preview displays complete change text only in combined approval and
     assert.equal((dialog.match(/changes\.map\(renderChange\)/g)||[]).length,1);
     assert.match(dialog,/data-health-core-ack/);
     assert.match(dialog,/if\(!moves\)approved=prepared/);
-    assert.match(dialog,/approved=ack\.checked\?prepared:null/);
+    assert.match(dialog,/approved=confirmed\?prepared:null/);
+    assert.match(dialog,/class="stmb-workshop-preview"><summary>/);
+    assert.doesNotMatch(dialog,/<pre>/);
+    assert.match(dialog,/confirmed=false/);
+    assert.match(dialog,/change\.paragraph/);
 });
