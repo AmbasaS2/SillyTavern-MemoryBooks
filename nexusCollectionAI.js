@@ -386,7 +386,7 @@ async function nexusStateEvidenceFor(messages, ask) {
     return payload;
 }
 
-function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource}) {
+function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partialSource,characterContextIncluded=false}) {
     const entries=Object.values(nexus.entries||{}).map(e=>{
         const {roles,legacyLayout,protected:protectedEntry}=describeNexusCollectionEntry(e);
         return {uid:e.uid,title:e.comment,body:protectedEntry?'[protected; not included]':e.content,
@@ -404,8 +404,9 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
-            'The following character card is reference for disambiguation only. New memories must reflect the actual chat:',
-            characterContext,
+            ...(characterContextIncluded?
+                ['The character card reference above is for disambiguation only. New memories must reflect the actual chat.']:
+                ['The following character card is reference for disambiguation only. New memories must reflect the actual chat:',characterContext]),
         ]:[]),
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
@@ -612,9 +613,8 @@ export async function composeSingleSlothCollection(options) {
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
-        slothNexusGuidance({nexus,settings,initial,characterContext,partialSource}),
-        'Original source IDs: '+JSON.stringify(ids),
-        'Original source messages:',compact(messages),
+        slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
+        'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
     const ask=requester(profile,settings,signal,true,(usage,phase)=>{

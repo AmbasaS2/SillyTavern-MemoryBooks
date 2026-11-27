@@ -1,0 +1,45 @@
+// Copyright (C) 2026 AmbasaS2
+// SPDX-License-Identifier: AGPL-3.0-only
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {inspectSlothNexusHealth} from './slothNexusHealth.js';
+const repeated='This is an exact repeated paragraph with enough detail.';
+test('health counts each stored body once, separates protected and mixed roles, and does not edit a book',async()=>{
+    const entries={
+        1:{uid:1,comment:'Core Memory',content:repeated,constant:true},
+        2:{uid:2,comment:'LT - Rain',content:repeated,constant:false},
+        3:{uid:3,comment:'Current Continuity',content:'## Active Threads\nThe parcel is still waiting.',constant:true},
+        4:{uid:4,comment:'PanelAssets',content:repeated,position:7,constant:true},
+        5:{uid:5,comment:'LT - Old',content:repeated,disable:true,constant:true},
+        6:{uid:6,comment:'Long-Term Memory',constant:true,content:'[Essential facts / ongoing world state]\nFacts\n[Enduring relationship / shared priorities]\nRule\n[Physical carryover]\nOpen'},
+        7:{uid:7,comment:'LT - Empty',content:''},
+    };
+    const book={entries},before=JSON.stringify(book);
+    const report=await inspectSlothNexusHealth(book,s=>s.length);
+    assert.equal(report.total,Object.values(entries).reduce((n,e)=>n+e.content.length,0));
+    assert.equal(report.alwaysOn,entries[1].content.length+entries[3].content.length+entries[4].content.length+entries[6].content.length);
+    assert.equal(report.groups.mixed.entries,1);
+    assert.equal(report.groups.protected.entries,2);
+    assert.equal(report.duplicates.length,1);
+    assert.deepEqual(report.duplicates[0].entries.map(e=>e.uid),[1,2]);
+    assert.equal(JSON.stringify(book),before);
+});
+test('unknown tokenizer results are not treated as zero, including a thrown count',async()=>{
+    const book={entries:{1:{uid:1,comment:'Core Memory',content:'Known source',constant:true},
+        2:{uid:2,comment:'LT - X',content:'Unknown source'},3:{uid:3,comment:'LT - Y',content:'Another source'}}};
+    const report=await inspectSlothNexusHealth(book,s=>s==='Known source'?10:s==='Unknown source'?0:Promise.reject(Error('offline')));
+    assert.equal(report.total,10);assert.equal(report.uncounted,2);
+    assert.equal(report.rows.find(r=>r.uid===2).tokens,null);
+    assert.equal(report.groups.lt.uncounted,2);
+});
+test('health button uses a read-only popup and scoped layout',()=>{
+    const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+    const source=read('./nexusCollectorRuntime.js');
+    const fn=source.slice(source.indexOf('export async function showSlothNexusHealth('),source.indexOf('export async function applySlothNexusRecallSettings('));
+    assert.match(fn,/loadServerWorld/);assert.match(fn,/inspectSlothNexusHealth/);assert.match(fn,/verify\(\)/);
+    assert.doesNotMatch(fn,/saveWorldInfo|requester\(|requestCompletion|stageNexusEdits|hideChatMessageRange|patchVerifiedSlothMetadata/);
+    assert.match(read('./templates.js'),/data-stmb-sloth-action="nexus-health"/);
+    assert.match(read('./index.js'),/'nexus-health': \(\) => showSlothNexusHealth\(\)/);
+    assert.match(read('./style.css'),/\.popup\.stmb-popup \.stmb-health-stats\{/);
+});

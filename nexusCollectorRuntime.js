@@ -45,6 +45,7 @@ import { expandSplitRanges, sourceRangesForSplit } from './nexusSceneSplitArchiv
 import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticTokenCounter,
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
+import { inspectSlothNexusHealth, SLOTH_HEALTH_ROLES } from './slothNexusHealth.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
     slothSideRenameBooks, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
 
@@ -1310,6 +1311,62 @@ export async function reviewSlothLegacyCoverage() {
         invalidateSlothAutomaticProgress();
         return { saved:true };
     } finally { collectorBusy = false; }
+}
+
+export async function showSlothNexusHealth(){
+    if(collectorBusy)throw new Error('A Sloth operation is already in progress.');
+    collectorBusy=true;
+    try{
+        const settings=extension_settings.STMemoryBooks,ref=structuredClone(getCurrentStmbChatRef());
+        const roles={nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings).name,
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings).name};
+        const verify=()=>{assertSlothBookRoles(ref,roles);assertSideRenameReady(ref);};
+        verify();
+        const book=await loadServerWorld(roles.nexus);
+        const report=await inspectSlothNexusHealth(book,getTokenCountAsync);
+        verify();
+        const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
+        const labels={core:'Core',continuity:'Continuity',lt:'LT',npc:'NPC',
+            mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
+        const num=n=>n===null?'—':Number(n).toLocaleString();
+        const amount=(n,missing=false)=> (missing?'≥ ':'~ ')+num(n);
+        const summary=(label,value)=>'<div class="stmb-health-stat"><span>'+html(label)+'</span><strong>'+html(value)+'</strong></div>';
+        const groupRows=SLOTH_HEALTH_ROLES.map(role=>{
+            const group=report.groups[role];
+            return '<tr><td>'+html(labels[role])+'</td><td>'+num(group.entries)+'</td><td>'+html(amount(group.tokens,group.uncounted>0))+
+                '</td><td>'+html(amount(group.alwaysOnTokens,group.uncounted>0))+'</td></tr>';
+        }).join('');
+        const options=report.rows.map((row,index)=>'<option value="'+index+'">'+
+            html((row.title||'UID '+row.uid)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)))+'</option>').join('');
+        const duplicates=report.duplicates.map(item=>'<details><summary>'+html(item.entries.map(e=>e.title||'UID '+e.uid).join(' · '))+
+            '</summary><div class="stmb-health-text">'+html(item.text)+'</div></details>').join('');
+        const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-nexus-health"><h3>'+
+            html(tr('Title','Nexus health check'))+'</h3><p class="stmb-health-book">'+html(roles.nexus)+'</p><p class="opacity50p">'+
+            html(tr('Help','Read-only snapshot of stored body text, estimated with the current tokenizer. Always-on flags are not proof of actual injection. Nothing is deleted or reclassified.'))+'</p>'+
+            '<div class="stmb-health-stats">'+summary(tr('Total','Stored tokens'),amount(report.total,report.uncounted>0))+
+            summary(tr('Always','Always-on tokens'),amount(report.alwaysOn,report.uncounted>0))+
+            summary(tr('Duplicates','Exact repeats'),num(report.duplicates.length))+'</div>'+
+            (report.uncounted?'<p role="status">'+html(tr('Unknown','Some bodies could not be counted: '))+num(report.uncounted)+'</p>':'')+
+            '<div class="stmb-health-table-wrap"><table class="stmb-health-table"><thead><tr><th>'+html(tr('Role','Role'))+'</th><th>'+
+            html(tr('Entries','Entries'))+'</th><th>'+html(tr('Total','Stored tokens'))+'</th><th>'+html(tr('Always','Always-on tokens'))+
+            '</th></tr></thead><tbody>'+groupRows+'</tbody></table></div>'+
+            '<details class="stmb-workspace-drawer" open><summary>'+html(tr('Inspect','Inspect entries by size'))+'</summary><select class="text_pole" data-health-entry aria-label="'+
+            html(tr('Inspect','Inspect entries by size'))+'"><option value="">'+html(tr('Choose','Choose an entry'))+'</option>'+options+'</select>'+
+            '<div class="stmb-health-text" data-health-body hidden></div></details>'+
+            '<details class="stmb-workspace-drawer"><summary>'+html(tr('Duplicates','Exact repeats'))+' ('+num(report.duplicates.length)+')</summary>'+
+            '<p class="opacity50p">'+html(tr('RepeatHelp','Literal repeated paragraphs are review clues, not proof of redundant meaning.'))+'</p>'+duplicates+'</details></div>',
+            POPUP_TYPE.TEXT,'',{wide:true,large:true,allowVerticalScrolling:true}));
+        const selector=popup.dlg.querySelector('[data-health-entry]'),body=popup.dlg.querySelector('[data-health-body]');
+        selector.addEventListener('change',()=>{
+            body.hidden=true;body.textContent='';
+            if(selector.value==='')return;
+            const row=report.rows[Number(selector.value)];
+            if(!row)return;
+            body.textContent=row.body;body.hidden=false;
+        });
+        await popup.show();
+        return {saved:false};
+    }finally{collectorBusy=false;}
 }
 
 export async function applySlothNexusRecallSettings(){

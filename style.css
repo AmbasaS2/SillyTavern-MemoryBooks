@@ -1622,3 +1622,20 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup #stmb-sloth-mode-inactive[hidden],
 .popup.stmb-popup #stmb-legacy-rotation-settings[hidden],
 .popup.stmb-popup .stmb-original-consolidate[hidden] { display:none; }
+
+/* Sloth: read-only Nexus health snapshot; scoped to its popup. */
+.popup.stmb-popup .stmb-nexus-health{gap:12px;text-align:start;min-width:0}
+.popup.stmb-popup .stmb-nexus-health .stmb-health-book{margin:0;opacity:.7;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-nexus-health p{margin:0}
+.popup.stmb-popup .stmb-health-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:8px}
+.popup.stmb-popup .stmb-health-stat{display:grid;gap:5px;min-width:0;padding:12px;border:1px solid var(--SmartThemeBorderColor);border-radius:9px;background:var(--SmartThemeBlurTintColor)}
+.popup.stmb-popup .stmb-health-stat span{font-size:.85em;opacity:.8}
+.popup.stmb-popup .stmb-health-stat strong{font-size:1.4em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-health-table-wrap{overflow-x:auto;max-width:100%}
+.popup.stmb-popup .stmb-health-table{width:100%;border-collapse:collapse;font-size:.9em;font-variant-numeric:tabular-nums}
+.popup.stmb-popup .stmb-health-table :is(td,th){padding:7px 6px;border-bottom:1px solid var(--SmartThemeBorderColor);text-align:end}
+.popup.stmb-popup .stmb-health-table :is(td,th):first-child{text-align:start}
+.popup.stmb-popup .stmb-nexus-health details{padding:8px;border:1px solid var(--SmartThemeBorderColor);border-radius:7px;min-width:0}
+.popup.stmb-popup .stmb-nexus-health summary{cursor:pointer;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-nexus-health select{width:100%;margin-top:8px}
+.popup.stmb-popup .stmb-health-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:42vh;overflow:auto;padding:8px;margin-top:6px;border-inline-start:2px solid var(--SmartThemeBorderColor);font-size:.94em}
