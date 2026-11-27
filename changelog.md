@@ -7,6 +7,12 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ← [Back to README](readme.md)
 
+## v9.4.0-ambasa.5 (November 27, 2026) — Sloth fork
+- Memory overview and Memory Workshop: read-only review, AI-assisted suggestions and explicit approval for selected exact duplicate removals or Core-to-Anchor paragraph moves.
+- Anchor replaces LT as the public role name; existing LT titles, UID references, keywords, injection modes and recovery contracts remain compatible.
+- Targeted evidence checks and partial recovery preserve valid memories and retain rejected edits for repair. AI summaries may still contain semantic errors; literal source matching is not semantic verification.
+- Verified against isolated SillyTavern 1.19.1 and Chrome, including narrow and wide layouts, English/Korean UI, save/readback, external-change protection and rollback. Optional writing experiment #20 is not included.
+
 ## Fork branding update (2026-11-26)
 - Renamed the fork to Sloth's Memory Books (게으름뱅이의 메모리북). Existing modes, menus, commands, data and install URL are unchanged.
 

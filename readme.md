@@ -31,7 +31,9 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## ⚡ Quick start
 
-**Current version: 9.4.0-ambasa.3.**
+**Current version: 9.4.0-ambasa.5.**
+
+This update adds Memory Workshop, improves Memory overview and partial recovery, and uses Anchor as the public name for the existing LT role. Existing LT titles, entry UIDs and injection settings remain compatible. The Workshop requires approval before applying selected changes; moving Core text into an Anchor may reduce how often it is recalled. AI summaries can still omit or misinterpret details; review and correct them as needed.
 
 > **Roleplay → finish an event → collect memories → continue RP.**
 >
@@ -92,7 +94,7 @@ Nexus keeps core facts, current state, individual long-term memories and NPC mem
 >
 > When switching from hand-authored memories, verify the already summarized message ranges and the always-on flags of your older Scenes before the first collection. Older `STMB_start/end` fields alone are not a Sloth collection receipt; visible old messages may be collected again. Scenes without Sloth source metadata may not join automatic recent-three rotation. Test on a copy first. See [current compatibility notes](./AMBASA_NEXUS_DEV.md#open-compatibility-checks-for-replacing-manual-memory-updates).
 
-**Injection settings** are collapsed by default. Core Memory, Current Continuity, LT and NPC independently support Always on, Vector, Keywords and No injection. The latest three Scenes stay always on; older Scenes support Vector or Keywords. New-entry defaults preserve existing entries. Apply changes explicitly in Manage existing memories.
+**Injection settings** are collapsed by default. Core Memory, Current Continuity, Anchor (legacy LT) and NPC independently support Always on, Vector, Keywords and No injection. The latest three Scenes stay always on; older Scenes support Vector or Keywords. New-entry defaults preserve existing entries. Apply changes explicitly in Manage existing memories.
 
 #### 2. Collection settings
 
@@ -191,7 +193,7 @@ Select Original in Usage mode to run its scene-marker, consolidation and other o
 
 ### 4. Reference — Validation and recovery
 
-Normal Nexus updates no longer require literal quotation receipts (since 9.4.0-ambasa.1).
+Routine Nexus updates do not require literal quotation receipts. Important Anchor changes and protected Core/Continuity changes use targeted source-evidence checks; rejected edits are retained for recovery rather than discarding other valid memories. A matching source quote is not a guarantee of semantic accuracy.
 
 **Safeguards retained**
 
@@ -244,7 +246,9 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## ⚡ 간단 사용 설명
 
-**현재 버전: 9.4.0-ambasa.3.**
+**현재 버전: 9.4.0-ambasa.5.**
+
+이번 업데이트에서는 기억 정비소를 추가하고 기억 현황 및 부분 복구를 개선했습니다. 기존 LT 역할의 표시 이름을 앵커(Anchor)로 변경했으며, 기존 LT 제목·UID·주입 설정은 호환됩니다. 기억 정비소는 선택한 변경을 승인한 뒤에만 저장합니다. 코어에서 앵커로 옮긴 내용은 매번 불러오지 못할 수 있습니다. AI 요약의 누락과 해석 오류는 여전히 발생할 수 있으므로 필요할 때 확인하고 수정해 주세요.
 
 > **롤플 → 사건이 끝나면 기억 수집 → 다시 롤플!**
 >
@@ -300,7 +304,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 > [!TIP]
 > 같은 캐릭터로 여러 AU를 진행한다면 **이 채팅에만 로어북 따로 지정**을 사용하세요. 다른 채팅의 기본 책은 유지됩니다.
 
-**주입 설정**은 기본 접힘 상태입니다. Core Memory·Current Continuity·LT·NPC의 주입 방식을 상시·벡터·키워드·미주입 중 각각 선택합니다. 최근 Scene 3개는 상시이고 이전 Scene은 벡터·키워드 중 선택합니다. 기존 항목은 기억 관리의 기존 기억 주입 방식 변경에서 명시적으로 적용합니다.
+**주입 설정**은 기본 접힘 상태입니다. Core Memory·Current Continuity·앵커(기존 LT)·NPC의 주입 방식을 상시·벡터·키워드·미주입 중 각각 선택합니다. 최근 Scene 3개는 상시이고 이전 Scene은 벡터·키워드 중 선택합니다. 기존 항목은 기억 관리의 기존 기억 주입 방식 변경에서 명시적으로 적용합니다.
 
 #### 2. 수집 설정
 
@@ -404,7 +408,7 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 ### 4. 참고: 저장 검증·복구
 
-9.4.0-ambasa.1부터 일반 Nexus 갱신에 원문 직접 인용이 필수는 아닙니다.
+일상적인 Nexus 갱신에는 원문 직접 인용이 필수는 아닙니다. 중요한 앵커 변경과 보호 대상 Core/Continuity 변경에는 출처 검증이 적용됩니다. 보류된 편집은 복구할 수 있도록 남기며 다른 정상 기억의 저장을 막지 않습니다. 정확한 원문 인용이 내용의 의미 정확성까지 보증하지는 않습니다.
 
 **유지되는 검증**
 
@@ -433,7 +437,7 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 ---
 
-**Documentation basis / 안내 기준:** main [`8bcf2d0`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/8bcf2d05529278d4802742e9a19dedceaf6e5717) (2026-11-25), upstream manifest 9.4.0. Installed SillyTavern and live provider integration are not verified by this documentation update.
+**Documentation basis / 안내 기준:** verified runtime [PR #19 / `204d0db`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged to main on 2026-11-27. Node 657/657 and Bun build; isolated SillyTavern 1.19.1 Chrome host verification of revised UI, role compatibility and storage safeguards. Actual AI accuracy and installed-device behavior vary.
 
 ## Original Memory Books documentation / 원본 기능 안내
 

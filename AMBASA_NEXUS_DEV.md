@@ -4,15 +4,15 @@ Project: [AmbasaS2/SillyTavern-MemoryBooks](https://github.com/AmbasaS2/SillyTav
 
 ## Current main status — 2026-11-27 (KST)
 
-Reviewed source baseline: [main `0883ddc`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/0883ddc24b3e689fe997a674ab98f63e938a3a63), manifest `9.4.0-ambasa.3`, display name **Sloth's Memory Books**. See [current bilingual guide](./readme.md). Main already includes the Sloth workflow and compiled JS/CSS. The November 23 development-branch sections below are retained as historical records; their old branch names, release restrictions, tests, and incomplete-feature lists are **not** the current project state.
+Published version: `9.4.0-ambasa.5`, display name **Memory Books (Sloth)**. Runtime baseline is [PR #19 / 204d0db](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged in [026698a](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/026698a473c43e00e6a858e09f3d909294d43937); merge tree matches the tested candidate. The version/documentation commit does not change runtime JS/CSS. Install/update the existing fork from [AmbasaS2/SillyTavern-MemoryBooks](https://github.com/AmbasaS2/SillyTavern-MemoryBooks); do not install a second Memory Books alongside it.
 
-- **Purpose:** replace recurring manual chat/JSON memory updates inside SillyTavern, while keeping Original mode available. Sloth is for individual character chats; group chats use Original mode. Nexus and Memory are roles, not mandatory filename prefixes.
-- **Current workflow:** one collection request per source chunk without range/plan approval. Optional review adds up to one request; optional Side Prompts remain separate. Manual Hide is opt-in; automatic collection does not Hide. See SLOTH_SINGLE_COLLECTION_EXPERIMENT.md.
-- **Nexus:** reuse recognized existing combined Long-Term Memory/continuity and LT/NPC entries where possible; first setup may create separate Core Memory and Current Continuity entries. Preserve protected/disabled entries and special Outlets. Normal Nexus updates no longer require literal chat quotation receipts; structural checks and optimistic write/read-back remain. Two-book saves use compensating rollback, not an atomic server transaction.
-- **Memory:** new collection uses causal event boundaries, Timeline / Scene / Result, source ranges and recent-three rotation. Older recall is vector or keyword by configuration. Jev retrieval belongs to the optional STLO fork, not this extension.
-- **Verification history:** the November 26 side-prompt commit [`b010ca3`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/b010ca3bc4fb87410f3cb6254fcf51c2d42a225b) was recorded as passing 543 Node tests and a Bun build. Earlier isolated browser tests and real-model trials are historical evidence, not a fresh test of this HEAD. Live installed-device behavior and semantic model accuracy are not guaranteed.
-
-- **2026-11-27 recall UI:** injection settings default to collapsed; Nexus and Memory columns wrap according to panel width. Icon pickers choose each type independently. NPC collection remains enabled (legacy off falls back to the configured detail mode). Node tests 548/548 and Bun build passed; actual ST rendering and real-model comparison remain pending.
+- Sloth is for individual character chats; Original mode remains available and group chats use Original mode. Nexus/Memory are roles, not required filename prefixes.
+- Single collection request per source chunk; optional review can add one request and Side Prompts are separate. Manual Hide is opt-in, automatic collection does not Hide. Recent three completed Scenes remain always on; earlier Scenes retain their full text in configured vector/keyword recall.
+- Memory overview is read-only. Memory Workshop analyzes on request, displays suggested changes, and writes only explicitly selected and approved changes; Core-to-Anchor moves require acknowledgment of recall impact. Existing LT titles and internal role `lt` remain compatible with the public Anchor name.
+- Preserve existing protected entries, original content, UIDs, recall settings, and recovery contracts. Targeted evidence guards and recoverable partial writes remain; two-book saves use compensating rollback rather than an atomic server transaction. Do not discard whole memories merely because a model's interpretation is imperfect.
+- Verification: [657/657 Node tests and Bun build](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/actions/runs/45967046865), isolated ST 1.19.1 Chrome host checks (Korean/English, 390/1280px, light/dark), legacy/new Anchor compatibility, actual storage readback and rollback. No new model calls in the final host test.
+- Known limits: a valid closing quote does not establish semantic accuracy; omissions, attribution mistakes and incorrect emotional interpretations can still be saved. User's release gate is functional/data safety, not perfect model interpretation. Some host/role labels remain English in Korean UI. Actual RP retrieval and installed devices are not covered by the final isolated host verification.
+- #20 remains a separate unadopted writing experiment; do not include it in this version or require repeated model runs. Pre-release rollback reference: `83223a6f700a12b2212f1d049056d2430793d7b7`. Back up existing user data before updating or downgrading; resolve pending recovery first, as older code may not understand newer recovery contracts.
 
 ### Taking over a manually maintained story
 
@@ -29,6 +29,18 @@ Historical development log follows. Do not treat its old draft-only, no-main, or
 ## Historical development log — 2026-11-23 onward
 
 The following text describes earlier development snapshots and is preserved for provenance.
+
+### Previous main snapshot — 2026-11-27 (historical)
+
+Reviewed source baseline: [main `0883ddc`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/0883ddc24b3e689fe997a674ab98f63e938a3a63), manifest `9.4.0-ambasa.3`, display name **Sloth's Memory Books**. See [current bilingual guide](./readme.md). That snapshot already includes the Sloth workflow and compiled JS/CSS. The November 23 development-branch sections below are retained as historical records; their old branch names, release restrictions, tests, and incomplete-feature lists are **not** the current project state.
+
+- **Purpose:** replace recurring manual chat/JSON memory updates inside SillyTavern, while keeping Original mode available. Sloth is for individual character chats; group chats use Original mode. Nexus and Memory are roles, not mandatory filename prefixes.
+- **Current workflow:** one collection request per source chunk without range/plan approval. Optional review adds up to one request; optional Side Prompts remain separate. Manual Hide is opt-in; automatic collection does not Hide. See SLOTH_SINGLE_COLLECTION_EXPERIMENT.md.
+- **Nexus:** reuse recognized existing combined Long-Term Memory/continuity and LT/NPC entries where possible; first setup may create separate Core Memory and Current Continuity entries. Preserve protected/disabled entries and special Outlets. Normal Nexus updates no longer require literal chat quotation receipts; structural checks and optimistic write/read-back remain. Two-book saves use compensating rollback, not an atomic server transaction.
+- **Memory:** new collection uses causal event boundaries, Timeline / Scene / Result, source ranges and recent-three rotation. Older recall is vector or keyword by configuration. Jev retrieval belongs to the optional STLO fork, not this extension.
+- **Verification history:** the November 26 side-prompt commit [`b010ca3`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/b010ca3bc4fb87410f3cb6254fcf51c2d42a225b) was recorded as passing 543 Node tests and a Bun build. Earlier isolated browser tests and real-model trials are historical evidence, not a fresh test of this HEAD. Live installed-device behavior and semantic model accuracy are not guaranteed.
+
+- **2026-11-27 recall UI:** injection settings default to collapsed; Nexus and Memory columns wrap according to panel width. Icon pickers choose each type independently. NPC collection remains enabled (legacy off falls back to the configured detail mode). Node tests 548/548 and Bun build passed; actual ST rendering and real-model comparison remain pending.
 
 ## Naming
 
