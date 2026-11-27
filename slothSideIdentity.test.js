@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import { normalizeSlothSideRename, planSlothSideSettingsRename, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
 import { createMessageDeletionTracker } from './memoryRollback.js';
 import { automaticCollectionDue, createAutomaticTokenCounter, createAutomaticTokenUpperBound } from './slothAutomaticCollection.js';
@@ -101,4 +103,28 @@ test('token upper bound skips only certainly below-threshold checks; exact token
     assert.equal(await automaticCollectionDue({...scope,threshold:11}),true);
     assert.equal(await automaticCollectionDue({...scope,threshold:12}),false);
     assert.equal(calls,1);
+});
+
+test('native World Info rename migrates exact old and new editor names even with an empty old cache',async()=>{
+    const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
+    const start=source.indexOf('const possibleLorebookRenames');
+    const end=source.indexOf('\nasync function resolveSlothSideBook',start);
+    const changes=[],data={entries:{1:{uid:1,content:'Same memory'}}};
+    const api=vm.runInNewContext(source.slice(start,end).replace(/export (async )?function/g,(_,a='')=>a+'function')+
+        '\n({beginSlothLorebookRename,observeSlothLorebookSave,finishSlothLorebookRename})',{
+        extension_settings:{STMemoryBooks:{}},slothSideRenameBooks:(_s,{newBook})=>['Nexus','Memory',newBook].filter(Boolean),
+        worldInfoCache:new Map(),stringify:JSON.stringify,loadServerWorld:async()=>data,
+        queueSlothSideRename:async change=>changes.push(change),
+    });
+    api.beginSlothLorebookRename('Nexus',['Nexus','Memory']);
+    api.observeSlothLorebookSave('New Nexus',data,['Nexus','Memory','New Nexus'],'Nexus');
+    assert.equal(await api.finishSlothLorebookRename('New Nexus',['Nexus','Memory','New Nexus']),false);
+    assert.equal(await api.finishSlothLorebookRename('New Nexus',['Memory','New Nexus']),true);
+    assert.deepEqual(JSON.parse(JSON.stringify(changes)),[{type:'lorebook',oldBook:'Nexus',newBook:'New Nexus'}]);
+    api.beginSlothLorebookRename('Memory',['Memory','New Nexus']);
+    api.observeSlothLorebookSave('New Nexus',data,['Memory','New Nexus'],'Memory');
+    assert.equal(await api.finishSlothLorebookRename('New Nexus',['New Nexus']),false,'existing destinations are not rename candidates');
+    api.beginSlothLorebookRename('Unrelated',['Unrelated','Memory']);
+    api.observeSlothLorebookSave('Other',data,['Unrelated','Memory'],'Unrelated');
+    assert.equal(await api.finishSlothLorebookRename('Other',['Memory','Other']),false);
 });

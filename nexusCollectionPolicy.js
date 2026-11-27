@@ -462,7 +462,7 @@ export function stageNexusRecallSettings(original,moduleSettings) {
 // titles remain intact. Old manual Scenes keep their original title/body.
 export function slothUnnumberedSceneTitle(value) {
     let title=str(value),previous;
-    do { previous=title;title=title.replace(/^\s*(?:\[\d+\]|\d+)\s*[-–—]\s*/u,'').trim(); }
+    do { previous=title;title=title.replace(/^\s*(?:\[\d+\]\s*[-–—]\s*|\d{1,3}\s*[-–—]\s*|\d{4,}\s+[-–—]\s+)/u,'').trim(); }
     while(title!==previous);
     return title;
 }

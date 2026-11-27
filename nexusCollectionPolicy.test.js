@@ -367,4 +367,6 @@ test('repeated generated sequence prefixes are stripped and exact same-chat lega
     assert.equal(reused.staged.entries[1].comment,'058 - Letter');
     const created=stageMemoryScenes({entries:{}},[scene],create,{chatId:'chat'});
     assert.equal(created.staged.entries[2].comment,'001 - Letter');
+    const dated=stageMemoryScenes({entries:{}},[{...scene,title:'058 - 2026-11-27: Letter'}],create,{chatId:'chat'});
+    assert.equal(dated.staged.entries[2].comment,'001 - 2026-11-27: Letter');
 });

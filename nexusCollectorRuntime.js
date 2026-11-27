@@ -532,13 +532,34 @@ export function retrySlothSideRenames() {
 }
 
 const possibleLorebookRenames = new Map();
+let hostLorebookRename=null;
 
-export function observeSlothLorebookSave(newBook, data, names) {
-    if (!Array.isArray(names) || names.includes(newBook)) return;
+// Native ST rename has no dedicated event in supported versions. Capture the
+// actual editor action before the host opens its name dialog; then require
+// its save-new / remove-old / select-new sequence and exact read-back.
+export function beginSlothLorebookRename(oldBook,names) {
+    const recorded=slothSideRenameBooks(extension_settings.STMemoryBooks,{type:'lorebook',newBook:''});
+    hostLorebookRename=oldBook&&Array.isArray(names)&&names.includes(oldBook)&&recorded.includes(oldBook)
+        ?{oldBook,names:[...names],expires:Date.now()+300000}:null;
+}
+
+export function observeSlothLorebookSave(newBook, data, names, editorName='') {
+    if (!Array.isArray(names)||!newBook||!data?.entries) return;
     for (const [name, candidate] of possibleLorebookRenames) if (Date.now()>candidate.expires) possibleLorebookRenames.delete(name);
     const settings=extension_settings.STMemoryBooks;
     const recorded=slothSideRenameBooks(settings,{type:'lorebook',newBook});
     const fingerprint=stringify(data);
+    const intent=hostLorebookRename;
+    if (intent&&Date.now()<=intent.expires&&intent.oldBook===editorName&&
+        newBook!==intent.oldBook&&recorded.includes(intent.oldBook)&&names.includes(intent.oldBook)&&
+        !intent.names.includes(newBook)) {
+        // The editor explicitly initiated a rename. Do not require the old
+        // cache to still contain an identical object after host normalization.
+        possibleLorebookRenames.set(newBook,{oldBook:intent.oldBook,fingerprint,expires:Date.now()+300000});
+        hostLorebookRename=null;
+        return;
+    }
+    if (names.includes(newBook)) return;
     const matches=recorded.filter(oldBook=>names.includes(oldBook) && worldInfoCache.has(oldBook) &&
         stringify(worldInfoCache.get(oldBook)) === fingerprint);
     if (matches.length === 1) possibleLorebookRenames.set(newBook,{oldBook:matches[0],fingerprint,expires:Date.now()+30000});
