@@ -33,6 +33,7 @@ test('summary presets keep the built-in summary and preserve old instructions on
     const builtin=getActiveSlothSummaryPreset();
     assert.equal(builtin.id,'builtin');
     assert.ok(builtin.text.includes('What to preserve'));
+    assert.ok(builtin.text.includes("Keep independent agreement conditions separate; when consent or a crossed boundary changes the relationship, retain who did what, the actual response and any specific apology, prioritizing a short exact line of dialogue that carries the condition or repair."));
     assert.doesNotMatch(builtin.text,/event planner|Update Nexus|Output contract|STRICT JSON/);
     const settings={moduleSettings:{slothCollectionPrompt:'Keep concise humor.'}};
     const old=getActiveSlothSummaryPreset(settings);
