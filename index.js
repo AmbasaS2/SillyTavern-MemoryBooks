@@ -3828,12 +3828,9 @@ async function getManualGroupConsolidationLorebooks(primaryLorebookName, loreboo
     if (!item) {
       const memberLorebookData = memberLorebookName === primaryName
         ? lorebookData
-        : await loadWorldInfo(memberLorebookName);
+        : await loadAndMigrateSummaryLorebook(memberLorebookName);
       if (!memberLorebookData?.entries) {
         throw new Error(__st_t_tag`Lorebook "${memberLorebookName}" could not be loaded.`);
-      }
-      if (migrateLorebookSummarySchema(memberLorebookData)) {
-        await saveWorldInfo(memberLorebookName, memberLorebookData, true);
       }
       item = {
         role: "character",
@@ -5620,73 +5617,35 @@ async function executeMemoryGeneration(
 
   // Optional global conversion of recursion flags on existing STMB entries
   try {
-    if (
-      settings?.moduleSettings?.convertExistingRecursion &&
-      lorebookValidation?.valid &&
-      lorebookValidation.data?.entries
-    ) {
-      const entriesList = identifyMemoryEntries(lorebookValidation.data) || [];
-      const earliest = entriesList.length > 0 ? entriesList[0].entry : null;
-
+    if (settings?.moduleSettings?.convertExistingRecursion && lorebookValidation?.valid && lorebookValidation.data?.entries) {
       const targetPrevent = !!profileSettings.preventRecursion;
       const targetDelay = !!profileSettings.delayUntilRecursion;
-
-      let needsConversion = false;
-      if (!earliest) {
-        // No STMB entries, nothing to do
-        needsConversion = false;
-      } else {
-        const ePrev = !!earliest.preventRecursion;
-        const eDelay = !!earliest.delayUntilRecursion;
-        needsConversion = ePrev !== targetPrevent || eDelay !== targetDelay;
-      }
-
-      if (needsConversion) {
-        let examined = 0;
-        let updated = 0;
-        const allEntries = Object.values(lorebookValidation.data.entries || {});
-        for (const entry of allEntries) {
-          if (entry && entry.stmemorybooks === true) {
-            examined++;
-            const prevChanged = entry.preventRecursion !== targetPrevent;
-            const delayChanged = entry.delayUntilRecursion !== targetDelay;
-            if (prevChanged || delayChanged) {
-              entry.preventRecursion = targetPrevent;
-              entry.delayUntilRecursion = targetDelay;
-              updated++;
-            }
+      let examined = 0, updated = 0;
+      const result = await updateOriginalLorebookUnderLane(lorebookValidation.name, data => {
+        const earliest = (identifyMemoryEntries(data) || [])[0]?.entry;
+        if (!earliest || (!!earliest.preventRecursion === targetPrevent && !!earliest.delayUntilRecursion === targetDelay)) return false;
+        for (const entry of Object.values(data.entries)) {
+          if (entry?.stmemorybooks !== true) continue;
+          examined++;
+          if (entry.preventRecursion !== targetPrevent || entry.delayUntilRecursion !== targetDelay) {
+            entry.preventRecursion = targetPrevent;
+            entry.delayUntilRecursion = targetDelay;
+            updated++;
           }
         }
-
-        if (updated > 0) {
-          try {
-            await saveWorldInfo(
-              lorebookValidation.name,
-              lorebookValidation.data,
-              true,
-            );
-            if (settings.moduleSettings?.refreshEditor) {
-              try {
-                reloadEditor(lorebookValidation.name);
-              } catch (e) {
-                /* noop */
-              }
-            }
-          } catch (e) {
-            console.warn('🦥 STMemoryBooks', 
-              "STMemoryBooks: Failed to save lorebook during recursion conversion:",
-              e,
-            );
-          }
-          try {
-            toastr.info(
-              __st_t_tag`Updated recursion flags on ${updated} of ${examined} memory entr${updated === 1 ? "y" : "ies"}`,
-              "STMemoryBooks",
-            );
-          } catch (e) {
-            /* noop */
-          }
+        return updated > 0;
+      }, () => getStmbChatKey() === memoryOriginSnapshot.chatKey);
+      lorebookValidation.data = result.data;
+      if (result.changed) {
+        if (settings.moduleSettings?.refreshEditor) {
+          try { reloadEditor(lorebookValidation.name); } catch (e) { /* noop */ }
         }
+        try {
+          toastr.info(
+            __st_t_tag`Updated recursion flags on ${updated} of ${examined} memory entr${updated === 1 ? "y" : "ies"}`,
+            "STMemoryBooks",
+          );
+        } catch (e) { /* noop */ }
       }
     }
   } catch (e) {
@@ -9596,6 +9555,45 @@ function getAutoConsolidationTierOptions() {
   return getSummaryTierOptions().filter((option) => Number(option.value) <= 5);
 }
 
+// Legacy schema upgrades are writes too. Use the same per-book lane as
+// Sloth collection, Manager and Ordering, and never mutate a native cache
+// object before the server confirms the write.
+async function updateOriginalLorebookUnderLane(name, transform, isCurrent = () => true) {
+  const verifyOrigin = () => {
+    if (!isCurrent()) throw new Error("Memory Book selection or chat changed.");
+  };
+  const equals = (left, right) => getLorebookDataFingerprint(left) === getLorebookDataFingerprint(right);
+  const assertCache = (book, ...allowed) => {
+    const cached = worldInfoHost.worldInfoCache?.get(book);
+    if (cached && !allowed.some(data => equals(cached, data))) {
+      throw new Error("Memory Book changed in another editor: " + book);
+    }
+  };
+  return withStmbWriteLane({ type: "lorebook", name }, async () => {
+    verifyOrigin();
+    const original = await loadRollbackWorldInfo(name);
+    verifyOrigin();
+    assertCache(name, original);
+    const staged = deepClone(original);
+    const changed = transform(staged);
+    if (!changed) return { data: original, changed: false };
+    await commitVerifiedWorldInfoBooks([{ name, original, staged }], {
+      loadFresh: loadRollbackWorldInfo,
+      save: (book, data) => saveWorldInfo(book, deepClone(data), true),
+      // We already own the lane. Never acquire it recursively.
+      withLocks: (_names, task) => task(),
+      verifyOrigin,
+      verifyBeforeWrite: assertCache,
+      resetCache: (book, data) => worldInfoHost.worldInfoCache?.set(book, deepClone(data)),
+    }, { equals, label: "Original Memory Book update" });
+    return { data: deepClone(staged), changed: true };
+  });
+}
+
+async function loadAndMigrateSummaryLorebook(name, isCurrent = () => true) {
+  return (await updateOriginalLorebookUnderLane(name, migrateLorebookSummarySchema, isCurrent)).data;
+}
+
 async function maybePromptAutoConsolidation(targetTier, lorebookValidation = null) {
   const emptyResult = {
     checked: false,
@@ -9628,10 +9626,8 @@ async function maybePromptAutoConsolidation(targetTier, lorebookValidation = nul
       return { ...emptyResult, checked: true, targetTier: normalizedTargetTier };
     }
 
-    const lorebookData = lorebookState.data;
-    if (migrateLorebookSummarySchema(lorebookData)) {
-      await saveWorldInfo(lorebookState.name, lorebookData, true);
-    }
+    const sourceChatKey = getStmbChatKey();
+    const lorebookData = await loadAndMigrateSummaryLorebook(lorebookState.name, () => getStmbChatKey() === sourceChatKey);
 
     const requiredMin = normalizeSummaryMinChildren(
       settings.moduleSettings.summaryTierMinimums?.[normalizedTargetTier],
@@ -9818,8 +9814,9 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
       lorebookData = { entries: {} };
     }
 
-    if (lorebookName && migrateLorebookSummarySchema(lorebookData)) {
-      await saveWorldInfo(lorebookName, lorebookData, true);
+    const sourceChatKey = getStmbChatKey();
+    if (lorebookName) {
+      lorebookData = await loadAndMigrateSummaryLorebook(lorebookName, () => getStmbChatKey() === sourceChatKey);
     }
 
     const configuredLorebookName = lorebookName;
@@ -10228,23 +10225,29 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
       .querySelector("#stmb-consolidation-lorebook")
       ?.addEventListener("change", async (event) => {
         const selectedLorebookName = String(event.target.value || "").trim();
-        if (!selectedLorebookName || selectedLorebookName === lorebookName) return;
-
+        // Even a return to the current book invalidates a pending selection.
         const loadSequence = ++sourceLorebookLoadSequence;
+        if (!selectedLorebookName || selectedLorebookName === lorebookName) {
+          event.target.value = lorebookName || "";
+          if (isSourceLorebookLoading) {
+            isSourceLorebookLoading = false;
+            renderTierState();
+          }
+          return;
+        }
+
+        const isCurrent = () => loadSequence === sourceLorebookLoadSequence
+          && String(event.target.value || "").trim() === selectedLorebookName
+          && getStmbChatKey() === sourceChatKey;
         isSourceLorebookLoading = true;
         renderTierState();
 
         try {
-          const selectedLorebookData = await loadWorldInfo(selectedLorebookName);
+          const selectedLorebookData = await loadAndMigrateSummaryLorebook(selectedLorebookName, isCurrent);
+          if (!isCurrent()) return;
           if (!selectedLorebookData?.entries) {
             throw new Error("Failed to load the selected Memory Book.");
           }
-          if (loadSequence !== sourceLorebookLoadSequence) return;
-
-          if (migrateLorebookSummarySchema(selectedLorebookData)) {
-            await saveWorldInfo(selectedLorebookName, selectedLorebookData, true);
-          }
-          if (loadSequence !== sourceLorebookLoadSequence) return;
 
           lorebookName = selectedLorebookName;
           lorebookData = selectedLorebookData;
@@ -10428,7 +10431,17 @@ async function showSummaryConsolidationPopup(popupOptions = {}) {
       });
 
     const res = await popup.show();
+    const sourceSelector = dlg.querySelector("#stmb-consolidation-lorebook");
+    const selectionMatches = !isSourceLorebookLoading && (!sourceSelector
+      || String(sourceSelector.value || "").trim() === lorebookName)
+      && getStmbChatKey() === sourceChatKey;
+    // Closing the popup also invalidates any unresolved book load.
+    sourceLorebookLoadSequence++;
     if (res !== POPUP_RESULT.AFFIRMATIVE) return;
+    if (!selectionMatches) {
+      toastr.warning("Memory Book selection changed. Reopen consolidation and select the intended book.", "STMemoryBooks");
+      return;
+    }
 
     const targetTier = clampInt(
       readIntInput(dlg.querySelector("#stmb-summary-tier"), 1),
