@@ -107,3 +107,32 @@ test('dry-run and quiet starts do not cancel a scheduled Sloth collection',()=>{
  const active=env.startState().slothGeneration;
  callback('quiet',{},false);assert.equal(env.startState().slothGeneration,active);
 });
+
+test('Sloth auto collection is scheduled only by a completed normal reply, not generation UI events', async()=>{
+ const calls=[], timers=new Map();let next=0,key='chat-1',enabled=true;
+ const segment=cut('  let slothGeneration = null;', '    // Clear any prior persistent failure toast')+'\n  });\n'+
+   cut('  function scheduleSlothCollectionForReply(', '  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED')+
+   '\nthis.receive=scheduleSlothCollectionForReply;';
+ const callbacks={};const chat=[{is_user:true,mes:'question'}];
+ const env={eventSource:{on(event,fn){callbacks[event]=fn;}},event_types:{GENERATION_STARTED:'start',GENERATION_ENDED:'end',GENERATION_STOPPED:'stop'},isDryRun:false,
+   getStmbChatKey:()=>key,chat,extension_settings:{STMemoryBooks:{}},getMemoryBooksMode:()=> 'sloth',getCurrentStmbChatRef:()=>({}),
+   getSlothAutomaticSettings:()=>({enabled}),getSlothProfileConfiguration:()=>({}),streamingProcessor:null,
+   setTimeout:fn=>{const id=++next;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),
+   runNexusCollector:async options=>{calls.push(options.automaticChatKey);return {saved:false};},refreshSlothRoleControls:()=>{},
+   syncSlothAutomaticStatus:()=>{},narratorResponseGeneration:{end(){},clear(){}},clearGenerationLorebookSnapshots:()=>{},console};
+ vm.runInNewContext(segment,env);
+ callbacks.start('normal',{},false);
+ chat.push({mes:'reply'});callbacks.end();
+ assert.equal(timers.size,0,'UI unlock is not a completed reply');
+ env.receive(1,'quiet');env.receive(1,'first_message');
+ assert.equal(timers.size,0);
+ env.streamingProcessor={messageId:1,isFinished:false,isStopped:true};env.receive(1,'normal');
+ assert.equal(timers.size,0,'failed stream is not a completed reply');
+ env.streamingProcessor={messageId:1,isFinished:true,isStopped:false};env.receive(1,'normal');
+ assert.equal(timers.size,1);
+ env.receive(1,'normal');callbacks.start('quiet',{},false);callbacks.end();callbacks.stop();
+ assert.equal(timers.size,1,'unrelated completion and stop preserve the completed reply timer');
+ await [...timers.values()][0]();timers.clear();assert.deepEqual(calls,['chat-1']);
+ callbacks.start('normal',{},false);chat.push({mes:'another reply'});env.streamingProcessor=null;env.receive(2,'normal');
+ enabled=false;await [...timers.values()][0]();assert.deepEqual(calls,['chat-1'],'turning auto collection off prevents a queued call');
+});
