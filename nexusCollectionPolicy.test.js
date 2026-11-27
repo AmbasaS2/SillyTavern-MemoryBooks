@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,parseReviewedSegments,groupSlothSourceWindows,
-  fingerprintSlothChat,describeNexusCollectionEntry,
+  fingerprintSlothChat,describeNexusCollectionEntry,slothDisplayAnchorTitle,
   stageNexusEdits,stageMemoryScenes,getSlothHideRanges} from './nexusCollectionPolicy.js';
 
 test('a collection keeps proposed events while forwarding only verified ending quotes', () => {
@@ -385,4 +385,24 @@ test('manual Scene review lists only untracked completed candidates and never in
         {name:'B',mes:'Keep   this promise.'}]),[{id:1,name:'A',quote:'Keep this promise.'},{id:2,name:'B',quote:'Keep this promise.'}]);
     assert.deepEqual(findSlothLegacyEvidence('They agreed.',[{mes:'They agreed.'}]),[]);
     assert.deepEqual(book,before);
+});
+
+test('Anchor and historical LT titles share the same role, identity and recall configuration',()=>{
+  const book={entries:{7:{uid:7,comment:'LT 02 | Harbor',content:'The quay is quiet.',vectorized:true,selective:true,key:['harbor']}}};
+  const before=JSON.stringify(book);
+  const createEntry=staged=>staged.entries[8]={uid:8};
+  for(const comment of ['LT 02 | Harbor','Anchor - Harbor','Anchor 02 | Harbor'])
+    assert.deepEqual(describeNexusCollectionEntry({comment}).roles,['lt']);
+  assert.deepEqual(describeNexusCollectionEntry({comment:'NPC - Harbor'}).roles,['npc']);
+  assert.throws(()=>stageNexusEdits(book,[{kind:'lt',action:'create',title:'Anchor - Harbor',content:'New fact.'}],createEntry),/Duplicate Nexus role or detail/);
+  const result=stageNexusEdits(book,[{kind:'lt',action:'append',uid:7,text:'The tide is low.'},
+    {kind:'lt',action:'create',title:'Anchor - Lanterns',content:'The lantern was repaired.',keywords:['lantern']}],createEntry);
+  assert.equal(JSON.stringify(book),before);
+  assert.equal(result.staged.entries[7].comment,'LT 02 | Harbor');
+  assert.equal(result.staged.entries[8].comment,'Anchor - Lanterns');
+  assert.equal(result.staged.entries[8].STMB_slothNexusKind,'lt');
+  assert.equal(result.staged.entries[8].vectorized,true);
+  assert.equal(slothDisplayAnchorTitle('LT 02 | Harbor','앵커'),'앵커 02 | Harbor');
+  assert.equal(slothDisplayAnchorTitle('Anchor - Lanterns','앵커'),'앵커 - Lanterns');
+  assert.equal(slothDisplayAnchorTitle('SALT - Food'),'SALT - Food');
 });

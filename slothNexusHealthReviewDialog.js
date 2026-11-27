@@ -6,6 +6,7 @@ import {escapeHtml} from '../../../utils.js';
 import {translate} from '../../../i18n.js';
 import {markStmbPopup} from './utils.js';
 import {stageSlothHealthReviewChange,stageSlothHealthReviewBatch} from './slothNexusHealthReview.js';
+import {slothDisplayAnchorTitle} from './nexusCollectionPolicy.js';
 
 export const healthReviewLabel=(key,fallback)=>translate(fallback,'STMemoryBooks_SlothHealthReview'+key);
 const tr=healthReviewLabel;
@@ -17,7 +18,7 @@ const countLabel=(key,fallback,count)=>tr(key,fallback).replace('{{count}}',Stri
 function displayTitle(title){
     const value=String(title??'');
     if(value==='Core Memory')return tr('CoreName','Core Memory');
-    return value.replace(/^LT(?=(?:\s*[-–—:|]|\s*$))/iu,()=>tr('LTName','Long-Term Memory'));
+    return slothDisplayAnchorTitle(value,tr('LTName','Anchor'));
 }
 function renderChange(change){
     const mode=change.constant?tr('Constant','Always-on'):change.vectorized?tr('Vector','Vector'):tr('Keyword','Keyword');
@@ -56,7 +57,7 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
     const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-health-review">'+
         '<header class="stmb-workshop-heading"><i class="fa-solid fa-wrench" aria-hidden="true"></i><h3>'+html(tr('Title','Memory Workshop'))+'</h3>'+
         '<button type="button" class="stmb-health-info" data-workshop-help aria-expanded="false" aria-label="'+html(tr('HelpLabel','About Memory Workshop'))+'" title="'+html(tr('HelpLabel','About Memory Workshop'))+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
-        '<div class="stmb-workshop-help" hidden>'+html(tr('Help','Review suggested changes to Nexus memories. Only selected changes are saved. Memories moved from Core to Long-Term Memory may not appear in every conversation turn. Other chats sharing the book may have pending recovery affected. AI suggestions can be wrong.'))+
+        '<div class="stmb-workshop-help" hidden>'+html(tr('Help','Review suggested changes to Nexus memories. Only selected changes are saved. Memories moved from Core to Anchor may not appear in every conversation turn. Other chats sharing the book may have pending recovery affected. AI suggestions can be wrong.'))+
         '<p>'+html(summary)+'</p></div>'+
         '<div class="stmb-workshop-metrics"><div><span>'+html(tr('Available','Changes'))+'</span><strong>'+count+'</strong></div><div><span>'+html(tr('ReviewOnly','Review only'))+'</span><strong>'+(rows.length-count)+'</strong></div></div>'+
         (rows.length?'<div class="stmb-workshop-list">'+rows.map(rowHtml).join('')+'</div><div data-health-review-plan></div>':
@@ -87,7 +88,7 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
             plan.innerHTML='<details class="stmb-workshop-preview"><summary>'+html(tr('FullPreview','View complete before/after'))+'</summary>'+
                 changes.map(renderChange).join('')+'</details>'+
                 (moves?'<label class="checkbox_label stmb-workshop-confirm"><input type="checkbox" data-health-core-ack><span>'+
-                    html(tr('CoreAck','Move selected memories to Long-Term Memory.'))+'</span></label>':'');
+                    html(tr('CoreAck','Move selected memories to Anchor.'))+'</span></label>':'');
             if(!moves)approved=prepared;
             const ack=plan.querySelector('[data-health-core-ack]');
             ack?.addEventListener('change',()=>{confirmed=ack.checked;approved=confirmed?prepared:null;enabled();});

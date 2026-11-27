@@ -22,7 +22,7 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, fingerprintSlothReviewedRanges, stageNexusEdits, stageMemoryScenes,
     listSlothUntrackedScenes, findSlothLegacyEvidence,
-    getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes } from './nexusCollectionPolicy.js';
+    getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes, slothDisplayAnchorTitle } from './nexusCollectionPolicy.js';
 import { composeSingleSlothCollection, composeSlothScene,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene, suggestSlothNexusHealthReview } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
@@ -1331,7 +1331,7 @@ export async function showSlothNexusHealth(){
         const report=await inspectSlothNexusHealth(book,getTokenCountAsync);
         verify();
         const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
-        const labels={core:tr('Core','Core Memory'),continuity:'Continuity',lt:tr('LT','Long-Term Memory'),npc:'NPC',
+        const labels={core:tr('Core','Core Memory'),continuity:'Continuity',lt:tr('LT','Anchor'),npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
         const num=n=>Number(n).toLocaleString();
         const amount=(n,missing=0)=>n===0&&missing?'—':'~ '+num(n);
@@ -1394,9 +1394,9 @@ export async function showSlothNexusHealth(){
             });
         };
         mountList('[data-health-entries]','[data-health-entry]','[data-health-body]',report.rows,
-            row=>(row.title||'UID '+row.uid)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
+            row=>slothDisplayAnchorTitle(row.title||'UID '+row.uid,labels.lt)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
         mountList('[data-health-repeats]','[data-health-repeat]','[data-health-repeat-body]',report.duplicates,
-            item=>item.entries.map(e=>e.title||'UID '+e.uid).join(' · '),item=>item.text);
+            item=>item.entries.map(e=>slothDisplayAnchorTitle(e.title||'UID '+e.uid,labels.lt)).join(' · '),item=>item.text);
         await popup.show();
         return {saved:false};
     }finally{collectorBusy=false;}

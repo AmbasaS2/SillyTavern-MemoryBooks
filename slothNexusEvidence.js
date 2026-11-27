@@ -89,5 +89,5 @@ export function assertSlothNexusEvidence(edit,nexus,source,policyVersion=1){
         if(policyVersion===4)citations.push(source.get(id));
     }
     if(policyVersion===4&&String(edit?.kind??'').trim().toLowerCase()==='lt'&&hasDirectKnowledgeContradiction(edit,citations))
-        throw new Error('The cited source directly contradicts this LT knowledge claim. Correct the claim or evidence.');
+        throw new Error('The cited source directly contradicts this Anchor knowledge claim. Correct the claim or evidence.');
 }

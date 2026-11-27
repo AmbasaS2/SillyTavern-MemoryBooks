@@ -1,3 +1,4 @@
+import {slothDisplayAnchorTitle} from './nexusCollectionPolicy.js';
 // Copyright (C) 2026 AmbasaS2
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
@@ -218,13 +219,29 @@ test('health preview displays complete change text only in combined approval and
     assert.match(dialog,/change\.paragraph/);
 });
 
- test('workshop display expands the LT prefix without changing persisted titles',()=>{
+ test('workshop displays both historical and new Anchor names without changing persisted titles',()=>{
     const dialog=readFileSync(new URL('./slothNexusHealthReviewDialog.js',import.meta.url),'utf8');
     const start=dialog.indexOf('function displayTitle('),end=dialog.indexOf('function renderChange(',start);
-    const display=vm.runInNewContext(dialog.slice(start,end)+'\ndisplayTitle',{tr:(_key,fallback)=>fallback});
-    assert.equal(display('LT - Lamp repairs'),'Long-Term Memory - Lamp repairs');
+    const display=vm.runInNewContext(dialog.slice(start,end)+'\ndisplayTitle',{tr:(_key,fallback)=>fallback,slothDisplayAnchorTitle});
+    assert.equal(display('LT - Lamp repairs'),'Anchor - Lamp repairs');
+    assert.equal(display('LT 02 | Lamp repairs'),'Anchor 02 | Lamp repairs');
+    assert.equal(display('Anchor - Lamp repairs'),'Anchor - Lamp repairs');
     assert.equal(display('Core Memory'),'Core Memory');
     assert.equal(display('SALT - Food'),'SALT - Food');
     assert.equal(display('LT notes'),'LT notes');
     assert.match(dialog,/displayTitle\(change\.title\)/);
  });
+
+test('Memory Workshop supports new Anchor titles without rewriting legacy names',()=>{
+    const book=mk();
+    const finding=move();
+    finding.refs=[finding.refs[0]];
+    finding.change={type:'move',sourceUid:1,paragraph:para,newTitle:'Anchor - Lantern memories',keywords:['lantern']};
+    const result=stageSlothHealthReviewChange(book,finding,{moduleSettings:{nexusRecallModes:{lt:'keyword'}}});
+    const created=Object.values(result.staged.entries).find(e=>e.comment==='Anchor - Lantern memories');
+    assert.equal(created.content,para);
+    assert.equal(created.STMB_slothNexusKind,'lt');
+    assert.equal(result.staged.entries[2].comment,'LT - Festivals');
+    const prompt=buildSlothHealthReviewPrompt(buildSlothHealthCatalog(book));
+    assert.match(prompt,/"newTitle":"Anchor - distinct topic"/);
+});

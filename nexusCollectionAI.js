@@ -294,7 +294,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
         'If the old Continuity has only legacy source blocks, add a grounded named section',
         'instead of rewriting or interpreting the original archive without an explicit review.',
-        'Match LT to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. Use the surrounding chat context to identify the same person, including unambiguous pronouns or aliases. Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new LT needs a distinct lasting subject with no existing home.',
+        'Match Anchor (kind lt) to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. Use the surrounding chat context to identify the same person, including unambiguous pronouns or aliases. Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new Anchor needs a distinct lasting subject with no existing home.',
         'Create a new NPC entry for a durable relationship or a separate future encounter supported by the chat. One visit or expected follow-up during the same visit is insufficient. Record relevant immediate follow-up or knowledge boundaries in continuity.',
     ].join('\n\n'),
 });
@@ -462,7 +462,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             ['Supply specific literal recall keywords for each new Nexus entry. Never overwrite existing entry activation settings.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
         'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
-        'Before creating LT or NPC, match the subject with existing titles, aliases, former names, and body context. If the same relationship, topic, or person already has a UID, update that UID even if the new wording or name differs. A different surname spelling or honorific alone is not evidence of a new person.',
+        'Before creating an Anchor or NPC, match the subject with existing titles, aliases, former names, and body context. If the same relationship, topic, or person already has a UID, update that UID even if the new wording or name differs. A different surname spelling or honorific alone is not evidence of a new person.',
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
@@ -483,7 +483,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             'Newer chat messages are outside this input. Only propose grounded durable edits. Do not create or modify Current Continuity or Present Handoff from this historical slice.',
         ] : []),
         'Current Nexus entries (exact UIDs):',source,
-        'New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append.',
+        'New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. New Anchor entries use the title "Anchor - Subject" and the existing JSON kind lt. Existing LT and Anchor titles refer to the same role; reuse the matching UID without renaming old entries. Use append_section only for continuity; additional Anchor or NPC text uses append.',
         'Keep the complete JSON within the output budget. Patch existing entries with minimal spans. Keep the handoff and durable changes; omit redundant recaps and routine dialogue.',
     ].join('\n\n');
 }
@@ -683,7 +683,7 @@ export async function composeSingleSlothCollection(options) {
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
-        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every LT replace_exact and any newly stated LT promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For LT additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every Anchor (kind lt) replace_exact and any newly stated Anchor promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For Anchor additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
