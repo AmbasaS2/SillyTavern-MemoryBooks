@@ -14750,10 +14750,14 @@ function setupEventListeners() {
   // Track dry-run state for generation events
   eventSource.on(event_types.GENERATION_STARTED, (type, options, dryRun) => {
     isDryRun = dryRun || false;
-    clearTimeout(slothAutoTimer);
-    slothGeneration = !dryRun && ['normal','continue','regenerate','swipe'].includes(type) ? {
-      key:getStmbChatKey(), length:chat.length, automatic:type === 'normal' && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef(), getStmbChatKey()) === 'sloth',
-    } : null;
+    // Dry runs and background generations are not a new visible RP reply.
+    // Keep an already scheduled automatic collection intact.
+    if (!dryRun && ['normal','continue','regenerate','swipe'].includes(type)) {
+      clearTimeout(slothAutoTimer);
+      slothGeneration = {
+        key:getStmbChatKey(), length:chat.length, automatic:type === 'normal' && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef(), getStmbChatKey()) === 'sloth',
+      };
+    }
     // Clear any prior persistent failure toast and error when a new generation starts
     try {
       if (lastFailureToast) {

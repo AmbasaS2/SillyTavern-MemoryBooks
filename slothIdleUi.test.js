@@ -92,3 +92,18 @@ test('memory tier macro counters preserve all categories in one entry traversal'
         3:{stmemorybooks:true,tier:2,comment:'Side'},4:{stmemorybooks:false,tier:3,comment:'Side'}}});
     assert.deepEqual(JSON.parse(JSON.stringify(out)),{tierCounts:{1:1,2:1,3:0},clipCount:1,sidePromptCount:2});
 });
+
+
+test('dry-run and quiet starts do not cancel a scheduled Sloth collection',()=>{
+ const segment=cut('  let slothGeneration = null;', '    // Clear any prior persistent failure toast');
+ assert.ok(segment.includes('GENERATION_STARTED'));
+ const code=segment+'\n  });\nthis.startState=()=>({slothGeneration,slothAutoTimer});this.setTimer=value=>{slothAutoTimer=value;};';
+ let callback,cancelled=[];const env={eventSource:{on(_event,fn){callback=fn;}},event_types:{GENERATION_STARTED:'started'},isDryRun:false,clearTimeout:id=>cancelled.push(id),getStmbChatKey:()=> 'chat-1',chat:[{}],getMemoryBooksMode:()=> 'sloth',getCurrentStmbChatRef:()=> ({}),extension_settings:{STMemoryBooks:{}}};
+ vm.runInNewContext(code,env);env.setTimer(17);
+ callback('normal',{},true);callback('quiet',{},false);
+ assert.deepEqual(cancelled,[]);assert.equal(env.startState().slothAutoTimer,17);
+ callback('normal',{},false);
+ assert.deepEqual(cancelled,[17]);assert.equal(env.startState().slothGeneration.automatic,true);
+ const active=env.startState().slothGeneration;
+ callback('quiet',{},false);assert.equal(env.startState().slothGeneration,active);
+});
