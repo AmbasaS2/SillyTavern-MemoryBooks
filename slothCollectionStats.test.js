@@ -53,3 +53,41 @@ test('the UI formatter preserves reported zero and separates estimates from unkn
     assert.deepEqual(slothMetricParts({reported:0,reportedN:0,unknownN:1}),[{kind:'unknown',value:1}]);
     assert.deepEqual(slothMetricParts({}),[]);
 });
+
+test('NanoGPT archived usage maps explicit USD zero and created cache despite a zero compatibility count',()=>{
+    const usage={prompt_tokens:78397,completion_tokens:1777,cost:0,currency:'USD',
+        prompt_tokens_details:{created_cache_tokens:78352},cache_creation_input_tokens:0};
+    const m=metric({full:{usage}});
+    assert.equal(m.reported.input,78397);assert.equal(m.reported.output,1777);
+    assert.equal(m.reported.cacheWrite,78352);assert.equal(m.reported.usd,0);
+    const run=createSlothCollectionRun({ids:[0,1]});
+    addSlothRequestMetric(run,m);
+    const store=storage();recordSlothCollectionRun(run,store);
+    const values=readSlothCollectionHistory(store)[0].groups.collection.values;
+    assert.deepEqual(slothMetricParts(values.usd),[{kind:'reported',value:0}]);
+    assert.deepEqual(slothMetricParts(values.cacheWrite),[{kind:'reported',value:78352}]);
+});
+test('USD cost alias requires a numeric value and matching currency; explicit USD fields win',()=>{
+    for(const value of [0,0.04]){
+        assert.equal(metric({full:{usage:{cost:value,currency:'USD'}}}).reported.usd,value);
+        assert.equal(metric({full:{cost:value,currency:'USD'}}).reported.usd,value);
+        assert.equal(metric({full:{stmb_streaming:{last_chunk:{usage:{cost:value,currency:'USD'}}}}}).reported.usd,value);
+    }
+    for(const usage of [{cost:0},{cost:0.04,currency:'EUR'},{cost:'0',currency:'USD'},{cost:-1,currency:'USD'},{cost:null,currency:'USD'}]){
+        assert.equal(metric({full:{usage}}).reported.usd,null);
+    }
+    assert.equal(metric({full:{usage:{cost_usd:0,cost:0.04,currency:'USD'}}}).reported.usd,0);
+    assert.equal(metric({full:{cost_usd:0.02,usage:{cost:0.04,currency:'USD'}}}).reported.usd,0.02);
+    assert.equal(metric({full:{currency:'USD',usage:{cost:0.04}}}).reported.usd,null);
+});
+test('cache write aliases are not summed and missing or invalid counts remain unmeasured',()=>{
+    const writes=usage=>metric({full:{usage}}).reported.cacheWrite;
+    assert.equal(writes({prompt_tokens_details:{created_cache_tokens:78352}}),78352);
+    assert.equal(writes({cache_creation_input_tokens:3,prompt_tokens_details:{created_cache_tokens:3}}),3);
+    assert.equal(writes({cache_creation_input_tokens:3,prompt_tokens_details:{created_cache_tokens:7}}),3);
+    assert.equal(writes({cache_creation_input_tokens:3,prompt_tokens_details:{created_cache_tokens:0}}),3);
+    assert.equal(writes({prompt_tokens_details:{created_cache_tokens:0}}),0);
+    assert.equal(writes({cache_creation_input_tokens:0}),0);
+    assert.equal(writes({prompt_tokens_details:{created_cache_tokens:'78352'}}),null);
+    assert.equal(writes({}),null);
+});

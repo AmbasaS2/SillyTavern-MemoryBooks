@@ -13,19 +13,29 @@ const modelId=v=>typeof v==='string'&&/^[a-z0-9][a-z0-9._:/+-]{0,119}$/i.test(v)
 const valueGroup=()=>({reported:0,reportedN:0,estimated:0,estimatedN:0,bytes:0,bytesN:0,unknownN:0});
 const group=()=>({requests:0,responded:0,failed:0,cancelled:0,blocked:0,blockedEstimate:null,durationMs:0,models:[],values:Object.fromEntries(SLOTH_STATS_FIELDS.map(k=>[k,valueGroup()]))});
 const first=(...v)=>v.map(count).find(n=>n!==null)??null;
+const explicitUsd=value=>decimal(value?.cost_usd)??decimal(value?.total_cost_usd);
+const labeledUsd=value=>value?.currency==='USD'?decimal(value.cost):null;
 const phaseKey=v=>SLOTH_STATS_PHASES.includes(v)?v:'collection';
 function field(usage,k){
     if(k==='input')return first(usage?.prompt_tokens,usage?.input_tokens);
     if(k==='output')return first(usage?.completion_tokens,usage?.output_tokens);
     if(k==='cacheRead')return first(usage?.prompt_tokens_details?.cached_tokens,usage?.input_tokens_details?.cached_tokens,usage?.cache_read_input_tokens);
-    if(k==='cacheWrite')return first(usage?.cache_creation_input_tokens,usage?.prompt_tokens_details?.cache_write_tokens,usage?.input_tokens_details?.cache_write_tokens);
-    // Do not infer currency from an unlabeled cost field.
-    return decimal(usage?.cost_usd)??decimal(usage?.total_cost_usd);
+    if(k==='cacheWrite'){
+        const standard=first(usage?.cache_creation_input_tokens,usage?.prompt_tokens_details?.cache_write_tokens,usage?.input_tokens_details?.cache_write_tokens);
+        const created=count(usage?.prompt_tokens_details?.created_cache_tokens);
+        // NanoGPT may report an actual created count alongside a zero
+        // compatibility field. Prefer the nonzero standard value if present;
+        // otherwise use the explicit created count. Never add these aliases.
+        return standard!==null&&standard>0?standard:created??standard;
+    }
+    return explicitUsd(usage);
 }
 export function makeSlothRequestMetric({phase,model,estimate,full,status='response',durationMs=0}={}){
     const usage=full?.usage??full?.stmb_streaming?.last_chunk?.usage;
     const reported=Object.fromEntries(SLOTH_STATS_FIELDS.map(k=>[k,field(usage,k)]));
-    if(reported.usd===null)reported.usd=decimal(full?.cost_usd)??decimal(full?.total_cost_usd);
+    // Cost aliases are accepted only with an explicit USD denomination.
+    // Explicit *_usd fields keep precedence, including a reported zero.
+    if(reported.usd===null)reported.usd=explicitUsd(full)??labeledUsd(usage)??labeledUsd(full);
     return {phase:phaseKey(phase),model:modelId(model),status:['response','failed','cancelled','blocked'].includes(status)?status:'failed',
         durationMs:count(Math.max(0,Math.round(durationMs)))??0,reported,
         estimate:count(estimate?.input),estimateKind:estimate?.estimated==='bytes'?'bytes':'tokens'};
