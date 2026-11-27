@@ -211,6 +211,9 @@ test('health preview displays complete change text only in combined approval and
     const dialog=readFileSync(new URL('./slothNexusHealthReviewDialog.js',import.meta.url),'utf8');
     assert.equal((dialog.match(/changes\.map\(renderChange\)/g)||[]).length,1);
     assert.match(dialog,/data-health-core-ack/);
+    assert.match(dialog,/tr\('CoreAck','I understand moved memories may not be recalled on every turn\.'\)/);
+    const ko=JSON.parse(readFileSync(new URL('./locales/ko-kr.json',import.meta.url),'utf8'));
+    assert.equal(ko.STMemoryBooks_SlothHealthReviewCoreAck,'앵커로 옮긴 기억이 일부 대화에서 주입되지 않을 수 있음을 확인했습니다.');
     assert.match(dialog,/if\(!moves\)approved=prepared/);
     assert.match(dialog,/approved=confirmed\?prepared:null/);
     assert.match(dialog,/class="stmb-workshop-preview"><summary>/);

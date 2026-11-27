@@ -2085,7 +2085,7 @@
   "STMemoryBooks_SlothHealthReviewCancel": "정비 취소",
   "STMemoryBooks_SlothHealthReviewCancelled": "기억 정비를 취소했습니다.",
   "STMemoryBooks_SlothHealthReviewPlanConflict": "선택한 변경이 서로 충돌합니다. 충돌하는 항목을 선택 해제해 주세요.",
-  "STMemoryBooks_SlothHealthReviewCoreAck": "선택한 기억을 앵커로 이동합니다.",
+  "STMemoryBooks_SlothHealthReviewCoreAck": "앵커로 옮긴 기억이 일부 대화에서 주입되지 않을 수 있음을 확인했습니다.",
   "STMemoryBooks_SlothHealthReviewHelpLabel": "기억 정비소 안내",
   "STMemoryBooks_SlothHealthReviewDedupeAction": "중복 제거",
   "STMemoryBooks_SlothHealthReviewDedupeOne": "동일한 문단 1개 제거",

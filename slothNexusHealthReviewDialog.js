@@ -88,7 +88,7 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
             plan.innerHTML='<details class="stmb-workshop-preview"><summary>'+html(tr('FullPreview','View complete before/after'))+'</summary>'+
                 changes.map(renderChange).join('')+'</details>'+
                 (moves?'<label class="checkbox_label stmb-workshop-confirm"><input type="checkbox" data-health-core-ack><span>'+
-                    html(tr('CoreAck','Move selected memories to Anchor.'))+'</span></label>':'');
+                    html(tr('CoreAck','I understand moved memories may not be recalled on every turn.'))+'</span></label>':'');
             if(!moves)approved=prepared;
             const ack=plan.querySelector('[data-health-core-ack]');
             ack?.addEventListener('change',()=>{confirmed=ack.checked;approved=confirmed?prepared:null;enabled();});
