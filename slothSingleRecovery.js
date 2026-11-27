@@ -122,6 +122,7 @@ function readRange(value) {
         const match=/^\s*#?(\d+)(?:\s*[-–—:]\s*#?(\d+))?\s*$/u.exec(value);
         if (match) return [int(match[1]),int(match[2]??match[1])];
     }
+    if (Array.isArray(value)&&value.length===1&&int(value[0])!==null) return [int(value[0]),int(value[0])];
     if (Array.isArray(value)&&value.length===2) return value.map(int);
     if (record(value)) return [int(value.start),int(value.end)];
     const id=int(value);
@@ -132,7 +133,7 @@ function sourceFor(row,sourceIds) {
     let invalid=false,unknown=false;
     const explicit=row?.messageIds;
     if (Array.isArray(explicit)&&row?.segments===undefined&&row?.ranges===undefined) {
-        for (const item of explicit) {
+        for (const item of explicit.flat(Infinity)) {
             const id=int(item);
             if (id===null) { invalid=true;unknown=true; }
             else if (!allowed.has(id)) invalid=true;
@@ -142,9 +143,15 @@ function sourceFor(row,sourceIds) {
         const raw=row?.segments??row?.ranges??(row?.start!==undefined&&row?.end!==undefined?{start:row.start,end:row.end}:null);
         const pairs=typeof raw==='string'&&raw.includes(',') ? raw.split(',') :
             Array.isArray(raw) && !(raw.length===2&&raw.every(v=>int(v)!==null))?raw:[raw];
-        for (const value of pairs) {
+        const visit=value=>{
             const pair=readRange(value);
-            if (!pair||pair[0]===null||pair[1]===null||pair[0]>pair[1]) { invalid=true;unknown=true;continue; }
+            // Explicit nested lists longer than a pair contain individual IDs,
+            // not an invented inclusive range from their first to last ID.
+            if (Array.isArray(value)&&(!pair||pair.includes(null))&&value.length) {
+                for(const part of value) visit(part);
+                return;
+            }
+            if (!pair||pair[0]===null||pair[1]===null||pair[0]>pair[1]) { invalid=true;unknown=true;return; }
             const [a,b]=pair;
             if (a<sourceIds[0]||b>sourceIds.at(-1)) invalid=true;
             // Actual input IDs only: gaps from earlier saved memories are not
@@ -152,7 +159,8 @@ function sourceFor(row,sourceIds) {
             const ids=sourceIds.filter(id=>id>=a&&id<=b);
             if (!ids.length) invalid=true;
             for (const id of ids) known.add(id);
-        }
+        };
+        for(const value of pairs) visit(value);
     }
     const ids=[...known].sort((a,b)=>a-b);
     return {ids,invalid:invalid||!ids.length,unknown:unknown||!ids.length};
@@ -183,8 +191,14 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
             continue;
         }
         const title=(text(row.title)||result).slice(0,180);
-        const closure=row.closure,id=int(closure?.messageId),quote=text(closure?.quote);
-        const verified=range.ids.includes(id)&&quote&&typeof originals.get(id)==='string'&&originals.get(id).includes(quote);
+        const closure=row.closure,quote=text(closure?.quote);
+        let id=int(closure?.messageId);
+        const matches=quote?range.ids.filter(sourceId=>typeof originals.get(sourceId)==='string'&&
+            originals.get(sourceId).includes(quote)):[];
+        // Correct only a uniquely identifiable verbatim quote within the event.
+        if(!matches.includes(id)&&matches.length===1&&
+            (quote.length>=8||quote===originals.get(matches[0]).trim())) id=matches[0];
+        const verified=matches.includes(id);
         events.push({id:'event-'+(i+1),title,reason:text(row.reason),result,segments:collectionRanges(range.ids),
             messageIds:range.ids,start:range.ids[0],end:range.ids.at(-1),
             ...(verified?{closure:{messageId:id,quote}}:{}),
@@ -241,4 +255,47 @@ export function finalizeSingleSlothScenes(plan,drafts) {
 export function sameSlothDraftBinding(record,binding) {
     return record?.version===1 && typeof record.raw==='string' &&
         JSON.stringify(record.binding)===JSON.stringify(binding);
+}
+
+
+// The recovery editor contains only unapplied rows. Previously saved Scenes
+// are retained as immutable inputs for range accounting, not regenerated.
+export function joinSlothRecoveryScenes(raw,lockedScenes=[]) {
+    if (!lockedScenes.length) return raw;
+    const rows=lockedScenes.map(scene=>({title:scene.title,complete:true,reason:scene.reason,
+        result:scene.result,segments:scene.segments,closure:scene.closure}));
+    return {...raw,events:[...rows,...(Array.isArray(raw.events)?raw.events:[])],
+        recoveryUncertain:raw.recoveryUncertain===true||!Array.isArray(raw.events)};
+}
+
+export function buildSlothPendingDraft(raw,scenes,lockedCount,pendingEdits) {
+    const saved=new Set(scenes.map(scene=>Number(scene.id.slice(6))-1));
+    return {
+        events:(Array.isArray(raw.events)?raw.events:[]).filter((_,i)=>!saved.has(i+lockedCount)),
+        deferred:raw.deferred??[],
+        edits:pendingEdits??[],
+        ...(raw.recoveryUncertain===true?{recoveryUncertain:true}:{}),
+        ...(raw.recoveredIncompleteEdits===true?{recoveredIncompleteEdits:true}:{}),
+    };
+}
+
+// This receipt is produced only after verified World Info commits. It is
+// distinct from an uncommitted draft and cannot authorize a different chat,
+// edited original source, or independently modified lorebooks.
+export function canReplaySlothPartial(record,{chatKey,roles,books,fingerprint}={}) {
+    const saved=record?.partial;
+    const original=record?.binding;
+    const ids=saved?.sourceIds,chunk=saved?.chunkIds;
+    return record?.version===1&&saved?.version===1&&typeof record.raw==='string'&&
+        original?.chatKey===chatKey&&original.roles?.nexus===roles?.nexus&&original.roles?.memory===roles?.memory&&
+        Array.isArray(ids)&&ids.length>0&&ids.every((id,i)=>Number.isSafeInteger(id)&&id>=0&&(!i||id>ids[i-1]))&&
+        Array.isArray(chunk)&&chunk.length>0&&chunk.every((id,i)=>ids.includes(id)&&(!i||id>chunk[i-1]))&&
+        Array.isArray(saved.lockedScenes)&&Array.isArray(saved.committedEdits)&&
+        JSON.stringify(saved.books)===JSON.stringify(books)&&
+        JSON.stringify(original.fingerprint)===JSON.stringify(fingerprint);
+}
+
+export function slothEditSignature(edit) {
+    return JSON.stringify(['kind','action','uid','find','text','section','title','content','supersession','keywords']
+        .map(key=>key==='uid'&&edit?.[key]!=null?String(edit[key]):edit?.[key]??null));
 }

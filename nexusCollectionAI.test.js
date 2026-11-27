@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {slothEditSignature} from './slothSingleRecovery.js';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
@@ -340,7 +341,7 @@ test('Nexus edits without citations are accepted; structural conflicts are skipp
     const start=source.indexOf('function readSlothNexusEdits(');
     const end=source.indexOf('async function reviewSlothSceneDrafts(',start);
     const filter=vm.runInNewContext(source.slice(normalizerStart,normalizerEnd)+'\n'+source.slice(start,end)+'\nreadSlothNexusEdits',{
-        stageNexusEdits, console:{warn:()=>{}},
+        stageNexusEdits, slothEditSignature, console:{warn:()=>{}},
     });
     const nexus={entries:{1:{uid:1,comment:'LT 01 | The letter',content:'The letter arrived.'},
         2:{uid:2,comment:'LT 02 | The gate',content:'The gate had been open.'}}};
@@ -354,6 +355,10 @@ test('Nexus edits without citations are accepted; structural conflicts are skipp
     const saved=filter({edits:[good,bad,good,next]},{messages,nexus});
     assert.equal(saved.skippedNexusEdits,2);
     assert.deepEqual(JSON.parse(JSON.stringify(saved.edits)),[good,next]);
+    assert.deepEqual(JSON.parse(JSON.stringify(saved.pendingEdits)),[bad,good]);
+    const replay=filter({edits:[good,bad,next]},{messages,nexus,committedEdits:[good,next]});
+    assert.equal(replay.edits.length,0);
+    assert.equal(replay.skippedNexusEdits,1);
     assert.equal(nexus.entries[1].content,'The letter arrived.');
     const withContinuity={entries:{...nexus.entries,3:{uid:3,comment:'Current Continuity',
         content:'## Present Handoff\nThe gate was open.',constant:true}}};

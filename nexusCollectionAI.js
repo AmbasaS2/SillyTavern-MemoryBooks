@@ -10,7 +10,8 @@ import { getTokenCountAsync } from '../../../tokenizers.js';
 import { getContext } from '../../../extensions.js';
 import { getSelectedConnectionProfile } from './connectionProfileRequest.js';
 import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
-import { parseSingleSlothCollectionDraft, normalizeSingleSlothPlan, finalizeSingleSlothScenes } from './slothSingleRecovery.js';
+import { parseSingleSlothCollectionDraft, normalizeSingleSlothPlan, finalizeSingleSlothScenes,
+    joinSlothRecoveryScenes, buildSlothPendingDraft, slothEditSignature } from './slothSingleRecovery.js';
 import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, includeDeepSeekTailEvent, fitDeepSeekSceneBatch, stageNexusEdits,
     describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
 import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
@@ -424,12 +425,14 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
     ].join('\n\n');
 }
 
-function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialSource}) {
-    const edits = [];
+function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialSource,committedEdits=[]}) {
+    const edits = [], acceptedRawEdits=[], pendingEdits=[];
     if (!Array.isArray(response.edits) || response.edits.length > 80) {
-        return { edits, skippedNexusEdits: Array.isArray(response.edits) ? response.edits.length : 1 };
+        return { edits, acceptedRawEdits, pendingEdits:response.edits??[],
+            skippedNexusEdits: Array.isArray(response.edits) ? response.edits.length : 1 };
     }
     const candidates = canonicalizeNewNexusTitles(response.edits).map(stripRepeatedContinuityHeading);
+    const already=new Set(committedEdits.map(slothEditSignature));
     const detailRecallMode = settings?.moduleSettings?.nexusDetailRecallMode === 'keyword' ? 'keyword' : 'vector';
     const createPreviewEntry = book => {
         const used = new Set(Object.values(book.entries).map(entry => Number(entry.uid)));
@@ -439,22 +442,27 @@ function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialS
     };
     let staged = nexus;
     for (const [index, candidate] of candidates.entries()) {
+        if(committedEdits.length&&already.has(slothEditSignature(candidate))) continue;
         try {
             // Structural staging, not mandatory model-generated quotation receipts,
             // determines whether an edit can safely be applied.
             const edit = candidate;
-            if (partialSource && String(edit.kind).trim().toLowerCase() === 'continuity') continue;
+            if (partialSource && String(edit.kind).trim().toLowerCase() === 'continuity') {
+                pendingEdits.push(response.edits[index]);continue;
+            }
             if (initial && (edit.action !== 'create' || edit.kind === 'npc-index')) {
                 throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
             }
             // Each accepted edit becomes the baseline for the next, with the regular World Info guards.
             staged = stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode, recallModes:settings?.moduleSettings?.nexusRecallModes }).staged;
-            edits.push(edit);
+            edits.push(edit);acceptedRawEdits.push(edit);
         } catch (error) {
+            pendingEdits.push(response.edits[index]);
             console.warn('Skipping collection Nexus edit ' + (index + 1), error);
         }
     }
-    return { edits, skippedNexusEdits: candidates.length - edits.length + Number(response.recoveredIncompleteEdits === true) };
+    return { edits, acceptedRawEdits, pendingEdits,
+        skippedNexusEdits: pendingEdits.length + Number(response.recoveredIncompleteEdits === true) };
 }
 
 async function reviewSlothSceneDrafts({events,messages,scenes,settings,ask}) {
@@ -587,7 +595,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{}}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[]}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -624,11 +632,18 @@ export async function composeSingleSlothCollection(options) {
         try{const count=await getTokenCountAsync(prompt);if(Number.isFinite(count)&&count>=0)inputTokens=count;}catch{}
     }
     verifyOrigin();
-    const plan=normalizeSingleSlothPlan(raw,ids,{originalMessages:messages});
+    const joined=lockedScenes.length?joinSlothRecoveryScenes(raw,lockedScenes):raw;
+    const plan=normalizeSingleSlothPlan(joined,ids,{originalMessages:messages});
     const oneLine=value=>typeof value==='string'?value.replace(/\s*\r?\n\s*/gu,' ').trim():'';
-    const rows=(Array.isArray(raw.events)?raw.events:[]).map((event,i)=>({...event,id:'event-'+(i+1),
+    const rows=(Array.isArray(joined.events)?joined.events:[]).map((event,i)=>({...event,id:'event-'+(i+1),
         timeline:oneLine(event?.timeline)||'Unknown',result:oneLine(event?.result)}));
     const drafts=readSlothBatchScenes({scenes:rows},plan.events);
+    for(const [i,saved] of lockedScenes.entries()) {
+        const event=plan.events.find(item=>item.id==='event-'+(i+1));
+        if(!event||JSON.stringify(event.segments)!==JSON.stringify(saved.segments))
+            throw new Error('A pending correction conflicts with an already saved Scene. Keep the completed Scene unchanged.');
+        drafts.set(event.id,{...event,content:saved.content,keywords:saved.keywords});
+    }
     let reviewFailed=false;
     if(reviewSummaries&&!replayed&&plan.events.length){
         try {
@@ -638,7 +653,10 @@ export async function composeSingleSlothCollection(options) {
         verifyOrigin();
     }
     const accepted=finalizeSingleSlothScenes(plan,drafts);
-    return {plan,...accepted,...readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource}),
+    const nexusResult=readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource,committedEdits});
+    const pendingDraft=buildSlothPendingDraft(raw,accepted.scenes,lockedScenes.length,nexusResult.pendingEdits);
+    return {plan,...accepted,...nexusResult,pendingDraft,
+        committedEdits:[...committedEdits,...(nexusResult.acceptedRawEdits??[])],
         reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain};
 }
 
