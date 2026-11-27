@@ -1,0 +1,452 @@
+{
+  "version": 2,
+  "description": "Fixed synthetic cases shared with the previous experiment plus an independent outcome/late choice/obligation/attribution case. Evaluation answers are not part of the AI prompt.",
+  "cases": [
+    {
+      "id": "shared-topic-distinct-outcomes",
+      "messages": [
+        {
+          "id": 0,
+          "name": "Mara",
+          "is_user": true,
+          "mes": "In the station café, Mara asked Ellis to tell her before changing their travel plans, instead of deciding for both of them."
+        },
+        {
+          "id": 1,
+          "name": "Ellis",
+          "is_user": false,
+          "mes": "Ellis looked down at his cooling tea. After a long silence, he said, \"I will ask you before booking anything. You can still choose to stay.\""
+        },
+        {
+          "id": 2,
+          "name": "Mara",
+          "is_user": true,
+          "mes": "Mara answered, \"Yes. Asking first and keeping my choice are two different things.\" She unclenched her hand."
+        },
+        {
+          "id": 3,
+          "name": "Ellis",
+          "is_user": false,
+          "mes": "He nodded and put his notebook away. They kept tomorrow's train undecided by mutual agreement."
+        },
+        {
+          "id": 4,
+          "name": "Mara",
+          "is_user": true,
+          "mes": "At the same café table, Mara took out a borrowed brass key and asked whether Ellis had returned it to Ivo."
+        },
+        {
+          "id": 5,
+          "name": "Ellis",
+          "is_user": false,
+          "mes": "Ellis admitted he had forgotten. He handed the key to Ivo at the counter and said, \"It's yours again.\""
+        },
+        {
+          "id": 6,
+          "name": "Mara",
+          "is_user": true,
+          "mes": "Ivo clipped the key onto his belt and thanked Ellis. Mara heard the tiny metallic click."
+        },
+        {
+          "id": 7,
+          "name": "Ellis",
+          "is_user": false,
+          "mes": "Ellis then asked whether Mara would move away next winter. She looked at the rain on the window and had not answered."
+        }
+      ],
+      "expectedEvents": [
+        {
+          "id": "travel-choice",
+          "complete": true,
+          "requiredIds": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "closure": {
+            "messageId": 3,
+            "quote": "They kept tomorrow's train undecided by mutual agreement."
+          }
+        },
+        {
+          "id": "key-return",
+          "complete": true,
+          "requiredIds": [
+            4,
+            5,
+            6
+          ],
+          "closure": {
+            "messageId": 6,
+            "quote": "Ivo clipped the key onto his belt and thanked Ellis."
+          }
+        },
+        {
+          "id": "winter-move",
+          "complete": false,
+          "requiredIds": [
+            7
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "ask-first",
+          "evidenceIds": [
+            0,
+            1,
+            2
+          ],
+          "mustPreserve": "Ellis undertook to ask Mara before booking."
+        },
+        {
+          "id": "chooser",
+          "evidenceIds": [
+            1,
+            2
+          ],
+          "mustPreserve": "Mara retains the option to stay, independently of prior notice."
+        },
+        {
+          "id": "status",
+          "evidenceIds": [
+            3
+          ],
+          "mustPreserve": "No train booked or final travel decision."
+        },
+        {
+          "id": "atmosphere",
+          "evidenceIds": [
+            1,
+            2
+          ],
+          "mustPreserve": "Silence/cooling tea and release of Mara's hand convey the response without invented forgiveness."
+        },
+        {
+          "id": "agency",
+          "evidenceIds": [
+            4,
+            5,
+            6
+          ],
+          "mustPreserve": "Ellis returned the key to Ivo, who clipped it to his belt."
+        },
+        {
+          "id": "open",
+          "evidenceIds": [
+            7
+          ],
+          "mustPreserve": "Winter move question remains unanswered."
+        }
+      ]
+    },
+    {
+      "id": "units-knowledge-and-apology",
+      "messages": [
+        {
+          "id": 0,
+          "name": "Nia",
+          "is_user": true,
+          "mes": "Nia asked Jo to ring the little bell three times before entering her studio."
+        },
+        {
+          "id": 1,
+          "name": "Jo",
+          "is_user": false,
+          "mes": "Jo agreed: \"Three times, not three bells. And I will wait until you say yes.\""
+        },
+        {
+          "id": 2,
+          "name": "Nia",
+          "is_user": true,
+          "mes": "Nia said, \"Yes to that. I may still say no.\" She drew her sleeve back from his hand."
+        },
+        {
+          "id": 3,
+          "name": "Jo",
+          "is_user": false,
+          "mes": "Jo let go immediately. \"I'm sorry I grabbed your wrist without asking,\" he said, his voice barely audible."
+        },
+        {
+          "id": 4,
+          "name": "Nia",
+          "is_user": true,
+          "mes": "She nodded and said, \"Thank you for letting go. Keep the promise.\" She did not say she forgave him."
+        },
+        {
+          "id": 5,
+          "name": "Jo",
+          "is_user": false,
+          "mes": "Privately Jo remembered the blue cupboard's code, 621. Nia did not hear or see this thought."
+        },
+        {
+          "id": 6,
+          "name": "Nia",
+          "is_user": true,
+          "mes": "Nia asked Jo whether he had told the gardener about the cupboard. Jo had not yet answered."
+        }
+      ],
+      "expectedEvents": [
+        {
+          "id": "studio-boundary",
+          "complete": true,
+          "requiredIds": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "closure": {
+            "messageId": 4,
+            "quote": "Keep the promise."
+          }
+        },
+        {
+          "id": "disclosure-question",
+          "complete": false,
+          "requiredIds": [
+            5,
+            6
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "unit",
+          "evidenceIds": [
+            0,
+            1
+          ],
+          "mustPreserve": "Bell rung three times, not three separate bells."
+        },
+        {
+          "id": "conditions",
+          "evidenceIds": [
+            1,
+            2
+          ],
+          "mustPreserve": "Wait for permission; Nia can refuse independently."
+        },
+        {
+          "id": "apology",
+          "evidenceIds": [
+            2,
+            3,
+            4
+          ],
+          "mustPreserve": "Jo released Nia's wrist and apologized specifically for grabbing without asking; she thanked him but did not forgive explicitly."
+        },
+        {
+          "id": "texture",
+          "evidenceIds": [
+            2,
+            3
+          ],
+          "mustPreserve": "The sleeve withdrawal, release, and barely audible voice matter; no unsupported inner feeling."
+        },
+        {
+          "id": "private",
+          "evidenceIds": [
+            5
+          ],
+          "mustPreserve": "Only Jo's private thought establishes his knowledge of 621; do not infer Nia or the gardener knows."
+        },
+        {
+          "id": "open",
+          "evidenceIds": [
+            6
+          ],
+          "mustPreserve": "Disclosure question remains open."
+        }
+      ]
+    },
+    {
+      "id": "distinct-outcomes-late-choice-and-unit",
+      "messages": [
+        {
+          "id": 0,
+          "name": "Iris",
+          "is_user": true,
+          "mes": "At the market, Iris asked Leo to introduce her to the stallholder by her actual name instead of calling her his assistant."
+        },
+        {
+          "id": 1,
+          "name": "Leo",
+          "is_user": false,
+          "mes": "Leo said, 'This is Iris, my partner.' Iris smiled and introduced herself. The stallholder shook Iris's hand."
+        },
+        {
+          "id": 2,
+          "name": "Iris",
+          "is_user": true,
+          "mes": "At the same stall Iris considered buying a clay cup. She asked Leo whether they could leave it on the shelf."
+        },
+        {
+          "id": 3,
+          "name": "Leo",
+          "is_user": false,
+          "mes": "He set the cup back, waiting silently. 'You decide. I will ask you before choosing anything for us.'"
+        },
+        {
+          "id": 4,
+          "name": "Iris",
+          "is_user": true,
+          "mes": "Iris chose to leave the cup there. 'Ask beforehand, and don't buy it unless I agree. We'll both check the price.' She drew her hand away from his."
+        },
+        {
+          "id": 5,
+          "name": "Leo",
+          "is_user": false,
+          "mes": "He released her hand. 'I am sorry I grabbed your hand without asking.' He agreed to all three conditions."
+        },
+        {
+          "id": 6,
+          "name": "Iris",
+          "is_user": true,
+          "mes": "'Take me here twelve times, not twelve cups,' Iris said. 'I'll choose when.'"
+        },
+        {
+          "id": 7,
+          "name": "Leo",
+          "is_user": false,
+          "mes": "'Twelve visits, and you choose when.' He nodded. Iris thanked him, without saying she forgave him."
+        },
+        {
+          "id": 8,
+          "name": "Iris",
+          "is_user": true,
+          "mes": "Iris noticed two women outside who introduced themselves as sisters. She asked Leo why their guide had left."
+        },
+        {
+          "id": 9,
+          "name": "Leo",
+          "is_user": false,
+          "mes": "Leo hesitated. The sisters waited in silence, and he had not yet answered."
+        }
+      ],
+      "expectedEvents": [
+        {
+          "id": "public-introduction",
+          "complete": true,
+          "requiredIds": [
+            0,
+            1
+          ],
+          "closure": {
+            "messageId": 1,
+            "quote": "The stallholder shook Iris's hand."
+          }
+        },
+        {
+          "id": "cup-choice-and-terms",
+          "complete": true,
+          "requiredIds": [
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "closure": {
+            "messageId": 7,
+            "quote": "Iris thanked him, without saying she forgave him."
+          }
+        },
+        {
+          "id": "guide-question",
+          "complete": false,
+          "requiredIds": [
+            8,
+            9
+          ]
+        }
+      ],
+      "facts": [
+        {
+          "id": "intro",
+          "evidenceIds": [
+            0,
+            1
+          ],
+          "mustPreserve": "Leo introduced Iris by name as his partner and the stallholder acknowledged her."
+        },
+        {
+          "id": "late-choice",
+          "evidenceIds": [
+            3,
+            4
+          ],
+          "mustPreserve": "Iris chose to leave the cup on the shelf; the choice was exercised, not merely offered."
+        },
+        {
+          "id": "notice",
+          "evidenceIds": [
+            4,
+            5
+          ],
+          "mustPreserve": "Ask beforehand."
+        },
+        {
+          "id": "permission",
+          "evidenceIds": [
+            4,
+            5
+          ],
+          "mustPreserve": "No purchase unless Iris agrees."
+        },
+        {
+          "id": "responsibility",
+          "evidenceIds": [
+            4,
+            5
+          ],
+          "mustPreserve": "Both will check the price."
+        },
+        {
+          "id": "apology",
+          "evidenceIds": [
+            4,
+            5
+          ],
+          "mustPreserve": "Leo released Iris's hand and specifically apologized for grabbing it without asking."
+        },
+        {
+          "id": "units",
+          "evidenceIds": [
+            6,
+            7
+          ],
+          "mustPreserve": "Twelve visits, not twelve cups."
+        },
+        {
+          "id": "chooser",
+          "evidenceIds": [
+            6,
+            7
+          ],
+          "mustPreserve": "Iris chooses when to visit."
+        },
+        {
+          "id": "reaction",
+          "evidenceIds": [
+            3,
+            4,
+            7
+          ],
+          "mustPreserve": "Waiting in silence, withdrawal of her hand and thanks, not forgiveness."
+        },
+        {
+          "id": "identity-open",
+          "evidenceIds": [
+            8,
+            9
+          ],
+          "mustPreserve": "Two women are sisters; no unsupported role. Question about the guide is unanswered."
+        }
+      ]
+    }
+  ]
+}
