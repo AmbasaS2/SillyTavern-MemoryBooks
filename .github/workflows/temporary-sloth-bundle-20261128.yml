@@ -1,0 +1,28 @@
+name: Temporary isolated Sloth bundle build
+on:
+  push:
+    branches: [fix/sloth-suite-safety-20261128]
+permissions:
+  contents: write
+jobs:
+  bundle:
+    if: github.repository == 'AmbasaS2/SillyTavern-MemoryBooks' && github.ref == 'refs/heads/fix/sloth-suite-safety-20261128'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: node --test
+      - run: bun run build
+      - run: node --check index.build.js
+      - name: Commit only verified generated files to the isolated fix branch
+        run: |
+          git add index.build.js index.build.js.map style.build.css
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Rebuild Memory Books bundle for Sloth safety fixes"
+          git push origin HEAD:refs/heads/fix/sloth-suite-safety-20261128
