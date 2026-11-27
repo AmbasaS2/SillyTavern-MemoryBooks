@@ -13,6 +13,7 @@ import {
     openThirdPartyExtensionMenu,
 } from '../../../extensions.js';
 import { loadWorldInfo } from '../../../world-info.js';
+import { withSlothLorebookWriteLane } from './slothWriteLane.js';
 import { translate } from '../../../i18n.js';
 import { Popup, POPUP_RESULT, POPUP_TYPE } from '../../../popup.js';
 import { guardPendingProgress, isProgressChatLoaded, updateProgress } from './stmbProgress.js';
@@ -201,6 +202,9 @@ function normalizeLaneIdentity(identity) {
 }
 
 export async function withStmbWriteLane(identity, task) {
+    if (identity?.type === 'lorebook' && typeof identity.name === 'string' && identity.name) {
+        return withSlothLorebookWriteLane(identity.name, task);
+    }
     const key = normalizeLaneIdentity(identity);
     const previousTail = writeLanes.get(key) || Promise.resolve();
     const runPromise = previousTail.catch(() => {}).then(async () => {
