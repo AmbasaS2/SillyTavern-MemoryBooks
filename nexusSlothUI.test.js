@@ -58,7 +58,7 @@ test('Sloth exposes setup and settings without opening the original tab',()=>{
     assert.match(sloth,/id="stmb-sloth-advanced"[\s\S]+id="stmb-sloth-collection-footer"[\s\S]+data-stmb-sloth-action="collect"/);
     assert.match(advanced,/stmb-sloth-composer-enabled[\s\S]+stmb-sloth-icon-trigger[\s\S]+stmb-sloth-composer-position[\s\S]+stmb-sloth-composer-size/);
     assert.match(sloth,/<details id="stmb-sloth-lorebooks" open /);
-    assert.match(sloth,/<details id="stmb-sloth-collection-settings" open /);
+    assert.doesNotMatch(sloth,/<details id="stmb-sloth-collection-settings"[^>]*\bopen\b/);
     for (const id of ['stmb-sloth-auto','stmb-sloth-side-prompts','stmb-manage-memories','stmb-sloth-advanced']) {
         assert.match(sloth,new RegExp('<details id="'+id+'" class='));
     }
@@ -165,4 +165,36 @@ test('recall row fits two or four options, stays centered when possible, and cla
     position(menu,trigger,false);
     assert.equal(menu.style.left,'-20px');
     assert.equal(menu.style.top,'33px');
+});
+
+test('Memory Workshop groups existing actions without extra rendering and only Lorebook setup starts open',()=>{
+    const source=file('./templates.js');
+    const panel=source.slice(source.indexOf('id="stmb-sloth-panel"'),source.indexOf('id="stmb-original-panel" class='));
+    assert.deepEqual([...panel.matchAll(/<details id="([^"]+)"[^>]*\sopen(?:\s|>)/g)].map(m=>m[1]),['stmb-sloth-lorebooks']);
+    const start=panel.indexOf('<details id="stmb-manage-memories"');
+    const block=panel.slice(start,panel.indexOf('</details>',start));
+    assert.match(block,/<summary data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop<\/summary>/);
+    assert.deepEqual([...block.matchAll(/data-stmb-sloth-action="([^"]+)"/g)].map(m=>m[1]),[
+        'nexus-health','nexus-health-review','merge','split','compress','recall-apply','legacy-coverage']);
+    assert.equal((block.match(/class="stmb-workshop-tools"/g)||[]).length,3);
+    assert.doesNotMatch(block,/\bon(?:click|toggle)=|MutationObserver|ResizeObserver|setInterval|requestAnimationFrame/);
+    const js=file('./index.js');
+    const dispatcher=js.slice(js.indexOf('async function runSlothSettingsAction('),js.indexOf('function mountSlothCollectionFooter('));
+    assert.match(dispatcher,/'nexus-health': \(\) => showSlothNexusHealth\(\)/);
+    assert.match(dispatcher,/'nexus-health-review': \(\) => runCancellableSlothButton/);
+    assert.match(dispatcher,/'legacy-coverage': \(\) => reviewSlothLegacyCoverage\(\)/);
+    assert.doesNotMatch(dispatcher,/MutationObserver|ResizeObserver|setInterval|requestAnimationFrame/);
+    const css=file('./style.css');
+    assert.match(css,/#stmb-sloth-panel \.stmb-workspace-drawer > summary \{[\s\S]*?display: flex;[\s\S]*?min-block-size: 24px/);
+    assert.match(css,/\.stmb-sloth-maintenance \.stmb-management-action > \.stmb-sloth-help-row \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 24px/);
+    for(const code of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr','ms-my','pt-br','ru-ru','zh-cn','zh-tw']){
+        const data=JSON.parse(file('./locales/'+code+'.json'));
+        for(const key of ['SlothManageBooks','SlothHealthReviewTitle','SlothWorkshopAI','SlothWorkshopManual','SlothWorkshopExisting','SlothLegacyCoverage'])
+            assert.ok(data['STMemoryBooks_'+key],code+': '+key);
+        assert.notEqual(data.STMemoryBooks_SlothManageBooks,data.STMemoryBooks_SlothHealthReviewTitle);
+    }
+    const ko=JSON.parse(file('./locales/ko-kr.json'));
+    assert.equal(ko.STMemoryBooks_SlothManageBooks,'기억 정비소');
+    assert.equal(ko.STMemoryBooks_SlothHealthReviewTitle,'AI 기억 분석 및 정리');
+    assert.equal(ko.STMemoryBooks_SlothLegacyCoverage,'기존 요약 범위 등록');
 });

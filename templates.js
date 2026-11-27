@@ -152,7 +152,7 @@ export const settingsTemplate = Handlebars.compile(`
           <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose an individual character chat to connect lorebooks.</p>
         {{/unless}}
         {{#if slothCharacterAvailable}}
-        <details id="stmb-sloth-collection-settings" open class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
+        <details id="stmb-sloth-collection-settings" class="stmb-workspace-panel stmb-workspace-drawer" aria-labelledby="stmb-sloth-settings-title">
           <summary id="stmb-sloth-settings-title" data-i18n="STMemoryBooks_SlothCollectionSettings">Collection settings</summary>
         <div class="stmb-sloth-settings-fields">
         <label for="stmb-sloth-profile-select" class="stmb-sloth-select-row">
@@ -226,12 +226,15 @@ export const settingsTemplate = Handlebars.compile(`
         </details>
         {{#if slothRoleActive}}
           <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
-            <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
+            <summary data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop</summary>
             <div>
               <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health" data-i18n="STMemoryBooks_SlothHealthTitle">Memory overview</button></div>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health-review" data-i18n="STMemoryBooks_SlothHealthReviewTitle">Memory Workshop</button></div>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="legacy-coverage" data-i18n="STMemoryBooks_SlothLegacyCoverage">Review previously summarized messages</button></div>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-ai-heading">
+                <h4 id="stmb-workshop-ai-heading" data-i18n="STMemoryBooks_SlothWorkshopAI">AI maintenance</h4>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health-review" data-i18n="STMemoryBooks_SlothHealthReviewTitle">AI memory review and cleanup</button></div>
+              </section>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-manual-heading">
+                <h4 id="stmb-workshop-manual-heading" data-i18n="STMemoryBooks_SlothWorkshopManual">Manual maintenance</h4>
               <div class="stmb-management-action">
               <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
               <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
@@ -243,6 +246,12 @@ export const settingsTemplate = Handlebars.compile(`
                 <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="compress" data-i18n="STMemoryBooks_SlothCompress">Shorten an event</button> <button type="button" id="stmb-sloth-compress-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-compress-help" aria-label="Shorten an event" data-i18n="[aria-label]STMemoryBooks_SlothCompress"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
                 <small id="stmb-sloth-compress-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothCompressHelp" hidden>Choose what to keep and review the shorter memory.</small>
               </div>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
+              </section>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-existing-heading">
+                <h4 id="stmb-workshop-existing-heading" data-i18n="STMemoryBooks_SlothWorkshopExisting">Existing memory management</h4>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="legacy-coverage" data-i18n="STMemoryBooks_SlothLegacyCoverage">Register previously summarized ranges</button></div>
+              </section>
             </div>
           </details>
         {{/if}}
