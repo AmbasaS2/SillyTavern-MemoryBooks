@@ -65,7 +65,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         getTokenCountAsync:async()=>123,console:{warn(){}},
     });
     const makeRun=()=>vm.runInNewContext([
-        section(runtime,'const slothPaidDrafts=new Map();','async function choosePaidSlothDraft('),
+        section(runtime,'const slothPaidDrafts=new Map();','async function choosePaidSlothDraft(').replace(/export (async )?function/g,(_,a='')=>a+'function'),
         section(runtime,'function assertOrigin(','const legacyPairKey'),
         section(runtime,'const legacyPairKey','function readableSegments('),
         section(runtime,'async function readStoredSlothChat(','function assertSlothBookRoles('),

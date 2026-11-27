@@ -1530,7 +1530,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 slothRecoveryStore.revisionFor(key,activeDraft));
             return !slothPaidDrafts.has(key);
         };
-        const recoveryVerified=!needsRecovery||await persistPartial();
+        let recoveryVerified=!needsRecovery||await persistPartial();
         let receiptVerified=false;
         if(scenes.length){
             try {
@@ -1541,7 +1541,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
-        if(!needsRecovery&&scenes.length&&!receiptVerified) await persistPartial();
+        if(!needsRecovery&&scenes.length&&!receiptVerified) recoveryVerified=await persistPartial();
         const hideRanges = approval.hideRanges.length ? getSlothHideRanges(scenes,chat,approval.keepRecent) : [];
         let hiddenMessages=0;
         if (hideRanges.length) {
