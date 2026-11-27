@@ -69,9 +69,11 @@ async function rememberPaidSlothDraft(ref,binding,raw,details={}) {
     while (slothPaidDrafts.size>8) slothPaidDrafts.delete(slothPaidDrafts.keys().next().value);
     try {
         if (getStmbChatKey()!==key) return record;
-        await patchStmbMetadataForChatRef(ref,markers=>({...markers,slothCollectionDraft:record}));
+        await patchVerifiedSlothMetadata(ref,markers=>({...markers,slothCollectionDraft:record}));
     } catch(error) {
         console.warn('Paid Sloth response retained in this browser session; chat draft persistence failed.',error);
+        if(error?.code==='STMB_SLOTH_EXTERNAL_CHAT_CONFLICT')
+            toastr.warning(error.message,'STMemoryBooks',{preventDuplicates:true});
     }
     return record;
 }
@@ -79,7 +81,7 @@ async function forgetPaidSlothDraft(ref,record) {
     if (!record) return;
     const key=record.binding.chatKey;
     try {
-        if (getStmbChatKey()===key) await patchStmbMetadataForChatRef(ref,markers=>{
+        if (getStmbChatKey()===key) await patchVerifiedSlothMetadata(ref,markers=>{
             if (markers.slothCollectionDraft?.receivedAt!==record.receivedAt) return markers;
             const next={...markers};delete next.slothCollectionDraft;return next;
         });
@@ -429,7 +431,7 @@ async function retargetActiveSlothReceipts(change) {
         return next;
     };
     const markers=getSceneMarkers();
-    if (stringify(markers) !== stringify(replace(markers))) await patchStmbMetadataForChatRef(ref,replace);
+    if (stringify(markers) !== stringify(replace(markers))) await patchVerifiedSlothMetadata(ref,replace);
 }
 
 function assertSideRenameReady(ref) {
@@ -536,7 +538,8 @@ let hostLorebookRename=null;
 
 // Native ST rename has no dedicated event in supported versions. Capture the
 // actual editor action before the host opens its name dialog; then require
-// its save-new / remove-old / select-new sequence and exact read-back.
+// its save-new / remove-old sequence and exact read-back. Selection is
+// only needed for the legacy cache-based fallback, never for native intent.
 export function beginSlothLorebookRename(oldBook,names) {
     const recorded=slothSideRenameBooks(extension_settings.STMemoryBooks,{type:'lorebook',newBook:''});
     hostLorebookRename=oldBook&&Array.isArray(names)&&names.includes(oldBook)&&recorded.includes(oldBook)
@@ -555,9 +558,9 @@ export function observeSlothLorebookSave(newBook, data, names, editorName='') {
         !intent.names.includes(newBook)) {
         // The editor explicitly initiated a rename. Do not require the old
         // cache to still contain an identical object after host normalization.
-        possibleLorebookRenames.set(newBook,{oldBook:intent.oldBook,fingerprint,expires:Date.now()+300000});
+        possibleLorebookRenames.set(newBook,{oldBook:intent.oldBook,fingerprint,expires:Date.now()+300000,explicit:true});
         hostLorebookRename=null;
-        return;
+        return true;
     }
     if (names.includes(newBook)) return;
     const matches=recorded.filter(oldBook=>names.includes(oldBook) && worldInfoCache.has(oldBook) &&
@@ -565,14 +568,39 @@ export function observeSlothLorebookSave(newBook, data, names, editorName='') {
     if (matches.length === 1) possibleLorebookRenames.set(newBook,{oldBook:matches[0],fingerprint,expires:Date.now()+30000});
 }
 
+const finishingLorebookRenames=new Set();
+
 export async function finishSlothLorebookRename(newBook, names) {
     const candidate=possibleLorebookRenames.get(newBook);
-    if (!candidate || !Array.isArray(names) || names.includes(candidate.oldBook) || !names.includes(newBook)) return false;
-    possibleLorebookRenames.delete(newBook);
-    if (Date.now()>candidate.expires || stringify(await loadServerWorld(newBook)) !== candidate.fingerprint) return false;
-    // ST's editor selects the new name after saving the exact copy and removing the old name.
-    await queueSlothSideRename({type:'lorebook',oldBook:candidate.oldBook,newBook});
-    return true;
+    if (!candidate || finishingLorebookRenames.has(newBook)) return false;
+    if(Date.now()>candidate.expires){possibleLorebookRenames.delete(newBook);return false;}
+    if(!Array.isArray(names)||names.includes(candidate.oldBook)||!names.includes(newBook))return false;
+    finishingLorebookRenames.add(newBook);
+    try {
+        // Check actual server files, not only the editor's cached options.
+        const available=(await listSlothSideBooks()).map(book=>book.file_id);
+        if(available.includes(candidate.oldBook)||!available.includes(newBook))return false;
+        if(stringify(await loadServerWorld(newBook))!==candidate.fingerprint){
+            possibleLorebookRenames.delete(newBook);return false;
+        }
+        if(possibleLorebookRenames.get(newBook)!==candidate)return false;
+        possibleLorebookRenames.delete(newBook);
+        await queueSlothSideRename({type:'lorebook',oldBook:candidate.oldBook,newBook});
+        return true;
+    }finally{finishingLorebookRenames.delete(newBook);}
+}
+
+// Native hosts can rebuild the list without selecting the renamed file.
+// Only explicitly observed rename actions qualify for this automatic path.
+export async function finishPendingSlothLorebookRenames() {
+    for(const [name,candidate] of possibleLorebookRenames)
+        if(Date.now()>candidate.expires) possibleLorebookRenames.delete(name);
+    const pending=()=>[...possibleLorebookRenames].filter(([,candidate])=>candidate.explicit===true);
+    if(!pending().length)return {changed:false,pending:false};
+    const names=(await listSlothSideBooks()).map(book=>book.file_id);
+    let changed=false;
+    for(const [name] of pending()) changed=await finishSlothLorebookRename(name,names)||changed;
+    return {changed,pending:pending().length>0};
 }
 
 async function resolveSlothSideBook(ref, books, {book: selected, create}, signal) {
@@ -893,7 +921,7 @@ async function withBothWriteLanes(names,task) {
 
 async function readStoredSlothChat(ref) {
     const response = await fetch('/api/chats/get', {
-        method: 'POST', headers: getRequestHeaders(),
+        method: 'POST', headers: getRequestHeaders(), cache:'no-cache',
         body: stringify({ avatar_url: ref.avatarUrl, file_name: ref.fileName }),
     });
     if (!response.ok) throw new Error('The original chat could not be read from SillyTavern.');
@@ -902,8 +930,51 @@ async function readStoredSlothChat(ref) {
     return stored;
 }
 
+// Host saveMetadata()/Hide save the entire loaded chat, not just a header
+// patch. Check ALL persisted turns immediately before such a write, including
+// already collected/hidden turns and alternate swipes, not only source IDs.
+function canonicalSlothWriteSnapshot(value) {
+    return JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)
+        ?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
+}
+
+function slothWriteConflict() {
+    return Object.assign(new Error(t('The saved chat changed outside this tab. Reload the original chat before saving. The previous AI response is retained.',
+        'STMemoryBooks_SlothExternalChatConflict')),{code:'STMB_SLOTH_EXTERNAL_CHAT_CONFLICT'});
+}
+
+async function readCurrentSlothChatForWrite(ref) {
+    const key=getStmbChatKey(ref);
+    if(!key||getStmbChatKey()!==key) throw slothWriteConflict();
+    const snapshot=canonicalSlothWriteSnapshot(chat);
+    const stored=await readStoredSlothChat(ref);
+    if(getStmbChatKey()!==key||canonicalSlothWriteSnapshot(chat)!==snapshot||
+        canonicalSlothWriteSnapshot(stored.slice(1))!==snapshot) throw slothWriteConflict();
+    return stored;
+}
+
+function normalizeSlothWriteMarkers(value) {
+    const result={...(value||{})};
+    // Reading getSceneMarkers() initializes these two optional null fields.
+    for(const key of ['sceneStart','sceneEnd']) if(result[key]==null) delete result[key];
+    return result;
+}
+
+async function patchVerifiedSlothMetadata(ref,patcher) {
+    // The async patcher runs under patchStmbMetadataForChatRef's existing
+    // chat write lane. Never save the stale loaded chat to "preserve" a draft.
+    return await patchStmbMetadataForChatRef(ref,async markers=>{
+        const stored=await readCurrentSlothChatForWrite(ref);
+        const persisted=stored[0].chat_metadata.STMemoryBooks;
+        if(canonicalSlothWriteSnapshot(normalizeSlothWriteMarkers(markers))!==
+            canonicalSlothWriteSnapshot(normalizeSlothWriteMarkers(persisted))) throw slothWriteConflict();
+        return patcher(markers);
+    });
+}
+
 async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions, hiddenRanges=[]) {
-    const stored = await readStoredSlothChat(ref);
+    const stored = fingerprintOptions?.requireCurrentChat
+        ?await readCurrentSlothChatForWrite(ref):await readStoredSlothChat(ref);
     if (fingerprintSlothChat(stored.slice(1), sourceIds, fingerprintOptions) !== fingerprint) {
         throw new Error('The saved chat differs from the reviewed messages. Reload it before collecting again.');
     }
@@ -927,7 +998,7 @@ async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, f
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
     const previous = await readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions);
-    await patchStmbMetadataForChatRef(ref, markers => {
+    await patchVerifiedSlothMetadata(ref, markers => {
         assertOrigin(ref, roleNames, sourceIds, fingerprint, fingerprintOptions);
         if (stringify(markers.slothCollection) !== stringify(previous)) {
             throw new Error('The saved collection receipt changed during review.');
@@ -1015,7 +1086,7 @@ export async function reviewSlothLegacyCoverage() {
         verify();
         if (stringify(await readStored()) !== stringify(previous)) throw new Error('The saved reviewed ranges changed. Reload the chat.');
         if (stringify(previous) === stringify(next)) return { saved:false };
-        await patchStmbMetadataForChatRef(ref, markers => {
+        await patchVerifiedSlothMetadata(ref, markers => {
             verify();
             if (stringify(getSlothLegacyCoverage(markers, chatKey, roles)) !== stringify(previous))
                 throw new Error('The reviewed ranges changed while saving.');
@@ -1072,7 +1143,7 @@ export async function applySlothNexusRecallSettings(){
 async function settleSlothAutoAttempt(ref,attempt,status) {
     if (!ref||!attempt||getStmbChatKey()!==attempt.chatKey) return;
     try {
-        await patchStmbMetadataForChatRef(ref,markers=>{
+        await patchVerifiedSlothMetadata(ref,markers=>{
             const current=markers.slothAutomatic;
             if (current?.attemptId!==attempt.attemptId||current.chatKey!==attempt.chatKey||
                 stringify(current.books)!==stringify(attempt.books)) return markers;
@@ -1265,7 +1336,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const autoWindow=autoAttempt && partialSource ? {attempt:autoAttempt,through:currentChunk.at(-1).id} : null;
         if (automatic) {
             await readReviewedChat(ref,sourceIds,fingerprint);
-            await patchStmbMetadataForChatRef(ref,markers=>{
+            await patchVerifiedSlothMetadata(ref,markers=>{
                 checkOrigin();
                 if (stringify(markers.slothAutomatic)!==stringify(previousAuto))
                     throw new Error('Automatic collection already advanced for this chat.');
@@ -1276,6 +1347,9 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         } else {
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
+        // Also refuse a new paid request/replay if the loaded chat is already stale.
+        await readCurrentSlothChatForWrite(ref);
+        checkBeforeSave();
         progressChatKey = getStmbChatKey(ref);
         const showProgress = (source, key) => setSlothCollectionProgress(progressChatKey, t(source, key));
         showProgress('Writing memories', 'STMemoryBooks_SlothProgressWriting');
@@ -1336,7 +1410,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     role:other==='memory'?'nexus':'memory',pairedBook:roleNames[other]}};
             }
         }
-        await readReviewedChat(ref,sourceIds,fingerprint,{...fingerprintOptions,verifyStored: stored => {
+        await readReviewedChat(ref,sourceIds,fingerprint,{...fingerprintOptions,requireCurrentChat:true,verifyStored: stored => {
             const storedCoverage=getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks,getStmbChatKey(ref),roleNames);
             if (stringify(storedCoverage) !== stringify(reviewed)) throw new Error('The reviewed ranges changed during collection.');
             assertSlothLegacyCoverage(reviewed,stored.slice(1));
@@ -1388,6 +1462,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 assertOrigin(ref,roleNames,remaining,fingerprint,fingerprintOptions);
                 for (const [start,end] of hideRanges) {
                     const expected = fingerprintSlothChat(chat,remaining.filter(id=>id<start||id>end),fingerprintOptions);
+                    await readCurrentSlothChatForWrite(ref);
                     await hideChatMessageRange(start,end,false);
                     remaining = remaining.filter(id=>id<start||id>end);
                     assertOrigin(ref,roleNames,remaining,expected,fingerprintOptions);

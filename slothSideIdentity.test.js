@@ -110,16 +110,22 @@ test('native World Info rename migrates exact old and new editor names even with
     const start=source.indexOf('const possibleLorebookRenames');
     const end=source.indexOf('\nasync function resolveSlothSideBook',start);
     const changes=[],data={entries:{1:{uid:1,content:'Same memory'}}};
+    let available=['Nexus','Memory','New Nexus'];
     const api=vm.runInNewContext(source.slice(start,end).replace(/export (async )?function/g,(_,a='')=>a+'function')+
-        '\n({beginSlothLorebookRename,observeSlothLorebookSave,finishSlothLorebookRename})',{
+        '\n({beginSlothLorebookRename,observeSlothLorebookSave,finishSlothLorebookRename,finishPendingSlothLorebookRenames})',{
         extension_settings:{STMemoryBooks:{}},slothSideRenameBooks:(_s,{newBook})=>['Nexus','Memory',newBook].filter(Boolean),
         worldInfoCache:new Map(),stringify:JSON.stringify,loadServerWorld:async()=>data,
+        listSlothSideBooks:async()=>available.map(file_id=>({file_id})),
         queueSlothSideRename:async change=>changes.push(change),
     });
     api.beginSlothLorebookRename('Nexus',['Nexus','Memory']);
     api.observeSlothLorebookSave('New Nexus',data,['Nexus','Memory','New Nexus'],'Nexus');
     assert.equal(await api.finishSlothLorebookRename('New Nexus',['Nexus','Memory','New Nexus']),false);
-    assert.equal(await api.finishSlothLorebookRename('New Nexus',['Memory','New Nexus']),true);
+    available=['Memory','New Nexus'];
+    // No selection event for the new book; authoritative file listing is enough.
+    const result=await api.finishPendingSlothLorebookRenames();
+    assert.equal(result.changed,true);assert.equal(result.pending,false);
+    assert.equal(await api.finishSlothLorebookRename('New Nexus',['Memory','New Nexus']),false);
     assert.deepEqual(JSON.parse(JSON.stringify(changes)),[{type:'lorebook',oldBook:'Nexus',newBook:'New Nexus'}]);
     api.beginSlothLorebookRename('Memory',['Memory','New Nexus']);
     api.observeSlothLorebookSave('New Nexus',data,['Memory','New Nexus'],'Memory');
@@ -127,4 +133,32 @@ test('native World Info rename migrates exact old and new editor names even with
     api.beginSlothLorebookRename('Unrelated',['Unrelated','Memory']);
     api.observeSlothLorebookSave('Other',data,['Unrelated','Memory'],'Unrelated');
     assert.equal(await api.finishSlothLorebookRename('Other',['Memory','Other']),false);
+});
+
+test('native rename candidates wait for actual deletion, and an ordinary copy is not auto-adopted',async()=>{
+    const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
+    const start=source.indexOf('const possibleLorebookRenames');
+    const end=source.indexOf('\nasync function resolveSlothSideBook',start);
+    const changes=[],data={entries:{1:{uid:1,content:'Original'}}};
+    let available=['Nexus','Memory','Copied'];
+    const api=vm.runInNewContext(source.slice(start,end).replace(/export (async )?function/g,(_,a='')=>a+'function')+
+        '\n({beginSlothLorebookRename,observeSlothLorebookSave,finishSlothLorebookRename,finishPendingSlothLorebookRenames})',{
+        extension_settings:{STMemoryBooks:{}},slothSideRenameBooks:(_s,{newBook})=>['Nexus','Memory',newBook].filter(Boolean),
+        worldInfoCache:new Map([['Nexus',data]]),stringify:JSON.stringify,
+        loadServerWorld:async()=>data,listSlothSideBooks:async()=>available.map(file_id=>({file_id})),
+        queueSlothSideRename:async change=>changes.push(change),
+    });
+    api.observeSlothLorebookSave('Copied',data,['Nexus','Memory'],'Nexus');
+    assert.equal((await api.finishPendingSlothLorebookRenames()).changed,false);
+    assert.equal(changes.length,0);
+    api.beginSlothLorebookRename('Nexus',['Nexus','Memory','Copied']);
+    api.observeSlothLorebookSave('Renamed',data,['Nexus','Memory','Copied'],'Nexus');
+    available=['Nexus','Memory','Copied','Renamed'];
+    assert.equal((await api.finishPendingSlothLorebookRenames()).pending,true);
+    assert.equal(changes.length,0);
+    available=['Memory','Copied','Renamed'];
+    const [a,b]=await Promise.all([api.finishPendingSlothLorebookRenames(),api.finishPendingSlothLorebookRenames()]);
+    assert.equal(Number(a.changed)+Number(b.changed),1);
+    assert.equal(changes.length,1);
+    assert.equal(changes[0].newBook,'Renamed');
 });

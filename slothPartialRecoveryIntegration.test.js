@@ -21,10 +21,12 @@ const create=book=>{let uid=0;while(Object.hasOwn(book.entries,uid))uid++;return
 const row=(segments,title='The letter')=>({title,complete:true,reason:'Distinct completed incident',segments,
     timeline:'Unknown',scene:'The letter was delivered.',result:'The letter arrived.',keywords:['letter']});
 
-function harness({openTail=false,brokenScene=false}={}) {
+function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnResponse=false,editAfterBookCommit=false,extraHidden=false}={}) {
     const ref={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
     const key='chat-a-key';
     const chat=Array.from({length:openTail||brokenScene?4:2},(_,id)=>({name:'A',mes:'Original '+id,is_system:false}));
+    if(extraHidden)chat.push({name:'A',mes:'Previously hidden message',is_system:true});
+    let diskChat=clone(chat),diskMarkers={},metadataWrites=0,bookWrites=0;
     const books={N:{entries:{1:{uid:1,comment:'LT 01 | The gate',content:'The gate was open.'},
         2:{uid:2,comment:'LT 02 | The letter',content:'The letter was expected.'}}},M:{entries:{}}};
     let markers={},calls=0,dialogs=0;
@@ -42,7 +44,10 @@ function harness({openTail=false,brokenScene=false}={}) {
         ...recovery,stageNexusEdits,validateSlothSceneResponse,isCompletedSceneEntry,sceneNumberFromTitle,
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Keywords',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
-        requester:()=>async(_prompt,phase,parse)=>{calls++;return parse(JSON.stringify(response),phase);},
+        requester:()=>async(_prompt,phase,parse)=>{
+            calls++;if(editOnResponse)diskChat.at(-1).mes='External edit during model request.';
+            return parse(JSON.stringify(response),phase);
+        },
         getTokenCountAsync:async()=>123,console:{warn(){}},
     });
     const makeRun=()=>vm.runInNewContext([
@@ -61,10 +66,14 @@ function harness({openTail=false,brokenScene=false}={}) {
         initialCharacterContext:()=>'',collectionProfile:()=>({}),getAutomaticCheckpointThrough:()=>-1,
         createAutomaticTokenCounter:()=>()=>0,getTokenCountAsync:async()=>0,automaticReadingRevision:0,
         loadServerWorld:async name=>clone(books[name]),splitSlothCollectionSource:async source=>[source],
-        getRequestHeaders:()=>({}),fetch:async()=>({ok:true,json:async()=>clone([{chat_metadata:{STMemoryBooks:markers}},...chat])}),
-        patchStmbMetadataForChatRef:async(_ref,patch)=>{markers=clone(patch(markers));},
+        getRequestHeaders:()=>({}),fetch:async()=>({ok:true,json:async()=>clone([{chat_metadata:{STMemoryBooks:diskMarkers}},...diskChat])}),
+        patchStmbMetadataForChatRef:async(_ref,patch)=>{
+            const next=await patch(markers);
+            markers=clone(next);diskMarkers=clone(next);diskChat=clone(chat);metadataWrites++;
+        },
         choosePaidSlothDraft:async(record,_binding,_signal,options)=>{
             dialogs++;
+            if(editOnRecovery)diskChat.at(-1).mes='External edit while recovery was open.';
             assert.equal(options?.partialReplay,true,'must be editable even after all source messages are hidden');
             const pending=JSON.parse(record.raw);
             assert.deepEqual(pending.edits,[bad]);
@@ -76,13 +85,20 @@ function harness({openTail=false,brokenScene=false}={}) {
         composeSingleSlothCollection:compose,stageMemoryScenes,stageNexusEdits,isCompletedSceneEntry,
         fingerprintSlothChat,fingerprintSlothReviewedRanges,getSlothHideRanges,normalizeSlothVisibleTail,
         getRunnableSlothSidePresets:()=>[],createWorldInfoEntry:(_name,book)=>create(book),
-        saveWorldInfo:async(name,book)=>{books[name]=clone(book);},
+        saveWorldInfo:async(name,book)=>{
+            books[name]=clone(book);bookWrites++;
+            if(editAfterBookCommit&&bookWrites===2)diskChat.at(-1).mes='External edit after book commit.';
+        },
         commitSlothBooks,commitSlothNexusMigration,withStmbWriteLane:async(_key,task)=>task(),withBothWriteLanes:async(_names,task)=>task(),
-        assertReviewedCache:()=>{},worldInfoCache:new Map(),hideChatMessageRange:async(a,b)=>{for(let i=a;i<=b;i++)chat[i].is_system=true;},
+        assertReviewedCache:()=>{},worldInfoCache:new Map(),hideChatMessageRange:async(a,b)=>{
+            for(let i=a;i<=b;i++)chat[i].is_system=true;
+            diskChat=clone(chat);
+        },
         reloadEditor:()=>{},invalidateSlothAutomaticProgress:()=>{},settleSlothAutoAttempt:async()=>{},
         setSlothCollectionProgress:()=>{},t:s=>s,toastr:{info:s=>logs.push(s),warning:s=>logs.push(s),success:s=>logs.push(s)},console:{warn(){}},
     });
-    return {chat,books,logs,run:()=>makeRun()({}),get markers(){return markers;},get calls(){return calls;},get dialogs(){return dialogs;}};
+    return {chat,books,logs,run:()=>makeRun()({}),get diskChat(){return diskChat;},get metadataWrites(){return metadataWrites;},
+        get bookWrites(){return bookWrites;},get markers(){return markers;},get calls(){return calls;},get dialogs(){return dialogs;}};
 }
 
 test('partial commit then reload recovers only pending Nexus edit even with zero visible source and no new request',async()=>{
@@ -129,4 +145,44 @@ test('independent lorebook change invalidates the partial receipt instead of sil
     await assert.rejects(h.run(),/must be editable even after all source messages are hidden/);
     assert.equal(h.calls,1);
     assert.equal(h.books.N.entries[2].content,'The letter was expected.');
+});
+
+test('server edit while the partial recovery dialog is open is never overwritten by draft metadata save',async()=>{
+    const h=harness({editOnRecovery:true});
+    await h.run();
+    const books=clone(h.books),writes=h.metadataWrites,bookWrites=h.bookWrites;
+    await assert.rejects(h.run(),/saved chat changed outside this tab/);
+    assert.equal(h.metadataWrites,writes);
+    assert.equal(h.bookWrites,bookWrites);
+    assert.deepEqual(h.books,books);
+    assert.equal(h.diskChat.at(-1).mes,'External edit while recovery was open.');
+    assert.equal(h.calls,1);
+    assert.ok(h.markers.slothCollectionDraft.partial);
+});
+test('already hidden source outside the recovery scope is included in the whole-chat guard',async()=>{
+    const h=harness({editOnRecovery:true,extraHidden:true});
+    await h.run();
+    const writes=h.metadataWrites,books=clone(h.books);
+    await assert.rejects(h.run(),/saved chat changed outside this tab/);
+    assert.equal(h.metadataWrites,writes);
+    assert.deepEqual(h.books,books);
+    assert.equal(h.diskChat.at(-1).mes,'External edit while recovery was open.');
+});
+test('a paid response arriving after an external edit never saves stale chat or books',async()=>{
+    const h=harness({editOnResponse:true});
+    await assert.rejects(h.run(),/saved chat changed outside this tab/);
+    assert.equal(h.calls,1);
+    assert.equal(h.metadataWrites,0);
+    assert.equal(h.bookWrites,0);
+    assert.equal(h.diskChat.at(-1).mes,'External edit during model request.');
+});
+test('external edit after books commit blocks receipt, draft cleanup and Hide writes',async()=>{
+    const h=harness({editAfterBookCommit:true});
+    const first=await h.run();
+    assert.equal(first.saved,true);
+    assert.equal(first.receiptVerified,false);
+    assert.equal(first.hiddenMessages,null);
+    assert.equal(h.metadataWrites,1,'only the pre-commit paid response may have been saved');
+    assert.ok(h.diskChat.every(m=>!m.is_system));
+    assert.equal(h.diskChat.at(-1).mes,'External edit after book commit.');
 });
