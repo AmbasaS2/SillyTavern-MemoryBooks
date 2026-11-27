@@ -1331,7 +1331,7 @@ export async function showSlothNexusHealth(){
         const report=await inspectSlothNexusHealth(book,getTokenCountAsync);
         verify();
         const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
-        const labels={core:'Core',continuity:'Continuity',lt:'LT',npc:'NPC',
+        const labels={core:tr('Core','Core Memory'),continuity:'Continuity',lt:tr('LT','Long-Term Memory'),npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
         const num=n=>Number(n).toLocaleString();
         const amount=(n,missing=0)=>n===0&&missing?'—':'~ '+num(n);

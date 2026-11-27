@@ -217,3 +217,14 @@ test('health preview displays complete change text only in combined approval and
     assert.match(dialog,/confirmed=false/);
     assert.match(dialog,/change\.paragraph/);
 });
+
+ test('workshop display expands the LT prefix without changing persisted titles',()=>{
+    const dialog=readFileSync(new URL('./slothNexusHealthReviewDialog.js',import.meta.url),'utf8');
+    const start=dialog.indexOf('function displayTitle('),end=dialog.indexOf('function renderChange(',start);
+    const display=vm.runInNewContext(dialog.slice(start,end)+'\ndisplayTitle',{tr:(_key,fallback)=>fallback});
+    assert.equal(display('LT - Lamp repairs'),'Long-Term Memory - Lamp repairs');
+    assert.equal(display('Core Memory'),'Core Memory');
+    assert.equal(display('SALT - Food'),'SALT - Food');
+    assert.equal(display('LT notes'),'LT notes');
+    assert.match(dialog,/displayTitle\(change\.title\)/);
+ });

@@ -13,16 +13,22 @@ const html=v=>escapeHtml(String(v??''));
 const kindLabel=kind=>({duplicate:tr('Duplicate','Duplicate memory'),conflict:tr('Conflict','Conflicting memories'),
     validity:tr('Validity','Needs review'),core_to_lt:tr('Move','Move memory')})[kind];
 const countLabel=(key,fallback,count)=>tr(key,fallback).replace('{{count}}',String(count));
+// Display labels only. Preserve the original title and UID for staging and saving.
+function displayTitle(title){
+    const value=String(title??'');
+    if(value==='Core Memory')return tr('CoreName','Core Memory');
+    return value.replace(/^LT(?=(?:\s*[-–—:|]|\s*$))/iu,()=>tr('LTName','Long-Term Memory'));
+}
 function renderChange(change){
     const mode=change.constant?tr('Constant','Always-on'):change.vectorized?tr('Vector','Vector'):tr('Keyword','Keyword');
-    return '<section class="stmb-workshop-full-entry"><h4>'+html(change.title)+' <small>'+html(mode)+'</small></h4>'+
+    return '<section class="stmb-workshop-full-entry"><h4>'+html(displayTitle(change.title))+' <small>'+html(mode)+'</small></h4>'+
         '<span class="stmb-workshop-muted">'+html(tr('Before','Before'))+'</span><div class="stmb-workshop-full-text">'+html(change.before??tr('NewEntry','New memory'))+'</div>'+
         '<span class="stmb-workshop-muted">'+html(tr('After','After'))+'</span><div class="stmb-workshop-full-text">'+html(change.after)+'</div>'+
         (change.keywords.length?'<small class="stmb-workshop-muted">'+html(tr('Keywords','Keywords'))+': '+html(change.keywords.join(', '))+'</small>':'')+'</section>';
 }
 export async function showSlothHealthReviewFindings({review,catalog,original,moduleSettings,showPopup}){
     const rows=review.findings,selected=new Set(),titles=new Map(catalog.entries.map(entry=>[entry.uid,entry.title]));
-    const titleOf=uid=>titles.get(uid)||('UID '+uid);
+    const titleOf=uid=>displayTitle(titles.get(uid)||('UID '+uid));
     let approved=null,prepared=null,confirmed=false;
     const eligible=rows.map(finding=>{
         if(!finding.change)return false;
@@ -36,7 +42,7 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
     function rowHtml(finding,i){
         const change=eligible[i]?finding.change:null;
         const title=change?.type==='dedupe'?tr('DedupeAction','Remove duplicate'):kindLabel(finding.kind);
-        const direction=change?.type==='move'?'<div class="stmb-workshop-route"><span>'+html(titleOf(change.sourceUid))+'</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>'+html(change.targetUid!==undefined?titleOf(change.targetUid):change.newTitle)+'</span></div>':
+        const direction=change?.type==='move'?'<div class="stmb-workshop-route"><span>'+html(titleOf(change.sourceUid))+'</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i><span>'+html(change.targetUid!==undefined?titleOf(change.targetUid):displayTitle(change.newTitle))+'</span></div>':
             change?.type==='dedupe'?'<div class="stmb-workshop-muted">'+html(titleOf(change.uid))+' · '+html(tr('DedupeOne','Remove one identical paragraph'))+'</div>':'';
         const details='<details class="stmb-workshop-evidence"><summary>'+html(tr('Reason','Details'))+'</summary><p>'+html(finding.reason)+'</p>'+
             finding.refs.map(ref=>'<div class="stmb-workshop-reference"><small>'+html(titleOf(ref.uid))+'</small><div class="stmb-workshop-quote">'+html(ref.quote)+'</div></div>').join('')+'</details>';
@@ -44,13 +50,13 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
             '<div class="stmb-workshop-item-header">'+(change?'<input type="checkbox" data-health-review-include="'+i+'" aria-label="'+html(title)+'">':'<i class="fa-solid fa-circle-info" aria-hidden="true"></i>')+
             '<strong>'+html(title)+'</strong>'+(!change?'<small class="stmb-workshop-muted">'+html(tr('Advice','Review only'))+'</small>':'')+'</div>'+
             (change?'<div class="stmb-workshop-quote">'+html(change.paragraph)+'</div>'+direction:
-                '<p class="stmb-workshop-reason">'+html(finding.reason)+'</p><p class="stmb-workshop-muted">'+html(finding.changeUnavailable?tr('Unavailable','Manual review required.'):tr('AdviceDetail','No automatic change is proposed.'))+'</p>')+
+                '<p class="stmb-workshop-muted">'+html(finding.changeUnavailable?tr('Unavailable','Manual review required.'):tr('AdviceDetail','Review the content manually.'))+'</p>')+
             details+'</article>';
     }
     const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-health-review">'+
         '<header class="stmb-workshop-heading"><i class="fa-solid fa-wrench" aria-hidden="true"></i><h3>'+html(tr('Title','Memory Workshop'))+'</h3>'+
         '<button type="button" class="stmb-health-info" data-workshop-help aria-expanded="false" aria-label="'+html(tr('HelpLabel','About Memory Workshop'))+'" title="'+html(tr('HelpLabel','About Memory Workshop'))+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
-        '<div class="stmb-workshop-help" hidden>'+html(tr('Help','Review suggested changes to Nexus memories. Only selected changes are saved. Moving Core memories to LT changes recall; other chats sharing the book may have pending recovery affected. AI suggestions can be wrong.'))+
+        '<div class="stmb-workshop-help" hidden>'+html(tr('Help','Review suggested changes to Nexus memories. Only selected changes are saved. Memories moved from Core to Long-Term Memory may not appear in every conversation turn. Other chats sharing the book may have pending recovery affected. AI suggestions can be wrong.'))+
         '<p>'+html(summary)+'</p></div>'+
         '<div class="stmb-workshop-metrics"><div><span>'+html(tr('Available','Changes'))+'</span><strong>'+count+'</strong></div><div><span>'+html(tr('ReviewOnly','Review only'))+'</span><strong>'+(rows.length-count)+'</strong></div></div>'+
         (rows.length?'<div class="stmb-workshop-list">'+rows.map(rowHtml).join('')+'</div><div data-health-review-plan></div>':
@@ -81,7 +87,7 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
             plan.innerHTML='<details class="stmb-workshop-preview"><summary>'+html(tr('FullPreview','View complete before/after'))+'</summary>'+
                 changes.map(renderChange).join('')+'</details>'+
                 (moves?'<label class="checkbox_label stmb-workshop-confirm"><input type="checkbox" data-health-core-ack><span>'+
-                    html(tr('CoreAck','Confirm the selected moves to LT.'))+'</span></label>':'');
+                    html(tr('CoreAck','Move selected memories to Long-Term Memory.'))+'</span></label>':'');
             if(!moves)approved=prepared;
             const ack=plan.querySelector('[data-health-core-ack]');
             ack?.addEventListener('change',()=>{confirmed=ack.checked;approved=confirmed?prepared:null;enabled();});

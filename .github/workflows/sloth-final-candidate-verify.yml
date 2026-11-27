@@ -20,6 +20,27 @@ jobs:
         with:
           bun-version: '1.3.2'
       - run: bun install --ignore-scripts
+      - name: Audit Korean UI copy and display abbreviations
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {execFileSync} from 'node:child_process';
+          const paths=execFileSync('git',['ls-files'],{encoding:'utf8'}).trim().split('\n').filter(p=>/\.(js|ts|html)$/.test(p)&&!p.includes('.build.')&&!p.includes('.test.')&&!p.startsWith('bin/'));
+          const locale=JSON.parse(fs.readFileSync('locales/ko-kr.json','utf8'));
+          const informal=/(?:했어|했지|하자|해줘|해 줘|해라|됐어|됐지|거야|거지|잖아|이야|아니야|괜찮아|맞아|할게|할래|하렴|하지 마|하지마|어때|했니|하니|구나|아냐|더라|하는군)(?:[.!?]|$)/u;
+          const ui=Object.entries(locale).filter(([k,v])=>typeof v==='string'&&!/(?:Prompt|Example|ResponseFormat|ResponseContract|Instructions|Template)/i.test(k));
+          console.log('Korean locale keys',Object.keys(locale).length,'UI candidate strings',ui.length);
+          for(const [key,value] of ui)if(informal.test(value))console.log('REVIEW locale',key,JSON.stringify(value.slice(0,300)));
+          console.log('Source files inspected',paths.length);
+          for(const p of paths){
+            const lines=fs.readFileSync(p,'utf8').split('\n');
+            lines.forEach((line,i)=>{
+              if(!/[가-힣]{2}/u.test(line))return;
+              if(/^\s*(?:\/\/|\*|\/\*)/.test(line))return;
+              console.log('KOREAN SOURCE',p+':'+(i+1),line.trim().slice(0,220));
+            });
+          }
+          NODE
       - run: node --test
       - run: bun run build
       - name: Commit verified browser artifacts to experiment only

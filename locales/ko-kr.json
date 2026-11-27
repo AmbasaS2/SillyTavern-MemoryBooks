@@ -6,9 +6,9 @@
   "STMemoryBooks_SlothInputEstimate": "입력 약 {{count}}토큰",
   "STMemoryBooks_SlothNexusInjection": "Nexus 주입 설정",
   "STMemoryBooks_SlothMemoryInjection": "Memory 주입 설정",
-  "STMemoryBooks_SlothCoreRecall": "Core Memory · 핵심 장기 기억",
+  "STMemoryBooks_SlothCoreRecall": "핵심 기억",
   "STMemoryBooks_SlothContinuityRecall": "Current Continuity · 현재 상태",
-  "STMemoryBooks_SlothLTRecall": "LT · 개별 장기 기억",
+  "STMemoryBooks_SlothLTRecall": "장기 기억",
   "STMemoryBooks_SlothNPCRecall": "NPC · 인물 기억",
   "STMemoryBooks_SlothInjectionSettings": "주입 설정",
   "STMemoryBooks_SlothRecallNewEntries": "새로 만드는 항목에 적용됩니다. 기존 항목의 설정은 유지합니다.",
@@ -1633,8 +1633,8 @@
   "STMemoryBooks_ArcPrompt_DisplayName_GroupChat": "그룹 채팅 통합 분석(자동)",
   "STMemoryBooks_ArcPromptManager_GroupChatOnlyNote": "캐릭터 메모리 북도 구성된 경우에만 그룹 메모리 북에 자동으로 사용됩니다. 일반 통합에는 선택할 수 없으며 기본값으로 설정할 수도 없습니다.",
   "STMemoryBooks_SummaryPrompt_GroupChatConsolidation": "당신은 전지적 서사 연대표를 구축하고 이야기의 시간적 연속성을 유지하는 전문가입니다.\n\n여러 {{stmbchildtier}} 단위 연대기를 일관성을 갖춘 최소 개수의 {{stmbtier}} 단위 연대기로 통합하세요.\n\n이 요약은 이야기 전체에서 객관적으로 일어난 일을 기록합니다. 모든 캐릭터가 포함된 모든 사실을 알고, 목격하고, 기억하거나 올바르게 이해한다는 뜻은 아닙니다. 출처가 구분을 확립한 경우 객관적 사건과 개별 캐릭터의 지식 차이를 보존하세요.\n\n다음이 제공됩니다:\n\n* 선택적 `PREVIOUS {{stmbtier}}` 블록. 확립된 정사이며 연속성을 위해 사용할 수 있지만 요약하거나 다시 쓰거나 반복해서는 안 됩니다.\n* 시간순으로 제시되는 {{stmbchildtier}} 항목 집합. 각 항목에는 출처 ID가 있습니다.\n\n설명이나 코드 펜스 없이 유효한 JSON만 반환하세요:\n\n{\n\t\"summaries\": [\n\t\t{\n\t\t\t\"title\": \"짧고 설명적인 {{stmbtier}} 제목\",\n\t\t\t\"summary\": \"하나의 JSON 문자열로 구조화된 전지적 {{stmbtier}} 연대기.\",\n\t\t\t\"keywords\": [\"키워드1\", \"키워드2\"],\n\t\t\t\"member_ids\": [\"출처-id-1\", \"출처-id-2\"]\n\t\t}\n\t],\n\t\"unassigned_items\": [\n\t\t{\n\t\t\t\"id\": \"출처-id\",\n\t\t\t\"reason\": \"이 항목을 배정할 수 없었던 짧은 이유.\"\n\t\t}\n\t]\n}\n\n## 배정 규칙\n\n* 제공된 시간순을 지키세요.\n* 내용이 뒷받침하는 최소 개수의 일관된 {{stmbtier}} 요약을 생성하세요.\n* 캐릭터, 관점, 기억 소유자 또는 지식 범위가 다르다는 이유만으로 별도 요약을 만들지 마세요.\n* 하나의 일관된 {{stmbtier}}를 이루어서는 안 되는 실질적으로 별개의 시간적 또는 서사적 단위가 있을 때만 자료를 나누세요.\n* 모든 출처 ID를 정확히 한 번 배정하세요:\n  * 하나의 요약의 `member_ids`에 배정하거나,\n  * `unassigned_items`에 배정합니다.\n* 각 요약 안에서 ID 순서를 유지하세요.\n* 항목을 일관되게 배치할 수 없다면 짧고 구체적인 이유와 함께 `unassigned_items`에 넣으세요.\n* `PREVIOUS {{stmbtier}}`는 연속성을 유지하고 반복을 피하는 데만 사용하세요. `member_ids`에는 포함하지 마세요.\n\n## 내용 규칙\n\n각 요약은 다음을 충족해야 합니다:\n\n* 원인, 의도, 반응, 결과를 명확히 추적합니다.\n* 시간순, 줄거리 정확성, 연속성을 보존합니다.\n* 중요한 행동, 폭로, 결정, 갈등, 결과, 지속적 변화를 기록합니다.\n* 출처가 뒷받침하는 경우 누가 중요한 정보를 알았고, 목격했고, 숨겼고, 오해했거나 몰랐는지 보존합니다.\n* 연대기를 전지적 이야기 역사로 취급하며 모든 캐릭터가 내용을 안다는 증거로 취급하지 않습니다.\n* 연속성에 실질적 영향을 주지 않는 OOC 논의, 반복 정보, 배경, 분위기용 세부 사항, 일상적 절차는 생략합니다.\n* 모호해지지 않으면서 토큰을 효율적으로 사용합니다.\n* 과거형과 3인칭을 사용합니다.\n* 연속성이나 검색성을 높일 때 구체적인 이름과 명사를 사용합니다.\n* 제공된 항목이 뒷받침하지 않는 정보를 포함하지 않습니다.\n\n## 필수 `summary` 구조\n\n`summary` 필드는 다음 Markdown 구조를 올바르게 이스케이프한 하나의 JSON 문자열로 포함해야 합니다:\n\n# [제목]\n\n**연대표**: [출처 항목이 뒷받침하는 가장 구체적인 날짜와 시간을 사용하세요. 날짜나 시간이 확립되지 않았다면 미지정이라고 밝히거나 근거가 있는 상대적 기간을 사용하세요.]\n\n## 이야기 전개\n\n* 주요 행동, 폭로, 결정, 갈등과 감정적·관계적·신체적·마법적 변화를 시간순으로 제시합니다.\n* 각 중요한 전개의 계기, 캐릭터가 행동한 이유, 다른 이들의 반응, 그 결과를 설명합니다.\n* 줄거리에 영향을 주는 상호작용, 의미 있는 공동 경험, 관계나 미래 연속성을 바꾼 사건을 포함합니다.\n* 객관적 사건과 각 캐릭터가 알거나 믿었던 내용의 차이를 보존합니다.\n* 사건에 직접 영향을 주지 않는 반복 동작, 방 장식, 배경 물건, 일상적 절차는 생략합니다.\n\n## 캐릭터 역학\n\n* 요약 기간 동안 동기, 감정, 관계, 충성, 권력 역학이 어떻게 변했는지 설명합니다.\n* 결과를 낳은 긴장, 취약함, 신뢰, 갈등, 회피, 애정, 원망, 의존, 의심 또는 충성을 포착합니다.\n* 작거나 일상적인 경험은 관계의 역사를 의미 있게 바꾼 경우에만 포함합니다.\n* 그로 인한 대인관계 변화를 설명하는 데 필요한 경우가 아니면 줄거리 사건을 반복하지 않습니다.\n\n## 중요한 사실\n\n* 계획, 위험, 능력, 한계, 약속, 비밀, 빚, 부상, 마법 효과, 발견, 지식, 오해, 의무 등 나중에 중요할 가능성이 있는 새 사실을 기록합니다.\n* 지식 차이가 연속성에 영향을 줄 때 어떤 캐릭터가 그 사실을 알고 모르는지 밝힙니다.\n* 연속성과 관련되어 중요해진 경우가 아니라면 사소한 취향, 배경, 심부름, 서류, 의복, 가구, 날씨와 기타 부수적 세부 사항을 제외합니다.\n\n## 핵심 대화\n\n* 폭로, 결정, 갈등, 감정 또는 관계 변화, 약속, 위협, 기억할 만한 식별 표현을 확립한 대화만 포함합니다.\n* 모든 인용문에 화자 이름을 붙입니다.\n* 출처가 정확한 문구를 보존한 경우에만 직접 인용합니다.\n* 요약된 대화를 인용문으로 바꾸지 않습니다.\n* 서사나 관계에 중요한 독특한 표현을 보존합니다.\n* 짧은 인용문은 최대 8개만 포함합니다.\n* 최종 출력이 유효한 JSON이 되도록 모든 따옴표를 올바르게 이스케이프합니다.\n\n## 결과와 연속성\n\n* 사건으로 생긴 최종 서사적·감정적·관계적·신체적·마법적 상태를 밝힙니다.\n* 이후에 영향을 주는 결정, 계획, 위험, 약속, 비밀, 부상, 지식 변화, 의무를 기록합니다.\n* 미해결 줄거리, 보류된 갈등, 미래 결과, 복선을 식별합니다.\n* 전체 사건 순서를 반복하지 않습니다.\n\n(OOC 참고: 이것은 이야기의 응집성을 위해 유지되는 전지적 서사 연대표입니다. 개별 캐릭터는 그 일부만 알거나 일부 사건과 사실을 전혀 모를 수 있습니다.)\n\n\n\n`keywords` 필드:\n\n자료가 뒷받침할 때 **자연스러운 검색 키워드 12–20개**를 생성하세요. 약한 용어로 수를 채우기보다 적게 사용하세요. 키워드는 검색 고리이지 축약 요약이나 증거 메모가 아닙니다.\n\n우선순위:\n\n1. **안정적인 고유 명사**: {{char}} 또는 {{user}} 외의 인물, 장소, 조직, 사건, 문서, 세력, 주문, 독특한 물건.\n2. **주요 연속성 기준점**: 계획, 위협, 비밀, 발견, 조사, 갈등, 부상, 약속, 관계 변화, 미해결 줄거리.\n3. **기억할 만한 순간**: 의미 있는 공동 활동, 선물, 음식, 의식, 농담, 돌봄, 말다툼, 일상 사건.\n4. 요약 자료의 다른 부분을 검색하는 **독립적인 보조 고리**.\n\n### 키워드 구성\n\n바꿔 말하거나 어순이 뒤집혀도 알아볼 가능성이 높은 가장 짧고 독특한 표현을 사용하세요.\n\n예시:\n\n* `Gala of the Silver Rose` 또는 `Silver Rose Gala` → `Silver Rose`\n* `Bromet Response SA` → `Bromet`\n* `Château D’Aramitz`, Comte D’Aramitz 또는 그와 관련된 계획 → `D’Aramitz`\n* 대상을 식별하는 데 두 단어가 모두 필요하면 `Althof Ledger`를 유지합니다.\n\n하나의 중심 고유 명사가 여러 관련 사건을 이미 포괄하면 그것을 우선합니다:\n\n* `D’Aramitz 구출 계획` → `D’Aramitz`\n* `Bromet 비밀 계약자` → `Bromet`\n* `Althof Ledger 바꿔치기` → `Althof Ledger`\n\n수식된 문구는 중심 명사가 제공하지 않는 독립 검색 경로를 줄 때만 유지합니다:\n\n* `가짜 출장 요리사`\n* `원장 복제본`\n* `은신처 아침 식사`\n* `역감시 카메라`\n\n여러 단서가 하나의 결론을 확립하면 보통 각 단서보다 결과로 얻은 발견을 태그합니다:\n\n* 제복, 배지, 차량 접근 → `가짜 출장 요리사`\n* 지급 내역과 회사 기록 → `Bromet`\n* 갈라의 비밀 전술팀 → `암살 의심`\n* 장비와 변장용 임대 빌라 → `준비 빌라`\n\n보조 단서는 기억할 만하거나, 다시 등장할 가능성이 있거나, 독립적으로 검색에 유용할 때만 유지합니다.\n\n키워드는 보통:\n\n* 1–4개 단어로 구성합니다.\n* 자연스러운 명사구를 사용합니다.\n* 요약의 실제로 다른 부분을 식별합니다.\n* 이후 설명이 다른 표현을 사용해도 안정적으로 유지됩니다.\n\n제외:\n\n* 부수적인 배경이나 소품.\n* 정확한 시간, 수량, 카드 숫자, 송장 문구, 행정 세부 사항.\n* `위험`, `로맨스`, `대화` 같은 일반적 주제.\n* 근거 없는 결론.\n* 문장형 증거 설명.\n* 같은 고유 명사를 반복하거나 좁힐 뿐인 여러 키워드.\n\nJSON을 반환하기 전에 각 키워드가 자연스럽게 검색 가능하고, 연속성에 관련되며, 바꿔 말해도 안정적이고, 독립적으로 유용하며, 필요 이상으로 길지 않은지 내부적으로 확인하세요.",
-  "STMemoryBooks_SummaryPrompt_Regenerate": "당신은 전문 서사 분석가이자 메모리 엔진 어시스턴트입니다. 포함된 모든 {{stmbchildtier}} 항목을 하나의 일관된 {{stmbtier}} 요약으로 결합하고 압축하세요.\n\n사건을 분명한 시작, 전개, 결말이 있는 시간순으로 재구성하세요. 주요 줄거리, 인물, 관계, 연속성의 발전은 보존하고 배경 묘사, 군더더기, 잡담, 반복 행동, 일회성 절차는 생략하세요.\n\n과거형과 3인칭으로 작성하세요. 모든 [OOC], 메타 논의, 원본 항목이 뒷받침하지 않는 정보는 제외하세요. 전체 응답은 유효한 JSON이어야 합니다. 문자열의 큰따옴표, 백슬래시, 줄바꿈을 JSON 규칙에 맞게 이스케이프하고 content의 줄바꿈은 이스케이프되지 않은 실제 줄바꿈 대신 \\n으로 표시하세요.\n\n연속성이나 검색에 도움이 되면 “기기” 대신 “밥솥”처럼 구체적인 명사와 고유명사를 사용하고, 단순한 배경 소품은 빼세요. 형용사와 부사는 분위기, 감정, 성격 묘사, 위험, 연속성에 실질적인 영향을 줄 때만 사용하세요. 사건을 원인 → 의도 → 반응 → 결과로 구성하고 반복 행동과 대화를 통합된 서사적 비트로 합치세요. 모든 문장은 새 정보를 더해야 하며, 망라보다 압축을 우선하세요.\n\n설명이나 코드 펜스 없이 다음 구조의 유효한 JSON만 반환하세요:\n{\n\"title\": \"3~6단어의 짧은 설명형 제목\",\n\"content\": \"Markdown 형식의 개요\",\n\"keywords\": [\"키워드1\", \"키워드2\", \"키워드3\"]\n}\n\ncontent 필드는 다음 구조를 사용해야 합니다:\n# [장면 제목]\n\n**타임라인**: [원본이 뒷받침하는 가장 구체적인 날짜와 시간. 없으면 미상 또는 상대 시간.]\n\n## 이야기 비트\n* 주요 행동, 폭로, 결정, 감정적 또는 마법적 변화를 시간순으로 제시하세요.\n* 각 전개의 계기, 인물의 의도, 다른 이들의 반응, 결과를 설명하세요.\n* 줄거리에 영향을 준 상호작용, 의미 있는 공동 경험, 관계나 향후 연속성을 바꾼 사건을 포함하세요.\n* 반복 몸짓, 방 장식, 배경 물체, 절차는 사건에 직접 영향을 준 경우 외에는 생략하세요.\n\n## 인물 역학\n* 동기, 감정, 관계, 권력 역학의 변화와 결과에 영향을 준 함의, 긴장, 취약성, 신뢰, 갈등, 회피, 애정, 원망, 충성을 설명하세요.\n* 작거나 일상적인 경험은 관계의 역사를 의미 있게 형성한 경우만 포함하세요. 대인 변화를 설명하는 데 필요하지 않으면 줄거리를 반복하지 마세요.\n\n## 중요한 사실\n* 앞으로 중요할 수 있는 새 사실인 계획, 위험, 능력, 한계, 선호, 약속, 비밀, 빚, 부상, 마법 효과, 발견, 의무를 기록하세요.\n* 연속성과 무관한 가벼운 선호, 배경, 심부름, 서류, 의복, 가구, 날씨는 제외하세요.\n\n## 핵심 대화\n* 폭로, 결정, 갈등, 감정 또는 관계 변화를 규정한 대화만 화자 이름과 함께 포함하세요.\n* 원본에 정확한 문구가 보존된 경우만 직접 인용하고, 바꿔 쓴 내용에서 인용을 재구성하지 마세요. 독특한 표현은 기억에 남거나 관계상 중요한 경우만 보존하며 인용은 8개 이하로 제한하세요.\n\n## 결과 및 연속성\n* 사건이 만든 최종 서사적, 감정적, 관계적, 신체적, 마법적 상태를 제시하세요.\n* 그 결과 생긴 결정, 계획, 위험, 약속, 비밀, 부상, 지식, 의무와 미해결 실마리, 보류된 갈등, 미래 결과, 복선을 기록하세요. 전체 사건 순서를 다시 요약하지 마세요.\n\nkeywords에는 자료가 뒷받침할 때 12~20개의 자연스러운 검색 키워드를 만들고, 약한 용어로 채우기보다 적게 사용하세요. 우선순위는 (1) {{char}}와 {{user}} 외의 안정적인 명명 개체, (2) 계획, 위협, 비밀, 발견, 조사, 갈등, 부상, 약속, 관계 변화 같은 주요 연속성 앵커, (3) 기억에 남는 공동 활동, 선물, 음식, 의식, 농담, 돌봄, 논쟁, 일상 사건, (4) 요약의 별도 부분을 검색하는 독립 보조 후크입니다.\n\n바꿔 쓰거나 어순을 뒤집어도 알아볼 수 있는 가장 짧고 독특한 표현을 사용하세요. 하나의 중심 명명 개체가 여러 관련 사건을 포괄하면 이를 우선하고, 독립 검색 경로를 주는 수식어만 유지하세요. 여러 단서가 하나의 결론을 세우면 보통 각 단서 대신 결론을 태그하세요. 키워드는 보통 1~4단어의 자연스러운 명사구로, 요약의 실제로 다른 부분을 식별해야 합니다. 부수적 배경이나 소품, 정확한 시간·수량, 카드 숫자, 청구서 문구, 행정 세부, 일반 주제, 근거 없는 결론, 문장형 증거 설명, 같은 개체의 중복 변형은 제외하세요.\n\n### 키워드 구성 예시\n\n키워드는 검색용 훅이지, 축소된 요약이나 증거 메모가 아닙니다.\n\n인식 가능한 가장 짧고 특징적인 표현의 예:\n\n* `Gala of the Silver Rose` 또는 `Silver Rose Gala` → `Silver Rose`\n* `Bromet Response SA` → `Bromet`\n* `Château D’Aramitz`, Comte D’Aramitz 또는 그와 관련된 계획 → `D’Aramitz`\n* 물건을 식별하는 데 두 단어가 모두 필요하면 `Althof Ledger`를 유지하십시오.\n\n하나의 중심 고유 개체가 여러 관련 사건을 이미 포괄한다면 이를 우선하십시오:\n\n* `D’Aramitz 구출 계획` → `D’Aramitz`\n* `Bromet의 숨은 계약자` → `Bromet`\n* `Althof Ledger 바꿔치기` → `Althof Ledger`\n\n수식된 구절은 중심 개체가 제공하지 않는 독립적인 검색 경로가 될 때만 유지하십시오:\n\n* `가짜 케이터링 직원`\n* `원장의 복제본`\n* `은신처 아침 식사`\n* `역감시 카메라`\n\n여러 단서가 하나의 결론을 확립한다면 보통 각 단서가 아니라 그 결과를 태그로 지정하십시오:\n\n* 제복, 배지, 차량 접근 권한 → `가짜 케이터링 직원`\n* 결제 내역과 회사 기록 → `Bromet`\n* 갈라의 비밀 전술팀 → `암살 의혹`\n* 장비와 변장을 위해 빌린 빌라 → `준비용 빌라`\n\n보조 단서는 기억에 남거나, 다시 등장할 가능성이 높거나, 그 자체로 검색에 유용할 때만 유지할 수 있습니다. “pack for forever”나 “dick-measuring contest” 같은 특징적인 표현은 기억에 남거나 관계상 중요한 경우에만 보존하십시오.\n\nJSON을 반환하기 전에 각 키워드가 자연스럽게 검색 가능하고, 연속성에 관련되며, 바꿔 쓰기에 안정적이고, 독립적으로 유용하며, 필요한 만큼만 짧은지 조용히 확인하세요.",
-  "STMemoryBooks_ActiveCast": "활성 배역",
+  "STMemoryBooks_SummaryPrompt_Regenerate": "당신은 전문 서사 분석가이자 메모리 엔진 어시스턴트입니다. 포함된 모든 {{stmbchildtier}} 항목을 하나의 일관된 {{stmbtier}} 요약으로 결합하고 압축하세요.\n\n사건을 분명한 시작, 전개, 결말이 있는 시간순으로 재구성하세요. 주요 줄거리, 인물, 관계, 연속성의 발전은 보존하고 배경 묘사, 군더더기, 잡담, 반복 행동, 일회성 절차는 생략하세요.\n\n과거형과 3인칭으로 작성하세요. 모든 [OOC], 메타 논의, 원본 항목이 뒷받침하지 않는 정보는 제외하세요. 전체 응답은 유효한 JSON이어야 합니다. 문자열의 큰따옴표, 백슬래시, 줄바꿈을 JSON 규칙에 맞게 이스케이프하고 content의 줄바꿈은 이스케이프되지 않은 실제 줄바꿈 대신 \\n으로 표시하세요.\n\n연속성이나 검색에 도움이 되면 “기기” 대신 “밥솥”처럼 구체적인 명사와 고유명사를 사용하고, 단순한 배경 소품은 빼세요. 형용사와 부사는 분위기, 감정, 성격 묘사, 위험, 연속성에 실질적인 영향을 줄 때만 사용하세요. 사건을 원인 → 의도 → 반응 → 결과로 구성하고 반복 행동과 대화를 통합된 서사적 비트로 합치세요. 모든 문장은 새 정보를 더해야 하며, 망라보다 압축을 우선하세요.\n\n설명이나 코드 펜스 없이 다음 구조의 유효한 JSON만 반환하세요:\n{\n\"title\": \"3~6단어의 짧은 설명형 제목\",\n\"content\": \"Markdown 형식의 개요\",\n\"keywords\": [\"키워드1\", \"키워드2\", \"키워드3\"]\n}\n\ncontent 필드는 다음 구조를 사용해야 합니다:\n# [장면 제목]\n\n**타임라인**: [원본이 뒷받침하는 가장 구체적인 날짜와 시간. 없으면 미상 또는 상대 시간.]\n\n## 이야기 비트\n* 주요 행동, 폭로, 결정, 감정적 또는 마법적 변화를 시간순으로 제시하세요.\n* 각 전개의 계기, 인물의 의도, 다른 이들의 반응, 결과를 설명하세요.\n* 줄거리에 영향을 준 상호작용, 의미 있는 공동 경험, 관계나 향후 연속성을 바꾼 사건을 포함하세요.\n* 반복 몸짓, 방 장식, 배경 물체, 절차는 사건에 직접 영향을 준 경우 외에는 생략하세요.\n\n## 인물 역학\n* 동기, 감정, 관계, 권력 역학의 변화와 결과에 영향을 준 함의, 긴장, 취약성, 신뢰, 갈등, 회피, 애정, 원망, 충성을 설명하세요.\n* 작거나 일상적인 경험은 관계의 역사를 의미 있게 형성한 경우만 포함하세요. 대인 변화를 설명하는 데 필요하지 않으면 줄거리를 반복하지 마세요.\n\n## 중요한 사실\n* 앞으로 중요할 수 있는 새 사실인 계획, 위험, 능력, 한계, 선호, 약속, 비밀, 빚, 부상, 마법 효과, 발견, 의무를 기록하세요.\n* 연속성과 무관한 가벼운 선호, 배경, 심부름, 서류, 의복, 가구, 날씨는 제외하세요.\n\n## 핵심 대화\n* 폭로, 결정, 갈등, 감정 또는 관계 변화를 규정한 대화만 화자 이름과 함께 포함하세요.\n* 원본에 정확한 문구가 보존된 경우만 직접 인용하고, 바꿔 쓴 내용에서 인용을 재구성하지 마세요. 독특한 표현은 기억에 남거나 관계상 중요한 경우만 보존하며 인용은 8개 이하로 제한하세요.\n\n## 결과 및 연속성\n* 사건이 만든 최종 서사적, 감정적, 관계적, 신체적, 마법적 상태를 제시하세요.\n* 그 결과 생긴 결정, 계획, 위험, 약속, 비밀, 부상, 지식, 의무와 미해결 실마리, 보류된 갈등, 미래 결과, 복선을 기록하세요. 전체 사건 순서를 다시 요약하지 마세요.\n\nkeywords에는 자료가 뒷받침할 때 12~20개의 자연스러운 검색 키워드를 만들고, 약한 용어로 채우기보다 적게 사용하세요. 우선순위는 (1) {{char}}와 {{user}} 외의 안정적인 명명 개체, (2) 계획, 위협, 비밀, 발견, 조사, 갈등, 부상, 약속, 관계 변화 같은 주요 연속성 앵커, (3) 기억에 남는 공동 활동, 선물, 음식, 의식, 농담, 돌봄, 논쟁, 일상 사건, (4) 요약의 별도 부분을 검색하는 독립 보조 후크입니다.\n\n바꿔 쓰거나 어순을 뒤집어도 알아볼 수 있는 가장 짧고 독특한 표현을 사용하세요. 하나의 중심 명명 개체가 여러 관련 사건을 포괄하면 이를 우선하고, 독립 검색 경로를 주는 수식어만 유지하세요. 여러 단서가 하나의 결론을 세우면 보통 각 단서 대신 결론을 태그하세요. 키워드는 보통 1~4단어의 자연스러운 명사구로, 요약의 실제로 다른 부분을 식별해야 합니다. 부수적 배경이나 소품, 정확한 시간·수량, 카드 숫자, 청구서 문구, 행정 세부, 일반 주제, 근거 없는 결론, 문장형 증거 설명, 같은 개체의 중복 변형은 제외하세요.\n\n### 키워드 구성 예시\n\n키워드는 검색용 훅이지, 축소된 요약이나 증거 메모가 아닙니다.\n\n인식 가능한 가장 짧고 특징적인 표현의 예:\n\n* `Gala of the Silver Rose` 또는 `Silver Rose Gala` → `Silver Rose`\n* `Bromet Response SA` → `Bromet`\n* `Château D’Aramitz`, Comte D’Aramitz 또는 그와 관련된 계획 → `D’Aramitz`\n* 물건을 식별하는 데 두 단어가 모두 필요하면 `Althof Ledger`를 유지하십시오.\n\n하나의 중심 고유 개체가 여러 관련 사건을 이미 포괄한다면 이를 우선하십시오:\n\n* `D’Aramitz 구출 계획` → `D’Aramitz`\n* `Bromet의 숨은 계약자` → `Bromet`\n* `Althof Ledger 바꿔치기` → `Althof Ledger`\n\n수식된 구절은 중심 개체가 제공하지 않는 독립적인 검색 경로가 될 때만 유지하십시오:\n\n* `가짜 케이터링 직원`\n* `원장의 복제본`\n* `은신처 아침 식사`\n* `역감시 카메라`\n\n여러 단서가 하나의 결론을 확립한다면 보통 각 단서가 아니라 그 결과를 태그로 지정하십시오:\n\n* 제복, 배지, 차량 접근 권한 → `가짜 케이터링 직원`\n* 결제 내역과 회사 기록 → `Bromet`\n* 갈라의 비밀 전술팀 → `암살 의혹`\n* 장비와 변장을 위해 빌린 빌라 → `준비용 빌라`\n\n보조 단서는 기억에 남거나, 다시 등장할 가능성이 높거나, 그 자체로 검색에 유용할 때만 유지할 수 있습니다. “pack for forever”나 “dick-measuring contest” 같은 특징적인 표현은 기억에 남거나 관계상 중요한 경우에만 보존하십시오.\n\nJSON을 반환하기 전에 각 키워드가 자연스럽게 검색 가능하고, 연속성에 관련되며, 바꿔 쓰기에 안정적이고, 독립적으로 유용하며, 필요한 만큼만 짧은지 조용히 확인하세요."
+  ,"STMemoryBooks_ActiveCast": "활성 배역",
   "STMemoryBooks_Add": "추가",
   "STMemoryBooks_Collapse": "접기",
   "STMemoryBooks_ManageCast": "배역 관리",
@@ -1660,160 +1660,160 @@
   "STMemoryBooks_Restore": "복원",
   "STMemoryBooks_SelectCharacter": "캐릭터 선택",
   "STMemoryBooks_SelectCharacterAndBook": "캐릭터와 메모리 북을 선택하세요.",
-  "STMemoryBooks_SelectMemoryBook": "메모리 북 선택",
-  "STMemoryBooks_NarratorCatchupUntagged": "/stmb-catchup은 배역 메타데이터가 없는 이전 내레이터 메시지를 처리할 수 없습니다. 장면을 한 번 수동으로 열어 배역을 확인하세요.",
-  "STMemoryBooks_CharacterName": "캐릭터 이름",
-  "STMemoryBooks_EnterCharacterAndBook": "캐릭터 이름을 입력하고 메모리 북을 선택하세요.",
-  "STMemoryBooks_NarratorRequiresManualMode": "내레이터 모드를 활성화하기 전에 수동 로어북 모드를 활성화하세요. 자동 채팅 연결 로어북은 내레이터 모드에서 지원되지 않습니다.",
-  "STMemoryBooks_DisableNarratorBeforeManualMode": "수동 로어북 모드를 비활성화하기 전에 내레이터 모드를 비활성화하세요.",
-  "STMemoryBooks_ClipReview_Apply": "적용하다",
-  "STMemoryBooks_ClipReview_ApplyFailed": "Clip 제안을 적용하지 못했습니다.",
-  "STMemoryBooks_ClipReview_BatchFailed": "메모리 지원 일괄 처리가 실패했습니다.",
-  "STMemoryBooks_ClipReview_CannotDelete": "메모리 지원은 삭제할 수 없습니다.",
-  "STMemoryBooks_ClipReview_CannotDuplicate": "메모리 지원은 중복될 수 없습니다.",
-  "STMemoryBooks_ClipReview_DefaultPrompt": "시스템: 새로 처리된 채팅 장면 하나와 비교하여 기존 메모리 북 클립을 검토합니다. \n\n제공된 각 클립에 대해 이 주제와 관련된 모든 사실을 수집하세요. 이전 정보에 대해 이후 정보를 해결합니다. 현재 상태, 완료된 이벤트, 결정, 해결되지 않은 문제 및 향후 계획을 구별합니다. 가능한 경우 정확한 세부정보를 유지하세요. \n\n규칙: \n- 제공된 장면에서 직접적으로 뒷받침되는 사실만 사용하세요. \n- 일반 클립의 경우 단일 소스 메시지에서 정확히 한 부분만 발췌한 내용을 제안하세요. 기존 콘텐츠를 다시 작성하거나 제거하지 마세요. \n- 주제별 클립의 경우 유용한 기존 정보를 보존하고, 관련된 새로운 사실을 병합하고, 중복을 제거하고, 실제 충돌을 기록하는 완전히 수정된 본문을 반환합니다. \n- 제공된 UID로만 ​​항목을 참조하세요. \n- 반복, 의역 또는 단순히 관련된 토론에는 업데이트가 필요하지 않습니다. \n- 업데이트가 필요하지 않은 항목은 생략합니다. \n- 인사나 업무 설명, 마크다운 펜스 반납 등을 하지 마세요.",
-  "STMemoryBooks_ClipReview_Dismiss": "무시",
-  "STMemoryBooks_ClipReview_UpdatedTitle": "메모리 지원 제안 업데이트됨",
-  "STMemoryBooks_ClipReview_UpdatedMessage": "“{{lorebookName}}”의 메모리 지원 제안이 업데이트되었습니다.",
-  "STMemoryBooks_ClipReview_UpdatedDismiss": "닫기",
-  "STMemoryBooks_ClipReview_GoToSuggestions": "제안으로 이동",
-  "STMemoryBooks_ClipReview_EditTitle": "메모리 지원 편집",
-  "STMemoryBooks_ClipReview_FixedContractHelp": "업데이트는 승인을 위해 기존 클립 변경 사항을 저장합니다. 업데이트 및 제안은 먼저 새로운 주제 클립 주제를 발견한 다음 동일한 업데이트 검토를 수행합니다. 자동은 일반 클립 추가 내용을 직접 적용하고 주제 클립 교체 내용은 승인 대기 상태로 둡니다. 안전한 검증을 위해 두 응답 계약 모두 고정된 상태로 유지됩니다.",
-  "STMemoryBooks_ClipReview_Mode": "모드",
-  "STMemoryBooks_ClipReview_ModeLabel": "기억력 지원 모드",
-  "STMemoryBooks_ClipReview_ModeAutomatic": "오토매틱",
-  "STMemoryBooks_ClipReview_ModeOff": "사용 안 함",
-  "STMemoryBooks_ClipReview_ModeUpdate": "업데이트",
-  "STMemoryBooks_ClipReview_ModeUpdateAndSuggest": "업데이트 및 제안",
-  "STMemoryBooks_ClipReview_ModeSuggest": "제안",
-  "STMemoryBooks_ClipReview_SuggestHelp": "제안은 기존 클립을 업데이트하지 않고 새로운 주제별 클립 주제를 찾습니다.",
-  "STMemoryBooks_ClipReview_Name": "기억력 지원",
-  "STMemoryBooks_ClipReview_NoSuggestions": "현재 메모리 지원 제안이 없습니다.",
-  "STMemoryBooks_ClipReview_OpenFailed": "메모리 지원 제안을 열지 못했습니다.",
-  "STMemoryBooks_ClipReview_ProfileOverride": "연결 프로필 재정의 사용",
-  "STMemoryBooks_ClipReview_QueryAll": "모두 쿼리",
-  "STMemoryBooks_ClipReview_QuerySelected": "선택된 쿼리",
-  "STMemoryBooks_ClipReview_SelectTitle": "검토할 클립을 선택하세요",
-  "STMemoryBooks_ClipReview_SpecialToggleInfo": "메모리 지원은 자체 끄기, 업데이트, 업데이트 및 제안, 자동 모드 설정을 사용합니다.",
-  "STMemoryBooks_ClipReview_SuggestedEdit": "제안된 수정 사항",
-  "STMemoryBooks_ClipReview_SuggestionsTitle": "기억력 지원 제안",
-  "STMemoryBooks_ClipReview_TargetChanged": "이 리뷰 이후 클립이 변경되었습니다. 제안을 적용하기 전에 메모리 지원을 다시 실행하십시오.",
-  "STMemoryBooks_ClipReview_TargetMissing": "추천 클립이 더 이상 존재하지 않습니다.",
-  "STMemoryBooks_ClipReview_TargetNotClip": "제안 대상은 더 이상 STMB 클립이 아닙니다.",
-  "STMemoryBooks_ClipReview_TargetTypeChanged": "이번 검토 이후 클립 유형이 변경되었습니다. 메모리 지원을 다시 실행하십시오.",
-  "STMemoryBooks_ClipReview_TokenWarningTitle": "메모리 지원 토큰 경고",
-  "STMemoryBooks_ClipReview_UpdatePrompt": "업데이트 프롬프트",
-  "STMemoryBooks_ClipSuggestions_Add": "주제 추가",
-  "STMemoryBooks_ClipSuggestions_CreateSelected": "선택한 초안 만들기",
-  "STMemoryBooks_ClipSuggestions_DefaultPrompt": "시스템: 제공된 채팅 장면을 검토하고 해당 장면을 기반으로 새로운 주제 클립을 제안합니다. \n\n1. 현장을 검토하고 토론에서 구체적인 주제를 파악합니다. 장면에서 식별된 주제를 0~5개로 간결하게 분류하세요. \n2. 식별된 주제를 제공된 기존 주제 클립 목록과 비교하십시오. 기존 주제 클립에서 아직 다루지 않은 주제인 경우에만 새 주제 클립을 제안하세요. \n3. 직접적으로 뒷받침되고 실질적으로 논의되는 주제로 제안을 제한하십시오. 접선적으로만 관련되거나 장면에서 언급되지 않은 주제를 제안하지 마십시오. \n\n규칙: \n- 제공된 장면에서 직접적으로 뒷받침되는 사실만 사용하세요. \n- 주관적인 인상보다 객관적인 세부 정보를 선호합니다. \n- 반복, 의역 또는 단순히 관련된 토론에는 업데이트가 필요하지 않습니다. \n- 업데이트가 필요하지 않은 항목은 생략합니다. \n- 인사나 업무 설명, 마크다운 펜스 반납 등을 하지 마세요.",
-  "STMemoryBooks_ClipSuggestions_Description": "주제 클립 초안으로 전환할 주제를 선택하세요. 제안 사항을 편집하거나 자신만의 주제를 추가할 수 있습니다.",
-  "STMemoryBooks_ClipSuggestions_Failed": "메모리 지원 주제 검색에 실패했습니다.",
-  "STMemoryBooks_ClipSuggestions_Include": "이 주제별 클립 만들기",
-  "STMemoryBooks_ClipSuggestions_KeepForLater": "나중을 위해 보관",
-  "STMemoryBooks_ClipSuggestions_Prompt": "주제 제안 프롬프트",
-  "STMemoryBooks_ClipSuggestions_Review": "주제 검토",
-  "STMemoryBooks_ClipSuggestions_Title": "새로운 주제별 클립 추천",
-  "STMemoryBooks_ClipSuggestions_None": "새로운 주제가 제안되지 않았습니다. 수동으로 추가할 수 있습니다.",
-  "STMemoryBooks_ClipReview_SelectDescription": "“{{lorebookName}}”에 클립이 5개보다 많습니다. 특정 항목을 선택하거나 모두 조회하세요.",
-  "STMemoryBooks_ClipReview_ResponseContract": "업데이트가 필요한 각 클립 UID를 하나의 제안 문자열에 매핑하는 단일 JSON 객체를 반환하세요.\n일반 클립의 경우 문자열은 NEW SCENE의 단일 메시지에서 정확히 복사한 발췌문이어야 합니다.\n주제별 클립의 경우 문자열은 완전히 수정된 클립 본문이어야 합니다.\n업데이트가 필요하지 않은 클립은 생략하세요. 업데이트가 필요한 클립이 없으면 {}를 반환하세요.\nJSON만 반환하세요. 배열, Markdown 코드 블록, 이유, 메시지 ID 또는 설명은 반환하지 마세요.",
-  "STMemoryBooks_ClipReview_TokenWarningMessage": "이 기억력 지원 배치는 {{estimatedTokens}}토큰으로 추정되어 경고 임계값 {{threshold}}를 초과합니다.",
-  "STMemoryBooks_ClipReview_AutomaticAppliedOne": "기억력 지원이 클립 업데이트 1건을 자동으로 적용했습니다.",
-  "STMemoryBooks_ClipReview_AutomaticAppliedMany": "기억력 지원이 클립 업데이트 {{count}}건을 자동으로 적용했습니다.",
-  "STMemoryBooks_ClipReview_SuggestedUpdateOne": "제안된 업데이트 1건",
-  "STMemoryBooks_ClipReview_SuggestedUpdateMany": "제안된 업데이트 {{count}}건",
-  "STMemoryBooks_ClipReview_NewTopicOne": "새 주제 1개",
-  "STMemoryBooks_ClipReview_NewTopicMany": "새 주제 {{count}}개",
-  "STMemoryBooks_ClipReview_FoundUpdatesAndTopics": "기억력 지원이 {{updateMessage}}과(와) {{topicMessage}}을(를) 찾았습니다.",
-  "STMemoryBooks_ClipReview_FoundTopics": "기억력 지원이 {{topicMessage}}을(를) 찾았습니다.",
-  "STMemoryBooks_Consolidation_RetryNeedsReview": "이 통합에는 저장 확인 기록이 없습니다. 새 통합을 시작하기 전에 메모리 북에 저장된 요약을 확인하세요.",
-  "STMemoryBooks_ClipReview_FoundUpdates": "기억력 지원이 {{updateMessage}}을(를) 찾았습니다.",
-  "STMemoryBooks_ClipReview_ResetPrompt": "프롬프트 재설정",
-  "STMemoryBooks_ClipReview_ResetWarning": "기억력 지원만 기본 제공 프롬프트와 설정으로 재설정합니다. 현재 모드는 변경되지 않습니다. 이 작업은 취소할 수 없습니다.",
-  "STMemoryBooks_TopicalClip_SourceTypes": "소스",
-  "STMemoryBooks_TopicalClip_IncludeMemories": "저장된 메모리 포함",
-  "STMemoryBooks_TopicalClip_IncludeMessages": "채팅 메시지 포함",
-  "STMemoryBooks_TopicalClip_MessageStart": "시작 메시지 ID",
-  "STMemoryBooks_TopicalClip_MessageEnd": "종료 메시지 ID",
-  "STMemoryBooks_TopicalClip_NoSourceTypes": "저장된 메모리, 채팅 메시지 또는 둘 다 선택하세요.",
-  "STMemoryBooks_TopicalClip_PromptMissingSourceMessages": "채팅 메시지를 선택한 경우 주제 클립 프롬프트에 {{SOURCE_MESSAGES}}가 포함되어야 합니다.",
-  "STMemoryBooks_TopicalClip_InvalidMessageRange": "현재 채팅 내의 유효한 메시지 범위를 입력하세요.",
-  "STMemoryBooks_TopicalClip_MessageCompileFailed": "선택한 메시지를 컴파일하지 못했습니다.",
-  "STMemoryBooks_ClipReview_TopicalAwaitingReviewOne": "주제 클립 업데이트 1개가 승인 대기 중입니다.",
-  "STMemoryBooks_ClipReview_TopicalAwaitingReviewMany": "주제 클립 업데이트 {{count}}개가 승인 대기 중입니다.",
-  "STMemoryBooks_AutoRollbackEnabled": "메시지 삭제 후 자동 롤백",
-  "STMemoryBooks_AutoRollbackBranches": "브랜치/체크포인트에도 자동 롤백 적용",
-  "STMemoryBooks_AutoRollbackBranchesDesc": "브랜치 또는 체크포인트를 열면 유지된 메시지 이후의 메모리를 롤백합니다. 독립적인 Memory Book 사본이 필요합니다.",
-  "STMemoryBooks_AutoRollbackBranchCopyDisabled": "Memory Book 복사가 꺼져 있어 이 브랜치 또는 체크포인트의 자동 롤백을 건너뛰었습니다.",
-  "STMemoryBooks_AutoRollbackBranchIsolation": "활성 Memory Book 전체의 독립 사본을 확인할 수 없어 브랜치/체크포인트 자동 롤백을 건너뛰었습니다.",
-  "STMemoryBooks_AutoRollbackDesc": "삭제된 메시지로 인해 처리된 메모리가 무효화되면 선택한 롤백 작업을 적용합니다. 메모리 또는 통합 삭제는 되돌릴 수 없습니다.",
-  "STMemoryBooks_AutoRollbackUpdateLastProcessed": "마지막으로 처리한 메시지 ID 업데이트",
-  "STMemoryBooks_AutoRollbackDeleteLastMemory": "마지막 메모리 삭제",
-  "STMemoryBooks_AutoRollbackRestoreSidePrompts": "이전 Side Prompt 복원",
-  "STMemoryBooks_AutoRollbackSidePromptLimit": "Side Prompt는 마지막으로 정확히 저장된 상태로 한 번만 롤백할 수 있습니다. 이전 롤백 단계는 보존되지 않습니다.",
-  "STMemoryBooks_AutoRollback_LoadFailed": "메모리 롤백에서 Memory Book {{name}}을(를) 안전하게 불러오지 못했습니다. 사용할 수 없는 책을 복구하거나 제거한 후 다시 시도하세요.",
-  "STMemoryBooks_AutoRollback_ScopeTitle": "메모리 롤백 범위 선택",
-  "STMemoryBooks_AutoRollback_ScopeBody": "채팅 중간에서 메시지 {{count}}개를 삭제하면 메모리 항목 {{memories}}개에 영향을 줍니다.",
-  "STMemoryBooks_AutoRollback_Full": "전체 롤백",
-  "STMemoryBooks_AutoRollback_FullDesc": "영향받은 메모리와 그 이후의 모든 메모리를 삭제합니다.",
-  "STMemoryBooks_AutoRollback_Affected": "영향받은 항목만",
-  "STMemoryBooks_AutoRollback_AffectedDesc": "겹치는 메모리만 삭제하고 이후 범위를 이동합니다. 메모리에 영구적인 공백이 남습니다.",
-  "STMemoryBooks_AutoRollback_Tier": "티어 {{tier}}",
-  "STMemoryBooks_AutoRollback_ConsolidationTitle": "종속 통합을 삭제하시겠습니까?",
-  "STMemoryBooks_AutoRollback_ConsolidationBody": "롤백하려면 다음 통합을 삭제하고 기존 직접 소스를 다시 활성화해야 합니다. 메모리 삭제는 되돌릴 수 없습니다.",
-  "STMemoryBooks_AutoRollback_ConfirmDelete": "삭제하고 롤백",
-  "STMemoryBooks_AutoRollback_Conflict": "롤백을 준비하는 동안 Memory Book {{name}}이(가) 변경되었습니다. 그 밖의 변경은 적용되지 않았습니다.",
-  "STMemoryBooks_AutoRollback_CompensationFailed": "다음 책의 롤백 복구도 실패했습니다: {{books}}. 계속하기 전에 해당 Memory Book을 백업에서 복원하세요.",
-  "STMemoryBooks_AutoRollback_Ambiguous": "채팅/범위 메타데이터가 충분하지 않은 메모리를 발견했습니다: {{entries}}. STMB_chatId, STMB_start, STMB_end 메타데이터를 복구한 후 다시 시도하세요.",
-  "STMemoryBooks_AutoRollback_LinkedIncomplete": "불완전하게 연결된 메모리 사본을 발견했습니다: {{details}}. 정규/연결 메타데이터를 복구한 후 다시 시도하세요.",
-  "STMemoryBooks_AutoRollback_NoMemories": "처리된 범위와 정확히 일치하는 메모리 항목을 찾지 못했습니다. 이전 형식이거나 누락된 메모리 메타데이터를 복구한 후 다시 시도하세요.",
-  "STMemoryBooks_AutoRollback_ConsolidationIncomplete": "불완전한 통합 종속성을 발견했습니다: {{details}}. 복구한 후 다시 시도하세요.",
-  "STMemoryBooks_AutoRollback_LegacySidePrompts": "이전 버전의 Side Prompt 스냅샷은 롤백할 수 없어 건너뛰었습니다.",
-  "STMemoryBooks_AutoRollback_ChangedSidePrompts": "일부 Side Prompt가 메모리 생성 후 변경되어 그대로 유지했습니다.",
-  "STMemoryBooks_AutoRollback_MultipleSidePrompts": "각 Side Prompt에서 사용 가능한 가장 최근의 이전 상태만 복원했습니다. 더 오래된 롤백 정보가 남아 있을 수 있습니다.",
-  "STMemoryBooks_AutoRollback_Complete": "메모리 항목 {{count}}개의 롤백을 완료했습니다.",
-  "STMemoryBooks_AutoRollback_Failed": "메모리 롤백 실패",
-  "STMemoryBooks_Toast_SceneMarkerCleared": "메시지 삭제로 인해 장면 마커가 지워졌습니다.",
-  "STMemoryBooks_GroupChatSettings": "그룹 채팅",
-  "STMemoryBooks_CharacterAwareMemories": "캐릭터별 메모리",
-  "STMemoryBooks_CharacterAwareMemoriesTooltip": "그룹 채팅 메모리를 참여 캐릭터로 필터링합니다. 선택을 해제하면 캐릭터 필터, 참여자 선택, 캐릭터별 복사본, 별도의 그룹/캐릭터 프롬프트 없이 일반적인 단일 메모리 북 처리를 사용합니다. 기존 항목은 다시 작성될 때까지 필터를 유지합니다.",
-  "STMemoryBooks_SeparateGroupSidePrompts": "그룹 사이드 프롬프트 따로 사용",
-  "STMemoryBooks_SeparateGroupSidePromptsTooltip": "자동 실행 시 그룹 사이드 프롬프트 기본값을 사용합니다. 선택을 해제하면 솔로 기본값을 상속합니다. 채팅별 명시적 선택은 계속 적용됩니다. 캐릭터별 메모리와 독립적인 설정입니다.",
-  "STMemoryBooks_CharacterAwareDisabled": "일반 설정에서 “캐릭터별 메모리”가 선택 해제되어 비활성화되었으며 적용되지 않습니다.",
-  "STMemoryBooks_SeparateGroupSidePromptsDisabled": "일반 설정에서 “그룹 사이드 프롬프트 따로 사용”이 선택 해제되어 비활성화되었으며 적용되지 않습니다.",
-  "STMemoryBooks_EnableSidePromptVersioning": "사이드 프롬프트 버전 관리 활성화",
-  "STMemoryBooks_SaveAllSidePromptVersions": "모든 버전 저장",
-  "STMemoryBooks_SidePromptVersioningHelp": "이 확인란을 선택하면 사이드 프롬프트별 버전 관리 설정이 활성화됩니다. 선택하지 않으면 새 버전은 만들지 않으며 기존 기록은 유지되고 최신 출력이 업데이트됩니다.",
-  "STMemoryBooks_SidePromptVersioningTemplateHelp": "사이드 프롬프트 관리자에서 버전 관리를 활성화해야 합니다. 이전 버전은 비활성화된 상태로 유지됩니다.",
-  "STMemoryBooks_Extract_Search": "채팅 메시지 검색",
-  "STMemoryBooks_Extract_CurrentChat": "현재 열린 채팅을 검색합니다. 주제별 클립의 출처로 사용할 메시지를 선택하세요.",
-  "STMemoryBooks_Extract_UseSelected": "선택한 메시지 사용",
-  "STMemoryBooks_Extract_NoMatches": "일치하는 메시지가 없습니다.",
-  "STMemoryBooks_Extract_Changed": "채팅 또는 선택한 메시지가 변경되었습니다. 다시 선택하세요.",
-  "STMemoryBooks_Extract_Action": "추출",
-  "STMemoryBooks_Extract_Open": "추출…",
-  "STMemoryBooks_Extract_Selected": "선택한 메시지",
-  "STMemoryBooks_Extract_Edit": "선택 편집",
-  "STMemoryBooks_Extract_SelectedCount": "선택한 메시지: {{count}}",
-  "STMemoryBooks_TopicalClip_MessageRange": "메시지 범위",
-  "STMemoryBooks_Consolidation_NoPending": "대기 중인 통합 저장이 없습니다.",
-  "STMemoryBooks_Consolidation_RecoveryHint": "재개하기 전에 저장된 요약을 확인하세요.",
-  "STMemoryBooks_Consolidation_Resume": "재개",
-  "STMemoryBooks_Consolidation_RecoveryTitle": "통합 복구",
-  "STMemoryBooks_Consolidation_Confirmed": "통합 저장이 확인되었습니다.",
-  "STMemoryBooks_Consolidation_Pending": "대기 중",
-  "STMemoryBooks_Consolidation_ReviewRequired": "저장된 통합 상태를 확인할 수 없습니다. 다시 시작하기 전에 메모리 북을 확인하세요.",
-  "STMemoryBooks_Consolidation_ReviewAction": "세부 정보 확인",
-  "STMemoryBooks_Consolidation_DismissAction": "확인 후 닫기",
-  "STMemoryBooks_Consolidation_RecoveryPartial": "저장된 요약을 복구했습니다. 남은 출처는 새 통합을 시작하세요.",
-  "STMemoryBooks_Reminder_AutomaticEnabled": "자동 메모리 알림 켜기",
-  "STMemoryBooks_Reminder_AutomaticInterval": "자동 메모리 알림 간격(메시지 수)",
-  "STMemoryBooks_Reminder_AutomaticHelp": "자동 생성이 켜져 있으면 메시지 간격에 버퍼와 이 메시지 수를 더한 시점에 첫 알림을 표시하고, 이후 같은 수의 메시지가 추가될 때마다 반복합니다. 토큰 수로 생성을 시작하는 경우에도 항상 채팅 메시지 수를 셉니다.",
-  "STMemoryBooks_Reminder_ManualEnabled": "수동 메모리 생성 알림 켜기",
-  "STMemoryBooks_Reminder_ManualInterval": "수동 메모리 알림 간격(메시지 수)",
-  "STMemoryBooks_Reminder_ManualHelp": "자동 생성이 꺼져 있으면 처리되지 않은 채팅 메시지가 이 수에 도달할 때 알리고, 이후 같은 수의 메시지가 추가될 때마다 반복합니다.",
-  "STMemoryBooks_Reminder_CommonHelp": "알림은 직접 닫을 때까지 표시되며 알림 표시 설정과 독립적으로 작동합니다.",
-  "STMemoryBooks_Reminder_AutomaticToast": "자동 메모리 요약이 지연되었습니다. 처리되지 않은 메시지가 {{count}}개 있습니다. 자동 메모리 설정을 확인하거나 메모리를 생성하세요.",
-  "STMemoryBooks_Reminder_ManualToast": "마지막 메모리 요약 이후 메시지가 {{count}}개 있습니다. 메모리 생성을 고려해 보세요.",
+  "STMemoryBooks_SelectMemoryBook": "메모리 북 선택"
+  ,"STMemoryBooks_NarratorCatchupUntagged": "/stmb-catchup은 배역 메타데이터가 없는 이전 내레이터 메시지를 처리할 수 없습니다. 장면을 한 번 수동으로 열어 배역을 확인하세요."
+  ,"STMemoryBooks_CharacterName": "캐릭터 이름"
+  ,"STMemoryBooks_EnterCharacterAndBook": "캐릭터 이름을 입력하고 메모리 북을 선택하세요."
+  ,"STMemoryBooks_NarratorRequiresManualMode": "내레이터 모드를 활성화하기 전에 수동 로어북 모드를 활성화하세요. 자동 채팅 연결 로어북은 내레이터 모드에서 지원되지 않습니다."
+  ,"STMemoryBooks_DisableNarratorBeforeManualMode": "수동 로어북 모드를 비활성화하기 전에 내레이터 모드를 비활성화하세요."
+  ,"STMemoryBooks_ClipReview_Apply": "적용하다"
+  ,"STMemoryBooks_ClipReview_ApplyFailed": "Clip 제안을 적용하지 못했습니다."
+  ,"STMemoryBooks_ClipReview_BatchFailed": "메모리 지원 일괄 처리가 실패했습니다."
+  ,"STMemoryBooks_ClipReview_CannotDelete": "메모리 지원은 삭제할 수 없습니다."
+  ,"STMemoryBooks_ClipReview_CannotDuplicate": "메모리 지원은 중복될 수 없습니다."
+  ,"STMemoryBooks_ClipReview_DefaultPrompt": "시스템: 새로 처리된 채팅 장면 하나와 비교하여 기존 메모리 북 클립을 검토합니다. \n\n제공된 각 클립에 대해 이 주제와 관련된 모든 사실을 수집하세요. 이전 정보에 대해 이후 정보를 해결합니다. 현재 상태, 완료된 이벤트, 결정, 해결되지 않은 문제 및 향후 계획을 구별합니다. 가능한 경우 정확한 세부정보를 유지하세요. \n\n규칙: \n- 제공된 장면에서 직접적으로 뒷받침되는 사실만 사용하세요. \n- 일반 클립의 경우 단일 소스 메시지에서 정확히 한 부분만 발췌한 내용을 제안하세요. 기존 콘텐츠를 다시 작성하거나 제거하지 마세요. \n- 주제별 클립의 경우 유용한 기존 정보를 보존하고, 관련된 새로운 사실을 병합하고, 중복을 제거하고, 실제 충돌을 기록하는 완전히 수정된 본문을 반환합니다. \n- 제공된 UID로만 ​​항목을 참조하세요. \n- 반복, 의역 또는 단순히 관련된 토론에는 업데이트가 필요하지 않습니다. \n- 업데이트가 필요하지 않은 항목은 생략합니다. \n- 인사나 업무 설명, 마크다운 펜스 반납 등을 하지 마세요."
+  ,"STMemoryBooks_ClipReview_Dismiss": "무시"
+  ,"STMemoryBooks_ClipReview_UpdatedTitle": "메모리 지원 제안 업데이트됨"
+  ,"STMemoryBooks_ClipReview_UpdatedMessage": "“{{lorebookName}}”의 메모리 지원 제안이 업데이트되었습니다."
+  ,"STMemoryBooks_ClipReview_UpdatedDismiss": "닫기"
+  ,"STMemoryBooks_ClipReview_GoToSuggestions": "제안으로 이동"
+  ,"STMemoryBooks_ClipReview_EditTitle": "메모리 지원 편집"
+  ,"STMemoryBooks_ClipReview_FixedContractHelp": "업데이트는 승인을 위해 기존 클립 변경 사항을 저장합니다. 업데이트 및 제안은 먼저 새로운 주제 클립 주제를 발견한 다음 동일한 업데이트 검토를 수행합니다. 자동은 일반 클립 추가 내용을 직접 적용하고 주제 클립 교체 내용은 승인 대기 상태로 둡니다. 안전한 검증을 위해 두 응답 계약 모두 고정된 상태로 유지됩니다."
+  ,"STMemoryBooks_ClipReview_Mode": "모드"
+  ,"STMemoryBooks_ClipReview_ModeLabel": "기억력 지원 모드"
+  ,"STMemoryBooks_ClipReview_ModeAutomatic": "오토매틱"
+  ,"STMemoryBooks_ClipReview_ModeOff": "사용 안 함"
+  ,"STMemoryBooks_ClipReview_ModeUpdate": "업데이트"
+  ,"STMemoryBooks_ClipReview_ModeUpdateAndSuggest": "업데이트 및 제안"
+  ,"STMemoryBooks_ClipReview_ModeSuggest": "제안"
+  ,"STMemoryBooks_ClipReview_SuggestHelp": "제안은 기존 클립을 업데이트하지 않고 새로운 주제별 클립 주제를 찾습니다."
+  ,"STMemoryBooks_ClipReview_Name": "기억력 지원"
+  ,"STMemoryBooks_ClipReview_NoSuggestions": "현재 메모리 지원 제안이 없습니다."
+  ,"STMemoryBooks_ClipReview_OpenFailed": "메모리 지원 제안을 열지 못했습니다."
+  ,"STMemoryBooks_ClipReview_ProfileOverride": "연결 프로필 재정의 사용"
+  ,"STMemoryBooks_ClipReview_QueryAll": "모두 쿼리"
+  ,"STMemoryBooks_ClipReview_QuerySelected": "선택된 쿼리"
+  ,"STMemoryBooks_ClipReview_SelectTitle": "검토할 클립을 선택하세요"
+  ,"STMemoryBooks_ClipReview_SpecialToggleInfo": "메모리 지원은 자체 끄기, 업데이트, 업데이트 및 제안, 자동 모드 설정을 사용합니다."
+  ,"STMemoryBooks_ClipReview_SuggestedEdit": "제안된 수정 사항"
+  ,"STMemoryBooks_ClipReview_SuggestionsTitle": "기억력 지원 제안"
+  ,"STMemoryBooks_ClipReview_TargetChanged": "이 리뷰 이후 클립이 변경되었습니다. 제안을 적용하기 전에 메모리 지원을 다시 실행하십시오."
+  ,"STMemoryBooks_ClipReview_TargetMissing": "추천 클립이 더 이상 존재하지 않습니다."
+  ,"STMemoryBooks_ClipReview_TargetNotClip": "제안 대상은 더 이상 STMB 클립이 아닙니다."
+  ,"STMemoryBooks_ClipReview_TargetTypeChanged": "이번 검토 이후 클립 유형이 변경되었습니다. 메모리 지원을 다시 실행하십시오."
+  ,"STMemoryBooks_ClipReview_TokenWarningTitle": "메모리 지원 토큰 경고"
+  ,"STMemoryBooks_ClipReview_UpdatePrompt": "업데이트 프롬프트"
+  ,"STMemoryBooks_ClipSuggestions_Add": "주제 추가"
+  ,"STMemoryBooks_ClipSuggestions_CreateSelected": "선택한 초안 만들기"
+  ,"STMemoryBooks_ClipSuggestions_DefaultPrompt": "시스템: 제공된 채팅 장면을 검토하고 해당 장면을 기반으로 새로운 주제 클립을 제안합니다. \n\n1. 현장을 검토하고 토론에서 구체적인 주제를 파악합니다. 장면에서 식별된 주제를 0~5개로 간결하게 분류하세요. \n2. 식별된 주제를 제공된 기존 주제 클립 목록과 비교하십시오. 기존 주제 클립에서 아직 다루지 않은 주제인 경우에만 새 주제 클립을 제안하세요. \n3. 직접적으로 뒷받침되고 실질적으로 논의되는 주제로 제안을 제한하십시오. 접선적으로만 관련되거나 장면에서 언급되지 않은 주제를 제안하지 마십시오. \n\n규칙: \n- 제공된 장면에서 직접적으로 뒷받침되는 사실만 사용하세요. \n- 주관적인 인상보다 객관적인 세부 정보를 선호합니다. \n- 반복, 의역 또는 단순히 관련된 토론에는 업데이트가 필요하지 않습니다. \n- 업데이트가 필요하지 않은 항목은 생략합니다. \n- 인사나 업무 설명, 마크다운 펜스 반납 등을 하지 마세요."
+  ,"STMemoryBooks_ClipSuggestions_Description": "주제 클립 초안으로 전환할 주제를 선택하세요. 제안 사항을 편집하거나 자신만의 주제를 추가할 수 있습니다."
+  ,"STMemoryBooks_ClipSuggestions_Failed": "메모리 지원 주제 검색에 실패했습니다."
+  ,"STMemoryBooks_ClipSuggestions_Include": "이 주제별 클립 만들기"
+  ,"STMemoryBooks_ClipSuggestions_KeepForLater": "나중을 위해 보관"
+  ,"STMemoryBooks_ClipSuggestions_Prompt": "주제 제안 프롬프트"
+  ,"STMemoryBooks_ClipSuggestions_Review": "주제 검토"
+  ,"STMemoryBooks_ClipSuggestions_Title": "새로운 주제별 클립 추천"
+  ,"STMemoryBooks_ClipSuggestions_None": "새로운 주제가 제안되지 않았습니다. 수동으로 추가할 수 있습니다."
+  ,"STMemoryBooks_ClipReview_SelectDescription": "“{{lorebookName}}”에 클립이 5개보다 많습니다. 특정 항목을 선택하거나 모두 조회하세요."
+  ,"STMemoryBooks_ClipReview_ResponseContract": "업데이트가 필요한 각 클립 UID를 하나의 제안 문자열에 매핑하는 단일 JSON 객체를 반환하세요.\n일반 클립의 경우 문자열은 NEW SCENE의 단일 메시지에서 정확히 복사한 발췌문이어야 합니다.\n주제별 클립의 경우 문자열은 완전히 수정된 클립 본문이어야 합니다.\n업데이트가 필요하지 않은 클립은 생략하세요. 업데이트가 필요한 클립이 없으면 {}를 반환하세요.\nJSON만 반환하세요. 배열, Markdown 코드 블록, 이유, 메시지 ID 또는 설명은 반환하지 마세요."
+  ,"STMemoryBooks_ClipReview_TokenWarningMessage": "이 기억력 지원 배치는 {{estimatedTokens}}토큰으로 추정되어 경고 임계값 {{threshold}}를 초과합니다."
+  ,"STMemoryBooks_ClipReview_AutomaticAppliedOne": "기억력 지원이 클립 업데이트 1건을 자동으로 적용했습니다."
+  ,"STMemoryBooks_ClipReview_AutomaticAppliedMany": "기억력 지원이 클립 업데이트 {{count}}건을 자동으로 적용했습니다."
+  ,"STMemoryBooks_ClipReview_SuggestedUpdateOne": "제안된 업데이트 1건"
+  ,"STMemoryBooks_ClipReview_SuggestedUpdateMany": "제안된 업데이트 {{count}}건"
+  ,"STMemoryBooks_ClipReview_NewTopicOne": "새 주제 1개"
+  ,"STMemoryBooks_ClipReview_NewTopicMany": "새 주제 {{count}}개"
+  ,"STMemoryBooks_ClipReview_FoundUpdatesAndTopics": "기억력 지원이 {{updateMessage}}과(와) {{topicMessage}}을(를) 찾았습니다."
+  ,"STMemoryBooks_ClipReview_FoundTopics": "기억력 지원이 {{topicMessage}}을(를) 찾았습니다."
+  ,"STMemoryBooks_Consolidation_RetryNeedsReview": "이 통합에는 저장 확인 기록이 없습니다. 새 통합을 시작하기 전에 메모리 북에 저장된 요약을 확인하세요."
+  ,"STMemoryBooks_ClipReview_FoundUpdates": "기억력 지원이 {{updateMessage}}을(를) 찾았습니다."
+  ,"STMemoryBooks_ClipReview_ResetPrompt": "프롬프트 재설정"
+  ,"STMemoryBooks_ClipReview_ResetWarning": "기억력 지원만 기본 제공 프롬프트와 설정으로 재설정합니다. 현재 모드는 변경되지 않습니다. 이 작업은 취소할 수 없습니다."
+  ,"STMemoryBooks_TopicalClip_SourceTypes": "소스"
+  ,"STMemoryBooks_TopicalClip_IncludeMemories": "저장된 메모리 포함"
+  ,"STMemoryBooks_TopicalClip_IncludeMessages": "채팅 메시지 포함"
+  ,"STMemoryBooks_TopicalClip_MessageStart": "시작 메시지 ID"
+  ,"STMemoryBooks_TopicalClip_MessageEnd": "종료 메시지 ID"
+  ,"STMemoryBooks_TopicalClip_NoSourceTypes": "저장된 메모리, 채팅 메시지 또는 둘 다 선택하세요."
+  ,"STMemoryBooks_TopicalClip_PromptMissingSourceMessages": "채팅 메시지를 선택한 경우 주제 클립 프롬프트에 {{SOURCE_MESSAGES}}가 포함되어야 합니다."
+  ,"STMemoryBooks_TopicalClip_InvalidMessageRange": "현재 채팅 내의 유효한 메시지 범위를 입력하세요."
+  ,"STMemoryBooks_TopicalClip_MessageCompileFailed": "선택한 메시지를 컴파일하지 못했습니다."
+  ,"STMemoryBooks_ClipReview_TopicalAwaitingReviewOne": "주제 클립 업데이트 1개가 승인 대기 중입니다."
+  ,"STMemoryBooks_ClipReview_TopicalAwaitingReviewMany": "주제 클립 업데이트 {{count}}개가 승인 대기 중입니다."
+  ,"STMemoryBooks_AutoRollbackEnabled": "메시지 삭제 후 자동 롤백"
+  ,"STMemoryBooks_AutoRollbackBranches": "브랜치/체크포인트에도 자동 롤백 적용"
+  ,"STMemoryBooks_AutoRollbackBranchesDesc": "브랜치 또는 체크포인트를 열면 유지된 메시지 이후의 메모리를 롤백합니다. 독립적인 Memory Book 사본이 필요합니다."
+  ,"STMemoryBooks_AutoRollbackBranchCopyDisabled": "Memory Book 복사가 꺼져 있어 이 브랜치 또는 체크포인트의 자동 롤백을 건너뛰었습니다."
+  ,"STMemoryBooks_AutoRollbackBranchIsolation": "활성 Memory Book 전체의 독립 사본을 확인할 수 없어 브랜치/체크포인트 자동 롤백을 건너뛰었습니다."
+  ,"STMemoryBooks_AutoRollbackDesc": "삭제된 메시지로 인해 처리된 메모리가 무효화되면 선택한 롤백 작업을 적용합니다. 메모리 또는 통합 삭제는 되돌릴 수 없습니다."
+  ,"STMemoryBooks_AutoRollbackUpdateLastProcessed": "마지막으로 처리한 메시지 ID 업데이트"
+  ,"STMemoryBooks_AutoRollbackDeleteLastMemory": "마지막 메모리 삭제"
+  ,"STMemoryBooks_AutoRollbackRestoreSidePrompts": "이전 Side Prompt 복원"
+  ,"STMemoryBooks_AutoRollbackSidePromptLimit": "Side Prompt는 마지막으로 정확히 저장된 상태로 한 번만 롤백할 수 있습니다. 이전 롤백 단계는 보존되지 않습니다."
+  ,"STMemoryBooks_AutoRollback_LoadFailed": "메모리 롤백에서 Memory Book {{name}}을(를) 안전하게 불러오지 못했습니다. 사용할 수 없는 책을 복구하거나 제거한 후 다시 시도하세요."
+  ,"STMemoryBooks_AutoRollback_ScopeTitle": "메모리 롤백 범위 선택"
+  ,"STMemoryBooks_AutoRollback_ScopeBody": "채팅 중간에서 메시지 {{count}}개를 삭제하면 메모리 항목 {{memories}}개에 영향을 줍니다."
+  ,"STMemoryBooks_AutoRollback_Full": "전체 롤백"
+  ,"STMemoryBooks_AutoRollback_FullDesc": "영향받은 메모리와 그 이후의 모든 메모리를 삭제합니다."
+  ,"STMemoryBooks_AutoRollback_Affected": "영향받은 항목만"
+  ,"STMemoryBooks_AutoRollback_AffectedDesc": "겹치는 메모리만 삭제하고 이후 범위를 이동합니다. 메모리에 영구적인 공백이 남습니다."
+  ,"STMemoryBooks_AutoRollback_Tier": "티어 {{tier}}"
+  ,"STMemoryBooks_AutoRollback_ConsolidationTitle": "종속 통합을 삭제하시겠습니까?"
+  ,"STMemoryBooks_AutoRollback_ConsolidationBody": "롤백하려면 다음 통합을 삭제하고 기존 직접 소스를 다시 활성화해야 합니다. 메모리 삭제는 되돌릴 수 없습니다."
+  ,"STMemoryBooks_AutoRollback_ConfirmDelete": "삭제하고 롤백"
+  ,"STMemoryBooks_AutoRollback_Conflict": "롤백을 준비하는 동안 Memory Book {{name}}이(가) 변경되었습니다. 그 밖의 변경은 적용되지 않았습니다."
+  ,"STMemoryBooks_AutoRollback_CompensationFailed": "다음 책의 롤백 복구도 실패했습니다: {{books}}. 계속하기 전에 해당 Memory Book을 백업에서 복원하세요."
+  ,"STMemoryBooks_AutoRollback_Ambiguous": "채팅/범위 메타데이터가 충분하지 않은 메모리를 발견했습니다: {{entries}}. STMB_chatId, STMB_start, STMB_end 메타데이터를 복구한 후 다시 시도하세요."
+  ,"STMemoryBooks_AutoRollback_LinkedIncomplete": "불완전하게 연결된 메모리 사본을 발견했습니다: {{details}}. 정규/연결 메타데이터를 복구한 후 다시 시도하세요."
+  ,"STMemoryBooks_AutoRollback_NoMemories": "처리된 범위와 정확히 일치하는 메모리 항목을 찾지 못했습니다. 이전 형식이거나 누락된 메모리 메타데이터를 복구한 후 다시 시도하세요."
+  ,"STMemoryBooks_AutoRollback_ConsolidationIncomplete": "불완전한 통합 종속성을 발견했습니다: {{details}}. 복구한 후 다시 시도하세요."
+  ,"STMemoryBooks_AutoRollback_LegacySidePrompts": "이전 버전의 Side Prompt 스냅샷은 롤백할 수 없어 건너뛰었습니다."
+  ,"STMemoryBooks_AutoRollback_ChangedSidePrompts": "일부 Side Prompt가 메모리 생성 후 변경되어 그대로 유지했습니다."
+  ,"STMemoryBooks_AutoRollback_MultipleSidePrompts": "각 Side Prompt에서 사용 가능한 가장 최근의 이전 상태만 복원했습니다. 더 오래된 롤백 정보가 남아 있을 수 있습니다."
+  ,"STMemoryBooks_AutoRollback_Complete": "메모리 항목 {{count}}개의 롤백을 완료했습니다."
+  ,"STMemoryBooks_AutoRollback_Failed": "메모리 롤백 실패"
+  ,"STMemoryBooks_Toast_SceneMarkerCleared": "메시지 삭제로 인해 장면 마커가 지워졌습니다."
+  ,"STMemoryBooks_GroupChatSettings": "그룹 채팅"
+  ,"STMemoryBooks_CharacterAwareMemories": "캐릭터별 메모리"
+  ,"STMemoryBooks_CharacterAwareMemoriesTooltip": "그룹 채팅 메모리를 참여 캐릭터로 필터링합니다. 선택을 해제하면 캐릭터 필터, 참여자 선택, 캐릭터별 복사본, 별도의 그룹/캐릭터 프롬프트 없이 일반적인 단일 메모리 북 처리를 사용합니다. 기존 항목은 다시 작성될 때까지 필터를 유지합니다."
+  ,"STMemoryBooks_SeparateGroupSidePrompts": "그룹 사이드 프롬프트 따로 사용"
+  ,"STMemoryBooks_SeparateGroupSidePromptsTooltip": "자동 실행 시 그룹 사이드 프롬프트 기본값을 사용합니다. 선택을 해제하면 솔로 기본값을 상속합니다. 채팅별 명시적 선택은 계속 적용됩니다. 캐릭터별 메모리와 독립적인 설정입니다."
+  ,"STMemoryBooks_CharacterAwareDisabled": "일반 설정에서 “캐릭터별 메모리”가 선택 해제되어 비활성화되었으며 적용되지 않습니다."
+  ,"STMemoryBooks_SeparateGroupSidePromptsDisabled": "일반 설정에서 “그룹 사이드 프롬프트 따로 사용”이 선택 해제되어 비활성화되었으며 적용되지 않습니다."
+  ,"STMemoryBooks_EnableSidePromptVersioning": "사이드 프롬프트 버전 관리 활성화"
+  ,"STMemoryBooks_SaveAllSidePromptVersions": "모든 버전 저장"
+  ,"STMemoryBooks_SidePromptVersioningHelp": "이 확인란을 선택하면 사이드 프롬프트별 버전 관리 설정이 활성화됩니다. 선택하지 않으면 새 버전은 만들지 않으며 기존 기록은 유지되고 최신 출력이 업데이트됩니다."
+  ,"STMemoryBooks_SidePromptVersioningTemplateHelp": "사이드 프롬프트 관리자에서 버전 관리를 활성화해야 합니다. 이전 버전은 비활성화된 상태로 유지됩니다."
+  ,"STMemoryBooks_Extract_Search": "채팅 메시지 검색"
+  ,"STMemoryBooks_Extract_CurrentChat": "현재 열린 채팅을 검색합니다. 주제별 클립의 출처로 사용할 메시지를 선택하세요."
+  ,"STMemoryBooks_Extract_UseSelected": "선택한 메시지 사용"
+  ,"STMemoryBooks_Extract_NoMatches": "일치하는 메시지가 없습니다."
+  ,"STMemoryBooks_Extract_Changed": "채팅 또는 선택한 메시지가 변경되었습니다. 다시 선택하세요."
+  ,"STMemoryBooks_Extract_Action": "추출"
+  ,"STMemoryBooks_Extract_Open": "추출…"
+  ,"STMemoryBooks_Extract_Selected": "선택한 메시지"
+  ,"STMemoryBooks_Extract_Edit": "선택 편집"
+  ,"STMemoryBooks_Extract_SelectedCount": "선택한 메시지: {{count}}"
+  ,"STMemoryBooks_TopicalClip_MessageRange": "메시지 범위"
+  ,"STMemoryBooks_Consolidation_NoPending": "대기 중인 통합 저장이 없습니다."
+  ,"STMemoryBooks_Consolidation_RecoveryHint": "재개하기 전에 저장된 요약을 확인하세요."
+  ,"STMemoryBooks_Consolidation_Resume": "재개"
+  ,"STMemoryBooks_Consolidation_RecoveryTitle": "통합 복구"
+  ,"STMemoryBooks_Consolidation_Confirmed": "통합 저장이 확인되었습니다."
+  ,"STMemoryBooks_Consolidation_Pending": "대기 중"
+  ,"STMemoryBooks_Consolidation_ReviewRequired": "저장된 통합 상태를 확인할 수 없습니다. 다시 시작하기 전에 메모리 북을 확인하세요."
+  ,"STMemoryBooks_Consolidation_ReviewAction": "세부 정보 확인"
+  ,"STMemoryBooks_Consolidation_DismissAction": "확인 후 닫기"
+  ,"STMemoryBooks_Consolidation_RecoveryPartial": "저장된 요약을 복구했습니다. 남은 출처는 새 통합을 시작하세요."
+  ,"STMemoryBooks_Reminder_AutomaticEnabled": "자동 메모리 알림 켜기"
+  ,"STMemoryBooks_Reminder_AutomaticInterval": "자동 메모리 알림 간격(메시지 수)"
+  ,"STMemoryBooks_Reminder_AutomaticHelp": "자동 생성이 켜져 있으면 메시지 간격에 버퍼와 이 메시지 수를 더한 시점에 첫 알림을 표시하고, 이후 같은 수의 메시지가 추가될 때마다 반복합니다. 토큰 수로 생성을 시작하는 경우에도 항상 채팅 메시지 수를 셉니다."
+  ,"STMemoryBooks_Reminder_ManualEnabled": "수동 메모리 생성 알림 켜기"
+  ,"STMemoryBooks_Reminder_ManualInterval": "수동 메모리 알림 간격(메시지 수)"
+  ,"STMemoryBooks_Reminder_ManualHelp": "자동 생성이 꺼져 있으면 처리되지 않은 채팅 메시지가 이 수에 도달할 때 알리고, 이후 같은 수의 메시지가 추가될 때마다 반복합니다."
+  ,"STMemoryBooks_Reminder_CommonHelp": "알림은 직접 닫을 때까지 표시되며 알림 표시 설정과 독립적으로 작동합니다."
+  ,"STMemoryBooks_Reminder_AutomaticToast": "자동 메모리 요약이 지연되었습니다. 처리되지 않은 메시지가 {{count}}개 있습니다. 자동 메모리 설정을 확인하거나 메모리를 생성하세요."
+  ,"STMemoryBooks_Reminder_ManualToast": "마지막 메모리 요약 이후 메시지가 {{count}}개 있습니다. 메모리 생성을 고려해 보세요.",
   "STMemoryBooks_MemoryAssist_NoScene": "현재 장면이 없습니다. 메시지 범위를 지정하세요: /memory-assist X-Y.",
   "STMemoryBooks_SortAscending": "오름차순",
   "STMemoryBooks_SortDescending": "내림차순",
@@ -2064,8 +2064,8 @@
   "STMemoryBooks_SlothHealthReviewEmpty": "분석할 기억이 없습니다.",
   "STMemoryBooks_SlothHealthReviewStale": "검토 중 Nexus가 변경되었습니다. 저장하지 않았습니다.",
   "STMemoryBooks_SlothHealthReviewSaved": "선택한 변경을 저장했습니다.",
-  "STMemoryBooks_SlothHealthReviewDuplicate": "중복 기억",
-  "STMemoryBooks_SlothHealthReviewConflict": "상충하는 기억",
+  "STMemoryBooks_SlothHealthReviewDuplicate": "중복 가능성",
+  "STMemoryBooks_SlothHealthReviewConflict": "상충 가능성",
   "STMemoryBooks_SlothHealthReviewValidity": "확인이 필요한 기억",
   "STMemoryBooks_SlothHealthReviewMove": "기억 이동",
   "STMemoryBooks_SlothHealthReviewConstant": "상시",
@@ -2076,23 +2076,27 @@
   "STMemoryBooks_SlothHealthReviewNewEntry": "새 기억",
   "STMemoryBooks_SlothHealthReviewKeywords": "키워드",
   "STMemoryBooks_SlothHealthReviewSummary": "분석 {{count}}개 · 제외 {{excluded}}개 · 제안 {{findings}}개 · 무효 {{rejected}}개",
-  "STMemoryBooks_SlothHealthReviewHelp": "Nexus 기억의 정리 및 이동을 제안합니다. 선택한 변경만 저장합니다. Core에서 LT로 이동하면 기억의 회수 방식이 달라집니다. 같은 로어북을 사용하는 다른 채팅의 복구 작업에 영향을 줄 수 있습니다. AI의 판단은 틀릴 수 있습니다.",
+  "STMemoryBooks_SlothHealthReviewHelp": "중복 기억을 정리하거나 핵심 기억을 장기 기억으로 옮깁니다. 선택한 항목만 변경합니다. 장기 기억으로 옮기면 이후 대화에 항상 포함되지는 않습니다. 같은 로어북을 쓰는 다른 채팅의 복구 작업에도 영향을 줄 수 있습니다. AI의 제안이 정확하지 않을 수 있으므로 변경 내용을 확인해 주세요.",
   "STMemoryBooks_SlothHealthReviewNoFindings": "정리할 기억이 발견되지 않았습니다.",
   "STMemoryBooks_SlothHealthReviewApply": "선택한 변경 적용",
   "STMemoryBooks_SlothHealthReviewClose": "닫기",
-  "STMemoryBooks_SlothHealthReviewUnavailable": "직접 확인이 필요합니다.",
+  "STMemoryBooks_SlothHealthReviewUnavailable": "이 항목은 직접 확인해 주세요.",
   "STMemoryBooks_SlothHealthReviewAdvice": "확인 필요",
   "STMemoryBooks_SlothHealthReviewCancel": "정비 취소",
   "STMemoryBooks_SlothHealthReviewCancelled": "기억 정비를 취소했습니다.",
   "STMemoryBooks_SlothHealthReviewPlanConflict": "선택한 변경이 서로 충돌합니다. 충돌하는 항목을 선택 해제해 주세요.",
-  "STMemoryBooks_SlothHealthReviewCoreAck": "선택한 기억의 LT 이동을 확인합니다.",
+  "STMemoryBooks_SlothHealthReviewCoreAck": "선택한 기억을 장기 기억으로 이동합니다.",
   "STMemoryBooks_SlothHealthReviewHelpLabel": "기억 정비소 안내",
   "STMemoryBooks_SlothHealthReviewDedupeAction": "중복 제거",
   "STMemoryBooks_SlothHealthReviewDedupeOne": "동일한 문단 1개 제거",
   "STMemoryBooks_SlothHealthReviewReason": "제안 상세",
-  "STMemoryBooks_SlothHealthReviewAdviceDetail": "자동 변경을 제안하지 않습니다.",
+  "STMemoryBooks_SlothHealthReviewAdviceDetail": "내용을 직접 확인해 주세요.",
   "STMemoryBooks_SlothHealthReviewAvailable": "정리 가능",
   "STMemoryBooks_SlothHealthReviewReviewOnly": "확인 필요",
   "STMemoryBooks_SlothHealthReviewApplyCount": "선택한 변경 {{count}}개 적용",
-  "STMemoryBooks_SlothHealthReviewFullPreview": "전체 변경 전후 보기"
+  "STMemoryBooks_SlothHealthReviewFullPreview": "전체 변경 전후 보기",
+  "STMemoryBooks_SlothHealthCore": "핵심 기억",
+  "STMemoryBooks_SlothHealthLT": "장기 기억",
+  "STMemoryBooks_SlothHealthReviewCoreName": "핵심 기억",
+  "STMemoryBooks_SlothHealthReviewLTName": "장기 기억"
 }

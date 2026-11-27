@@ -11169,7 +11169,7 @@ function buildSlothRecallSections(moduleSettings) {
       ...[
         ['core','Core Memory','STMemoryBooks_SlothCoreRecall'],
         ['continuity','Current Continuity','STMemoryBooks_SlothContinuityRecall'],
-        ['lt','LT','STMemoryBooks_SlothLTRecall'],
+        ['lt','Long-Term Memory','STMemoryBooks_SlothLTRecall'],
         ['npc','NPC','STMemoryBooks_SlothNPCRecall'],
       ].map(([kind,title,key])=>field(kind,title,key,modes[kind],all,'stmb-nexus-recall-'+kind,false,true)),
     ]},

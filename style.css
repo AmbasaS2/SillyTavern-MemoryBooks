@@ -1698,7 +1698,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-workshop-item-header>input,.popup.stmb-popup .stmb-workshop-confirm>input{flex:none;width:16px;height:16px;margin:0}
 .popup.stmb-popup .stmb-workshop-item-header strong{font-size:.94em;font-weight:600}
 .popup.stmb-popup .stmb-workshop-item-header>small{margin-inline-start:auto}
-.popup.stmb-popup .stmb-workshop-quote,.popup.stmb-popup .stmb-workshop-full-text{font-family:inherit;font-size:.9em;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.popup.stmb-popup .stmb-workshop-quote,.popup.stmb-popup .stmb-workshop-full-text{font-size:.9em;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
 .popup.stmb-popup .stmb-workshop-quote{margin-inline-start:25px}
 .popup.stmb-popup .stmb-workshop-route{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:.8em;margin-inline-start:25px;overflow-wrap:anywhere}
 .popup.stmb-popup .stmb-workshop-route>span{background:var(--SmartThemeBlurTintColor);border-radius:5px;padding:3px 7px;max-width:100%;overflow-wrap:anywhere}
