@@ -664,7 +664,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2,onRequestMetric=null}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=4,onRequestMetric=null}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -682,7 +682,7 @@ export async function composeSingleSlothCollection(options) {
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
-        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Other edits retain the existing structural checks.',
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every LT replace_exact and any newly stated LT promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For LT additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
