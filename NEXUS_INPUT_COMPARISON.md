@@ -1,0 +1,9 @@
+# Nexus input policy experiment (2026-11-27)
+Baseline: d3082fc9a46f244e19305eaa62cb56c8b30e97b3, single-call full input. This branch changes only the Nexus collection input policy. It is not a release.
+
+- Full: all editable Nexus bodies, plus latest three completed Scene titles and Results and original chat once.
+- Selective: always include Core, Current Continuity, NPC Index, constant entries and unclassified editable entries. Rank LT/NPC detail bodies by deterministic multilingual lexical overlap against the original messages (title/keywords weighted 4x; IDF-weighted overlap). Include positive matches up to an estimated 6,000 detail-token budget. Preserve omitted titles, roles, UIDs and keywords in a read-only catalog. No extra model or embedding request.
+- Hybrid: identical to full if editable body estimate is at most 12,000 tokens; otherwise use selective.
+- Both thresholds are experimental UTF-8 byte-length/3 estimates, NOT hard limits on the total input or provider token counts. The unchanged mandatory context/catalog and chat contribute additional input. All actual token counts are reported by the provider when available, otherwise estimated by the host tokenizer.
+- If the model requests an omitted body, omits the required needsNexusUids array, or attempts to edit an omitted UID, abort before saving. No automatic extra model call; no silent fallback. The full original book remains the staging and duplicate-check authority. Lexical selection can still miss semantic connections or unreported updates; live comparison must check those.
+- Compare all three branches on the identical disposable copies of a chat, Nexus and Memory; identical profile, prompt, output limits and optional review/Side Prompt settings. Keep Hide off. Record requests, input/output usage, saved Scene coverage, unresolved events, grounded Nexus changes, missed edits, duplicate entries and errors. Review quality before adopting thresholds or merging.
