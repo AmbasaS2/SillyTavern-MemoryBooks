@@ -673,6 +673,16 @@ export async function composeSingleSlothCollection(options) {
         .slice(-3).map(e=>({title:e.comment,result:String(e.content).split(/^\s*(?:\*\*Result\*\*|#{1,6}\s+Result)\s*$/im).at(-1).trim()}));
     const preset=getActiveSlothSummaryPreset(settings);
     const useBuiltInWriting=preset.id==='builtin'||preset.usesR07Writing===true;
+    let r07Opening=useBuiltInWriting ? SLOTH_R07_OPENING : [], r07Closing=useBuiltInWriting ? SLOTH_R07_CLOSING : '';
+    if (useBuiltInWriting && typeof preset.r07WritingText === 'string') {
+        // The editor owns its writing text, while the JSON/source/Nexus
+        // machinery stays unchanged. Preserve the closing paragraph's position
+        // when recognizable; otherwise keep the whole authored text intact.
+        const paragraphs=preset.r07WritingText.split(/\r?\n\s*\r?\n/u);
+        const closingIndex=paragraphs.findIndex((part,i)=>i>0 && /^Tell the story from the first eligible section\b/u.test(part));
+        r07Opening=[SLOTH_R07_OPENING[0],...(closingIndex<0 ? paragraphs : paragraphs.slice(0,closingIndex))];
+        r07Closing=closingIndex<0 ? '' : paragraphs.slice(closingIndex).join('\n\n');
+    }
     let source;
     if(useBuiltInWriting&&messages.length){
         const sectionSize=Math.ceil(messages.length/4),sections=[];
@@ -686,7 +696,7 @@ export async function composeSingleSlothCollection(options) {
         source=compact(messages);
     }
     const prompt=[
-        ...(useBuiltInWriting ? SLOTH_R07_OPENING : [
+        ...(useBuiltInWriting ? r07Opening : [
             DEFAULT_SLOTH_COLLECTION_PROMPTS.plan.replace(
                 'Use whole messages and assign each original ID exactly once. When one message closes an incident and briefly opens another, assign it to the action it primarily carries and do not list it twice.',
                 'Use actual original message IDs as evidence. A message that closes one incident and opens another may belong to both. Keep both causal boundaries; distinguish completed outcomes from unfinished incidents.'),
@@ -704,7 +714,7 @@ export async function composeSingleSlothCollection(options) {
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
         'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every Anchor (kind lt) replace_exact and any newly stated Anchor promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For Anchor additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
         'Original source messages (use each record’s id as its original message number):',source,
-        ...(useBuiltInWriting ? [SLOTH_R07_CLOSING] : []),
+        ...(useBuiltInWriting && r07Closing ? [r07Closing] : []),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
     const ask=requester(profile,settings,signal,true,(usage,phase,estimate)=>{
