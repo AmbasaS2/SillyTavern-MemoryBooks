@@ -673,7 +673,7 @@ export async function composeSingleSlothCollection(options) {
         .slice(-3).map(e=>({title:e.comment,result:String(e.content).split(/^\s*(?:\*\*Result\*\*|#{1,6}\s+Result)\s*$/im).at(-1).trim()}));
     const preset=getActiveSlothSummaryPreset(settings);
     const useBuiltInWriting=preset.id==='builtin'||preset.usesR07Writing===true;
-    let r07Opening=SLOTH_R07_OPENING, r07Closing=SLOTH_R07_CLOSING;
+    let r07Opening=useBuiltInWriting ? SLOTH_R07_OPENING : [], r07Closing=useBuiltInWriting ? SLOTH_R07_CLOSING : '';
     if (useBuiltInWriting && typeof preset.r07WritingText === 'string') {
         // The editor owns its writing text, while the JSON/source/Nexus
         // machinery stays unchanged. Preserve the closing paragraph's position
