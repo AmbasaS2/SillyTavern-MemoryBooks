@@ -1942,5 +1942,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Masukkan hanya julat mesej yang telah dirangkumi dalam buku Memory yang dipilih. Gunakan nombor mesej sembang, contohnya 0-18, 22-25. Biarkan kosong untuk mengosongkan julat ini.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "Mesej yang telah disemak berubah. Semak atau kosongkan julatnya dalam Urus ingatan sedia ada.",
   "STMemoryBooks_SlothRenameRetry": "Kemas kini pautan lorebook masih tertunda. Klik pemberitahuan ini untuk mencuba semula dalam sembang asal. Jika sembang tersimpan berubah, muat semula dahulu.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Kembali ke sembang asal sebelum mencuba semula kemas kini pautan lorebook."
+  "STMemoryBooks_SlothRenameOriginalChat": "Kembali ke sembang asal sebelum mencuba semula kemas kini pautan lorebook.",
+  "STMemoryBooks_SlothHealthTitle": "Pemeriksaan kesihatan Nexus",
+  "STMemoryBooks_SlothHealthMixed": "Peranan campuran",
+  "STMemoryBooks_SlothHealthOther": "Lain-lain",
+  "STMemoryBooks_SlothHealthProtected": "Dilindungi",
+  "STMemoryBooks_SlothHealthHelp": "Paparan baca sahaja teks tersimpan, dianggarkan dengan tokenizer semasa. Tanda sentiasa aktif bukan bukti suntikan sebenar. Tiada pemadaman atau pengelasan semula.",
+  "STMemoryBooks_SlothHealthTotal": "Disimpan",
+  "STMemoryBooks_SlothHealthAlways": "Sentiasa aktif",
+  "STMemoryBooks_SlothHealthDuplicates": "Perenggan serupa",
+  "STMemoryBooks_SlothHealthUnknown": "Belum dikira: ",
+  "STMemoryBooks_SlothHealthRole": "Peranan",
+  "STMemoryBooks_SlothHealthEntries": "Entri",
+  "STMemoryBooks_SlothHealthInspect": "Semak entri mengikut saiz",
+  "STMemoryBooks_SlothHealthChoose": "Pilih entri",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Perenggan serupa sepenuhnya ialah petunjuk semakan, bukan bukti pertindihan makna.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini",
+  "STMemoryBooks_SlothCapacityExceeded": "Anggaran pengumpulan (input {{input}} + output {{output}} + rizab {{reserve}}) melebihi had konteks selamat {{limit}} token. Tiada permintaan AI dihantar. Pilih model dengan konteks lebih besar atau kecilkan julat pengumpulan.",
+  "STMemoryBooks_SlothCapacityUnknown": "Had konteks model pengumpulan tidak diketahui. Permintaan besar (kira-kira {{input}} token input) tidak dihantar. Pilih model dengan had diketahui atau profil dengan konteks yang sesuai."
 }

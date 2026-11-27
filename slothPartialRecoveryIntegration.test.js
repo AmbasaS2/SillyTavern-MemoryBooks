@@ -14,6 +14,8 @@ import {stableHashString} from './clipReviewPolicy.js';
 import {createHash} from 'node:crypto';
 import {createSlothRecoveryStore,selectSlothRecoveryRecord,slothRecoveryFileName} from './slothRecoveryStore.js';
 import * as recovery from './slothSingleRecovery.js';
+import {assertSlothNexusEvidence} from './slothNexusEvidence.js';
+import {createSlothCollectionRun,addSlothRequestMetric,makeSlothRequestMetric} from './slothCollectionStats.js';
 
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 const runtime=read('./nexusCollectorRuntime.js'),ai=read('./nexusCollectionAI.js');
@@ -36,7 +38,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
     const books={N:{entries:{1:{uid:1,comment:'LT 01 | The gate',content:'The gate was open.'},
         2:{uid:2,comment:'LT 02 | The letter',content:'The letter was expected.'}}},M:{entries:{}}};
     let markers={},calls=0,dialogs=0;
-    const logs=[];
+    const logs=[],stats=[];
     const good={kind:'lt',action:'append',uid:1,text:'The gate was closed.'};
     const bad={kind:'lt',action:'append',uid:99,text:'The letter arrived.'};
     const response={events:[row([0,1]),...(brokenScene?[row([2,99],'The second letter')]:openTail?[{complete:false,segments:[2,3],reason:'Unfinished'}]:[])],edits:[good,bad]};
@@ -55,10 +57,11 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         section(ai,'export async function composeSingleSlothCollection(','export async function retryApprovedSlothScenes(').replace('export async','async'),
         'composeSingleSlothCollection',
     ].join('\n'),{
-        ...recovery,stageNexusEdits,validateSlothSceneResponse,isCompletedSceneEntry,sceneNumberFromTitle,
+        ...recovery,stageNexusEdits,assertSlothNexusEvidence,validateSlothSceneResponse,isCompletedSceneEntry,sceneNumberFromTitle,
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Keywords',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
-        requester:()=>async(_prompt,phase,parse)=>{
+        requester:(_p,_s,_sig,_single,_usage,_verify,onRequestMetric)=>async(_prompt,phase,parse)=>{
+            onRequestMetric?.(makeSlothRequestMetric({phase:'collection',model:'mock-model',full:{usage:{prompt_tokens:123,completion_tokens:20}},durationMs:50}));
             calls++;if(editOnResponse)diskChat.at(-1).mes='External edit during model request.';
             return parse(JSON.stringify(response),phase);
         },
@@ -73,6 +76,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         'runNexusCollector',
     ].join('\n'),{
         ...recovery,createSlothRecoveryStore,selectSlothRecoveryRecord,sha256,structuredClone:clone,chat,stableHashString,stringify:JSON.stringify,collectorBusy:false,
+        createSlothCollectionRun,addSlothRequestMetric,recordSlothCollectionRun:run=>stats.push(clone(run)),
         getSceneMarkers:()=>markers,getStmbChatKey:()=>key,getCurrentStmbChatRef:()=>ref,
         extension_settings:{STMemoryBooks:{moduleSettings:{slothHideAfter:true,slothHideRecent:0}}},
         getNexusRoleResolutionForChatRef:role=>({state:'ready',name:role==='nexus'?'N':'M'}),
@@ -130,7 +134,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         setSlothCollectionProgress:()=>{},t:s=>s,toastr:{info:s=>logs.push(s),warning:s=>logs.push(s),success:s=>logs.push(s)},console:{warn(){}},
     });
     const session=makeRun();
-    return {chat,books,logs,run:()=>makeRun()({}),runSameSession:()=>session({}),allowUpload:()=>{failUpload=false;},
+    return {chat,books,logs,stats,run:()=>makeRun()({}),runSameSession:()=>session({}),allowUpload:()=>{failUpload=false;},
         get diskChat(){return diskChat;},get metadataWrites(){return metadataWrites;},get recoveryRecord(){return recoveryRecord();},
         get fileWrites(){return fileWrites;},get bookWrites(){return bookWrites;},get markers(){return markers;},get calls(){return calls;},get dialogs(){return dialogs;}};
 }
@@ -259,4 +263,20 @@ test('an upload failure stops before books are written and retains the paid resp
     assert.equal(h.bookWrites,0);
     assert.equal(h.fileWrites,0);
     assert.ok(h.logs.some(line=>line.includes('retained in this tab only')));
+});
+
+test('collection statistics distinguish verified writes, held rows and replay without counting the original call twice',async()=>{
+    const h=harness();
+    await h.run();
+    assert.equal(h.stats.length,1);
+    const first=h.stats[0];
+    assert.equal(first.status,'partial');assert.equal(first.groups.collection.requests,1);
+    assert.equal(first.groups.collection.values.input.reported,123);
+    assert.equal(first.counts.sceneCreated,1);assert.equal(first.counts.nexusUpdated,1);
+    assert.equal(first.counts.nexusHeld,1);assert.equal(first.source.messageCount,2);
+    await h.run();
+    const replay=h.stats[1];
+    assert.equal(replay.trigger,'recovery');assert.equal(replay.groups.collection.requests,0);
+    assert.equal(replay.counts.sceneCreated,0);assert.equal(replay.counts.sceneReused,1);
+    assert.equal(replay.counts.nexusUpdated,1);assert.equal(replay.status,'recovered');assert.equal(h.calls,1);
 });

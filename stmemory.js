@@ -23,6 +23,7 @@ import { applyOpenRouterRoutingSettings } from './openRouterRouting.js';
 import { attachChatCompletionServiceError } from './chatCompletionServiceError.js';
 import { getSelectedConnectionProfile, prepareConnectionProfileRequest } from './connectionProfileRequest.js';
 import { tr } from './i18nHelpers.js';
+import { emitSlothRequestMetric } from './slothCollectionStats.js';
 const $ = window.jQuery;
 
 const MODULE_NAME = 'STMemoryBooks-Memory';
@@ -476,6 +477,7 @@ export async function sendRawCompletionRequest({
     useChatCompletionService = false,
     chatCompletionPreset = '',
     singleAttempt = false,
+    beforeRequest = null,
 }) {
     let url = getCurrentCompletionEndpoint();
     let headers = getRequestHeaders();
@@ -638,6 +640,10 @@ export async function sendRawCompletionRequest({
         body.vertexai_express_project_id = oai_settings?.vertexai_express_project_id || '';
     }
 
+    if(beforeRequest){
+        await beforeRequest({api,model:effectiveModel,body,connection,selectedCustomConnection,chatCompletionPreset});
+        signal?.throwIfAborted();
+    }
     let chatCompletionServiceError = null;
     if (api !== 'full-manual' && (useChatCompletionService || stConnectionProfileId)) {
         const routedFallbackBody = applyOpenRouterRoutingSettings(body, oai_settings);
@@ -709,10 +715,28 @@ export async function requestCompletion({
     useChatCompletionService = false,
     chatCompletionPreset = '',
     singleAttempt = false,
+    beforeRequest = null,
+    onRequestMetric = null,
+    metricPhase = 'collection',
 }) {
     // Delegate all provider-specific shaping to sendRawCompletionRequest which already
     // handles: full-manual, custom (custom_model_id  oai_settings.custom_url), and normal providers.
-    return await sendRawCompletionRequest({
+    let measured=null;
+    const measuredBeforeRequest=typeof onRequestMetric==='function'?async request=>{
+        let estimate;
+        try{estimate=await beforeRequest?.(request);}
+        catch(error){
+            if(error?.code==='STMB_SLOTH_INPUT_BUDGET')emitSlothRequestMetric(onRequestMetric,{phase:metricPhase,model:request.model,estimate:error.budget,status:'blocked'});
+            throw error;
+        }
+        measured={model:request.model,estimate,startedAt:Date.now()};
+    }:beforeRequest;
+    const finishMetric=(full,status)=>{
+        if(!measured)return;
+        emitSlothRequestMetric(onRequestMetric,{phase:metricPhase,model:measured.model,estimate:measured.estimate,full,status,durationMs:Date.now()-measured.startedAt});
+    };
+    try{
+    const response=await sendRawCompletionRequest({
         model,
         prompt,
         temperature,
@@ -728,7 +752,11 @@ export async function requestCompletion({
         useChatCompletionService,
         chatCompletionPreset,
         singleAttempt,
+        beforeRequest:measuredBeforeRequest,
     });
+    finishMetric(response.full,response.full?.error?'failed':'response');
+    return response;
+    }catch(error){finishMetric(null,signal?.aborted?'cancelled':'failed');throw error;}
 }
 
 /**

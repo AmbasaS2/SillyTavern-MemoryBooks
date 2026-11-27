@@ -1942,5 +1942,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Masukkan hanya rentang pesan yang sudah tercakup dalam buku Memory terpilih. Gunakan nomor pesan obrolan, misalnya 0-18, 22-25. Kosongkan untuk menghapus rentang tersebut.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "Pesan yang telah diperiksa berubah. Periksa atau hapus rentangnya di Kelola memori yang ada.",
   "STMemoryBooks_SlothRenameRetry": "Pembaruan tautan lorebook tertunda. Klik notifikasi ini untuk mencoba lagi di obrolan asli. Jika obrolan tersimpan berubah, muat ulang terlebih dahulu.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Kembali ke obrolan asli sebelum mencoba lagi pembaruan tautan lorebook."
+  "STMemoryBooks_SlothRenameOriginalChat": "Kembali ke obrolan asli sebelum mencoba lagi pembaruan tautan lorebook.",
+  "STMemoryBooks_SlothHealthTitle": "Pemeriksaan kesehatan Nexus",
+  "STMemoryBooks_SlothHealthMixed": "Peran campuran",
+  "STMemoryBooks_SlothHealthOther": "Lainnya",
+  "STMemoryBooks_SlothHealthProtected": "Terlindungi",
+  "STMemoryBooks_SlothHealthHelp": "Ringkasan teks tersimpan hanya-baca, diperkirakan dengan tokenizer saat ini. Penanda selalu aktif bukan bukti injeksi sebenarnya. Tidak ada yang dihapus atau diklasifikasi ulang.",
+  "STMemoryBooks_SlothHealthTotal": "Tersimpan",
+  "STMemoryBooks_SlothHealthAlways": "Selalu aktif",
+  "STMemoryBooks_SlothHealthDuplicates": "Paragraf identik",
+  "STMemoryBooks_SlothHealthUnknown": "Belum dihitung: ",
+  "STMemoryBooks_SlothHealthRole": "Peran",
+  "STMemoryBooks_SlothHealthEntries": "Entri",
+  "STMemoryBooks_SlothHealthInspect": "Periksa entri berdasarkan ukuran",
+  "STMemoryBooks_SlothHealthChoose": "Pilih entri",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Paragraf identik adalah petunjuk pemeriksaan, bukan bukti makna yang berlebihan.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini",
+  "STMemoryBooks_SlothCapacityExceeded": "Perkiraan pengumpulan (masukan {{input}} + keluaran {{output}} + cadangan {{reserve}}) melampaui batas konteks aman {{limit}} token. Tidak ada permintaan AI dikirim. Pilih model dengan konteks lebih besar atau kurangi rentang pengumpulan.",
+  "STMemoryBooks_SlothCapacityUnknown": "Batas konteks model pengumpulan tidak diketahui. Permintaan besar (sekitar {{input}} token masukan) tidak dikirim. Pilih model dengan batas yang diketahui atau profil dengan konteks yang sesuai."
 }
