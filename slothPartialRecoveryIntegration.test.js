@@ -77,6 +77,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         extension_settings:{STMemoryBooks:{moduleSettings:{slothHideAfter:true,slothHideRecent:0}}},
         getNexusRoleResolutionForChatRef:role=>({state:'ready',name:role==='nexus'?'N':'M'}),
         canStartNexusSetup:()=>false,getMemoryBooksMode:()=> 'sloth',getActiveNexusRoleContext:()=>({character:{}}),
+        hasPendingSlothSideRename:()=>false,assertSideRenameReady:()=>{},
         initialCharacterContext:()=>'',collectionProfile:()=>({}),getAutomaticCheckpointThrough:()=>-1,
         createAutomaticTokenCounter:()=>()=>0,getTokenCountAsync:async()=>0,automaticReadingRevision:0,
         loadServerWorld:async name=>clone(books[name]),splitSlothCollectionSource:async source=>[source],

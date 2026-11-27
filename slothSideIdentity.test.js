@@ -162,3 +162,41 @@ test('native rename candidates wait for actual deletion, and an ordinary copy is
     assert.equal(changes.length,1);
     assert.equal(changes[0].newBook,'Renamed');
 });
+
+test('ordinary existing-book save avoids serializing or scanning rename candidates',()=>{
+    const src=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
+    const start=src.indexOf('const possibleLorebookRenames'),end=src.indexOf('\nasync function resolveSlothSideBook',start);
+    let scanned=0,serialized=0;
+    const observe=vm.runInNewContext(src.slice(start,end).replace(/export (async )?function/g,(_,a='')=>a+'function')+
+        '\nobserveSlothLorebookSave',{
+        extension_settings:{STMemoryBooks:{}},slothSideRenameBooks:()=>{scanned++;return ['N'];},
+        stringify:()=>{serialized++;return '';},worldInfoCache:new Map(),
+    });
+    for(let i=0;i<100;i++)observe('N',{entries:{}},['N'],'N');
+    assert.equal(scanned,0);assert.equal(serialized,0);
+});
+test('rename preparation overlaps bounded reads but keeps commits sequential and verifies untouched candidates',async()=>{
+    const src=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
+    const start=src.indexOf('async function processSlothSideRenames('),end=src.indexOf('\nfunction reportSideRenameFailure',start);
+    const record={type:'lorebook',oldBook:'Old',newBook:'New'};
+    const params={slothSidePendingRenames:[record]};
+    const names=['N','M','Notes','Other','New','More'];
+    let active=0,maxActive=0,writes=[],read=[];
+    const process=vm.runInNewContext(src.slice(start,end)+'\nprocessSlothSideRenames',{
+        extension_settings:{STMemoryBooks:{moduleSettings:params}},
+        pendingSideRenames:settings=>settings.moduleSettings.slothSidePendingRenames,
+        normalizeSlothSideRename:r=>r,planSlothSideSettingsRename:()=>({}),slothSideRenameBooks:()=>names,
+        listSlothSideBooks:async()=>names.map(file_id=>({file_id})),slothSideBookOwner:()=>null,
+        loadServerWorld:async name=>{read.push(name);active++;maxActive=Math.max(maxActive,active);await Promise.resolve();active--;return {entries:{},name};},
+        stageSlothSideIdentityRename:book=>['M','Notes'].includes(book.name)?{...book,changed:true}:null,
+        commitSlothNexusMigration:async ({name},opts)=>{opts.verifyOrigin();assert.equal(active,0);writes.push(name);},
+        saveWorldInfo:()=>{},withStmbWriteLane:()=>{},assertReviewedCache:()=>{},worldInfoCache:new Map(),structuredClone,
+        reloadEditor:()=>{},retargetActiveSlothReceipts:async()=>{},retargetSlothLorebookRoles:()=>{},
+        persistSideRenameQueue:async(params,next)=>{params.slothSidePendingRenames=next;},console,
+    });
+    await process();
+    assert.equal(maxActive,4);
+    assert.deepEqual(read,names);
+    assert.deepEqual(writes,['M','Notes']);
+    assert.equal(params.slothSidePendingRenames.length,0);
+});
