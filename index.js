@@ -11090,8 +11090,8 @@ function buildSlothRecallSections(moduleSettings) {
   const modes = getNexusRecallModes(moduleSettings);
   const choices = [
     ['constant','Always on','STMemoryBooks_SlothRecallConstant','fa-solid fa-circle'],
-    ['vector','Vector','STMemoryBooks_NexusRecallVector','fa-solid fa-link'],
     ['keyword','Keywords','STMemoryBooks_SlothRecallKeywords','fa-solid fa-circle'],
+    ['vector','Vector','STMemoryBooks_NexusRecallVector','fa-solid fa-link'],
     ['disabled','No injection','STMemoryBooks_SlothRecallDisabled','fa-solid fa-ban'],
   ];
   const field = (kind,title,labelKey,mode,allowed,id,locked=false,isNexus=false) => {
@@ -11981,12 +11981,38 @@ function closeSlothIconPicker(menu, trigger) {
   trigger?.setAttribute('aria-expanded','false');
 }
 
+function positionSlothRecallPicker(menu, trigger) {
+  const margin=4, gap=3;
+  const viewportWidth=document.documentElement.clientWidth;
+  const viewportHeight=document.documentElement.clientHeight;
+  const anchor=trigger.getBoundingClientRect();
+  const width=anchor.width;
+  menu.style.width=width+'px';
+  menu.style.maxWidth=width+'px';
+  menu.style.left=Math.max(0,Math.min(anchor.left,viewportWidth-width))+'px';
+  menu.style.top=anchor.bottom+gap+'px';
+  menu.style.maxHeight=Math.max(0,viewportHeight-anchor.bottom-gap-margin)+'px';
+}
+
 function showSlothIconPicker(menu, trigger) {
   menu.hidden = false;
+  const recall=menu.classList.contains('stmb-sloth-recall-popover');
+  if (recall) {
+    // Keep the narrow menu below its own trigger, including in a scrolled
+    // mobile settings pane. Scroll the anchor into room if needed.
+    const height=menu.querySelectorAll('[data-stmb-recall-choice]').length*29+2;
+    if (document.documentElement.clientHeight-trigger.getBoundingClientRect().bottom<height+7)
+      trigger.scrollIntoView?.({block:'center',inline:'nearest'});
+  }
   if (typeof menu.showPopover === 'function') {
     menu.setAttribute('popover','auto');
     trigger.setAttribute('popovertarget',menu.id);
     menu.showPopover();
+    if (recall) {
+      positionSlothRecallPicker(menu,trigger);
+      trigger.setAttribute('aria-expanded','true');
+      return;
+    }
     const anchor = trigger.getBoundingClientRect();
     const margin = 8, gap = 6;
     const viewportWidth = document.documentElement.clientWidth;
@@ -12034,6 +12060,15 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   if (!popupInstance?.dlg) return;
 
   const popupElement = popupInstance.dlg;
+  // Top-layer recall menus are fixed-position; re-anchor when the popup
+  // itself scrolls. Leave the independent composer icon picker unchanged.
+  popupElement.addEventListener('scroll',e=>{
+    const menu=popupElement.querySelector('.stmb-sloth-recall-popover:not([hidden])');
+    if (!menu || menu===e.target || menu.contains(e.target) ||
+        typeof menu.showPopover!=='function' || !menu.matches(':popover-open')) return;
+    const trigger=menu.parentElement?.querySelector('[data-stmb-recall-trigger]');
+    if (trigger) positionSlothRecallPicker(menu,trigger);
+  },true);
   syncGroupSettingsControls(popupElement);
   let originalSettingsPrepared = false;
   let loadingOriginal = false;

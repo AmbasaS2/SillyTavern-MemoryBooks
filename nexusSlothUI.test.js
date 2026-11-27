@@ -122,3 +122,14 @@ test('injection settings use a closed drawer, compact wrapping columns and icon 
     assert.match(js,/syncSlothRecallPicker\(e.target\)/);
     assert.doesNotMatch(js,/SlothNPCOff/);
 });
+
+test('recall popover opens as a narrow vertical list immediately below its trigger',()=>{
+    const js=file('./index.js'),css=file('./style.css');
+    const choices=js.slice(js.indexOf('function buildSlothRecallSections('),js.indexOf('const field = (kind,title',js.indexOf('function buildSlothRecallSections(')));
+    assert.deepEqual([...choices.matchAll(/\['(constant|keyword|vector|disabled)'/g)].map(m=>m[1]),['constant','keyword','vector','disabled']);
+    const position=js.slice(js.indexOf('function positionSlothRecallPicker('),js.indexOf('function showSlothIconPicker('));
+    assert.match(position,/const width=anchor\.width/);
+    assert.match(position,/menu\.style\.width=width\+'px'/);
+    assert.match(position,/menu\.style\.top=anchor\.bottom\+gap\+'px'/);
+    assert.match(css,/\.stmb-sloth-icon-popover\.stmb-sloth-recall-popover\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?width: 100%; max-width: 100%; padding: 0/);
+});
