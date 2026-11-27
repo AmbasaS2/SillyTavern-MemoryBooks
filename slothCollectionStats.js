@@ -124,3 +124,13 @@ export function clearSlothCollectionHistory(storage=browserStorage()){
     fallbackHistory=null;
     try{storage?.removeItem(HISTORY_KEY);return true;}catch{return false;}
 }
+
+/** Separate measured, estimated and missing values; never turn unknown into zero. */
+export function slothMetricParts(value){
+    const parts=[];
+    if(value?.reportedN>0)parts.push({kind:'reported',value:value.reported});
+    if(value?.estimatedN>0)parts.push({kind:'estimated',value:value.estimated});
+    if(value?.bytesN>0)parts.push({kind:'bytes',value:value.bytes});
+    if(value?.unknownN>0)parts.push({kind:'unknown',value:value.unknownN});
+    return parts;
+}

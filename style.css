@@ -1661,3 +1661,18 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     .popup.stmb-popup .stmb-health-row{gap:5px;font-size:.84em}
     .popup.stmb-popup .stmb-health-labels{font-size:.72em}
 }
+
+/* Sloth: on-demand browser-local collection statistics. */
+.popup.stmb-popup.stmb-collection-stats-popup{width:520px;max-height:min(90dvh,calc(100dvh - 2em));min-height:0}
+.popup.stmb-popup .stmb-collection-stats{gap:9px;text-align:start;min-width:0}
+.popup.stmb-popup .stmb-collection-stats h3,.popup.stmb-popup .stmb-collection-stats h4{margin:0;font-weight:600}
+.popup.stmb-popup .stmb-collection-stats>small{line-height:1.45;opacity:.9}
+.popup.stmb-popup .stmb-collection-stats select{width:100%;min-width:0}
+.popup.stmb-popup .stmb-collection-stats [data-sloth-stats-body]{display:flex;flex-direction:column;gap:8px;min-width:0}
+.popup.stmb-popup .stmb-stats-card{border:1px solid var(--SmartThemeBorderColor);border-radius:8px;padding:9px;min-width:0}
+.popup.stmb-popup .stmb-stats-card h4{margin-bottom:5px}
+.popup.stmb-popup .stmb-stats-pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px;padding:4px 0;align-items:baseline;line-height:1.4;font-size:.88em}
+.popup.stmb-popup .stmb-stats-pair>*{min-width:0;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-stats-pair strong{text-align:end;font-weight:500;font-variant-numeric:tabular-nums}
+.popup.stmb-popup .stmb-stats-phase{margin-top:5px;padding-top:5px;border-top:1px solid var(--SmartThemeBorderColor)}
+.popup.stmb-popup .stmb-stats-phase summary{cursor:pointer;font-size:.88em}

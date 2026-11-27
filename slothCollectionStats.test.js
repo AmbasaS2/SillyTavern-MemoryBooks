@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSlothCollectionRun,addSlothRequestMetric,makeSlothRequestMetric,recordSlothCollectionRun,readSlothCollectionHistory,totalSlothRequestMetrics,emitSlothRequestMetric,clearSlothCollectionHistory} from './slothCollectionStats.js';
+import {createSlothCollectionRun,addSlothRequestMetric,makeSlothRequestMetric,recordSlothCollectionRun,readSlothCollectionHistory,totalSlothRequestMetrics,emitSlothRequestMetric,clearSlothCollectionHistory,slothMetricParts} from './slothCollectionStats.js';
 const metric=(overrides={})=>makeSlothRequestMetric({phase:'collection',model:'gemma-4-31b-it',durationMs:50,...overrides});
 const storage=()=>{let value=null;return {getItem:()=>value,setItem:(_key,next)=>{value=next;},removeItem:()=>{value=null;},get value(){return value;}};};
 test('provider usage, estimated input, byte fallback, missing cache and blocked calls remain distinct',()=>{
@@ -45,4 +45,11 @@ test('replay creates no extra request; observer and storage failures do not esca
     assert.doesNotThrow(()=>recordSlothCollectionRun(run,store));
     assert.equal(readSlothCollectionHistory(store).length,1);
     clearSlothCollectionHistory(store);
+});
+
+test('the UI formatter preserves reported zero and separates estimates from unknown',()=>{
+    assert.deepEqual(slothMetricParts({reported:0,reportedN:1,estimated:30,estimatedN:1,bytes:50,bytesN:1,unknownN:2}),
+        [{kind:'reported',value:0},{kind:'estimated',value:30},{kind:'bytes',value:50},{kind:'unknown',value:2}]);
+    assert.deepEqual(slothMetricParts({reported:0,reportedN:0,unknownN:1}),[{kind:'unknown',value:1}]);
+    assert.deepEqual(slothMetricParts({}),[]);
 });

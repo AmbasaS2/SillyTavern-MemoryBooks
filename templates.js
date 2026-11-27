@@ -180,6 +180,7 @@ export const settingsTemplate = Handlebars.compile(`
         </div>
         <hr class="stmb-sloth-settings-rule">
         <div data-stmb-prompt-library-slot="summary"></div>
+        <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="collection-stats" data-i18n="STMemoryBooks_SlothStatsTitle">Recent collection statistics</button></div>
         </details>
         {{/if}}
         <details id="stmb-sloth-auto" class="stmb-workspace-panel stmb-workspace-drawer">

@@ -80,6 +80,7 @@ import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCo
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft,
   refreshSlothPaidDraft, isSlothRecoveryUnavailable } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
+import { showSlothCollectionStats } from './slothCollectionStatsDialog.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
@@ -11839,6 +11840,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     companion: () => createSlothCompanion(),
     'recall-apply': () => applySlothNexusRecallSettings(),
     'nexus-health': () => showSlothNexusHealth(),
+    'collection-stats': () => showSlothCollectionStats(),
     'legacy-coverage': () => reviewSlothLegacyCoverage(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
