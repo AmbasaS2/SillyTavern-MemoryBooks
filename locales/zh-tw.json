@@ -1942,5 +1942,19 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "只輸入所選 Memory 已涵蓋的訊息範圍。請使用聊天訊息編號，例如 0-18, 22-25。留空即可清除這些範圍。",
   "STMemoryBooks_SlothLegacyCoverageChanged": "先前核對過的訊息有變更。請在管理現有記憶中重新核對或清除範圍。",
   "STMemoryBooks_SlothRenameRetry": "世界書連結更新尚未完成。點擊此通知，在原聊天中重試。如果已儲存的聊天已變更，請先重新載入。",
-  "STMemoryBooks_SlothRenameOriginalChat": "重試世界書連結更新前，請返回原聊天。"
+  "STMemoryBooks_SlothRenameOriginalChat": "重試世界書連結更新前，請返回原聊天。",
+  "STMemoryBooks_SlothHealthTitle": "Nexus 健康檢查",
+  "STMemoryBooks_SlothHealthMixed": "混合角色",
+  "STMemoryBooks_SlothHealthOther": "其他",
+  "STMemoryBooks_SlothHealthProtected": "受保護",
+  "STMemoryBooks_SlothHealthHelp": "使用目前分詞器估算已儲存正文的唯讀快照。常駐標記不代表實際注入。不會刪除或重新分類任何內容。",
+  "STMemoryBooks_SlothHealthTotal": "已儲存權杖",
+  "STMemoryBooks_SlothHealthAlways": "常駐正文權杖",
+  "STMemoryBooks_SlothHealthDuplicates": "完全重複",
+  "STMemoryBooks_SlothHealthUnknown": "無法計數的正文：",
+  "STMemoryBooks_SlothHealthRole": "角色",
+  "STMemoryBooks_SlothHealthEntries": "項目數",
+  "STMemoryBooks_SlothHealthInspect": "按大小查看項目",
+  "STMemoryBooks_SlothHealthChoose": "選擇項目",
+  "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落僅供核查，並非語意冗餘的證明。"
 }

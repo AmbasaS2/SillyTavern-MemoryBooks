@@ -1942,5 +1942,19 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Saisis uniquement les plages de messages déjà couvertes par le livre Memory sélectionné. Utilise les numéros des messages, par exemple 0-18, 22-25. Laisse le champ vide pour effacer ces plages.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "Les messages déjà vérifiés ont changé. Vérifie ou efface leurs plages dans Gérer les souvenirs existants.",
   "STMemoryBooks_SlothRenameRetry": "La mise à jour des liens des lorebooks est en attente. Cliquez sur cette notification pour réessayer dans le chat d’origine. Si le chat enregistré a changé, rechargez-le d’abord.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Revenez au chat d’origine avant de relancer la mise à jour des liens des lorebooks."
+  "STMemoryBooks_SlothRenameOriginalChat": "Revenez au chat d’origine avant de relancer la mise à jour des liens des lorebooks.",
+  "STMemoryBooks_SlothHealthTitle": "Bilan de santé Nexus",
+  "STMemoryBooks_SlothHealthMixed": "Rôles mixtes",
+  "STMemoryBooks_SlothHealthOther": "Autres",
+  "STMemoryBooks_SlothHealthProtected": "Protégés",
+  "STMemoryBooks_SlothHealthHelp": "Aperçu en lecture seule du texte enregistré, estimé avec le tokenizer actuel. Les indicateurs permanents ne prouvent pas l’injection réelle. Rien n’est supprimé ni reclassé.",
+  "STMemoryBooks_SlothHealthTotal": "Tokens enregistrés",
+  "STMemoryBooks_SlothHealthAlways": "Tokens toujours actifs",
+  "STMemoryBooks_SlothHealthDuplicates": "Répétitions exactes",
+  "STMemoryBooks_SlothHealthUnknown": "Textes non comptés : ",
+  "STMemoryBooks_SlothHealthRole": "Rôle",
+  "STMemoryBooks_SlothHealthEntries": "Entrées",
+  "STMemoryBooks_SlothHealthInspect": "Examiner les entrées par taille",
+  "STMemoryBooks_SlothHealthChoose": "Choisir une entrée",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Les paragraphes identiques sont des pistes de vérification, pas une preuve de redondance sémantique."
 }

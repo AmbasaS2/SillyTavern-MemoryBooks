@@ -1942,5 +1942,19 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Gib nur Nachrichtenbereiche ein, die bereits im gewählten Memory-Buch erfasst sind. Verwende Chatnachrichtennummern, z. B. 0-18, 22-25. Lass das Feld leer, um die Bereiche zu löschen.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "Bereits geprüfte Nachrichten wurden geändert. Prüfe oder lösche ihre Bereiche unter „Vorhandene Erinnerungen verwalten“.",
   "STMemoryBooks_SlothRenameRetry": "Die Aktualisierung der Lorebook-Verknüpfungen steht aus. Klicke auf diese Meldung, um es im ursprünglichen Chat erneut zu versuchen. Falls der gespeicherte Chat geändert wurde, lade ihn zuerst neu.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Wechsle zurück zum ursprünglichen Chat, bevor du die Aktualisierung der Lorebook-Verknüpfungen erneut versuchst."
+  "STMemoryBooks_SlothRenameOriginalChat": "Wechsle zurück zum ursprünglichen Chat, bevor du die Aktualisierung der Lorebook-Verknüpfungen erneut versuchst.",
+  "STMemoryBooks_SlothHealthTitle": "Nexus-Gesundheitscheck",
+  "STMemoryBooks_SlothHealthMixed": "Gemischte Rollen",
+  "STMemoryBooks_SlothHealthOther": "Sonstige",
+  "STMemoryBooks_SlothHealthProtected": "Geschützt",
+  "STMemoryBooks_SlothHealthHelp": "Schreibgeschützte Übersicht der gespeicherten Texte, geschätzt mit dem aktuellen Tokenizer. Immer-aktiv-Markierungen belegen keine tatsächliche Injektion. Nichts wird gelöscht oder neu zugeordnet.",
+  "STMemoryBooks_SlothHealthTotal": "Gespeicherte Tokens",
+  "STMemoryBooks_SlothHealthAlways": "Immer-aktive Tokens",
+  "STMemoryBooks_SlothHealthDuplicates": "Exakte Wiederholungen",
+  "STMemoryBooks_SlothHealthUnknown": "Nicht zählbare Texte: ",
+  "STMemoryBooks_SlothHealthRole": "Rolle",
+  "STMemoryBooks_SlothHealthEntries": "Einträge",
+  "STMemoryBooks_SlothHealthInspect": "Einträge nach Größe prüfen",
+  "STMemoryBooks_SlothHealthChoose": "Eintrag auswählen",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Identische Absätze sind Hinweise zur Prüfung, kein Beweis für inhaltliche Redundanz."
 }

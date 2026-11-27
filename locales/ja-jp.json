@@ -1942,5 +1942,19 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "選択した Memory に保存済みのメッセージ範囲だけを入力してください。チャットのメッセージ番号を使用します（例 0-18, 22-25）。空欄で保存すると範囲を解除します。",
   "STMemoryBooks_SlothLegacyCoverageChanged": "確認済みのメッセージが変更されました。「既存の記憶を管理」で範囲を再確認するか解除してください。",
   "STMemoryBooks_SlothRenameRetry": "ロアブックのリンク更新が保留中です。元のチャットで再試行するにはこの通知をクリックしてください。保存済みチャットが変更された場合は先に再読み込みしてください。",
-  "STMemoryBooks_SlothRenameOriginalChat": "ロアブックのリンク更新を再試行する前に、元のチャットに戻ってください。"
+  "STMemoryBooks_SlothRenameOriginalChat": "ロアブックのリンク更新を再試行する前に、元のチャットに戻ってください。",
+  "STMemoryBooks_SlothHealthTitle": "Nexus 健康診断",
+  "STMemoryBooks_SlothHealthMixed": "複合ロール",
+  "STMemoryBooks_SlothHealthOther": "その他",
+  "STMemoryBooks_SlothHealthProtected": "保護項目",
+  "STMemoryBooks_SlothHealthHelp": "現在のトークナイザーによる保存本文の推定値を表示する読み取り専用の概要です。常時有効の設定は実際の注入を保証しません。削除や再分類は行いません。",
+  "STMemoryBooks_SlothHealthTotal": "保存トークン",
+  "STMemoryBooks_SlothHealthAlways": "常時有効トークン",
+  "STMemoryBooks_SlothHealthDuplicates": "完全一致の繰り返し",
+  "STMemoryBooks_SlothHealthUnknown": "計測できなかった本文：",
+  "STMemoryBooks_SlothHealthRole": "ロール",
+  "STMemoryBooks_SlothHealthEntries": "項目数",
+  "STMemoryBooks_SlothHealthInspect": "サイズ順に項目を確認",
+  "STMemoryBooks_SlothHealthChoose": "項目を選択",
+  "STMemoryBooks_SlothHealthRepeatHelp": "完全一致する段落は確認の手掛かりであり、意味の重複を証明するものではありません。"
 }

@@ -1329,7 +1329,7 @@ export async function showSlothNexusHealth(){
         const labels={core:'Core',continuity:'Continuity',lt:'LT',npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
         const num=n=>n===null?'—':Number(n).toLocaleString();
-        const amount=(n,missing=false)=> (missing?'≥ ':'~ ')+num(n);
+        const amount=(n,missing=false)=> '~ '+num(n)+(missing?' + ?':'');
         const summary=(label,value)=>'<div class="stmb-health-stat"><span>'+html(label)+'</span><strong>'+html(value)+'</strong></div>';
         const groupRows=SLOTH_HEALTH_ROLES.map(role=>{
             const group=report.groups[role];
