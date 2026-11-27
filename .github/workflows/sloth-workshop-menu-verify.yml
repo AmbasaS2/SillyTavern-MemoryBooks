@@ -51,7 +51,7 @@ jobs:
                const h=d.map(x=>x.querySelector('summary').getBoundingClientRect().height);
                check(h.every(x=>Math.abs(x-h[0])<1),'summary heights '+h.join(','));
                const tools=all('#stmb-manage-memories button[data-stmb-sloth-action]');
-               check(tools.length===7&&tools.every(x=>x.getBoundingClientRect().width===0),'hidden before opening');
+               check(tools.length===7&&tools.every(x=>!x.checkVisibility({contentVisibilityAuto:true,visibilityProperty:true})),'hidden before opening');
                const old=tools.slice();
                b.querySelector('summary').click();
                check(b.open,'native opening');
@@ -66,16 +66,24 @@ jobs:
            fs.writeFileSync(name,'<!doctype html><meta charset="utf-8"><style>:root{--SmartThemeBodyColor:#ddd;--SmartThemeBorderColor:#555;--SmartThemeChatTintColor:#222;--SmartThemeBlurTintColor:#333;--SmartThemeEmColor:#ddd}body{margin:0;width:'+width+'px;font:16px Arial;color:#ddd;background:#222}.popup{width:min(calc(100% - 24px),600px);margin:12px auto}.menu_button{display:flex;align-items:center;border:1px solid #555;background:#333;color:inherit;font:inherit}.stmb-sloth-info{color:inherit}</style><style>'+css+'</style><div class="popup stmb-popup"><div class="stmb-workspace"><section id="stmb-sloth-panel">'+ids.map(extract).join('')+'</section></div></div><script>const ko='+JSON.stringify(lang==='ko'?ko:{})+';for(const x of document.querySelectorAll("[data-i18n]")){const k=x.getAttribute("data-i18n");if(ko[k]&&!x.children.length)x.textContent=ko[k];}('+script+')();</script>');
           }
           NODE
+          pids=()
           for width in 390 1280; do
             for lang in ko en; do
-              google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size="$width,900" --dump-dom "file:///tmp/stmb-workshop-$lang-$width.html" >/tmp/stmb-smoke-result 2>/tmp/stmb-smoke-chrome
-              if ! grep -q 'data-smoke="PASS"' /tmp/stmb-smoke-result; then
-                grep -o 'data-smoke="[^"]*"\|data-error="[^"]*"' /tmp/stmb-smoke-result || true
-                exit 1
-              fi
-              echo "PASS $lang $width"
+              (
+                output="/tmp/stmb-smoke-$lang-$width"
+                google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --no-first-run --disable-background-networking --user-data-dir="$output-profile" --window-size="$width,900" --dump-dom "file:///tmp/stmb-workshop-$lang-$width.html" >"$output" 2>"$output-chrome"
+                if ! grep -q 'data-smoke="PASS"' "$output"; then
+                  grep -o 'data-smoke="[^"]*"\|data-error="[^"]*"' "$output" || true
+                  exit 1
+                fi
+                echo "PASS $lang $width"
+              ) &
+              pids+=($!)
             done
           done
+          failed=0
+          for pid in "${pids[@]}"; do wait "$pid" || failed=1; done
+          exit "$failed"
       - name: Rebuild verified branch
         run: |
           git config user.name 'github-actions[bot]'
