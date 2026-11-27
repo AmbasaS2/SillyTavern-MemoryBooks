@@ -37,7 +37,7 @@ test('single collection sends the source once, reads active Nexus and only recen
     assert.match(calls[0],/response to a request or pressure from an unprompted choice/);
     assert.match(calls[0],/Attribute stated feelings and interpretations to their actual holders/);
     assert.match(calls[0],/Scene, Result and proposed Nexus claims independently against the original wording/);
-    assert.match(calls[0],/original speaker, number and counted action or object/);
+    assert.match(calls[0],/original unit, counted action or object and speaker/);
     assert.match(calls[0],/leave an unanswered response or unresolved feeling pending/);
     assert.match(calls[0],/Core reference/);assert.match(calls[0],/Outcome4/);
     assert.doesNotMatch(calls[0],/Outcome1|PrivateScene/);
