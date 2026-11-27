@@ -31,21 +31,21 @@ function getEffectiveLorebookNameNonInteractive() {
         : null;
 }
 
-function countEntriesByTier(lorebookData) {
-    const counts = { ...EMPTY_TIER_COUNTS };
-    for (const entry of Object.values(lorebookData?.entries || {})) {
-        if (entry?.stmemorybooks !== true) continue;
-        const tier = getEntrySummaryTier(entry);
-        if (Object.hasOwn(counts, tier)) counts[tier]++;
-    }
-    return counts;
-}
-
 function updateCounts(lorebookData) {
-    const entries = Object.values(lorebookData?.entries || {});
-    tierCounts = countEntriesByTier(lorebookData);
-    clipCount = entries.filter((entry) => isClipEntryTitle(entry?.comment)).length;
-    sidePromptCount = entries.filter((entry) => isSidePromptEntryTitle(entry?.comment)).length;
+    const counts = { ...EMPTY_TIER_COUNTS };
+    let clips = 0, sides = 0;
+    // Count all three macro families in one traversal of the same entries.
+    for (const entry of Object.values(lorebookData?.entries || {})) {
+        if (entry?.stmemorybooks === true) {
+            const tier = getEntrySummaryTier(entry);
+            if (Object.hasOwn(counts, tier)) counts[tier]++;
+        }
+        if (isClipEntryTitle(entry?.comment)) clips++;
+        if (isSidePromptEntryTitle(entry?.comment)) sides++;
+    }
+    tierCounts = counts;
+    clipCount = clips;
+    sidePromptCount = sides;
 }
 
 function clearCounts() {

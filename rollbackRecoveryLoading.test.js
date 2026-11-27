@@ -13,6 +13,7 @@ function harness() {
     const state = { loads: [], warnings: [], replayed: [], toasts: [], chains: new Map(), enabled: true };
     const context = vm.createContext({
         initializeSettings: () => ({ moduleSettings: { autoRollbackEnabled: state.enabled } }),
+        extension_settings: { STMemoryBooks: { moduleSettings: { get autoRollbackEnabled() { return state.enabled; } } } },
         getCurrentChatLorebookNames: () => new Set(['deleted', 'failed', 'healthy']),
         loadWorldInfo: async name => {
             state.loads.push(name);
@@ -60,6 +61,8 @@ test('empty chat identities and disabled recovery do not load books or queue emp
     }
     assert.equal(state.chains.size, 0);
     state.enabled = false;
+    context.queueDeletedMessageRollbackUnhideRecovery('chat-a', 'chat-a');
+    assert.equal(state.chains.size, 0, 'disabled rollback does not enqueue chat-open work');
     await context.recoverDeletedMessageRollbackUnhide('chat-a', 'chat-a');
     assert.deepEqual(state.loads, []);
 });

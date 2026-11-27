@@ -1,7 +1,7 @@
 // Copyright (C) 2024–2026 Aiko Hanasaki
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { legacyRotationEnabled } from './memoryBooksMode.js';
+import { getMemoryBooksMode, legacyRotationEnabled } from './memoryBooksMode.js';
 import { getCurrentStmbChatRef } from './stmbJobs.js';
 import { extension_settings } from '../../../extensions.js';
 import { chat, chat_metadata } from '../../../../script.js';
@@ -123,9 +123,10 @@ async function checkAutoSummaryTrigger() {
     try {
         if (hasPendingProgress()) return;
         const settings = extension_settings.STMemoryBooks;
-        if (legacyRotationEnabled(settings, getCurrentStmbChatRef()) ||
-            getCurrentNexusRoleResolution('memory', settings).state !== 'unassigned' &&
-            getCurrentNexusRoleResolution('memory', settings).state !== 'no-character') return;
+        const ref = getCurrentStmbChatRef();
+        if (getMemoryBooksMode(settings, ref) !== 'original' || legacyRotationEnabled(settings, ref)) return;
+        const memoryRole = getCurrentNexusRoleResolution('memory', settings).state;
+        if (memoryRole !== 'unassigned' && memoryRole !== 'no-character') return;
         if (!settings?.moduleSettings?.autoSummaryEnabled) {
             return;
         }
@@ -240,7 +241,8 @@ async function checkAutoSummaryTrigger() {
  */
 export async function handleAutoSummaryMessageReceived() {
     try {
-        if (extension_settings.STMemoryBooks?.moduleSettings?.autoSummaryEnabled) {
+        if (extension_settings.STMemoryBooks?.moduleSettings?.autoSummaryEnabled &&
+            getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef()) === 'original') {
             const currentMessageCount = chat.length;
             console.log(i18n('autosummary.log.messageReceivedSingle', 'STMemoryBooks: Message received - auto-summary enabled, current count: {{count}}', { count: currentMessageCount }));
 

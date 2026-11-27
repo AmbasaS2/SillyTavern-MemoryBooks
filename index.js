@@ -812,6 +812,8 @@ let narratorGenerationSnapshot = null;
 const narratorResponseGeneration = createNarratorGenerationState();
 let manualGroupGenerationSnapshot = null;
 let lorebookRegenerationObserver = null;
+let lorebookRegenerationDrawerObserver = null;
+let lorebookRegenerationRoot = null;
 const memoryRollbackDeletionTracker = createMessageDeletionTracker();
 const memoryRollbackChains = new Map();
 const childMemoryRollbackInFlight = new Set();
@@ -1356,8 +1358,20 @@ function getMemoryReminderController() {
   });
 }
 
+function isOriginalMemoryBooksChat(ref = getCurrentStmbChatRef()) {
+  return getMemoryBooksMode(extension_settings.STMemoryBooks, ref) === 'original';
+}
+
+function checkMemoryReminders(options) {
+  if (!isOriginalMemoryBooksChat()) {
+    memoryReminderController?.dismiss();
+    return;
+  }
+  return getMemoryReminderController().check(options);
+}
+
 function refreshMemoryBoundaryUi() {
-  getMemoryReminderController().check();
+  checkMemoryReminders();
   refreshMemoryBoundaryDivider();
   refreshMemoryBoundaryButton();
 }
@@ -1546,14 +1560,16 @@ function refreshSlothRecoveryForCurrentChat() {
 }
 
 async function handleChatChanged(chatId) {
+  const originChatKey = getStmbChatKey();
   refreshSlothRecoveryForCurrentChat();
   invalidateSlothAutomaticProgress();
   syncSlothAutomaticStatus();
   invalidateTrackerCheckpoints();
   syncSlothComposerButton();
-  getMemoryReminderController().dismiss();
+  memoryReminderController?.dismiss();
   progressChatLoaded();
   await getBranchLorebookController().handleChatChanged(chatId);
+  if (getStmbChatKey() !== originChatKey) return;
   console.log(
     translate(
       "STMemoryBooks: Chat changed - updating scene state",
@@ -1582,7 +1598,6 @@ async function handleChatChanged(chatId) {
   void maybePromptContextSettingForChatOpen();
 
   scheduleSceneButtonRefresh(true);
-  const originChatKey = getStmbChatKey();
   setTimeout(() => {
     if (getStmbChatKey() !== originChatKey) return;
     flushDeferredQueuedAutoHideRanges().catch((error) => {
@@ -1617,11 +1632,15 @@ function validateAndCleanupSceneMarkers() {
 async function handleMessageReceived() {
   const reminderChatKey = getStmbChatKey();
   try {
-    setTimeout(validateSceneMarkers, SCENE_MANAGEMENT.VALIDATION_DELAY_MS);
+    setTimeout(() => {
+      if (getStmbChatKey() === reminderChatKey) validateSceneMarkers();
+    }, SCENE_MANAGEMENT.VALIDATION_DELAY_MS);
     scheduleSceneButtonRefresh(false, true);
+    if (!isOriginalMemoryBooksChat()) return;
     await handleAutoSummaryMessageReceived();
-    if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
-    if (getStmbChatKey() === reminderChatKey && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef()) === 'original') await evaluateTrackers();
+    if (getStmbChatKey() !== reminderChatKey || !isOriginalMemoryBooksChat()) return;
+    checkMemoryReminders({ notify: true });
+    await evaluateTrackers();
   } catch (error) {
     console.error(
       translate(
@@ -1634,7 +1653,7 @@ async function handleMessageReceived() {
 }
 
 function handleStmbJobStateChanged() {
-  if (autoSummaryJobRetryInFlight) return;
+  if (!isOriginalMemoryBooksChat() || autoSummaryJobRetryInFlight) return;
   if (hasPendingProgress()) return;
   if (hasActiveStmbJobs(getStmbChatKey())) return;
 
@@ -1642,7 +1661,7 @@ function handleStmbJobStateChanged() {
   const reminderChatKey = getStmbChatKey();
   retryAutoSummaryAfterJobIdle()
     .then(() => {
-      if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
+      if (getStmbChatKey() === reminderChatKey) checkMemoryReminders({ notify: true });
     })
     .catch((error) => {
       console.warn("STMemoryBooks: auto-summary retry after job idle failed:", error);
@@ -4416,8 +4435,16 @@ let regenerationFullRefresh = false;
 let regenerationRunning = false;
 const pendingRegenerationRows = new Set();
 
+// The host keeps the World Info drawer in the DOM while closed. Observe its
+// open/closed class, not every descendant of a hidden editor.
+function getOpenLorebookRegenerationRoot() {
+  const drawer = document.getElementById('WorldInfo');
+  if (!drawer?.classList.contains('openDrawer') || drawer.classList.contains('closedDrawer')) return null;
+  return drawer.querySelector('#world_popup_entries_list');
+}
+
 function queueLorebookRegenerationRefresh() {
-  if (lorebookRegenerationRefreshTimer !== null || regenerationRunning) return;
+  if (!getOpenLorebookRegenerationRoot() || lorebookRegenerationRefreshTimer !== null || regenerationRunning) return;
   lorebookRegenerationRefreshTimer = setTimeout(() => {
     lorebookRegenerationRefreshTimer = null;
     void refreshLorebookRegenerationActions();
@@ -4433,11 +4460,11 @@ function scheduleLorebookRegenerationActionsRefresh() {
 }
 
 async function refreshLorebookRegenerationActions() {
-  if (regenerationRunning) return;
+  const root = getOpenLorebookRegenerationRoot();
+  if (regenerationRunning || !root) return;
   regenerationRunning = true;
   const revision = regenerationRevision;
   const lorebookName = getCurrentLorebookEditorName();
-  const root = document.getElementById('world_popup_entries_list');
   const full = regenerationFullRefresh || regenerationCache?.name !== lorebookName;
   const rows = full ? Array.from(root?.querySelectorAll('.world_entry') || []) : [...pendingRegenerationRows];
   regenerationFullRefresh = false;
@@ -4446,7 +4473,8 @@ async function refreshLorebookRegenerationActions() {
     if (!lorebookName || !rows.length) return;
     if (!regenerationCache || regenerationCache.name !== lorebookName) {
       const data = await loadWorldInfo(lorebookName);
-      if (!data?.entries || revision !== regenerationRevision || lorebookName !== getCurrentLorebookEditorName()) return;
+      if (!data?.entries || revision !== regenerationRevision || root !== getOpenLorebookRegenerationRoot() ||
+          lorebookName !== getCurrentLorebookEditorName()) return;
       regenerationCache = { name: lorebookName, data, indexes: buildRegenerationIndexes(data) };
     }
     const {data: lorebookData, indexes: regenerationIndexes} = regenerationCache;
@@ -4503,11 +4531,26 @@ async function refreshLorebookRegenerationActions() {
   }
 }
 
-function initializeLorebookRegenerationObserver() {
-  if (lorebookRegenerationObserver) return;
-  const observerRoot = document.querySelector("#world_popup_entries_list");
+function stopLorebookRegenerationRows() {
+  lorebookRegenerationObserver?.disconnect();
+  lorebookRegenerationObserver = null;
+  lorebookRegenerationRoot = null;
+  clearTimeout(lorebookRegenerationRefreshTimer);
+  lorebookRegenerationRefreshTimer = null;
+  regenerationRevision++;
+  regenerationCache = null;
+  regenerationFullRefresh = false;
+  pendingRegenerationRows.clear();
+}
+
+function syncLorebookRegenerationObserver() {
+  const observerRoot = getOpenLorebookRegenerationRoot();
+  if (observerRoot === lorebookRegenerationRoot) return;
+  stopLorebookRegenerationRows();
   if (!observerRoot) return;
+  lorebookRegenerationRoot = observerRoot;
   lorebookRegenerationObserver = new MutationObserver(records => {
+    if (observerRoot !== getOpenLorebookRegenerationRoot() || observerRoot !== lorebookRegenerationRoot) return;
     for (const { addedNodes } of records) {
       for (const node of addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
@@ -4529,19 +4572,26 @@ function initializeLorebookRegenerationObserver() {
     if (pendingRegenerationRows.size) queueLorebookRegenerationRefresh();
   });
   lorebookRegenerationObserver.observe(observerRoot, { childList: true, subtree: true });
-  $("#world_editor_select").on("change.stmb-regeneration", scheduleLorebookRegenerationActionsRefresh);
   scheduleLorebookRegenerationActionsRefresh();
 }
 
+function initializeLorebookRegenerationObserver() {
+  if (lorebookRegenerationDrawerObserver) return;
+  const drawer = document.getElementById('WorldInfo');
+  if (!drawer) return;
+  lorebookRegenerationDrawerObserver = new MutationObserver(syncLorebookRegenerationObserver);
+  lorebookRegenerationDrawerObserver.observe(drawer, { attributes: true, attributeFilter: ['class'] });
+  $("#world_editor_select").on("change.stmb-regeneration", () => {
+    syncLorebookRegenerationObserver();
+    scheduleLorebookRegenerationActionsRefresh();
+  });
+  syncLorebookRegenerationObserver();
+}
+
 function cleanupLorebookRegenerationObserver() {
-  lorebookRegenerationObserver?.disconnect();
-  lorebookRegenerationObserver = null;
-  clearTimeout(lorebookRegenerationRefreshTimer);
-  lorebookRegenerationRefreshTimer = null;
-  regenerationRevision++;
-  regenerationCache = null;
-  regenerationFullRefresh = false;
-  pendingRegenerationRows.clear();
+  lorebookRegenerationDrawerObserver?.disconnect();
+  lorebookRegenerationDrawerObserver = null;
+  stopLorebookRegenerationRows();
   $("#world_editor_select").off(".stmb-regeneration");
 }
 
@@ -5433,7 +5483,7 @@ async function handleLorebookEntryRegeneration(button) {
     isProcessingMemory = false;
     isProcessingArc = false;
     task.finish();
-    if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
+    if (getStmbChatKey() === reminderChatKey) checkMemoryReminders({ notify: true });
     button.disabled = false;
     if (buttonLabel) {
       buttonLabel.textContent = entryKind === "sidePrompt"
@@ -7373,7 +7423,7 @@ async function initiateMemoryCreation(selectedProfileIndex = null) {
   } finally {
     // ALWAYS reset the flag, no matter how we exit
     isProcessingMemory = false;
-    if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
+    if (getStmbChatKey() === reminderChatKey) checkMemoryReminders({ notify: true });
   }
 }
 
@@ -11811,6 +11861,25 @@ function mountSlothCollectionFooter(popup) {
   if (footer && controls) controls.prepend(footer);
 }
 
+// Mutation tracking stays synchronous; only the visible status redraw is
+// coalesced. Closed settings popups do not schedule work at all.
+let slothStatusRefreshTimer = null;
+function invalidateSlothStatusForMessageChange(ref = getCurrentStmbChatRef()) {
+  if (isOriginalMemoryBooksChat(ref)) return;
+  invalidateSlothAutomaticProgress();
+  if (!currentPopupInstance?.dlg.open || slothStatusRefreshTimer !== null) return;
+  slothStatusRefreshTimer = setTimeout(() => {
+    slothStatusRefreshTimer = null;
+    syncSlothAutomaticStatus();
+  }, 0);
+}
+
+function recordMemoryBooksMessageChange(messageId) {
+  const ref = getCurrentStmbChatRef();
+  invalidateSlothStatusForMessageChange(ref);
+  memoryRollbackDeletionTracker.snapshot(getStmbChatKey(ref), chat, messageId);
+}
+
 function syncSlothAutomaticStatus() {
   const popup = currentPopupInstance;
   if (!popup?.dlg.open) return;
@@ -12283,11 +12352,12 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       await saveSettings();
       syncSlothComposerButton(settings);
       if (getStmbChatKey(ref) !== getStmbChatKey()) { await refreshPopupContent(); return; }
-      getMemoryReminderController().dismiss();
-      getMemoryReminderController().check();
+      memoryReminderController?.dismiss();
+      checkMemoryReminders();
       await refreshPopupContent({loadOriginal:next === 'original'});
       syncMemoryBooksModeUi(popupElement, settings);
       await activateTab(next);
+      if (next === 'sloth') refreshSlothRecoveryForCurrentChat();
       void refreshMemoryTierMacroCache();
       return;
     }
@@ -12914,13 +12984,13 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
     if (e.target.matches('[data-memory-reminder]')) {
       if (persistMemoryReminderControls(popupElement, settings.moduleSettings)) saveSettingsDebounced();
-      getMemoryReminderController().check();
+      checkMemoryReminders();
       return;
     }
 
     if (e.target.matches("#stmb-auto-summary-enabled")) {
       settings.moduleSettings.autoSummaryEnabled = e.target.checked;
-      getMemoryReminderController().check();
+      checkMemoryReminders();
       saveSettingsDebounced();
       return;
     }
@@ -12962,7 +13032,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       const value = parseInt(e.target.value);
       if (!isNaN(value) && value >= 5 && value <= 200) {
         settings.moduleSettings.autoSummaryInterval = value;
-        getMemoryReminderController().check();
+        checkMemoryReminders();
         saveSettingsDebounced();
       }
       return;
@@ -12983,7 +13053,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     if (e.target.matches("#stmb-auto-summary-buffer")) {
       const value = readIntInput(e.target);
       settings.moduleSettings.autoSummaryBuffer = clampInt(value ?? 0, 0, 50);
-      getMemoryReminderController().check();
+      checkMemoryReminders();
       saveSettingsDebounced();
       return;
     }
@@ -13473,7 +13543,7 @@ function persistMainPopupSettings(popupElement) {
     saveSettingsDebounced();
   }
 
-  getMemoryReminderController().check();
+  checkMemoryReminders();
   return hasChanges;
 }
 
@@ -14147,7 +14217,7 @@ async function recoverDeletedMessageRollbackUnhide(chatKey, chatId) {
 }
 
 function queueDeletedMessageRollbackUnhideRecovery(chatKey, chatId) {
-  if (!chatKey || !chatId) return;
+  if (!chatKey || !chatId || extension_settings.STMemoryBooks?.moduleSettings?.autoRollbackEnabled !== true) return;
   const previous = memoryRollbackChains.get(chatKey) || Promise.resolve();
   const current = previous.catch(() => {}).then(() => recoverDeletedMessageRollbackUnhide(chatKey, chatId));
   memoryRollbackChains.set(chatKey, current);
@@ -14527,7 +14597,7 @@ function setupEventListeners() {
     invalidateTrackerCheckpoints();
     updateMemoryTierMacroCache(name, data);
     if (name === getCurrentLorebookEditorName()) scheduleLorebookRegenerationActionsRefresh();
-    populateInlineButtons();
+    if (currentPopupInstance?.dlg.open) populateInlineButtons();
   });
   $(document).on('change', '#world_editor_select', () => {
     const name = getCurrentLorebookEditorName();
@@ -14606,8 +14676,7 @@ function setupEventListeners() {
     }
   });
   eventSource.on(event_types.MESSAGE_DELETED, (deletedId) => {
-    invalidateSlothAutomaticProgress();
-    syncSlothAutomaticStatus();
+    invalidateSlothStatusForMessageChange();
     invalidateTrackerCheckpoints();
     const settings = initializeSettings();
     const chatKey = getStmbChatKey();
@@ -14632,9 +14701,7 @@ function setupEventListeners() {
     }
   });
   eventSource.on(event_types.MESSAGE_SENT, (messageId) => {
-    invalidateSlothAutomaticProgress();
-    syncSlothAutomaticStatus();
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
+    recordMemoryBooksMessageChange(messageId);
     if (!getCurrentMemoryBooksContext().isNarratorMode) return;
     const message = chat?.[messageId];
     if (!message) return;
@@ -14642,9 +14709,7 @@ function setupEventListeners() {
     saveChatDebounced();
   });
   eventSource.on(event_types.MESSAGE_RECEIVED, (messageId, type) => {
-    invalidateSlothAutomaticProgress();
-    syncSlothAutomaticStatus();
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
+    recordMemoryBooksMessageChange(messageId);
     const generation = narratorResponseGeneration.receive({
       messageId, type, chatKey: getStmbChatKey(), chat,
       narratorMode: getCurrentMemoryBooksContext().isNarratorMode,
@@ -14657,14 +14722,10 @@ function setupEventListeners() {
   });
   eventSource.on(event_types.MESSAGE_RECEIVED, handleMessageReceived);
   eventSource.on(event_types.MESSAGE_EDITED, (messageId) => {
-    invalidateSlothAutomaticProgress();
-    syncSlothAutomaticStatus();
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
+    recordMemoryBooksMessageChange(messageId);
   });
   eventSource.on(event_types.MESSAGE_SWIPED, (messageId) => {
-    invalidateSlothAutomaticProgress();
-    syncSlothAutomaticStatus();
-    memoryRollbackDeletionTracker.snapshot(getStmbChatKey(), chat, messageId);
+    recordMemoryBooksMessageChange(messageId);
     restoreNarratorCastFromTimeline(messageId);
   });
 
@@ -15131,7 +15192,7 @@ async function applyManualFixedJson(correctedRaw) {
     // ALWAYS reset the flag, no matter how we exit.
     // This clears the `isProcessingMemory` flag set inside the try block above.
     isProcessingMemory = false;
-    if (getStmbChatKey() === reminderChatKey) getMemoryReminderController().check({ notify: true });
+    if (getStmbChatKey() === reminderChatKey) checkMemoryReminders({ notify: true });
   }
 }
 
@@ -15804,8 +15865,8 @@ async function init() {
     resolved: (chatKey) => {
       if (getStmbChatKey() !== chatKey) return;
       refreshMemoryBoundaryUi();
-      if (!hasPendingProgress()) void handleAutoSummaryMessageReceived().then(() => {
-        if (getStmbChatKey() === chatKey) getMemoryReminderController().check({ notify: true });
+      if (isOriginalMemoryBooksChat() && !hasPendingProgress()) void handleAutoSummaryMessageReceived().then(() => {
+        if (getStmbChatKey() === chatKey) checkMemoryReminders({ notify: true });
       });
     },
   });
