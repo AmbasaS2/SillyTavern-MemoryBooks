@@ -211,7 +211,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
         '- create: unique title, content, and optional keywords array.',
         'Match the existing entry by role or subject before choosing an action. Reuse its UID for the update. An existing entry can hold both core and continuity: update only the relevant part. Only create Core Memory, Current Continuity or NPC Index if that role has no existing active entry.',
-        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues.',
+        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues only when they need to remain available across unrelated scenes. Classify by the need for continuous recall, not emotional importance alone: keep situation-specific durable facts and recall cues in LT, person-specific facts in NPC, live or unfinished states in Current Continuity, and actual past incidents in Scene. Update existing matching entries in place; this collection is not a reclassification or deletion of earlier memories.',
         'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
         'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
         'For a recall cue keep its perceivable trigger, grounded meaning and distinctly supported future function.',
