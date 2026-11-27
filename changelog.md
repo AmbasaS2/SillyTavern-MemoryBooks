@@ -7,6 +7,11 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ← [Back to README](readme.md)
 
+## v9.4.0-ambasa.6 (November 27, 2026) — Sloth fork
+- Group all existing memory-maintenance tools under Memory Workshop; rename the AI tool and previously summarized range registration for clarity.
+- Only Lorebook setup starts expanded. Align drawer headers, arrows and Workshop action widths using native disclosure and scoped CSS, with no new observer, polling or render handler.
+- No changes to prompts, model calls, data handling or memory workflows. Node 658/658, Bun build and isolated Chrome layout checks passed (Korean/English, 390/1280px).
+
 ## v9.4.0-ambasa.5 (November 27, 2026) — Sloth fork
 - Memory overview and Memory Workshop: read-only review, AI-assisted suggestions and explicit approval for selected exact duplicate removals or Core-to-Anchor paragraph moves.
 - Anchor replaces LT as the public role name; existing LT titles, UID references, keywords, injection modes and recovery contracts remain compatible.

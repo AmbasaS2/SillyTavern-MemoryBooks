@@ -31,9 +31,9 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## ⚡ Quick start
 
-**Current version: 9.4.0-ambasa.5.**
+**Current version: 9.4.0-ambasa.6.**
 
-This update adds Memory Workshop, improves Memory overview and partial recovery, and uses Anchor as the public name for the existing LT role. Existing LT titles, entry UIDs and injection settings remain compatible. The Workshop requires approval before applying selected changes; moving Core text into an Anchor may reduce how often it is recalled. AI summaries can still omit or misinterpret details; review and correct them as needed.
+This update adds Memory Workshop, improves Memory overview and partial recovery, and uses Anchor as the public name for the existing LT role. Existing LT titles, entry UIDs and injection settings remain compatible. Open Memory Workshop to choose a tool. AI memory review and cleanup requires approval before applying selected changes; moving Core text into an Anchor may reduce how often it is recalled. AI summaries can still omit or misinterpret details; review and correct them as needed.
 
 > **Roleplay → finish an event → collect memories → continue RP.**
 >
@@ -94,7 +94,7 @@ Nexus keeps core facts, current state, individual long-term memories and NPC mem
 >
 > When switching from hand-authored memories, verify the already summarized message ranges and the always-on flags of your older Scenes before the first collection. Older `STMB_start/end` fields alone are not a Sloth collection receipt; visible old messages may be collected again. Scenes without Sloth source metadata may not join automatic recent-three rotation. Test on a copy first. See [current compatibility notes](./AMBASA_NEXUS_DEV.md#open-compatibility-checks-for-replacing-manual-memory-updates).
 
-**Injection settings** are collapsed by default. Core Memory, Current Continuity, Anchor (legacy LT) and NPC independently support Always on, Vector, Keywords and No injection. The latest three Scenes stay always on; older Scenes support Vector or Keywords. New-entry defaults preserve existing entries. Apply changes explicitly in Manage existing memories.
+**Injection settings** are collapsed by default. Core Memory, Current Continuity, Anchor (legacy LT) and NPC independently support Always on, Vector, Keywords and No injection. The latest three Scenes stay always on; older Scenes support Vector or Keywords. New-entry defaults preserve existing entries. Apply changes explicitly in Memory Workshop.
 
 #### 2. Collection settings
 
@@ -172,7 +172,9 @@ Choose a built-in or custom prompt in the empty slot. Add more slots as needed.
    - Vector
    - Keywords (edit suggested keywords before saving)
 
-#### 🧩 Manage existing memories
+#### 🧩 Memory Workshop
+
+Only Lorebook setup starts expanded. Open Memory Workshop to view Memory overview, AI memory review and cleanup, the manual tools below, injection changes and registration of previously summarized ranges. Opening the drawer does not send an AI request.
 
 - **Merge:** causally related completed scenes.
 - **Split:** a completed scene with verifiable original message ranges.
@@ -246,9 +248,9 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## ⚡ 간단 사용 설명
 
-**현재 버전: 9.4.0-ambasa.5.**
+**현재 버전: 9.4.0-ambasa.6.**
 
-이번 업데이트에서는 기억 정비소를 추가하고 기억 현황 및 부분 복구를 개선했습니다. 기존 LT 역할의 표시 이름을 앵커(Anchor)로 변경했으며, 기존 LT 제목·UID·주입 설정은 호환됩니다. 기억 정비소는 선택한 변경을 승인한 뒤에만 저장합니다. 코어에서 앵커로 옮긴 내용은 매번 불러오지 못할 수 있습니다. AI 요약의 누락과 해석 오류는 여전히 발생할 수 있으므로 필요할 때 확인하고 수정해 주세요.
+이번 업데이트에서는 기억 정비소를 추가하고 기억 현황 및 부분 복구를 개선했습니다. 기존 LT 역할의 표시 이름을 앵커(Anchor)로 변경했으며, 기존 LT 제목·UID·주입 설정은 호환됩니다. 기억 정비소를 펼쳐 필요한 기능을 선택합니다. AI 기억 분석 및 정리는 선택한 변경을 승인한 뒤에만 저장합니다. 코어에서 앵커로 옮긴 내용은 매번 불러오지 못할 수 있습니다. AI 요약의 누락과 해석 오류는 여전히 발생할 수 있으므로 필요할 때 확인하고 수정해 주세요.
 
 > **롤플 → 사건이 끝나면 기억 수집 → 다시 롤플!**
 >
@@ -387,7 +389,9 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 키워드는 저장 검토 화면에서 수정할 수 있습니다.
 
-#### 🧩 저장한 사건 수정
+#### 🧩 기억 정비소
+
+로어북 준비만 기본으로 펼쳐집니다. 기억 정비소에서 기억 현황, AI 기억 분석 및 정리, 아래 직접 정비 도구, 주입 방식 변경, 기존 요약 범위 등록을 선택할 수 있습니다. 정비소를 여는 것만으로는 AI를 호출하지 않습니다.
 
 - **합치기:** 인과적으로 연결된 완료 사건을 정리.
 - **나누기:** 원래 메시지 범위와 순서를 확인할 수 있는 사건을 분리.
@@ -437,7 +441,7 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 ---
 
-**Documentation basis / 안내 기준:** verified runtime [PR #19 / `204d0db`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged to main on 2026-11-27. Node 657/657 and Bun build; isolated SillyTavern 1.19.1 Chrome host verification of revised UI, role compatibility and storage safeguards. Actual AI accuracy and installed-device behavior vary.
+**Documentation basis / 안내 기준:** verified runtime [PR #19 / `204d0db`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged to main on 2026-11-27. Node 657/657 and Bun build; isolated SillyTavern 1.19.1 Chrome host verification of revised UI, role compatibility and storage safeguards. UI-only follow-up [PR #21](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/pull/21) passed 658 Node tests, a Bun build and isolated Chrome layout checks (390/1280px, Korean/English). Actual AI accuracy and installed-device behavior vary.
 
 ## Original Memory Books documentation / 원본 기능 안내
 
