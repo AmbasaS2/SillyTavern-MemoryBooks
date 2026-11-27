@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { SLOTH_R07_OPENING, SLOTH_R07_CLOSING, SLOTH_R07_DISPLAY_TEXT } from './slothR07Prompt.js';
+import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
 import {readFileSync} from 'node:fs';
 import {validateNexusEventPlan,stageNexusEdits,describeNexusCollectionEntry,getNexusRecallModes,stageNexusRecallSettings} from './nexusCollectionPolicy.js';
 import {isCompletedSceneEntry,sceneNumberFromTitle} from './nexusSceneRotation.js';
@@ -23,6 +25,7 @@ test('single collection sends the source once, reads active Nexus and only recen
         extract('export async function composeSingleSlothCollection(', '\nexport async function retryApprovedSlothScenes(')
             .replace('export async','async')+'\ncomposeSingleSlothCollection',{
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>preset,
+        SLOTH_R07_OPENING,SLOTH_R07_CLOSING,
         SCENE_KEYWORD_GUIDANCE:'Recall',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         isCompletedSceneEntry,sceneNumberFromTitle,validateNexusEventPlan,validateSlothSceneResponse,
         parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,joinSlothRecoveryScenes,buildSlothPendingDraft,
@@ -67,6 +70,16 @@ test('single collection sends the source once, reads active Nexus and only recen
     assert.match(builtInRequest,/titles do not establish source coverage/);
     assert.match(builtInRequest,/Tell the story from the first eligible section/);
     assert.doesNotMatch(builtInRequest,/Old built-in summary/);
+    const copiedSettings={moduleSettings:{slothSummaryPresetId:'copy',slothSummaryPresets:[{id:'copy',name:'R07 copy',text:SLOTH_R07_DISPLAY_TEXT}]}};
+    preset=getActiveSlothSummaryPreset(copiedSettings);
+    assert.equal(preset.usesR07Writing,true);
+    await run({...opt,messages:fullSource});
+    assert.equal(calls.at(-1),builtInRequest,'a verbatim copy must send the identical request');
+    copiedSettings.moduleSettings.slothSummaryPresets[0].text+='\n\nExtra custom guidance.';
+    preset=getActiveSlothSummaryPreset(copiedSettings);
+    await run({...opt,messages:fullSource});
+    assert.match(calls.at(-1),/Extra custom guidance\./);
+    assert.doesNotMatch(calls.at(-1),/Reading section/);
 });
 test('Nexus recall settings are independent; uninjected entries remain updateable and legacy NPC off resumes collection',()=>{
     const entries={entries:{}};
