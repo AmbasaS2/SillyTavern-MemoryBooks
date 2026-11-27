@@ -148,3 +148,14 @@ export function appendContinuitySection(before, section, text, {legacyHeadings =
     guardContinuityChange(before, after, { action: 'append_section', section: name, legacyHeadings });
     return after;
 }
+
+/** Identify protected knowledge-boundary changes without interpreting prose. */
+export function touchesContinuityKnowledge(edit,existing=''){
+    if(edit.action==='append_section')return sectionName(edit.section,true)==='Knowledge Boundaries';
+    if(edit.action==='create')return sectionsOf(String(edit.content||''),true).sections.some(section=>section.name==='Knowledge Boundaries');
+    if(edit.action!=='replace_exact'||typeof edit.find!=='string'||!edit.find)return false;
+    const text=String(existing||''),start=text.indexOf(edit.find);
+    if(start<0||text.indexOf(edit.find,start+1)!==-1)return false;
+    return sectionsOf(text,true).sections.some(section=>section.name==='Knowledge Boundaries'&&
+        start>=section.bodyStart&&start+edit.find.length<=section.end);
+}

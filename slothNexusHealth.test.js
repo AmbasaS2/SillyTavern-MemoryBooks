@@ -79,3 +79,11 @@ test('health UI keeps two summary values, on-demand help and list bodies, withou
     assert.doesNotMatch(fn,/MutationObserver|ResizeObserver|setInterval|requestAnimationFrame|<table/);
     assert.match(read('./style.css'),/\.popup\.stmb-popup\.stmb-nexus-health-popup\{[^}]*height:fit-content/);
 });
+
+test('health help stays beside its title and dividers use a scoped theme-aware contrast color',()=>{
+    const css=readFileSync(new URL('./style.css',import.meta.url),'utf8');
+    assert.match(css,/\.popup\.stmb-popup \.stmb-health-heading\{[^}]*justify-content:flex-start;gap:4px/);
+    assert.match(css,/\.popup\.stmb-popup \.stmb-health-heading h3\{[^}]*flex:0 1 auto;width:auto/);
+    assert.match(css,/\.stmb-nexus-health\{[^}]*--stmb-health-border:color-mix/);
+    assert.match(css,/\.stmb-health-row\{[^}]*border-bottom:1px solid var\(--stmb-health-border/);
+});

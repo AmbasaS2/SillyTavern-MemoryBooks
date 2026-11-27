@@ -17,6 +17,7 @@ import { parseSingleSlothCollectionDraft, normalizeSingleSlothPlan, finalizeSing
 import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, includeDeepSeekTailEvent, fitDeepSeekSceneBatch, stageNexusEdits,
     describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
 import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
+import { assertSlothNexusEvidence } from './slothNexusEvidence.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
@@ -485,10 +486,11 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
     ].join('\n\n');
 }
 
-function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialSource,committedEdits=[]}) {
-    const edits = [], acceptedRawEdits=[], pendingEdits=[];
+function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialSource,committedEdits=[],strictNexusEvidence=false,evidencePolicyVersion=1}) {
+    const edits = [], acceptedRawEdits=[], pendingEdits=[],pendingIssues=[];
+    const evidenceSource=strictNexusEvidence?new Map(messages.map(message=>[message.id,message.mes])):null;
     if (!Array.isArray(response.edits) || response.edits.length > 80) {
-        return { edits, acceptedRawEdits, pendingEdits:response.edits??[],
+        return { edits, acceptedRawEdits, pendingEdits:response.edits??[],pendingIssues:[{type:'nexus',reason:'Invalid or oversized Nexus edits array.'}],
             skippedNexusEdits: Array.isArray(response.edits) ? response.edits.length : 1 };
     }
     const candidates = canonicalizeNewNexusTitles(response.edits).map(stripRepeatedContinuityHeading);
@@ -504,24 +506,30 @@ function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialS
     for (const [index, candidate] of candidates.entries()) {
         if(committedEdits.length&&already.has(slothEditSignature(candidate))) continue;
         try {
-            // Structural staging, not mandatory model-generated quotation receipts,
-            // determines whether an edit can safely be applied.
+            // Ordinary edits retain structural checks. New sensitive edits add
+            // exact source evidence; legacy responses keep their old contract.
             const edit = candidate;
             if (partialSource && String(edit.kind).trim().toLowerCase() === 'continuity') {
-                pendingEdits.push(response.edits[index]);continue;
+                pendingEdits.push(response.edits[index]);
+                pendingIssues.push({type:'nexus',row:index+1,reason:'Historical source slice cannot change live continuity.'});
+                continue;
             }
             if (initial && (edit.action !== 'create' || edit.kind === 'npc-index')) {
                 throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
             }
-            // Each accepted edit becomes the baseline for the next, with the regular World Info guards.
-            staged = stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode, recallModes:settings?.moduleSettings?.nexusRecallModes }).staged;
+            // Check structural staging before proof, and advance the baseline
+            // only after both checks succeed. No write occurs in this stage.
+            const next=stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode, recallModes:settings?.moduleSettings?.nexusRecallModes }).staged;
+            if(strictNexusEvidence)assertSlothNexusEvidence(edit,staged,evidenceSource,evidencePolicyVersion);
+            staged=next;
             edits.push(edit);acceptedRawEdits.push(edit);
         } catch (error) {
             pendingEdits.push(response.edits[index]);
+            pendingIssues.push({type:'nexus',row:index+1,reason:String(error?.message||error)});
             console.warn('Skipping collection Nexus edit ' + (index + 1), error);
         }
     }
-    return { edits, acceptedRawEdits, pendingEdits,
+    return { edits, acceptedRawEdits, pendingEdits,pendingIssues,
         skippedNexusEdits: pendingEdits.length + Number(response.recoveredIncompleteEdits === true) };
 }
 
@@ -655,7 +663,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[]}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -673,6 +681,7 @@ export async function composeSingleSlothCollection(options) {
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Other edits retain the existing structural checks.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
@@ -713,8 +722,9 @@ export async function composeSingleSlothCollection(options) {
         verifyOrigin();
     }
     const accepted=finalizeSingleSlothScenes(plan,drafts);
-    const nexusResult=readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource,committedEdits});
-    const pendingDraft=buildSlothPendingDraft(raw,accepted.scenes,lockedScenes.length,nexusResult.pendingEdits);
+    const nexusResult=readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource,committedEdits,strictNexusEvidence,evidencePolicyVersion});
+    const pendingDraft=buildSlothPendingDraft(raw,accepted.scenes,lockedScenes.length,nexusResult.pendingEdits,
+        [...(plan.issues??[]),...(nexusResult.pendingIssues??[])]);
     return {plan,...accepted,...nexusResult,pendingDraft,
         committedEdits:[...committedEdits,...(nexusResult.acceptedRawEdits??[])],
         reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain};
