@@ -227,6 +227,7 @@ export const settingsTemplate = Handlebars.compile(`
           <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health" data-i18n="STMemoryBooks_SlothHealthTitle">Nexus health check</button></div>
               <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
               <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="legacy-coverage" data-i18n="STMemoryBooks_SlothLegacyCoverage">Review previously summarized messages</button></div>
               <div class="stmb-management-action">

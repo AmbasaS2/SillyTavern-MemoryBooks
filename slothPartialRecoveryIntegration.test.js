@@ -14,6 +14,7 @@ import {stableHashString} from './clipReviewPolicy.js';
 import {createHash} from 'node:crypto';
 import {createSlothRecoveryStore,selectSlothRecoveryRecord,slothRecoveryFileName} from './slothRecoveryStore.js';
 import * as recovery from './slothSingleRecovery.js';
+import {assertSlothNexusEvidence} from './slothNexusEvidence.js';
 
 const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 const runtime=read('./nexusCollectorRuntime.js'),ai=read('./nexusCollectionAI.js');
@@ -55,7 +56,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         section(ai,'export async function composeSingleSlothCollection(','export async function retryApprovedSlothScenes(').replace('export async','async'),
         'composeSingleSlothCollection',
     ].join('\n'),{
-        ...recovery,stageNexusEdits,validateSlothSceneResponse,isCompletedSceneEntry,sceneNumberFromTitle,
+        ...recovery,stageNexusEdits,assertSlothNexusEvidence,validateSlothSceneResponse,isCompletedSceneEntry,sceneNumberFromTitle,
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Keywords',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         requester:()=>async(_prompt,phase,parse)=>{

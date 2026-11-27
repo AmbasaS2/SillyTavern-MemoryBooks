@@ -1942,5 +1942,22 @@
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Introduce solo los rangos que ya constan en el libro Memory seleccionado. Usa los números del chat, por ejemplo 0-18, 22-25. Deja el campo vacío para borrar estos rangos.",
   "STMemoryBooks_SlothLegacyCoverageChanged": "Los mensajes ya revisados han cambiado. Revisa o borra sus rangos en Gestionar recuerdos existentes.",
   "STMemoryBooks_SlothRenameRetry": "La actualización de los enlaces de los libros de lore está pendiente. Pulsa esta notificación para reintentar en el chat original. Si el chat guardado cambió, recárgalo primero.",
-  "STMemoryBooks_SlothRenameOriginalChat": "Vuelve al chat original antes de reintentar la actualización de los enlaces de los libros de lore."
+  "STMemoryBooks_SlothRenameOriginalChat": "Vuelve al chat original antes de reintentar la actualización de los enlaces de los libros de lore.",
+  "STMemoryBooks_SlothHealthTitle": "Revisión de salud de Nexus",
+  "STMemoryBooks_SlothHealthMixed": "Roles mixtos",
+  "STMemoryBooks_SlothHealthOther": "Otros",
+  "STMemoryBooks_SlothHealthProtected": "Protegidos",
+  "STMemoryBooks_SlothHealthHelp": "Vista de solo lectura del texto guardado, estimada con el tokenizador actual. Las marcas de activación permanente no prueban la inyección real. No se elimina ni reclasifica nada.",
+  "STMemoryBooks_SlothHealthTotal": "Guardado",
+  "STMemoryBooks_SlothHealthAlways": "Siempre activo",
+  "STMemoryBooks_SlothHealthDuplicates": "Párrafos idénticos",
+  "STMemoryBooks_SlothHealthUnknown": "Sin contar: ",
+  "STMemoryBooks_SlothHealthRole": "Rol",
+  "STMemoryBooks_SlothHealthEntries": "Entradas",
+  "STMemoryBooks_SlothHealthInspect": "Revisar entradas por tamaño",
+  "STMemoryBooks_SlothHealthChoose": "Elegir una entrada",
+  "STMemoryBooks_SlothHealthRepeatHelp": "Los párrafos idénticos son pistas para revisar, no prueba de redundancia semántica.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Información sobre estas cifras",
+  "STMemoryBooks_SlothCapacityExceeded": "La recopilación estimada (entrada {{input}} + salida {{output}} + reserva {{reserve}}) supera el límite seguro de {{limit}} tokens. No se envió ninguna solicitud de IA. Elige un modelo con más contexto o reduce el intervalo de recopilación.",
+  "STMemoryBooks_SlothCapacityUnknown": "Se desconoce el límite del modelo de recopilación elegido. No se envió la solicitud grande (aprox. {{input}} tokens de entrada). Elige un modelo con límite conocido o un perfil con un contexto adecuado."
 }

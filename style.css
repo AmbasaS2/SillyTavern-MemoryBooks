@@ -1622,3 +1622,42 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup #stmb-sloth-mode-inactive[hidden],
 .popup.stmb-popup #stmb-legacy-rotation-settings[hidden],
 .popup.stmb-popup .stmb-original-consolidate[hidden] { display:none; }
+
+/* Sloth: compact, on-demand Nexus health snapshot. */
+.popup.stmb-popup.stmb-nexus-health-popup{width:500px;height:fit-content!important;min-height:0;max-height:min(90dvh,calc(100dvh - 2em))}
+.popup.stmb-popup.stmb-nexus-health-popup .popup-body{height:auto;min-height:0}
+.popup.stmb-popup.stmb-nexus-health-popup .popup-content{min-height:0;flex:0 1 auto}
+.popup.stmb-popup .stmb-nexus-health{gap:10px;text-align:start;min-width:0;overflow-wrap:normal}
+.popup.stmb-popup .stmb-health-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.popup.stmb-popup .stmb-health-heading h3{margin:0;font-size:1.1em;line-height:1.3}
+.popup.stmb-popup .stmb-health-info{flex:none;display:grid;place-items:center;width:26px;height:26px;padding:0;background:transparent;border:0;color:var(--SmartThemeBodyColor);cursor:pointer}
+.popup.stmb-popup .stmb-health-info:focus-visible,.popup.stmb-popup .stmb-health-section summary:focus-visible{outline:2px solid var(--SmartThemeEmColor,currentColor);outline-offset:2px}
+.popup.stmb-popup .stmb-nexus-health p{margin:0}
+.popup.stmb-popup .stmb-health-book{font-size:.86em;opacity:.85;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-health-help{font-size:.88em;line-height:1.45;color:var(--SmartThemeBodyColor);padding:8px;border-inline-start:2px solid var(--SmartThemeBorderColor)}
+.popup.stmb-popup .stmb-health-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.popup.stmb-popup .stmb-health-stat{display:flex;flex-direction:column;gap:5px;min-width:0;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:9px}
+.popup.stmb-popup .stmb-health-stat>span{font-size:.8em;line-height:1.35;overflow-wrap:normal;word-break:normal}
+.popup.stmb-popup .stmb-health-stat strong{font-size:clamp(1.05em,4vw,1.4em);font-variant-numeric:tabular-nums;line-height:1.2;overflow-wrap:anywhere}
+.popup.stmb-popup .stmb-health-unknown{display:block;font-size:.76em;line-height:1.3;opacity:.9;white-space:normal}
+.popup.stmb-popup .stmb-health-breakdown{border-block:1px solid var(--SmartThemeBorderColor);min-width:0}
+.popup.stmb-popup .stmb-health-row{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr);gap:7px;align-items:center;padding:7px 2px;border-bottom:1px solid var(--SmartThemeBorderColor);font-size:.9em;line-height:1.4}
+.popup.stmb-popup .stmb-health-row:last-child{border-bottom:0}
+.popup.stmb-popup .stmb-health-row>:not(:first-child){text-align:end;font-variant-numeric:tabular-nums}
+.popup.stmb-popup .stmb-health-row>span{min-width:0;overflow-wrap:normal;word-break:normal}
+.popup.stmb-popup .stmb-health-role small{font-size:.8em;opacity:.8;white-space:nowrap}
+.popup.stmb-popup .stmb-health-value{overflow-wrap:anywhere!important}
+.popup.stmb-popup .stmb-health-labels{font-size:.76em;font-weight:600}
+.popup.stmb-popup .stmb-health-section{padding:8px 10px;border:1px solid var(--SmartThemeBorderColor);border-radius:7px;min-width:0}
+.popup.stmb-popup .stmb-health-section summary{cursor:pointer;line-height:1.4;font-weight:500;overflow-wrap:normal}
+.popup.stmb-popup .stmb-health-section summary span{font-variant-numeric:tabular-nums;opacity:.85}
+.popup.stmb-popup .stmb-health-section select{width:100%;margin-top:8px}
+.popup.stmb-popup .stmb-health-section .stmb-health-help{margin-top:7px}
+.popup.stmb-popup .stmb-health-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:36dvh;overflow:auto;padding:8px;margin-top:6px;border-inline-start:2px solid var(--SmartThemeBorderColor);font-size:.9em;line-height:1.45}
+@media(max-width:450px){
+    .popup.stmb-popup.stmb-nexus-health-popup{padding-inline:9px}
+    .popup.stmb-popup.stmb-nexus-health-popup .popup-content{padding-inline:4px}
+    .popup.stmb-popup .stmb-health-stat{padding:8px}
+    .popup.stmb-popup .stmb-health-row{gap:5px;font-size:.84em}
+    .popup.stmb-popup .stmb-health-labels{font-size:.72em}
+}

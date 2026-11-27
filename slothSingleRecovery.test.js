@@ -131,3 +131,34 @@ test('pending editor excludes committed Scene rows and reconstructs source accou
     assert.equal(plan(rejoined).events.length,2);
     assert.deepEqual(plan(rejoined).events[0].messageIds,[0,1]);
 });
+
+test('a contradictory explicit closure holds just that Scene and keeps the original paid text for review',()=>{
+    const good={...event([0,1],'Independent'),closure:{messageId:1,quote:'The door was closed.'}};
+    const bad={...event([2,3],'Missing ending'),closure:{messageId:3,quote:'They accepted the terms.'}};
+    const raw={events:[good,bad,open([5,5])],edits:[]};
+    const ids=[0,1,2,3,4,5];
+    const messages=['She took the key.','The door was closed.','A proposal.','They discussed it.','They accepted the terms.','A new unanswered question.'].map((mes,id)=>({id,mes}));
+    const p=normalizeSingleSlothPlan(raw,ids,{originalMessages:messages});
+    const out=finalize(p);
+    assert.equal(out.scenes.length,1);
+    assert.equal(out.skippedScenes,1);
+    assert.deepEqual(out.scenes[0].collectedRanges,[[0,1]]);
+    assert.deepEqual(out.pendingRanges,[[2,5]]);
+    const pending=JSON.parse(JSON.stringify(buildSlothPendingDraft(raw,out.scenes,0,[],p.issues)));
+    assert.deepEqual(pending.events,[bad,raw.events[2]]);
+    assert.match(pending.recoveryIssues[0].reason,/Closure quote/);
+    pending.events[0].segments=[2,4];
+    pending.events[0].closure.messageId=4;
+    const corrected=normalizeSingleSlothPlan(joinSlothRecoveryScenes(pending,out.scenes),ids,{originalMessages:messages});
+    assert.equal(corrected.events.length,2);
+    assert.equal(corrected.invalidScenes,0);
+    assert.deepEqual(finalize(corrected).pendingRanges,[[5,5]]);
+    assert.equal(raw.events[1].closure.messageId,3,'original response remains unchanged');
+});
+test('a missing closure remains compatible with previously received prose; a false explicit one does not',()=>{
+    const originals=[{id:0,mes:'The gate was closed.'}];
+    const raw={events:[event([0,0])],edits:[]};
+    assert.equal(normalizeSingleSlothPlan(raw,[0],{originalMessages:originals}).events.length,1);
+    raw.events[0].closure={messageId:0,quote:'Invented words'};
+    assert.equal(normalizeSingleSlothPlan(raw,[0],{originalMessages:originals}).events.length,0);
+});
