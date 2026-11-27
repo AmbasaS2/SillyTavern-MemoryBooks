@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 
 const file = name => readFileSync(new URL(name, import.meta.url),'utf8');
 
@@ -132,4 +133,20 @@ test('recall popover opens as a narrow vertical list immediately below its trigg
     assert.match(position,/menu\.style\.width=width\+'px'/);
     assert.match(position,/menu\.style\.top=anchor\.bottom\+gap\+'px'/);
     assert.match(css,/\.stmb-sloth-icon-popover\.stmb-sloth-recall-popover\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?width: 100%; max-width: 100%; padding: 0/);
+});
+
+test('recall menu geometry follows each desktop and mobile trigger exactly',()=>{
+    const js=file('./index.js');
+    const body=js.slice(js.indexOf('function positionSlothRecallPicker('),js.indexOf('function showSlothIconPicker('));
+    for(const viewport of [{width:1280,height:800,left:720,bottom:240},{width:390,height:700,left:332,bottom:440}]) {
+        const document={documentElement:{clientWidth:viewport.width,clientHeight:viewport.height}};
+        const position=vm.runInNewContext(body+'\npositionSlothRecallPicker',{document});
+        const menu={style:{}};
+        const trigger={getBoundingClientRect:()=>({width:29,left:viewport.left,bottom:viewport.bottom})};
+        position(menu,trigger);
+        assert.equal(menu.style.width,'29px');
+        assert.equal(menu.style.maxWidth,'29px');
+        assert.equal(menu.style.left,viewport.left+'px');
+        assert.equal(menu.style.top,(viewport.bottom+3)+'px');
+    }
 });

@@ -56,19 +56,19 @@ function objectEnd(input,start) {
 }
 function readRows(input,start) {
     const rows=[];
-    let i=start;
+    let i=start,invalid=0;
     for (;;) {
         while (/\s/u.test(input[i]??'')) i++;
-        if (input[i]===']') return {rows,end:i+1};
-        if (input[i]!=='{') return {rows,end:-1};
+        if (input[i]===']') return {rows,end:i+1,invalid};
+        if (input[i]!=='{') return {rows,end:-1,invalid};
         const end=objectEnd(input,i);
-        if (end<0) return {rows,end:-1};
+        if (end<0) return {rows,end:-1,invalid};
         try { rows.push(JSON.parse(stripTrailingCommas(input.slice(i,end)))); }
-        catch { return {rows,end:-1}; }
+        catch { invalid++; }
         i=end;
         while (/\s/u.test(input[i]??'')) i++;
-        if (input[i]===']') return {rows,end:i+1};
-        if (input[i]!==',') return {rows,end:-1};
+        if (input[i]===']') return {rows,end:i+1,invalid};
+        if (input[i]!==',') return {rows,end:-1,invalid};
         i++;
     }
 }
@@ -86,7 +86,7 @@ export function parseSingleSlothCollectionDraft(raw,phase='Single collection') {
             } catch { /* keep complete original rows below */ }
         }
         const recovered={events:[],deferred:[],edits:[]};
-        const seen=new Set(),closed=new Set();
+        const seen=new Set(),closed=new Set(),invalid=new Set();
         let i=start+1;
         for (;;) {
             while (/\s/u.test(input[i]??'')) i++;
@@ -95,6 +95,7 @@ export function parseSingleSlothCollectionDraft(raw,phase='Single collection') {
             const name=key[1];seen.add(name);
             const part=readRows(input,i+key[0].length);
             recovered[name]=part.rows;
+            if (part.invalid) invalid.add(name);
             if (part.end<0) break;
             closed.add(name);
             i=part.end;
@@ -106,8 +107,8 @@ export function parseSingleSlothCollectionDraft(raw,phase='Single collection') {
             // An unreceived event or deferred tail might own any of the input.
             // Save usable prose but do not consume/hide uncertain source IDs.
             recovered.recoveryUncertain=!closed.has('events') || (seen.has('deferred')&&!closed.has('deferred')) ||
-                (!closed.has('deferred')&&!seen.has('edits'));
-            recovered.recoveredIncompleteEdits=!closed.has('edits');
+                (!closed.has('deferred')&&!seen.has('edits')) || invalid.has('events') || invalid.has('deferred');
+            recovered.recoveredIncompleteEdits=!closed.has('edits')||invalid.has('edits');
             return recovered;
         }
     }

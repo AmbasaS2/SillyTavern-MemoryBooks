@@ -76,7 +76,7 @@ import {
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
   observeSlothLorebookSave, finishSlothLorebookRename,
-  getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy } from './nexusCollectorRuntime.js';
+  getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
@@ -11824,7 +11824,15 @@ function syncSlothAutomaticStatus() {
       reading = getSlothAutomaticProgress(ref,{nexus:nexus.name,memory:memory.name},mode);
       const unit = mode === 'tokens' ? translate('Tokens','STMemoryBooks_Tokens')
         : translate('Messages','STMemoryBooks_SlothAutoMessageUnit');
-      if (reading?.exact) {
+      const attempt=getSceneMarkers()?.slothAutomatic;
+      if (hasSlothPaidDraft(ref)) {
+        message=translate('Previous response needs recovery. Automatic requests are paused; collect manually to review it.',
+          'STMemoryBooks_SlothAutoRecovery');
+        reading=null;
+      } else if (attempt?.chatKey===getStmbChatKey(ref)&&attempt.status==='failed'&&!reading) {
+        message=translate('The last automatic attempt failed; uncollected messages are still available.',
+          'STMemoryBooks_SlothAutoFailed');
+      } else if (reading?.exact) {
         message = tr('STMemoryBooks_SlothAutoLastChecked','Last checked: {{count}} / {{threshold}} {{unit}}',{
           count:reading.count.toLocaleString(),threshold:threshold.toLocaleString(),unit,
         });

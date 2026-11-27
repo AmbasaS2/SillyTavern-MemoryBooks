@@ -90,3 +90,12 @@ test('a saved raw response can only be replayed for identical source and books',
     assert.equal(sameSlothDraftBinding(record,{...binding,books:['a','changed']}),false);
     assert.equal(sameSlothDraftBinding(record,{...binding,fingerprint:'changed'}),false);
 });
+
+test('a balanced but invalid row does not discard subsequent complete event prose',()=>{
+    const raw='{"events":['+JSON.stringify(event([0,1]))+',{"title":bad},'+JSON.stringify(event([4,5],'Later'))+'],"edits":[]}';
+    const recovered=parseSingleSlothCollectionDraft(raw);
+    assert.equal(recovered.events.length,2);
+    assert.equal(recovered.recoveryUncertain,true);
+    assert.equal(finalize(plan(recovered)).scenes.length,2);
+    assert.deepEqual(finalize(plan(recovered)).pendingRanges,[[0,5]]);
+});
