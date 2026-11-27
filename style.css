@@ -1182,9 +1182,9 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-sloth-recall-icon[data-mode="keyword"] { color: #2ca25f; }
 .popup.stmb-popup .stmb-sloth-recall-icon[data-mode="disabled"] { opacity: .65; }
 .popup.stmb-popup .stmb-sloth-recall-popover {
-    display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
-    width: max-content; max-width: calc(100vw - 16px);
-    position: absolute; inset: auto 0 auto auto; top: calc(100% + 4px); z-index: 2;
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 0;
+    width: 100%; max-width: 100%;
+    position: absolute; inset: auto 0 auto 0; top: calc(100% + 3px); z-index: 2;
 }
 .popup.stmb-popup .stmb-sloth-recall-popover:popover-open { position: fixed; inset: auto; }
 .popup.stmb-popup .stmb-sloth-recall-sr {
@@ -1343,6 +1343,31 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-icon-popover[hidden] { display: none; }
 .popup.stmb-popup .stmb-sloth-icon-popover:popover-open { position: fixed; }
+/* The recall menu is a one-icon-wide vertical continuation of its trigger.
+   Keep this more specific than the shared composer icon picker. */
+.popup.stmb-popup .stmb-sloth-icon-popover.stmb-sloth-recall-popover {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 0;
+    width: 100%; max-width: 100%; padding: 0; margin: 0;
+    position: absolute; inset: auto 0 auto 0; top: calc(100% + 3px);
+    border-radius: 5px; overflow-x: hidden; overflow-y: auto;
+    scrollbar-width: none; box-shadow: 0 3px 9px rgb(0 0 0 / .22);
+    background: var(--SmartThemeBlurTintColor);
+    backdrop-filter: blur(12px);
+}
+.popup.stmb-popup .stmb-sloth-icon-popover.stmb-sloth-recall-popover[hidden] { display: none !important; }
+.popup.stmb-popup .stmb-sloth-icon-popover.stmb-sloth-recall-popover:popover-open {
+    position: fixed; inset: auto;
+}
+.popup.stmb-popup .stmb-sloth-recall-popover .stmb-sloth-recall-icon {
+    width: 100%; min-width: 0; height: 29px; margin: 0; padding: 0;
+    border: 0; border-radius: 3px; background: transparent;
+}
+.popup.stmb-popup .stmb-sloth-recall-popover .stmb-sloth-recall-icon:is(:hover,[aria-pressed="true"]) {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.popup.stmb-popup .stmb-sloth-recall-popover .stmb-sloth-recall-icon:focus-visible {
+    outline: 1px solid currentColor; outline-offset: -2px;
+}
 
 .popup.stmb-popup .stmb-sloth-icon-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(29px, 1fr)); gap: 3px; }
 .popup.stmb-popup .stmb-sloth-icon-options label { position: relative; cursor: pointer; }

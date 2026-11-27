@@ -219,6 +219,12 @@ export function stageNexusSceneSplit(memory,{
         newEntry.constant=false;newEntry.vectorized=true;newEntry.selective=true;
         newEntry.STMB_chatId=plan.sourceChatId;
         newEntry.STMB_sourceRanges=structuredClone(event.segments);
+        if (Object.hasOwn(plan.sourceSnapshot,'STMB_collectedRanges')) {
+            const coverage=Array.isArray(plan.sourceSnapshot.STMB_collectedRanges)?plan.sourceSnapshot.STMB_collectedRanges:[];
+            newEntry.STMB_collectedRanges=event.segments.flatMap(([a,b])=>coverage
+                .filter(pair=>Array.isArray(pair)&&pair.length===2&&pair.every(Number.isSafeInteger))
+                .map(([c,d])=>[Math.max(a,c),Math.min(b,d)]).filter(([c,d])=>c<=d));
+        }
         if(event.segments.length===1){
             newEntry.STMB_start=event.segments[0][0];
             newEntry.STMB_end=event.segments[0][1];

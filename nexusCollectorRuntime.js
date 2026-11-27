@@ -4,6 +4,8 @@
 // Classify and write memories in one request, then validate, stage and save.
 
 import { getMemoryBooksMode } from './memoryBooksMode.js';
+import { sameSlothDraftBinding } from './slothSingleRecovery.js';
+import { stableHashString } from './clipReviewPolicy.js';
 import { chat, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { hideChatMessageRange } from '../../../chats.js';
@@ -48,6 +50,67 @@ const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
 const stringify=value=>JSON.stringify(value);
 let collectorBusy=false;
+// A same-session fallback keeps paid text even if chat metadata cannot be
+// written (for example, the user switched chats while the model was running).
+const slothPaidDrafts=new Map();
+const digestSlothSnapshot=value=>{const json=typeof value==='string'?value:stringify(value);return [json.length,stableHashString(json)];};
+function getPaidSlothDraft(ref) {
+    const key=getStmbChatKey(ref);
+    const memory=slothPaidDrafts.get(key);
+    const stored=getSceneMarkers()?.slothCollectionDraft;
+    const validStored=stored?.version===1&&stored.binding?.chatKey===key&&typeof stored.raw==='string'?stored:null;
+    return memory&&(!validStored||memory.receivedAt>=validStored.receivedAt)?memory:validStored;
+}
+async function rememberPaidSlothDraft(ref,binding,raw) {
+    const key=binding.chatKey;
+    const record={version:1,binding,raw:String(raw??''),receivedAt:Date.now()};
+    slothPaidDrafts.set(key,record);
+    // Keep only a small session fallback; the current chat owns durable data.
+    while (slothPaidDrafts.size>8) slothPaidDrafts.delete(slothPaidDrafts.keys().next().value);
+    try {
+        if (getStmbChatKey()!==key) return record;
+        await patchStmbMetadataForChatRef(ref,markers=>({...markers,slothCollectionDraft:record}));
+    } catch(error) {
+        console.warn('Paid Sloth response retained in this browser session; chat draft persistence failed.',error);
+    }
+    return record;
+}
+async function forgetPaidSlothDraft(ref,record) {
+    if (!record) return;
+    const key=record.binding.chatKey;
+    try {
+        if (getStmbChatKey()===key) await patchStmbMetadataForChatRef(ref,markers=>{
+            if (markers.slothCollectionDraft?.receivedAt!==record.receivedAt) return markers;
+            const next={...markers};delete next.slothCollectionDraft;return next;
+        });
+        if (slothPaidDrafts.get(key)?.receivedAt===record.receivedAt) slothPaidDrafts.delete(key);
+    } catch(error) { console.warn('Collection saved; recovery record could not be cleared.',error); }
+}
+async function choosePaidSlothDraft(record,binding,signal,{noSource=false}={}) {
+    const reusable=sameSlothDraftBinding(record,binding);
+    const title=t('Previous collection response','STMemoryBooks_SlothPaidDraftTitle');
+    const help=noSource?t('No uncollected source remains. You can copy this response before dismissing it.',
+        'STMemoryBooks_SlothPaidDraftNoSource'):reusable?t('Reuse or correct this response without another AI request. A new request is optional.',
+        'STMemoryBooks_SlothPaidDraftHelp'):t('The chat or lorebooks changed. This old response is available to copy, but cannot be automatically applied to the changed source.',
+        'STMemoryBooks_SlothPaidDraftStale');
+    const popup=markStmbPopup(new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>'+html(title)+
+        '</h3><p>'+html(help)+'</p><textarea class="text_pole" data-sloth-paid-draft style="width:100%;min-height:220px;white-space:pre-wrap">'+
+        html(record.raw)+'</textarea></div>'),reusable?POPUP_TYPE.CONFIRM:POPUP_TYPE.TEXT,'',{
+        wide:true,large:true,allowVerticalScrolling:true,
+        okButton:reusable?t('Reprocess saved response (no AI call)','STMemoryBooks_SlothPaidDraftApply'):false,
+        cancelButton:t('Cancel','STMemoryBooks_Cancel'),
+        customButtons:[{text:noSource?t('Dismiss saved response','STMemoryBooks_SlothPaidDraftDismiss'):
+            t('New AI request (uses tokens)','STMemoryBooks_SlothPaidDraftNew'),
+            result:POPUP_RESULT.CUSTOM1,classes:['menu_button']}],
+    }));
+    const field=popup.dlg.querySelector('[data-sloth-paid-draft]');
+    if (!reusable) field.readOnly=true;
+    const answer=await showCollectionPopup(popup,signal);
+    if (reusable&&answer===POPUP_RESULT.AFFIRMATIVE) return {raw:field.value};
+    if (answer===POPUP_RESULT.CUSTOM1) return noSource?{dismiss:true}:{raw:null};
+    return null;
+}
+export function hasSlothPaidDraft(ref) { return Boolean(getPaidSlothDraft(ref)); }
 export function isSlothOperationBusy() { return collectorBusy; }
 const automaticByteBound = createAutomaticTokenUpperBound();
 let automaticReading = null;
@@ -257,7 +320,8 @@ function activeSource(ref, memoryBook, roleNames, afterId = -1) {
     const sourceChatIds=new Set([String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean));
     for(const entry of Object.values(memoryBook?.entries||{})){
         if(!sourceChatIds.has(String(entry?.STMB_chatId||'')))continue;
-        for(const pair of Array.isArray(entry.STMB_sourceRanges)?entry.STMB_sourceRanges:[])addRange(pair);
+        const coverage=Object.hasOwn(entry,'STMB_collectedRanges')?entry.STMB_collectedRanges:entry.STMB_sourceRanges;
+        for(const pair of Array.isArray(coverage)?coverage:[])addRange(pair);
     }
     ranges.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
     const merged=[];
@@ -821,7 +885,7 @@ async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions,
 
 async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow) {
     const savedRanges=[...(prior.savedRanges||[])];
-    for(const event of events)for(const range of event.segments)savedRanges.push([...range]);
+    for(const event of events)for(const range of event.collectedRanges??event.segments)savedRanges.push([...range]);
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
     const previous = await readReviewedChat(ref, sourceIds, fingerprint);
@@ -967,6 +1031,19 @@ export async function applySlothNexusRecallSettings(){
     }finally{collectorBusy=false;}
 }
 
+async function settleSlothAutoAttempt(ref,attempt,status) {
+    if (!ref||!attempt||getStmbChatKey()!==attempt.chatKey) return;
+    try {
+        await patchStmbMetadataForChatRef(ref,markers=>{
+            const current=markers.slothAutomatic;
+            if (current?.attemptId!==attempt.attemptId||current.chatKey!==attempt.chatKey||
+                stringify(current.books)!==stringify(attempt.books)) return markers;
+            return {...markers,slothAutomatic:{...current,status}};
+        });
+    } catch(error) { console.warn('Automatic collection status could not be saved.',error); }
+    invalidateSlothAutomaticProgress();
+}
+
 function collectionProfile(settings, profileIndex, stConnectionProfileId) {
     return stConnectionProfileId ? {stConnectionProfileId} :
         settings.profiles?.[profileIndex ?? settings.defaultProfile] || settings.profiles?.[settings.defaultProfile];
@@ -979,6 +1056,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
     }
     collectorBusy=true;
     let progressChatKey = '';
+    let activeDraft=null;
+    let attemptedAuto=null,attemptedRef=null;
     try {
         signal?.throwIfAborted();
         const settings=extension_settings.STMemoryBooks;
@@ -1006,6 +1085,12 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const character=getActiveNexusRoleContext(settings).character;
         const roleNames=initial?proposeNexusBookNames(character):
             {memory:roles.memory.name,nexus:roles.nexus.name};
+        // The automatic checkpoint throttles attempts; it is not a collection
+        // receipt. A paid failed draft pauses auto requests until reviewed.
+        if (automatic&&getPaidSlothDraft(ref)) {
+            invalidateSlothAutomaticProgress();
+            return {saved:false,reason:'recovery-pending'};
+        }
         const previousAuto = automatic ? structuredClone(getSceneMarkers().slothAutomatic) : null;
         const checkpoint = previousAuto?.chatKey === automaticChatKey && previousAuto?.through < chat.length ?
             previousAuto : null;
@@ -1043,6 +1128,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const {source,prior,reviewed}=activeSource(ref,originalBooks.memory,roleNames);
         if(!source.length){
             if (automatic) return {saved:false,reason:'no-source'};
+            const previousDraft=getPaidSlothDraft(ref);
+            if (previousDraft) {
+                const choice=await choosePaidSlothDraft(previousDraft,null,signal,{noSource:true});
+                if (choice?.dismiss) await forgetPaidSlothDraft(ref,previousDraft);
+            }
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
             return {saved:false,reason:'no-source'};
         }
@@ -1086,7 +1176,26 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const [currentChunk,...laterChunks]=await splitSlothCollectionSource(source,getTokenCountAsync);
         checkBeforeSave();
         const partialSource=laterChunks.length>0;
-        const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames} : null;
+        const draftBinding={chatKey:getStmbChatKey(ref),roles:roleNames,source:currentChunk.map(m=>m.id),
+            fingerprint:digestSlothSnapshot(fingerprint),
+            books:[digestSlothSnapshot(originalBooks.nexus),digestSlothSnapshot(originalBooks.memory)]};
+        const previousDraft=getPaidSlothDraft(ref);
+        let rawDraft=null;
+        if (previousDraft) {
+            if (automatic) {
+                if (sameSlothDraftBinding(previousDraft,draftBinding))
+                    return {saved:false,reason:'recovery-pending'};
+            } else {
+                const choice=await choosePaidSlothDraft(previousDraft,draftBinding,signal);
+                if (!choice) return {saved:false,reason:'recovery-cancelled'};
+                rawDraft=choice.raw;
+                checkBeforeSave();
+                if (typeof rawDraft==='string')
+                    activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft);
+            }
+        }
+        const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames,
+            status:'running',attemptId:Date.now()} : null;
         const autoWindow=autoAttempt && partialSource ? {attempt:autoAttempt,through:currentChunk.at(-1).id} : null;
         if (automatic) {
             await readReviewedChat(ref,sourceIds,fingerprint);
@@ -1096,7 +1205,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     throw new Error('Automatic collection already advanced for this chat.');
                 return {...markers,slothAutomatic:autoAttempt};
             });
-            publishReading({count:0,exact:true},autoAttempt.through);
+            attemptedAuto=autoAttempt;attemptedRef=ref;
+            invalidateSlothAutomaticProgress();
         } else {
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
@@ -1105,28 +1215,33 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         showProgress('Writing memories', 'STMemoryBooks_SlothProgressWriting');
         const collection=await composeSingleSlothCollection({nexus:originalBooks.nexus,memory:originalBooks.memory,
             messages:currentChunk,profile,settings,initial,characterContext,partialSource,signal,
-            reviewSummaries,verifyOrigin:checkBeforeSave});
+            reviewSummaries,verifyOrigin:checkBeforeSave,rawDraft,
+            onDraft:async raw=>{activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw);}});
         checkBeforeSave();
         const {plan,scenes,edits,skippedNexusEdits,reviewFailed,skippedScenes}=collection;
-        if (automatic && !plan.events.length) return {saved:false,reason:'no-completed-events'};
+        const needsRecovery=Boolean(skippedScenes||skippedNexusEdits||collection.recoveryUncertain);
         const approval={hideRanges:!automatic&&settings.moduleSettings?.slothHideAfter===true
             ? getSlothHideRanges(scenes,chat,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent)) : [],
             keepRecent:normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent)};
         const approvedSidePresets=automatic?[]:getRunnableSlothSidePresets(settings,ref);
         showProgress('Validating memories','STMemoryBooks_SlothValidating');
         const showSkipped=()=>{
-            if (automatic) return;
+            if (automatic&&!needsRecovery) return;
             if (skippedScenes) toastr.warning(t('{{count}} planned memories were incomplete and were skipped.',
                 'STMemoryBooks_SlothCollectionSkippedScenes').replace('{{count}}',String(skippedScenes)),'STMemoryBooks');
             if (skippedNexusEdits) toastr.warning(t('Skipped {{count}} Nexus changes that could not be verified.',
                 'STMemoryBooks_SlothCollectionSkippedNexus').replace('{{count}}',String(skippedNexusEdits)),'STMemoryBooks');
             if (reviewFailed) toastr.warning(t('Summary review failed. The original drafts were kept.',
                 'STMemoryBooks_SlothSummaryReviewFailed'),'STMemoryBooks');
+            if (needsRecovery) toastr.warning(t('The received response was retained. Valid memories are saved independently; unverified source stays available.',
+                'STMemoryBooks_SlothPaidDraftRetained'),'STMemoryBooks');
         };
         if(!scenes.length&&!edits.length){
+            if (!needsRecovery) await forgetPaidSlothDraft(ref,activeDraft);
             showSkipped();
             if (!automatic) toastr.info(t('There are no completed events or Nexus changes to save.',
                 'STMemoryBooks_SlothNoCompleted'),'STMemoryBooks');
+            await settleSlothAutoAttempt(attemptedRef,attemptedAuto,needsRecovery?'recovery':'checked');
             return {saved:false,reason:'no-complete-events-or-deltas'};
         }
 
@@ -1139,7 +1254,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
                 }):null;
             const staged=memoryStage?.staged??structuredClone(originalBooks.memory);
-            if(memoryStage) savedEntries=memoryStage.writes.map(({uid})=>staged.entries[uid]);
+            if(memoryStage) savedEntries=memoryStage.writes.filter(write=>!write.reused).map(({uid})=>staged.entries[uid]);
             states.push({name:roleNames.memory,original:originalBooks.memory,staged});
         }
         if(edits.length||initial) {
@@ -1207,6 +1322,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             try{await Promise.resolve(reloadEditor(name));}
             catch(error){console.warn('Memory Books editor refresh failed.',error);}
         }
+        if (!needsRecovery&&(!scenes.length||receiptVerified)) await forgetPaidSlothDraft(ref,activeDraft);
+        await settleSlothAutoAttempt(attemptedRef,attemptedAuto,needsRecovery||scenes.length&&!receiptVerified?'recovery':'saved');
         const message=scenes.length&&edits.length
             ?t('Memory saved and Nexus updated.','STMemoryBooks_SlothSaved')
             :scenes.length?t('Completed events saved to Memory.','STMemoryBooks_SlothSceneOnlySaved')
@@ -1246,6 +1363,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         }
         return {saved:true,scenes:scenes.length,nexusEdits:edits.length,skippedScenes,skippedNexusEdits,
             receiptVerified,sidePromptsSaved,inputTokens:collection.inputTokens,inputTokensExact:collection.inputTokensExact,result:outcome};
+    }catch(error){
+        await settleSlothAutoAttempt(attemptedRef,attemptedAuto,activeDraft?'recovery':'failed');
+        if(activeDraft&&!signal?.aborted) toastr.warning(t('The received AI response was retained. Press collect again to review or reuse it without another AI request.',
+            'STMemoryBooks_SlothPaidDraftFailed'),'STMemoryBooks');
+        throw error;
     }finally{
         collectorBusy=false;
         if (progressChatKey) setSlothCollectionProgress(progressChatKey, '');

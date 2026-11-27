@@ -122,3 +122,12 @@ test('automatic preflight skips checkpoint history but retains every eligible la
         assert.deepEqual(Array.from(result,m=>m.id),Array.from(all.filter(m=>m.id>checkpoint),m=>m.id));
     }
 });
+
+test('reference-only overlaps stay in future collection even when a Scene is stored',()=>{
+    const h=harness();
+    const pair={nexus:'N',memory:'M'};
+    const memory={entries:{14:{STMB_chatId:'chat-a',STMB_sourceRanges:[[2,5]],STMB_collectedRanges:[[2,3]]},
+        15:{STMB_chatId:'chat-a',STMB_sourceRanges:[[6,7]],STMB_collectedRanges:[]}}};
+    const ids=Array.from(h.fn(h.current,memory,pair).source,m=>m.id);
+    assert.deepEqual(ids,[0,4,5,6,7,8,9]);
+});

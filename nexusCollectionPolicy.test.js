@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,parseReviewedSegments,groupSlothSourceWindows,
   fingerprintSlothChat,describeNexusCollectionEntry,
-  stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
+  stageNexusEdits,stageMemoryScenes,getSlothHideRanges} from './nexusCollectionPolicy.js';
 
 test('a collection keeps proposed events while forwarding only verified ending quotes', () => {
   const originalMessages=[
@@ -339,4 +339,19 @@ test('all-unfinished content stays uncollected without creating a fake complete 
   const plan=validateNexusEventPlan(raw,messages.map(m=>m.id));
   assert.equal(plan.events.length,0);
   assert.equal(plan.fullyCollected,false);
+});
+
+test('shared source references remain pending in Memory metadata and automatic Hide',()=>{
+    const messages=Array.from({length:6},(_,id)=>({mes:'message '+id,is_system:false}));
+    const story='**Timeline**: Unknown\n\n**Scene**\nA read the letter.\n\n**Result**\nThe letter was read.';
+    const scene={title:'Letter',content:story,messageIds:[1,2,3,4],segments:[[1,4]],collectedRanges:[[1,2]]};
+    const make=book=>{let uid=0;while(book.entries[uid])uid++;return book.entries[uid]={uid};};
+    const {staged}=stageMemoryScenes({entries:{}},[scene],make,{chatId:'same-chat'});
+    const entry=Object.values(staged.entries)[0];
+    assert.deepEqual(entry.STMB_sourceRanges,[[1,4]]);
+    assert.deepEqual(entry.STMB_collectedRanges,[[1,2]]);
+    assert.deepEqual(getSlothHideRanges([scene],messages,0),[[1,2]]);
+    const replay=stageMemoryScenes(staged,[scene],make,{chatId:'same-chat'});
+    assert.equal(Object.keys(replay.staged.entries).length,1);
+    assert.equal(replay.writes[0].reused,true);
 });
