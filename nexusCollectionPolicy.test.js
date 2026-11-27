@@ -355,3 +355,16 @@ test('shared source references remain pending in Memory metadata and automatic H
     assert.equal(Object.keys(replay.staged.entries).length,1);
     assert.equal(replay.writes[0].reused,true);
 });
+
+test('repeated generated sequence prefixes are stripped and exact same-chat legacy Scene is reused',()=>{
+    const body='**Timeline**: Unknown\n\n**Scene**\nThe letter arrived.\n\n**Result**\nDelivered.';
+    const existing={uid:1,comment:'058 - Letter',content:body,stmemorybooks:true,STMB_chatId:'chat',STMB_start:0,STMB_end:1};
+    const scene={title:'058 - 058 - Letter',content:body,messageIds:[0,1],segments:[[0,1]],collectedRanges:[[0,1]]};
+    const create=book=>book.entries[2]={uid:2};
+    const reused=stageMemoryScenes({entries:{1:existing}},[scene],create,{chatId:'chat'});
+    assert.equal(reused.writes[0].reused,true);
+    assert.equal(Object.keys(reused.staged.entries).length,1);
+    assert.equal(reused.staged.entries[1].comment,'058 - Letter');
+    const created=stageMemoryScenes({entries:{}},[scene],create,{chatId:'chat'});
+    assert.equal(created.staged.entries[2].comment,'001 - Letter');
+});

@@ -4,7 +4,7 @@
 // Classify and write memories in one request, then validate, stage and save.
 
 import { getMemoryBooksMode } from './memoryBooksMode.js';
-import { sameSlothDraftBinding } from './slothSingleRecovery.js';
+import { sameSlothDraftBinding, canReplaySlothPartial } from './slothSingleRecovery.js';
 import { stableHashString } from './clipReviewPolicy.js';
 import { chat, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
@@ -61,9 +61,9 @@ function getPaidSlothDraft(ref) {
     const validStored=stored?.version===1&&stored.binding?.chatKey===key&&typeof stored.raw==='string'?stored:null;
     return memory&&(!validStored||memory.receivedAt>=validStored.receivedAt)?memory:validStored;
 }
-async function rememberPaidSlothDraft(ref,binding,raw) {
+async function rememberPaidSlothDraft(ref,binding,raw,details={}) {
     const key=binding.chatKey;
-    const record={version:1,binding,raw:String(raw??''),receivedAt:Date.now()};
+    const record={...details,version:1,binding,raw:String(raw??''),receivedAt:Date.now()};
     slothPaidDrafts.set(key,record);
     // Keep only a small session fallback; the current chat owns durable data.
     while (slothPaidDrafts.size>8) slothPaidDrafts.delete(slothPaidDrafts.keys().next().value);
@@ -86,16 +86,20 @@ async function forgetPaidSlothDraft(ref,record) {
         if (slothPaidDrafts.get(key)?.receivedAt===record.receivedAt) slothPaidDrafts.delete(key);
     } catch(error) { console.warn('Collection saved; recovery record could not be cleared.',error); }
 }
-async function choosePaidSlothDraft(record,binding,signal,{noSource=false}={}) {
-    const reusable=sameSlothDraftBinding(record,binding);
+async function choosePaidSlothDraft(record,binding,signal,{noSource=false,partialReplay=false}={}) {
+    const reusable=partialReplay||(!record.partial&&sameSlothDraftBinding(record,binding));
     const title=t('Previous collection response','STMemoryBooks_SlothPaidDraftTitle');
     const help=noSource?t('No uncollected source remains. You can copy this response before dismissing it.',
-        'STMemoryBooks_SlothPaidDraftNoSource'):reusable?t('Reuse or correct this response without another AI request. A new request is optional.',
+        'STMemoryBooks_SlothPaidDraftNoSource'):partialReplay?t('Already saved items are protected. Correct only the remaining items below, then reprocess without a new AI request.',
+        'STMemoryBooks_SlothPaidDraftPartialHelp'):reusable?t('Reuse or correct this response without another AI request. A new request is optional.',
         'STMemoryBooks_SlothPaidDraftHelp'):t('The chat or lorebooks changed. This old response is available to copy, but cannot be automatically applied to the changed source.',
         'STMemoryBooks_SlothPaidDraftStale');
     const popup=markStmbPopup(new Popup(DOMPurify.sanitize('<div class="stmb-sloth-review"><h3>'+html(title)+
         '</h3><p>'+html(help)+'</p><textarea class="text_pole" data-sloth-paid-draft style="width:100%;min-height:220px;white-space:pre-wrap">'+
-        html(record.raw)+'</textarea></div>'),reusable?POPUP_TYPE.CONFIRM:POPUP_TYPE.TEXT,'',{
+        html(record.raw)+'</textarea>'+(typeof record.originalRaw==='string'?'<details><summary>'+
+            html(t('Original AI response (read only)','STMemoryBooks_SlothPaidDraftOriginal'))+
+            '</summary><textarea readonly class="text_pole" style="width:100%;min-height:180px">'+
+            html(record.originalRaw)+'</textarea></details>':'')+'</div>'),reusable?POPUP_TYPE.CONFIRM:POPUP_TYPE.TEXT,'',{
         wide:true,large:true,allowVerticalScrolling:true,
         okButton:reusable?t('Reprocess saved response (no AI call)','STMemoryBooks_SlothPaidDraftApply'):false,
         cancelButton:t('Cancel','STMemoryBooks_Cancel'),
@@ -320,7 +324,13 @@ function activeSource(ref, memoryBook, roleNames, afterId = -1) {
     const sourceChatIds=new Set([String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean));
     for(const entry of Object.values(memoryBook?.entries||{})){
         if(!sourceChatIds.has(String(entry?.STMB_chatId||'')))continue;
-        const coverage=Object.hasOwn(entry,'STMB_collectedRanges')?entry.STMB_collectedRanges:entry.STMB_sourceRanges;
+        // Explicit same-chat legacy Memory receipts are safe to inherit; a
+        // manually written Scene with no source receipt still needs review.
+        const legacy=entry.stmemorybooks===true&&isCompletedSceneEntry(entry)&&
+            Number.isSafeInteger(entry.STMB_start)&&Number.isSafeInteger(entry.STMB_end)?
+            [[entry.STMB_start,entry.STMB_end]]:[];
+        const coverage=Object.hasOwn(entry,'STMB_collectedRanges')?entry.STMB_collectedRanges:
+            entry.STMB_sourceRanges??legacy;
         for(const pair of Array.isArray(coverage)?coverage:[])addRange(pair);
     }
     ranges.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
@@ -883,14 +893,14 @@ async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions,
     return stored[0].chat_metadata.STMemoryBooks?.slothCollection;
 }
 
-async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow) {
+async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow, fingerprintOptions) {
     const savedRanges=[...(prior.savedRanges||[])];
     for(const event of events)for(const range of event.collectedRanges??event.segments)savedRanges.push([...range]);
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
-    const previous = await readReviewedChat(ref, sourceIds, fingerprint);
+    const previous = await readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions);
     await patchStmbMetadataForChatRef(ref, markers => {
-        assertOrigin(ref, roleNames, sourceIds, fingerprint);
+        assertOrigin(ref, roleNames, sourceIds, fingerprint, fingerprintOptions);
         if (stringify(markers.slothCollection) !== stringify(previous)) {
             throw new Error('The saved collection receipt changed during review.');
         }
@@ -902,7 +912,7 @@ async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, f
         }
         return next;
     });
-    if (stringify(await readReviewedChat(ref, sourceIds, fingerprint)) !== stringify(receipt)) {
+    if (stringify(await readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions)) !== stringify(receipt)) {
         throw new Error('The collection receipt did not persist in the original chat.');
     }
 }
@@ -1125,10 +1135,36 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if(getStmbChatKey()!==getStmbChatKey(ref)) {
             throw new Error('The chat changed while its lorebooks were loading. Start collection from the original chat.');
         }
-        const {source,prior,reviewed}=activeSource(ref,originalBooks.memory,roleNames);
+        const {source:liveSource,prior,reviewed}=activeSource(ref,originalBooks.memory,roleNames);
+        let source=liveSource,partialReplay=null,rawDraft=null;
+        let previousDraft=getPaidSlothDraft(ref);
+        // A partial save legitimately changes the books and removes collected
+        // IDs from activeSource. Reuse the original input only against the
+        // verified postcommit snapshot, including already hidden source turns.
+        const booksFingerprint=[digestSlothSnapshot(originalBooks.nexus),digestSlothSnapshot(originalBooks.memory)];
+        if(!automatic&&!initial&&previousDraft?.partial) {
+            const receipt=previousDraft.partial;
+            let originalFingerprint=null;
+            try { originalFingerprint=digestSlothSnapshot(fingerprintSlothChat(chat,receipt.sourceIds,{allowHidden:true})); }
+            catch { /* The old source is unavailable; keep the response read only. */ }
+            if(originalFingerprint&&canReplaySlothPartial(previousDraft,{chatKey:getStmbChatKey(ref),
+                roles:roleNames,books:booksFingerprint,fingerprint:originalFingerprint})) {
+                const choice=await choosePaidSlothDraft(previousDraft,null,signal,{partialReplay:true});
+                if(!choice) return {saved:false,reason:'recovery-cancelled'};
+                if(typeof choice.raw==='string') {
+                    partialReplay=receipt;rawDraft=choice.raw;
+                    source=receipt.sourceIds.map(id=>{
+                        const entry=chat[id];
+                        return {id,name:String(entry.name||''),mes:entry.mes,is_user:!!entry.is_user,send_date:entry.send_date||null};
+                    });
+                    // The review dialog can remain open while the user edits a chat.
+                    if(digestSlothSnapshot(fingerprintSlothChat(chat,receipt.sourceIds,{allowHidden:true})).join(':')!==originalFingerprint.join(':'))
+                        throw new Error('Original source changed during recovery.');
+                } else previousDraft=null; // explicitly chose a new paid request
+            }
+        }
         if(!source.length){
             if (automatic) return {saved:false,reason:'no-source'};
-            const previousDraft=getPaidSlothDraft(ref);
             if (previousDraft) {
                 const choice=await choosePaidSlothDraft(previousDraft,null,signal,{noSource:true});
                 if (choice?.dismiss) await forgetPaidSlothDraft(ref,previousDraft);
@@ -1137,7 +1173,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             return {saved:false,reason:'no-source'};
         }
         const sourceIds=source.map(s=>s.id);
-        const fingerprint=fingerprintSlothChat(chat,sourceIds);
+        const fingerprintOptions=partialReplay?{allowHidden:true}:undefined;
+        const fingerprint=fingerprintSlothChat(chat,sourceIds,fingerprintOptions);
         const profile=collectionProfile(settings, profileIndex, stConnectionProfileId);
         if(!profile)throw new Error('Choose an AI profile before starting Sloth collection.');
         const characterContext=initialCharacterContext(character);
@@ -1149,7 +1186,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 if (!now.enabled || now.mode !== automatic.mode || now.threshold !== automatic.threshold)
                     throw new Error('Automatic collection settings changed.');
             }
-            if(!initial)return assertOrigin(ref,roleNames,sourceIds,fingerprint);
+            if(!initial)return assertOrigin(ref,roleNames,sourceIds,fingerprint,fingerprintOptions);
             if(getStmbChatKey()!==getStmbChatKey(ref)||!canStartNexusSetup(ref,settings)||
                 initialCharacterContext(getActiveNexusRoleContext(settings).character)!==characterContext||
                 fingerprintSlothChat(chat,sourceIds)!==fingerprint) {
@@ -1173,15 +1210,16 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 !await thresholdMet(remaining)) return {saved:false,reason:'below-threshold'};
         }
         checkBeforeSave();
-        const [currentChunk,...laterChunks]=await splitSlothCollectionSource(source,getTokenCountAsync);
+        const [currentChunk,...laterChunks]=partialReplay?[source.filter(message=>partialReplay.chunkIds.includes(message.id))]:
+            await splitSlothCollectionSource(source,getTokenCountAsync);
         checkBeforeSave();
-        const partialSource=laterChunks.length>0;
-        const draftBinding={chatKey:getStmbChatKey(ref),roles:roleNames,source:currentChunk.map(m=>m.id),
-            fingerprint:digestSlothSnapshot(fingerprint),
-            books:[digestSlothSnapshot(originalBooks.nexus),digestSlothSnapshot(originalBooks.memory)]};
-        const previousDraft=getPaidSlothDraft(ref);
-        let rawDraft=null;
-        if (previousDraft) {
+        const partialSource=partialReplay?partialReplay.partialSource===true:laterChunks.length>0;
+        const draftBinding=partialReplay?previousDraft.binding:{chatKey:getStmbChatKey(ref),roles:roleNames,source:currentChunk.map(m=>m.id),
+            fingerprint:digestSlothSnapshot(fingerprint),books:booksFingerprint};
+        if (partialReplay) {
+            activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{partial:partialReplay,
+                originalRaw:previousDraft.originalRaw??previousDraft.raw});
+        } else if (previousDraft) {
             if (automatic) {
                 if (sameSlothDraftBinding(previousDraft,draftBinding))
                     return {saved:false,reason:'recovery-pending'};
@@ -1216,6 +1254,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const collection=await composeSingleSlothCollection({nexus:originalBooks.nexus,memory:originalBooks.memory,
             messages:currentChunk,profile,settings,initial,characterContext,partialSource,signal,
             reviewSummaries,verifyOrigin:checkBeforeSave,rawDraft,
+            lockedScenes:partialReplay?.lockedScenes??[],committedEdits:partialReplay?.committedEdits??[],
             onDraft:async raw=>{activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw);}});
         checkBeforeSave();
         const {plan,scenes,edits,skippedNexusEdits,reviewFailed,skippedScenes}=collection;
@@ -1269,7 +1308,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     role:other==='memory'?'nexus':'memory',pairedBook:roleNames[other]}};
             }
         }
-        await readReviewedChat(ref,sourceIds,fingerprint,{verifyStored: stored => {
+        await readReviewedChat(ref,sourceIds,fingerprint,{...fingerprintOptions,verifyStored: stored => {
             const storedCoverage=getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks,getStmbChatKey(ref),roleNames);
             if (stringify(storedCoverage) !== stringify(reviewed)) throw new Error('The reviewed ranges changed during collection.');
             assertSlothLegacyCoverage(reviewed,stored.slice(1));
@@ -1289,30 +1328,46 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
             }):await commitSlothBooks(states,{...commitOptions,withLocks:withBothWriteLanes});
 
+        // Only the successful, read-back-verified write is allowed to advance
+        // a partial replay's trusted baseline. Keep the original paid text too.
+        const persistPartial=async()=>{
+            if (!activeDraft) return;
+            const after=role=>states.find(state=>state.name===roleNames[role])?.staged??originalBooks[role];
+            const partial={version:1,sourceIds:[...sourceIds],chunkIds:currentChunk.map(message=>message.id),
+                partialSource,books:[digestSlothSnapshot(after('nexus')),digestSlothSnapshot(after('memory'))],
+                lockedScenes:scenes,committedEdits:collection.committedEdits??[]};
+            activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),
+                {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw});
+        };
+        if(needsRecovery) await persistPartial();
         let receiptVerified=false;
         if(scenes.length){
             try {
-                await updateCollectedLedger(prior,scenes,ref,roleNames,sourceIds,fingerprint,autoWindow);
+                await updateCollectedLedger(prior,scenes,ref,roleNames,sourceIds,fingerprint,autoWindow,fingerprintOptions);
                 receiptVerified=true;
                 if (!automatic || autoWindow) invalidateSlothAutomaticProgress();
             } catch (error) {
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
+        if(!needsRecovery&&scenes.length&&!receiptVerified) await persistPartial();
         const hideRanges = approval.hideRanges.length ? getSlothHideRanges(scenes,chat,approval.keepRecent) : [];
+        let hiddenMessages=0;
         if (hideRanges.length) {
             try {
                 if (!receiptVerified) throw new Error('The stored collection receipt could not be verified.');
                 let remaining = [...sourceIds];
-                assertOrigin(ref,roleNames,remaining,fingerprint);
+                assertOrigin(ref,roleNames,remaining,fingerprint,fingerprintOptions);
                 for (const [start,end] of hideRanges) {
-                    const expected = fingerprintSlothChat(chat,remaining.filter(id=>id<start||id>end));
+                    const expected = fingerprintSlothChat(chat,remaining.filter(id=>id<start||id>end),fingerprintOptions);
                     await hideChatMessageRange(start,end,false);
                     remaining = remaining.filter(id=>id<start||id>end);
-                    assertOrigin(ref,roleNames,remaining,expected);
+                    assertOrigin(ref,roleNames,remaining,expected,fingerprintOptions);
                 }
                 await readReviewedChat(ref,sourceIds,fingerprint,{allowHidden:true},hideRanges);
+                hiddenMessages=hideRanges.reduce((count,[start,end])=>count+end-start+1,0);
             } catch (error) {
+                hiddenMessages=null; // no claim about an unverified partial Hide
                 console.warn('Memory saved; Sloth Hide stopped.',error);
                 toastr.warning(t('The memories are saved. Check which messages were hidden before trying again.',
                     'STMemoryBooks_SlothHideInterrupted'),'STMemoryBooks');
@@ -1325,14 +1380,16 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if (!needsRecovery&&(!scenes.length||receiptVerified)) await forgetPaidSlothDraft(ref,activeDraft);
         await settleSlothAutoAttempt(attemptedRef,attemptedAuto,needsRecovery||scenes.length&&!receiptVerified?'recovery':'saved');
         const message=scenes.length&&edits.length
-            ?t('Memory saved and Nexus updated.','STMemoryBooks_SlothSaved')
+            ?t('Memory saved and Nexus updated.','STMemoryBooks_SlothCollectionSavedBoth')
             :scenes.length?t('Completed events saved to Memory.','STMemoryBooks_SlothSceneOnlySaved')
                 :t('Nexus updated.','STMemoryBooks_SlothNexusOnlySaved');
         if(!automatic){
             const usage=collection.inputTokens===null?'':' · '+t(collection.inputTokensExact?'Input: {{count}} tokens':'Input: ~{{count}} tokens',
                 collection.inputTokensExact?'STMemoryBooks_SlothInputTokens':'STMemoryBooks_SlothInputEstimate')
                 .replace('{{count}}',Number(collection.inputTokens).toLocaleString());
-            toastr.success(message+usage,'STMemoryBooks');
+            const hidden=hiddenMessages===null?'':' · '+t('Hidden: {{count}} messages','STMemoryBooks_SlothCollectionHiddenCount')
+                .replace('{{count}}',String(hiddenMessages));
+            toastr.success(message+hidden+usage,'STMemoryBooks');
         }
         showSkipped();
         let sidePromptsSaved=0;
@@ -1362,7 +1419,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             }
         }
         return {saved:true,scenes:scenes.length,nexusEdits:edits.length,skippedScenes,skippedNexusEdits,
-            receiptVerified,sidePromptsSaved,inputTokens:collection.inputTokens,inputTokensExact:collection.inputTokensExact,result:outcome};
+            receiptVerified,sidePromptsSaved,hiddenMessages,inputTokens:collection.inputTokens,inputTokensExact:collection.inputTokensExact,result:outcome};
     }catch(error){
         await settleSlothAutoAttempt(attemptedRef,attemptedAuto,activeDraft?'recovery':'failed');
         if(activeDraft&&!signal?.aborted) toastr.warning(t('The received AI response was retained. Press collect again to review or reuse it without another AI request.',
