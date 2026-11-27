@@ -37,7 +37,7 @@ test('Memory Books AU scope excludes other chats before actual Jev candidate pre
     const all=Object.values(lists).flat();
     assert.deepEqual(all.map(jevEntryKey),[correct,recent,outlet,entry('AU Memory',6)].map(jevEntryKey));
     const prepared=prepareJevRecall(all,new Set(['AU Nexus','AU Memory','A Memory','B Memory']),[{name:'A',mes:'Remember our last meeting?'}]);
-    assert.deepEqual([...prepared.candidates.keys()],[jevEntryKey(correct)]);
+    assert.deepEqual([...prepared.candidates.values()],[jevEntryKey(correct)]);
 });
 test('actual Ordering ledger and WorldInfo Info consumer share exact count and invalidate stale generation',async()=>{
     const ledger=createTokenLedger(),generation={},tokenizer='test-tokenizer';
