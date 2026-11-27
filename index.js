@@ -11989,38 +11989,43 @@ function closeSlothIconPicker(menu, trigger) {
   trigger?.setAttribute('aria-expanded','false');
 }
 
-function positionSlothRecallPicker(menu, trigger) {
-  const margin=4, gap=3;
+function positionSlothRecallPicker(menu, trigger, fixed = true) {
+  const margin=8, gap=4;
   const viewportWidth=document.documentElement.clientWidth;
-  const viewportHeight=document.documentElement.clientHeight;
   const anchor=trigger.getBoundingClientRect();
-  const width=anchor.width;
-  menu.style.width=width+'px';
-  menu.style.maxWidth=width+'px';
-  menu.style.left=Math.max(0,Math.min(anchor.left,viewportWidth-width))+'px';
-  menu.style.top=anchor.bottom+gap+'px';
-  menu.style.maxHeight=Math.max(0,viewportHeight-anchor.bottom-gap-margin)+'px';
+  // Measure the intrinsic row, which is sized by the actual option count.
+  const width=menu.getBoundingClientRect().width;
+  const centered=anchor.left+(anchor.width-width)/2;
+  const left=Math.max(margin,Math.min(centered,viewportWidth-width-margin));
+  const origin=fixed?{left:0,top:0}:
+    (menu.offsetParent?.getBoundingClientRect()??{left:anchor.left,top:anchor.top});
+  menu.style.left=(left-origin.left)+'px';
+  menu.style.top=(anchor.bottom+gap-origin.top)+'px';
 }
 
 function showSlothIconPicker(menu, trigger) {
   menu.hidden = false;
   const recall=menu.classList.contains('stmb-sloth-recall-popover');
+  const nativePopover=typeof menu.showPopover === 'function';
   if (recall) {
-    // Keep the narrow menu below its own trigger, including in a scrolled
-    // mobile settings pane. Scroll the anchor into room if needed.
-    const height=menu.querySelectorAll('[data-stmb-recall-choice]').length*29+2;
-    if (document.documentElement.clientHeight-trigger.getBoundingClientRect().bottom<height+7)
+    // Open the intrinsic horizontal row before measuring its actual height.
+    // Scroll only if the short row does not fit below the trigger.
+    if (nativePopover) {
+      menu.setAttribute('popover','auto');
+      trigger.setAttribute('popovertarget',menu.id);
+      menu.showPopover();
+    }
+    if (document.documentElement.clientHeight-trigger.getBoundingClientRect().bottom <
+        menu.getBoundingClientRect().height+12)
       trigger.scrollIntoView?.({block:'center',inline:'nearest'});
+    positionSlothRecallPicker(menu,trigger,nativePopover);
+    trigger.setAttribute('aria-expanded','true');
+    return;
   }
-  if (typeof menu.showPopover === 'function') {
+  if (nativePopover) {
     menu.setAttribute('popover','auto');
     trigger.setAttribute('popovertarget',menu.id);
     menu.showPopover();
-    if (recall) {
-      positionSlothRecallPicker(menu,trigger);
-      trigger.setAttribute('aria-expanded','true');
-      return;
-    }
     const anchor = trigger.getBoundingClientRect();
     const margin = 8, gap = 6;
     const viewportWidth = document.documentElement.clientWidth;
