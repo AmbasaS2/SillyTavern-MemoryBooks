@@ -2,58 +2,174 @@
 
 [한국어 안내 ↓](#한국어-안내)
 
-> **Do I need all four? No!** Use the ones you like. Existing lorebooks can stay as they are. You do not have to recreate your memories.
+> **Do I need all four? No!** Keep your existing books. Use the extensions you need.
+>
+> Set up once. Roleplay as usual!
 
-<p align="left"><img src="../assets/readme/mobile/quickstart-and-integration-mobile.svg" width="480" alt="Four extensions workflow" /></p>
+<img src="../assets/readme/mobile/quickstart-and-integration-mobile.svg" width="480" alt="quickstart and integration mobile" />
 
-## 🧩 What each extension does
+## Who does what?
 
-| Extension | Role |
+| Extension | Job |
 | --- | --- |
-| 🦥 [Sloth's Memory Books](../readme.md) | Save completed events and maintain Nexus; inspect collection usage and existing memories. |
-| ⚖️ [Lorebook Ordering for Sloths](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) | Set per-book priority and budgets; optionally use Jev to select existing lore. |
-| 🔖 [WorldInfo Info of Sloth](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) | The book lists verified insertions; Lore Insight analyzes activated entries and observed omissions. |
-| 🦦 [Sloth the Lorebook Manager](https://github.com/AmbasaS2/lore-manager) | Read/search/edit stored lore and translations in a separate library. |
+| 🦥 [Memory Books](../readme.md) | Save memories |
+| ⚖️ [STLO](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering) | Manage budgets and optional Jev recall |
+| 🔖 [WorldInfo Info](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) | Verify actual insertion |
+| 🦦 [Lorebook Manager](https://github.com/AmbasaS2/lore-manager) | Read, search, translate and edit stored lore |
 
-## ⚡ Set up once — only the extensions you install
+## 📖 Set up once
 
-1. Back up chats, lorebooks, settings and separate translation files; install each fork from its repository in SillyTavern Extensions → Install extension. Do not run an upstream extension and its fork together. There is no required installation order.
-2. In a one-to-one chat select Sloth mode in Memory Books. Assign distinct linked Nexus and Memory books (names are your choice); if none exist, first successful collection can create them. For distinct AUs choose chat-only books and verify the actual ST links. Group chat uses Original Memory Books.
-3. Choose a collection AI profile. Core Memory and Current Continuity default to always-on; Anchor (legacy LT) and NPC default to the existing detail recall mode, usually vector. Choose older Scene vector/keyword recall; configure native Vector Storage if using vectors. New Nexus entry settings do not silently rewrite existing records. For hand-authored memories, register only verified previously summarized chat ranges in Memory Workshop; old metadata alone is not a collection receipt or rotation proof.
-4. STLO: add the books, set priorities (1–5) and caps, optionally protect constants. Example only: Nexus priority 5, world lore 4, Memory 3 capped at 2,000 within an overall 8,000-token budget. Caps are maxima, not guaranteed reservations; always-on still needs room.
-5. Optional Jev: use a NanoGPT subscription-only key and a saved Custom Chat Completion profile with base URL `https://nano-gpt.com/api/subscription/v1`. Enable Jev in the current character's Lorebook Jev Recall, select profile and total budget, save. Default all-eligible mode can work without ordinary vector retrieval. Filtered mode only assesses native hits; Adaptive (experimental, 56,000 estimated input threshold by default) adds eligible memory cues above the threshold and falls back to full when vectors/hits are unavailable. Partial injection is experimental and off by default: it can use verified original paragraphs for eligible structured long Scenes; full-text budget and activation stay unchanged. No guarantee of recall or savings. Direct Jev keys are not supported by this fork.
-6. Optional library link: right-click/long-press the WorldInfo Info book → Link Lorebook Library. A verified entry opens by book name and UID in the compatible manager; otherwise use the built-in reader. Read/search/saved translations do not require AI.
+### ① Install
 
-## 🎮 Everyday RP
+Install each chosen extension from its repository. Back up chats, settings, lorebooks and translation data. Don't run a fork and upstream together.
 
-An old promise: “I will never make important decisions without you again.”
+### ② 🦥 Choose two memory books
 
-Finish the event → **Collect memories** (or `/sloth-collect`). The default collector analyzes and writes in one request per source chunk; validated results save directly, with no plan approval popup. Unfinished or rejected ranges stay available. Review saved content. The latest three eligible completed Scenes stay always-on, older managed Scenes rotate to vector/keywords while retaining text. Manual Hide is opt-in (off by default), only for verified saved ranges; automatic collection does not Hide automatically.
+Individual chat → Extensions → Memory Books → Sloth mode.
 
-Later: “Why did you hide it from me again?”
+<img src="../assets/readme/mobile/ui-lorebook-roles.svg" width="480" alt="lorebook roles" />
 
-With Jev on, the prior promise may be selected even without matching words. With Jev off, native activation remains. Selection must still pass budgets and native activation, and activation is not proof of actual insertion. STLO applies the shared World Info cap, book cap and shared Jev cap together.
+**Nexus:** who are we now? **Memory:** how did we get here?
 
-Open STLO → Lorebook Jev Recall → Advanced Jev settings → Latest Jev recall (or the compatible Chat Top Bar brain icon). The search result shows candidate/assessment/selection/budget/activation stages, budget use, AI search usage, and RP evidence if a compatible viewer supplies it. With Jev off, a budget-only report is available after a recorded budget run.
+Choose two distinct linked books → collection AI → older-Scene Vector or Keyword recall.
 
-Then open the WorldInfo Info book. It shows only verified insertion in the correlated pre-send Chat Completion request. Right-click/long-press → **View Lore Insight**: verified inserted entries and verified omitted activations, recorded reasons, per-book/reason/entry token estimates, share of collected input, and unverified insertion **count only**. Not-activated entries are not individually listed in the current version. Unknown is not excluded. Click a term/icon for details. A compatible STLO/WII pair shares exact individual measurement and verified RP evidence, without another Jev call. Unsupported routes and later/provider transformations remain outside proof. Reading a stored entry (including an available translation) is not a historical request snapshot; partial injection may have sent less.
+<img src="../assets/readme/mobile/ui-collection-settings.svg" width="480" alt="collection settings" />
 
-Read the memory in the manager (optionally via the library link). Choose Card file or People for Nexus and Memory view for completed Scenes: Timeline / Continuous full text / Page-by-page. Search and saved translations are read-only; new AI translation/editing is optional. Reading styles and sorting do not change actual recall.
+Try manual collection first.
 
-## 🧮 Which report answers which question?
+<details>
+<summary>Existing books, AUs and role options</summary>
 
-<p align="left"><img src="../assets/readme/mobile/ui-four-metrics.svg" width="480" alt="Separate measurement scopes" /></p>
+No books yet? First successful collection can create them. Use chat-only assignments for separate AUs. Register verified previously summarized ranges for manual memories; old metadata alone is not proof of coverage. Core/Current Continuity default to Always on; Anchor (legacy LT) and NPC default to the existing detail mode, normally Vector. Existing Nexus injection changes must be applied explicitly. Set up native vectors when needed. Groups use Original Memory Books; tab and mode are distinct.
 
-- **Memory Books → Collection settings → Recent collection statistics:** up to 30 local attempts, provider-reported or estimated collection/review/Side Prompt usage, result and recovery. Clearing stats does not delete memories.
-- **Memory Workshop → Memory overview:** selected Nexus stored tokens and always-on flags, not actual injection. AI cleanup is separate and consent-based.
-- **STLO → Jev search result / budget report:** search usage, full-text budget, activation/trim. Verified RP metrics refer to the measured Jev subset, not all lore.
-- **WorldInfo Info → Lore Insight:** verified inserted lore and approximate share of observed request text. Missing measurements are not zero. The model is not guaranteed to use the included information.
+</details>
 
-## 💡 Costs, backups and compatibility
+### ③ ⚖️ Set book budgets
 
-Collection/review/Side Prompts, optional Jev and new AI translation/editing can send content to a provider. Ordinary budget management, inspection and reading saved translations do not make extra AI calls; existing vector services may have their own usage. Provider usage, host estimates and actual bills are different. Back up both books and separate translation data (`data/<user>/user/files/`, including manager translation JSON and index); original lorebook ZIP export is not a translation backup. Existing collection recovery is not a substitute for a full backup.
+**Extensions → Lorebook Budget Management → add books → priority and cap → save.**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-budget-manager.svg" width="480" alt="budget manager" />
+
+Example: total World Info budget 8,000 tokens; Nexus priority 5/shared, world lore 4/shared, Memory 3/max 2,000. Enable Always-on protection if desired. A maximum is not a promise to fill it.
+
+### ④ 🔮 Want Jev? (Optional)
+
+NanoGPT subscription key → Billing → Subscription only. Save a Custom Chat Completion connection profile with:
+
+```text
+https://nano-gpt.com/api/subscription/v1
+```
+
+**Extensions → Lorebook Jev Recall → Use Jev → profile and total budget → save.**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-jev-settings.svg" width="480" alt="jev settings" />
+
+Start with defaults. Jev chooses relevant saved lore; the RP model stays unchanged.
+
+<details>
+<summary>Candidate modes and experimental options</summary>
+
+All eligible entries (default), native vector/keyword candidates, or Adaptive (experimental). Adaptive supplements native hits with memory cues above the estimated threshold (default 56,000), falling back to full when vectors/hits are unavailable. Partial injection (experimental, default off) may use eligible original-paragraph excerpts; full-text admission, budget and recursion remain. No refill from freed space and no guaranteed savings. World Info, per-book and Jev ceilings all apply. Jev budget is not an API input cap. Existing special activation rules remain. Retry or cancel on failure. Groups use per-book Jev. Direct Jev keys aren't supported.
+
+</details>
+
+### ⑤ 🔖 + 🦦 Open the library from the book
+
+**Right-click the book / long-press on mobile → Link Lorebook Library.**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-insight-settings.svg" width="480" alt="insight settings" />
+
+Click a verified entry to open the exact saved entry in the compatible library. Link off opens the built-in reader. Reading existing lore needs no AI.
+
+## 🎮 Now go roleplay!
+
+### ① Save today's memory
+
+> “I will never make important decisions without you again.”
+
+Finish the event → **Collect memories** (`/sloth-collect`).
+
+<img src="../assets/readme/mobile/memory-books-workflow-mobile.svg" width="480" alt="memory books workflow mobile" />
+
+Latest three eligible completed Scenes stay always-on; older managed Scenes rotate to Vector or Keywords. Stored text remains intact.
+
+<details>
+<summary>Collection and Hide</summary>
+
+Normal collection has no plan approval popup. Default one request per source chunk; optional review can add one. Validated results save; unfinished/unverified source stays. Retained responses may be safely reused. Manual Hide is opt-in, only for verified saved ranges. Automatic collection does not auto-Hide. Hide does not delete chat.
+
+</details>
+
+### ② Later, the memory matters
+
+> “Why did you hide it from me again?”
+
+Jev ON can judge the promise's relevance without matching keywords. Jev OFF uses ordinary activation. Just send the RP message!
+
+### ③ Did it really go in?
+
+Tap the floating book.
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-activated-lore.svg" width="480" alt="activated lore" />
+
+Only verified inserted lore appears. Compatible Jev entries have 🔮.
+
+Not there? Right-click/long-press → **View Lore Insight.**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-lore-insight.svg" width="480" alt="lore insight" />
+
+- Inserted: confirmed items and reasons.
+- Activated but not inserted: confirmed exclusions and reasons.
+- Unconfirmed: count only. Unknown does not mean excluded.
+
+See book/reason token estimates. Click terms/icons for explanations.
+
+Curious what Jev selected? Open the compatible Chat Top Bar brain button or Lorebook Jev Recall → Advanced → Latest Jev recall.
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-jev-report.svg" width="480" alt="jev report" />
+
+AI selection → budget acceptance → activation → actual RP inclusion are different stages. Jev off? A recorded budget run can show the budget report.
+
+<details>
+<summary>If a memory is missing</summary>
+
+Check book linkage, conditions, overall/book caps and Jev exclusions. Lore Insight covers activated entries; it does not list all inactive ones. /wi-report shows recorded keyword/recursion information for confirmed entries. Compatible STLO and WII share exact entry/tokenizer measurements and actual request evidence. Unknown is not zero. Verified pre-send inclusion does not guarantee the model uses it or prove provider-side processing.
+
+</details>
+
+### ④ Read the memory, beautifully
+
+Click a verified title with library link on, or Extensions → Lorebook Manager.
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/lore-manager/3242559015e6e83392614a57e696adaff9ea9568/assets/readme/mobile/ui-library-reader.svg" width="480" alt="library reader" />
+
+Nexus: Card file or Character directory. Memory: Timeline, Continuous full text or Page-by-page. World lore: Encyclopedia. Search and read stored translations. Reading styles don't change recall or injection order. The reader shows current saved text, not a historical request snapshot.
+
+Close it and go back to RP!
+
+## 🧮 Which number should I look at?
+
+<img src="../assets/readme/mobile/ui-four-metrics.svg" width="480" alt="four metrics" />
+
+| Question | Where |
+| --- | --- |
+| AI used for collection? | Memory Books → Recent collection statistics |
+| Nexus stored size? | Memory Workshop → Memory overview |
+| Jev use and full-text budget? | STLO → Jev search result / budget report |
+| Confirmed RP insertion? | WorldInfo Info → Lore Insight |
+| Saved content? | Lorebook Manager → library |
+
+<details>
+<summary>Costs, backup and compatibility</summary>
+
+Collection/review/Side Prompts, AI maintenance, Jev and new AI translation/editing may send data to providers. Reading stored records and ordinary budget checks make no extra AI requests; native vectors may have separate usage. Reported usage, estimates and billing differ. Back up both books, chat, settings and manager translation data (user/files/). Original JSON ZIP is not a translation backup. Changing modes does not unhide messages; recovery is not a full backup.
 
 Current guide basis: Memory Books 9.4.0-ambasa.7 ([d6c87d1](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/d6c87d1a0cbbdbc14ffcfda9d9e391cefd344687)), STLO 2.2.4-ambasa.7 ([0e9c286](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering/commit/0e9c286767639f26e4556c99854ab48d9a544b22)), WorldInfo Info 1.7.1-ambasa.14 ([1d58bb1](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo/commit/1d58bb1f331418bf7d8b322123a76af9409f0214)), Lorebook Manager 1.4.85-ambasa.86 ([3242559](https://github.com/AmbasaS2/lore-manager/commit/3242559015e6e83392614a57e696adaff9ea9568)). Use a host supporting the structured World Info scan event; WII request verification is scoped to supported Chat Completion routes. Individual test records are in the repositories; this guide is not a claim of new joint testing on every device. All integrations are optional.
+
+</details>
+
+Illustrations are UI-based examples, not live screenshots. Every integration is optional.
+
 
 ---
 
@@ -61,100 +177,332 @@ Current guide basis: Memory Books 9.4.0-ambasa.7 ([d6c87d1](https://github.com/A
 
 # 📚 실리태번 로어북 4종 연동 사용설명서
 
-> **네 개 다 깔아야 하나요? 아니요!** 마음에 드는 것만 설치하시면 됩니다. 이미 열심히 정리한 로어북도 그대로 쓰세요. 기억을 처음부터 다시 만들 필요 없어요!
+## 네 개 다 깔아야 하나요? 아니요! ✍️(◔◡◔)
 
-<p align="left"><img src="../assets/readme/mobile/quickstart-and-integration-mobile.svg" width="480" alt="네 확장 연동 흐름" /></p>
+필요한 것만 골라 쓰세요. 이미 만들어 둔 로어북도 그대로 쓰시면 됩니다.
 
-## 🧩 네 확장이 각각 하는 일
+**설정은 처음 한 번. 롤플은 평소처럼!**
 
-- 🦥 **[게으름뱅이의 메모리북](../readme.md)** — 지난 사건은 Memory, 핵심 정보와 현재 상태는 Nexus에 저장. 기억 정비소와 수집 통계도 제공합니다.
-- ⚖️ **[게으름뱅이를 위한 로어북 예산 관리기](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)** — 책별 우선순위·예산 관리, 선택형 Jev로 필요한 기존 기억 호출.
-- 🔖 **[게으름뱅이가 읽는 월드인포인포](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)** — 책 버튼은 실제 주입 확인, 로어 인사이트는 발동한 항목의 확인·제외와 기록된 이유 분석.
-- 🦦 **[로어북 매니저: 게으름뱅이](https://github.com/AmbasaS2/lore-manager)** — 기억을 책처럼 읽고 검색·번역·편집·백업.
+<img src="../assets/readme/mobile/quickstart-and-integration-mobile.svg" width="480" alt="quickstart and integration mobile" />
 
-## 이 조합, 누가 쓰면 좋을까? ✍️(◔◡◔)
+## 🧩 네 확장, 각각 뭐 하는 애들인가요?
 
-- 예전에 있었던 일을 캐릭터보다 내가 더 잘 기억해서 슬픈 사람
-- 기억을 쓰고 싶지만 구간마다 직접 요약하는 게 귀찮은 사람
-- 저장한 기억이 정작 필요한 순간에 안 들어와 화나는 사람
-- 어느 로어가 얼마나 들어갔는지 궁금하고, 쌓아 온 서사를 예쁘게 읽고 싶은 사람
+> **🦥 기억을 저장하는 애**
+>
+> [게으름뱅이의 메모리북 (Sloth's Memory Books)](https://github.com/AmbasaS2/SillyTavern-MemoryBooks)
+>
+> 사건이 끝나면 수집 버튼! 지나간 사건은 따로, 현재 상태도 따로 저장합니다.
+>
+> [GitHub 다운로드](https://github.com/AmbasaS2/SillyTavern-MemoryBooks)
 
-## ⚡ 간단 사용 설명
+> **⚖️ 필요한 기억을 골라 주는 애**
+>
+> [게으름뱅이를 위한 로어북 예산 관리기 (Lorebook Ordering for Sloths)](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)
+>
+> 로어북별 토큰 예산 관리. Jev를 켜면 지금 장면에 필요한 기억도 골라 줍니다.
+>
+> [GitHub 다운로드](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)
 
-처음 한 번: 메모리북에 두 권과 수집 AI 지정 → STLO에 우선순위·예산 지정 (Jev 선택) → 월드인포인포와 매니저의 서가 연동 선택.
+> **🔖 진짜 불러왔는지 확인해 주는 애**
+>
+> [게으름뱅이가 읽는 월드인포인포 (WorldInfo Info of Sloth)](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
+>
+> 책 버튼을 눌러 실제 주입된 로어 확인! 더 궁금하면 로어 인사이트.
+>
+> [GitHub 다운로드](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo)
 
-평소에는: 롤플 → 사건이 끝나면 기억 수집 → 저장 확인 → 다시 놀기 → 책 버튼에서 실제 주입 확인 → 궁금한 기억 누르기!
+> **🦦 기억을 예쁘게 읽게 해 주는 애**
+>
+> [로어북 매니저: 게으름뱅이 (Sloth the Lorebook Manager)](https://github.com/AmbasaS2/lore-manager)
+>
+> 저장한 로어를 서재에서 책처럼 읽습니다. 검색·번역·편집도 가능!
+>
+> [GitHub 다운로드](https://github.com/AmbasaS2/lore-manager)
 
-## 📖 사용 설명서 — 처음 한 번
+## 🪄 그래서 나는 뭐부터 깔지?
 
-### ① 필요한 확장 설치
+> - 기억 수집만 귀찮다 → **메모리북**
+> - 이미 로어북은 있다. 불러오는 게 문제다 → **STLO**
+> - 이번에 뭐가 들어갔는지 궁금하다 → **월드인포인포**
+> - 저장한 내용을 예쁘게 읽고 싶다 → **로어북 매니저**
+>
+> 전부 해당된다면… 네 개 다 쓰시면 됩니다! ㅎㅎ
 
-각 저장소의 GitHub 주소를 실리태번 확장 설치 메뉴에 붙여넣고 설치·새로고침. 순서는 자유입니다. 기존 원본과 해당 포크를 동시에 켜지 말고 채팅·로어북·설정·번역 기록부터 백업하세요.
+## 📖 처음 한 번만 설정하기
 
-### ② 기억을 저장할 두 권과 수집 AI 정하기
+## ① 확장 설치
 
-1:1 캐릭터 채팅 → 확장 메뉴 → 메모리 북 → **사용 모드 (현재 캐릭터) → For 게으름뱅이**. 그룹은 기존 메모리북 모드입니다. 탭 변경은 설정 화면만 바꿉니다.
+> 실리태번 **확장 설치 → 위의 GitHub 주소 붙여넣기 → 설치 → 새로고침**
 
-- Nexus: Core Memory(핵심 장기 기억), Current Continuity(현재 상태), Anchor(앵커, 기존 LT), NPC. 역할별 상시·벡터·키워드·미주입을 선택할 수 있고, 기본은 코어/현재 상태 상시, 앵커/NPC는 기존 상세 방식(보통 벡터).
-- Memory: 완료 사건을 각각 저장. 관리되는 최신 Scene 3개는 상시, 이전 Scene은 벡터 또는 키워드. 본문은 그대로.
+> 원본과 포크는 동시에 켜지 마세요. 교체하기 전에 채팅·설정·로어북·번역 파일을 백업해 주세요. 설치 순서는 자유입니다.
 
-연결된 서로 다른 두 책 지정 → 수집 AI 지정 → 주입 설정 확인. 책 이름은 자유이고 연결된 책이 없으면 첫 수집 저장 시 생성할 수 있습니다. 여러 AU는 이 채팅에만 책을 따로 지정하고 실제 ST 연결도 확인하세요. 기존 수동 요약을 이어받을 때에는 기억 정비소의 **기존 요약 범위 등록**에서 이미 저장된 원문 범위만 확인·등록합니다. 옛 메타데이터만으로 수집 완료나 최근 3개 회전이 보장되지는 않아요. 첫 수집은 자동 수집을 꺼 두고 사본에서 시험하면 좋아요.
+## ② 🦥 메모리북: 기억을 저장할 두 권 고르기
 
-### ③ 예산 정하기 (Jev는 선택!)
+> 1:1 캐릭터 채팅 → 확장 메뉴 → 메모리 북 → **For 게으름뱅이** 모드
 
-전체 월드 인포 예산이 8,000이라면 예를 들어 Nexus 우선순위 5, 세계관 4, Memory 3/최대 2,000. 최대치는 반드시 채워 주겠다는 약속이 아닙니다. 상시 주입 우선 보호를 켜도 세 예산을 무시하지 않아요.
+<img src="../assets/readme/mobile/ui-lorebook-roles.svg" width="480" alt="lorebook roles" />
 
-Jev를 쓰고 싶다면 나노GPT 구독 키 Billing → Subscription only. 실리태번 Chat Completion → Custom 연결 프로필에 `https://nano-gpt.com/api/subscription/v1` 저장 → 로어북 Jev 호출 → 현재 캐릭터 Jev 사용 → 프로필·총예산 지정 → 저장.
+> **🧭 Nexus = 지금 우리는 어떤 사이인가?**
+>
+> 핵심 설정, 관계, 현재 상태, 장기 기억, NPC를 정리하는 책.
 
-**어떤 로어를 보여 줄까요?** 전체 로어북 항목(기본) / 벡터·키워드 검색 후보 / 적응형(실험). 적응형은 예상 전체 입력량 기준(기본 56,000 추정 토큰)에 따라 기억 단서로 검색 후보를 보강하고 벡터 회수 불가·적격 결과 없음이면 전체 판단으로 돌아갑니다. 부분 주입(실험)은 고급 설정에서 별도 선택하며 기본 꺼짐입니다. 적격 긴 Scene의 원문 문단 발췌만 가능하고 전문 기준 예산·발동·재귀를 유지합니다. 남은 공간을 다른 기억으로 채우지 않고 절약을 보장하지도 않습니다. 처음엔 기본값 그대로도 충분해요!
+> **📕 Memory = 우리가 여기까지 어떻게 왔는가?**
+>
+> 처음 만난 날, 싸운 날, 화해한 날… 지나간 사건을 각각 기록하는 책.
 
-Jev 총예산은 API 입력 상한이 아닙니다. 전체 월드 인포·책별·Jev 한도를 함께 적용합니다. 그룹 채팅은 책별 Jev 설정을 따릅니다. 실패하면 재시도 또는 답변 취소.
+오늘 화해했다고 어제 싸운 일이 없어지는 건 아니잖아요?
 
-### ④ 확인하고 서재에서 읽기
+> - [ ] 서로 다른 두 권 지정 (책 이름은 자유!)
+> - [ ] 수집에 사용할 AI 선택
+> - [ ] 이전 Scene의 호출 방식: 벡터 또는 키워드 선택
 
-월드인포인포의 책 버튼을 우클릭(모바일 꾹 누르기) → **로어북 서가 연동**을 원할 때 체크. 호환 매니저에서 책 이름·UID로 해당 항목을 엽니다. 연동 없이 기본 열람창을 쓸 수도 있고, 독립 서재만 쓸 수도 있어요. 별도 AI 연결은 읽기에 필요 없습니다.
+<img src="../assets/readme/mobile/ui-collection-settings.svg" width="480" alt="collection settings" />
 
-## 🎮 이제 롤플! 평소에 쓰는 순서
+**여기까지면 됩니다!** 첫 수집은 자동 수집을 끄고 직접 해 보세요.
 
-### ① 사건이 끝나면 기억 수집
+<details>
+<summary>💡 기존 로어북이나 여러 AU를 쓰는 분만</summary>
 
-“다시는 중요한 결정을 혼자 내리지 않을게.”
+- 책이 없다면 첫 수집 저장 시 생성할 수 있습니다. 한 권만 있으면 부족한 책을 만드세요.
+- 같은 캐릭터의 여러 AU는 이 채팅에만 로어북 따로 지정.
+- 기존 수동 요약을 이어받을 때는 기억 정비소 → 기존 요약 범위 등록에서 이미 저장한 원문 범위만 등록합니다.
+- Nexus의 Core Memory·Current Continuity는 기본 상시, Anchor(기존 LT)·NPC는 기존 상세 방식(보통 벡터). 주입 설정에서 각각 선택할 수 있어요. 기존 항목의 변경은 정비소에서 직접 적용합니다.
+- 벡터는 실리태번 벡터 저장소 설정이 필요합니다.
+- 모드와 탭은 별개이며 그룹 채팅은 기존 메모리북 모드를 사용합니다.
 
-수집 아이콘/기억 수집 버튼 또는 `/sloth-collect` → AI가 미수집 원문을 분석·작성 → 검증된 Scene과 Nexus 변경 바로 저장 → 결과 확인 → 다시 놀기!
+</details>
 
-별도 계획 승인 팝업은 없습니다. 기본 수집은 구간당 한 요청이며 긴 대화는 구간을 나눌 수 있어요. 진행 중·검증되지 않은 구간은 남겨 둡니다. 정상 저장된 기억만 선택적 수동 Hide가 가능하고 기본 꺼짐, 자동 수집은 자동 Hide하지 않습니다. Hide는 원문 삭제가 아니에요.
+자세한 설정: [게으름뱅이의 메모리북 (Sloth's Memory Books)](https://github.com/AmbasaS2/SillyTavern-MemoryBooks)
 
-### ② 한참 뒤 그 기억이 필요해지면
+---
 
-“왜 또 나한테 숨겼어?”
+## ③ ⚖️ STLO: 로어북마다 예산 정하기
 
-Jev ON이면 정확한 키워드가 없어도 예전 약속을 필요로 하는 장면인지 판단할 수 있습니다. OFF이면 기존 상시·키워드·벡터 호출을 사용해요. 저장 → 판정 → 예산 통과 → 실제 발동 → 실제 주입은 다른 단계입니다. 어느 하나도 다음 단계를 무조건 보장하지 않습니다.
+> 확장 메뉴 → **로어북 예산 관리** → 책 추가 → 우선순위·예산 설정 → 저장
 
-### ③ 정말 들어갔을까?
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-budget-manager.svg" width="480" alt="budget manager" />
 
-- STLO: 로어북 Jev 호출 → Jev 고급 설정 → 최근 Jev 실행, 또는 호환 챗탑바 두뇌 버튼. 최신 **Jev 검색 결과**에서 검색 완료·AI 선택·예산 통과·최종 발동, Jev 예산 사용량, 검색에 사용한 AI, RP 프롬프트 포함 여부를 구분합니다. Jev OFF라도 예산 검사 기록이 있으면 예산 보고서를 확인할 수 있어요.
-- 월드인포인포의 **책 버튼:** 전송 직전 요청의 실제 주입 확인 로어만. 호환 STLO의 확인된 Jev 항목은 🔮.
-- **로어 인사이트:** 주입된 로어 / 발동했지만 주입되지 않은 것이 확인된 로어를 펼쳐 보고, 발동·제외 이유와 항목별 토큰, 책별·발동 방식별 토큰, 입력 비중을 확인합니다. 주입 여부 미확인은 개수만 표시하고 미발동 항목은 개별 목록에 넣지 않아요. 밑줄 용어나 발동 아이콘을 누르면 설명이 펼쳐집니다.
-- 호환 STLO와 월드인포인포는 동일한 개별 토큰 계측과 실제 요청 근거를 공유합니다. 근거가 없으면 미확인·미계측이지 0이나 제외가 아닙니다.
+> **예를 들어 전체 로어북 예산이 8,000토큰이라면?**
+>
+> - Nexus · 우선순위 5 / 전체 예산 공유
+> - 세계관 · 우선순위 4 / 전체 예산 공유
+> - Memory · 우선순위 3 / 최대 2,000토큰
+>
+> 중요한 책부터 고려하도록 정해 줍니다.
+>
+> 2,000토큰은 최대치이지 꼭 2,000토큰을 넣겠다는 뜻은 아니에요.
 
-책이 제대로 연결됐는지, 항목의 발동 조건, 전체·책별 예산, Jev 제외 여부를 확인하세요. /wi-report는 주입 확인 로어의 기록된 키워드·재귀 보고서입니다. 주입 확인이 곧 모델이 답변에 활용했다는 보장은 아니에요.
+**🔵 파란불부터 보호하고 싶다면?**  
+상시 주입 우선 보호를 켜 주세요. 그래도 전체 예산은 지켜야 합니다!
 
-### ④ 궁금한 기억 눌러서 읽기 (예쁘게!)
+## ④ 🔮 Jev도 쓰고 싶다면? (안 쓰시면 패스!)
 
-Nexus는 카드파일·인물록, Memory는 메모리 보기(타임라인·연속 기록장·페이지 넘김), 세계관은 백과사전으로 읽어 보세요. 돋보기로 원문·저장 번역을 검색하고, 필요하면 새 번역을 선택합니다. 읽기 방식과 서재 정렬은 실제 주입 조건이나 순서를 바꾸지 않아요. 열람창은 현재 저장된 본문이며 실제 요청의 스냅샷은 아닙니다.
+> **나노GPT 연결 프로필 만들기**
+>
+> - 나노GPT 구독 키 → Billing → Subscription only
+> - 실리태번 Chat Completion → Custom
+> - 아래 주소로 연결 프로필 저장
+>
+> ```txt
+> https://nano-gpt.com/api/subscription/v1
+> ```
+>
+> 확장 메뉴 → **로어북 Jev 호출 → Jev 사용 → 프로필·총예산 선택 → 저장**
 
-## 💡 어느 토큰 숫자를 봐야 할까?
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-jev-settings.svg" width="480" alt="jev settings" />
 
-<p align="left"><img src="../assets/readme/mobile/ui-four-metrics.svg" width="480" alt="계측 범위 비교" /></p>
+**일단 기본값으로 써 보세요!**  
+Jev는 이미 저장된 기억 중 이번 장면에 필요한 것을 고르는 AI입니다. 롤플 모델은 그대로예요.
 
-| 궁금한 것 | 열어 볼 곳 |
-| --- | --- |
-| 수집 AI 사용량·비용·저장 결과 | 메모리북 → 수집 설정 → 최근 수집 통계 (브라우저 최근 30개 시도) |
-| Nexus 저장량·상시 설정·중복 문단 | 메모리북 → 기억 정비소 → 기억 현황 (읽기 전용) |
-| Jev 입력·전문 예산·발동/탈락 | STLO → 최근 Jev 실행 / 예산 보고서 |
-| 이번 RP에 실제 들어간 로어·비중 | 월드인포인포 → 로어 인사이트 |
-| 저장한 원문·번역·기억 자체 | 로어북 매니저 → 독립 서재 |
+<details>
+<summary>💡 판정 방식이나 예산을 더 만지고 싶을 때만</summary>
 
-AI 요청은 수집·검증·사이드 프롬프트·AI 기억 분석, 선택적 Jev, 새 AI 번역/수정 시 발생합니다. 기존 벡터 제공자의 사용량은 별도일 수 있어요. 공급자 보고값과 호스트 추정치 및 청구액은 구분합니다. 원본 JSON ZIP 내보내기와 번역 포함 백업도 별개! 메모리북 두 권, 설정, 채팅 및 매니저 번역 기록(`user/files/`)을 보존하세요.
+- 전체 로어북 항목: 기본값. 적격 기억 전체 판단.
+- 벡터·키워드 검색 후보: 기존 검색에 잡힌 것만 판단.
+- 적응형(실험): 전체 판단 예상 입력이 기준(기본 56,000 추정 토큰)을 넘을 때 기존 검색에 장기 기억·짧은 기록·역할·제목/키워드·최근 출처 단서를 보강. 벡터 회수 불가/적격 결과 없음이면 전체 판단으로 돌아갑니다.
+- 부분 주입(실험): 기본 꺼짐. 적격 긴 Scene의 원문을 발췌할 수 있으나 전문 기준 발동·재귀·예산은 그대로이고 남는 공간을 다른 기억으로 채우지 않습니다. 품질·절약 보장은 없어요.
 
-안내 기준: 메모리북 9.4.0-ambasa.7, STLO 2.2.4-ambasa.7, 월드인포인포 1.7.1-ambasa.14, 로어북 매니저 1.4.85-ambasa.86 (위 영문 기준 커밋 참조). 개별 원작·라이선스·상세 설정·검증 범위는 각 확장 README 참고. 모든 연동은 선택이고 모든 환경에서의 동작·모델 기억 활용을 보장하지 않습니다.
+**예산 세 가지**  
+실리태번 전체 월드 인포 예산, 책별 예산, Jev 총예산을 모두 지킵니다. Jev 총예산은 API 입력 상한이 아니에요.
+
+파란불·Sticky·Outlet 등 특수 규칙은 기존대로. 실패하면 재시도 또는 답변 취소. 그룹은 책별 Jev 설정을 사용합니다.
+
+직접 Jev 키는 지원하지 않고 나노GPT 구독 전용 경로를 사용합니다.
+
+</details>
+
+자세한 설정: [게으름뱅이를 위한 로어북 예산 관리기 (Lorebook Ordering for Sloths)](https://github.com/AmbasaS2/SillyTavern-LorebookOrdering)
+
+---
+
+## ⑤ 🔖 + 🦦 책 버튼에서 서재로 바로 이동하기 (선택)
+
+> 월드인포인포 책 버튼 **PC 우클릭 / 모바일 꾹 누르기 → 로어북 서가 연동 체크**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-insight-settings.svg" width="480" alt="insight settings" />
+
+이제 주입된 로어의 제목을 누르면 호환 로어북 매니저에서 해당 항목이 열립니다. 연동을 끄면 기본 열람창이 열려요.
+
+> 서재만 쓰고 싶으신 분은 로어북 매니저의 화면·고급 설정에서 실리태번 기본 화면을 선택하시면 됩니다.
+>
+> 두 확장의 열람 기능은 별도 AI 연결 없이 쓸 수 있어요.
+
+자세한 설정: [게으름뱅이가 읽는 월드인포인포 (WorldInfo Info of Sloth)](https://github.com/AmbasaS2/SillyTavern-WorldInfoInfo) · [로어북 매니저: 게으름뱅이 (Sloth the Lorebook Manager)](https://github.com/AmbasaS2/lore-manager)
+
+---
+
+## 이제 준비 끝. 이제 노세요! (ง •̀\_•́)ง
+
+평소에는 확장 네 개를 돌아가면서 설정하지 않아도 됩니다.
+
+## 🎮 평소 롤플할 때는 이렇게!
+
+## ① 오늘 있었던 일은 메모리북에 저장
+
+> 두 사람이 크게 다퉜다가 화해했습니다.
+>
+> “다시는 중요한 결정을 혼자 내리지 않을게.”
+
+사건이 끝났다면 **기억 수집** 버튼을 누르세요. 끝!
+
+<img src="../assets/readme/mobile/memory-books-workflow-mobile.svg" width="480" alt="memory books workflow mobile" />
+
+- 최근 완료 Scene 3개는 🔵 상시.
+- 이전 Scene은 키워드 또는 벡터.
+- 과거 사건 본문은 그대로 보존.
+
+<details>
+<summary>💡 수집할 때 알아두면 좋은 것</summary>
+
+일반 수집은 계획 승인 팝업 없이 검증된 결과를 저장합니다. 기본 구간당 한 요청, 선택 검증은 추가 요청이 발생할 수 있어요. 진행 중·검증되지 않은 원문은 남겨 둡니다. 보류 응답은 조건이 맞으면 검토·재사용할 수 있습니다.
+
+수동 Hide는 고급 설정에서 켜야 합니다(기본 꺼짐). 저장 확인된 범위만 숨기며, 채팅 삭제가 아닙니다. 자동 수집은 자동으로 Hide하지 않아요.
+
+</details>
+
+---
+
+## ② 한참 뒤, 예전 기억이 필요한 순간이 오면?
+
+> 캐릭터가 또 혼자 일을 해결하려고 합니다.
+>
+> “왜 또 나한테 숨겼어?”
+
+예전 약속의 키워드가 하나도 없다면?
+
+> **Jev ON 🔮**  
+지금 상황에 그 약속이 필요한지 판단합니다.
+>
+> **Jev OFF**  
+기존 키워드·벡터·상시 호출을 사용합니다.
+
+둘 다 그냥 평소처럼 채팅을 보내시면 됩니다. 따로 기억을 호출할 필요는 없어요.
+
+---
+
+## ③ 그 기억이 진짜 들어왔는지 확인!
+
+**일단 떠 있는 책 버튼을 누르세요.**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-activated-lore.svg" width="480" alt="activated lore" />
+
+책에는 **실제 주입 확인된 로어만** 뜹니다. Jev로 불러온 기억에는 🔮가 붙어요.
+
+> **아니, 분명 저장했는데 왜 안 보이지?**
+>
+> 책 버튼 우클릭(모바일 꾹 누르기) → **로어 인사이트 보기**
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-WorldInfoInfo/72efb9ac60354b0109354e0c9bfa0f6ba6576ac8/assets/readme/mobile/ui-lore-insight.svg" width="480" alt="lore insight" />
+
+- 주입된 로어: 실제 요청에 들어간 항목과 이유
+- 발동했지만 주입되지 않은 로어: 확인된 제외 항목과 이유
+- 주입 미확인: 개수로 표시 (미확인은 미주입이 아닙니다!)
+
+책별·발동 방식별 토큰도 확인할 수 있어요. 짧은 용어나 아이콘은 눌러 보면 설명이 펼쳐집니다.
+
+> **Jev가 뭘 골랐는지도 궁금하다면?**
+>
+> 호환 챗탑바의 두뇌 버튼 또는 로어북 Jev 호출 → 고급 설정 → 최근 Jev 실행
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/SillyTavern-LorebookOrdering/ef0f7ee8235776003366ab7744766ce6b9e486df/assets/readme/mobile/ui-jev-report.svg" width="480" alt="jev report" />
+
+**AI 선택 → 예산 통과 → 최종 발동 → 실제 RP 포함**을 따로 확인할 수 있습니다. Jev 없이 예산만 쓰는 분도 기록이 있으면 예산 보고서를 열 수 있어요.
+
+<details>
+<summary>🔎 기억이 안 들어왔을 때 체크</summary>
+
+- 현재 채팅에 책이 연결됐나요?
+- 로어가 활성화되어 있고 조건에 맞나요?
+- 전체/책별 예산에서 밀렸나요?
+- Jev 대상에서 제외하지 않았나요?
+
+로어 인사이트는 발동된 항목을 중심으로 확인합니다. 처음부터 발동하지 않은 항목의 개별 목록은 제공하지 않아요. /wi-report는 확인된 주입 항목의 키워드·재귀 기록입니다.
+
+호환 STLO와 월드인포인포는 실제 요청 근거와 같은 본문·토크나이저의 개별 토큰 계측을 공유합니다. 확인되지 않은 값은 0이 아니며, 실제 주입되어도 모델이 반드시 활용한다는 보장은 없습니다.
+
+</details>
+
+---
+
+## ④ 궁금한 기억은 예쁘게 읽기!
+
+로어 제목을 눌러 서재로 이동하거나 확장 메뉴 → **로어북 매니저**.
+
+<img src="https://raw.githubusercontent.com/AmbasaS2/lore-manager/3242559015e6e83392614a57e696adaff9ea9568/assets/readme/mobile/ui-library-reader.svg" width="480" alt="library reader" />
+
+> - 🧭 Nexus: 카드파일이나 인물록
+> - 📕 Memory: 타임라인 / 연속 기록장 / 페이지 넘김
+> - 🌍 세계관: 백과사전
+>
+> 취향대로 골라 읽으세요!
+
+저장 번역을 읽거나 돋보기로 원하는 내용을 검색할 수 있습니다. 읽는 방식은 실제 발동이나 주입 순서를 바꾸지 않아요.
+
+다 읽었으면 닫고 다시 롤플! 사건이 끝나면 ①부터 반복하시면 됩니다.
+
+---
+
+## 🧮 숫자가 궁금해졌을 때만 보세요!
+
+<img src="../assets/readme/mobile/ui-four-metrics.svg" width="480" alt="four metrics" />
+
+> **수집에 AI를 얼마나 썼지?**  
+메모리북 → 수집 설정 → 최근 수집 통계
+>
+> **Nexus가 너무 커졌나?**  
+메모리북 → 기억 정비소 → 기억 현황
+
+> **Jev가 얼마나 읽고 예산을 썼지?**  
+STLO → Jev 검색 결과 / 예산 보고서
+
+> **이번 RP에 진짜 얼마나 들어갔지?**  
+월드인포인포 → 로어 인사이트
+
+로어북 매니저의 토큰 통계는 저장한 책의 분량입니다. **저장량, 수집 사용량, 전문 예산, 실제 주입량은 서로 다른 숫자**예요!
+
+<details>
+<summary>💡 비용·백업·호환성 (필요할 때 열어 주세요)</summary>
+
+**AI 요청이 발생하는 기능**
+
+- 메모리북 수집·검증·사이드 프롬프트·AI 기억 정리/사건 정비
+- STLO의 선택형 Jev
+- 새 AI 번역·AI 수정
+
+기본 예산 관리, 수집 통계·기억 현황 열람, 월드인포인포, 서재·저장 번역 열람은 별도 AI 요청 없이 쓸 수 있습니다. 기존 벡터 제공자 사용량은 별도일 수 있어요. AI에 대화/로어가 전달될 수 있으며 보고값·추정값·실제 청구액은 구분합니다.
+
+**백업**
+
+두 기억 책, 채팅, 설정, 번역 기록(user/files/)을 보존하세요. 원본 로어북 ZIP과 번역 포함 백업은 별개입니다. 숨긴 메시지는 모드를 바꿔도 자동 복원되지 않으며 복구 기록은 전체 백업을 대신하지 않습니다.
+
+**안내 기준**
+
+메모리북 9.4.0-ambasa.7 / STLO 2.2.4-ambasa.7 / 월드인포인포 1.7.1-ambasa.14 / 로어북 매니저 1.4.85-ambasa.86. 지원되는 Chat Completion 요청과 구조화된 월드 인포 스캔 기준이며 모든 환경·모델의 결과를 보장하지 않습니다.
+
+[GitHub 한영 연동 가이드와 기준 커밋](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/blob/main/docs/four-extensions-guide.md)
+
+</details>
+
+#### 📋 원작 및 라이선스
+
+각 확장의 안내글과 GitHub README를 참고하세요. 모든 연동은 선택입니다. 안내 그림은 예시 데이터로 만든 UI 목업이며 테마·화면 크기에 따라 다를 수 있어요.
