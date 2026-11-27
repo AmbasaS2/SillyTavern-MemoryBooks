@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import { isSlothRoleSyncPending } from './nexusAuxLinks.js';
 import {stageMemoryScenes,stageNexusEdits,getSlothHideRanges,normalizeSlothVisibleTail,
     fingerprintSlothChat,fingerprintSlothReviewedRanges} from './nexusCollectionPolicy.js';
 import {isCompletedSceneEntry,sceneNumberFromTitle} from './nexusSceneRotation.js';
@@ -75,7 +76,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
         section(runtime,'export async function runNexusCollector(','function isVisibleSceneMessage(').replace('export async','async'),
         'runNexusCollector',
     ].join('\n'),{
-        ...recovery,createSlothRecoveryStore,selectSlothRecoveryRecord,sha256,structuredClone:clone,chat,stableHashString,stringify:JSON.stringify,collectorBusy:false,
+        ...recovery,createSlothRecoveryStore,selectSlothRecoveryRecord,sha256,structuredClone:clone,chat,stableHashString,stringify:JSON.stringify,collectorBusy:false,isSlothRoleSyncPending,
         createSlothCollectionRun,addSlothRequestMetric,recordSlothCollectionRun:run=>stats.push(clone(run)),
         getSceneMarkers:()=>markers,getStmbChatKey:()=>key,getCurrentStmbChatRef:()=>ref,
         extension_settings:{STMemoryBooks:{moduleSettings:{slothHideAfter:true,slothHideRecent:0}}},
