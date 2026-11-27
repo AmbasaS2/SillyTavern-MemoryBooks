@@ -14726,6 +14726,7 @@ function setupEventListeners() {
   });
   eventSource.on(event_types.MESSAGE_RECEIVED, (messageId, type) => {
     recordMemoryBooksMessageChange(messageId);
+    scheduleSlothCollectionForReply(messageId, type);
     const generation = narratorResponseGeneration.receive({
       messageId, type, chatKey: getStmbChatKey(), chat,
       narratorMode: getCurrentMemoryBooksContext().isNarratorMode,
@@ -14787,29 +14788,40 @@ function setupEventListeners() {
     narratorGenerationSnapshot = null;
     manualGroupGenerationSnapshot = null;
   };
-  eventSource.on(event_types.GENERATION_ENDED, () => {
+  // GENERATION_ENDED also fires for UI unlocks, before MESSAGE_RECEIVED
+  // on streaming hosts. Schedule only on the actual completed normal reply.
+  function scheduleSlothCollectionForReply(messageId, type) {
     const completed = slothGeneration;
+    if (type !== 'normal' || !completed?.automatic || !completed.key ||
+        completed.key !== getStmbChatKey() || messageId !== chat.length - 1 ||
+        chat.length <= completed.length) return;
+    const last = chat[messageId];
+    if (!last || last.is_user || last.is_system || !last.mes?.trim()) return;
+    const processor = streamingProcessor;
+    if (processor && processor.messageId === messageId &&
+        (!processor.isFinished || processor.isStopped || processor.abortController?.signal?.aborted)) return;
     slothGeneration = null;
-    const last = chat.at(-1);
-    const settings = extension_settings.STMemoryBooks;
-    if (completed?.automatic && completed.key && chat.length > completed.length &&
-        last && !last.is_user && !last.is_system && last.mes?.trim() && getSlothAutomaticSettings(settings).enabled) {
-      slothAutoTimer = setTimeout(async () => {
-        if (slothGeneration || completed.key !== getStmbChatKey()) return;
-        try {
-          const outcome=await runNexusCollector({
-            ...getSlothProfileConfiguration(extension_settings.STMemoryBooks),automaticChatKey:completed.key,
-          });
-          if (outcome?.saved) await refreshSlothRoleControls();
-        } catch (error) { console.warn('🦥 STMemoryBooks', 'Automatic Sloth collection stopped:',error); }
-        finally { syncSlothAutomaticStatus(); }
-      }, 900);
-    }
+    if (!getSlothAutomaticSettings(extension_settings.STMemoryBooks).enabled) return;
+    slothAutoTimer = setTimeout(async () => {
+      slothAutoTimer = undefined;
+      if (slothGeneration || completed.key !== getStmbChatKey() ||
+          !getSlothAutomaticSettings(extension_settings.STMemoryBooks).enabled) return;
+      try {
+        const outcome=await runNexusCollector({
+          ...getSlothProfileConfiguration(extension_settings.STMemoryBooks),automaticChatKey:completed.key,
+        });
+        if (outcome?.saved) await refreshSlothRoleControls();
+      } catch (error) { console.warn('🦥 STMemoryBooks', 'Automatic Sloth collection stopped:',error); }
+      finally { syncSlothAutomaticStatus(); }
+    }, 900);
+  }
+  eventSource.on(event_types.GENERATION_ENDED, () => {
     narratorResponseGeneration.end({ processor: streamingProcessor, chat });
     clearGenerationLorebookSnapshots();
   });
   eventSource.on(event_types.GENERATION_STOPPED, () => {
-    clearTimeout(slothAutoTimer);
+    // A finished reply has already been received. Unrelated stop events must
+    // not cancel its scheduled collection.
     slothGeneration = null;
     narratorResponseGeneration.clear();
     clearGenerationLorebookSnapshots();
