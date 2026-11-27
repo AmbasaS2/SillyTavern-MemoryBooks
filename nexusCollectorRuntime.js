@@ -13,7 +13,7 @@ import { extension_settings } from '../../../extensions.js';
 import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
     charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
 import { getTokenCountAsync, getTokenizerModel } from '../../../tokenizers.js';
-import { DOMPurify, sha256 } from '../../../../lib.js';
+import { DOMPurify, sha256, showdown } from '../../../../lib.js';
 import { createSlothRecoveryStore, selectSlothRecoveryRecord } from './slothRecoveryStore.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
@@ -46,6 +46,7 @@ import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticToken
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { inspectSlothNexusHealth, SLOTH_HEALTH_ROLES } from './slothNexusHealth.js';
+import { createSlothHealthTranslationSession, createSlothHealthMarkdownRenderer } from './slothHealthReader.js';
 import { buildSlothHealthCatalog, stageSlothHealthReviewBatch } from './slothNexusHealthReview.js';
 import { showSlothHealthReviewFindings, healthReviewLabel } from './slothNexusHealthReviewDialog.js';
 import { createSlothCollectionRun, addSlothRequestMetric, recordSlothCollectionRun } from './slothCollectionStats.js';
@@ -1331,7 +1332,7 @@ export async function showSlothNexusHealth(){
         const report=await inspectSlothNexusHealth(book,getTokenCountAsync);
         verify();
         const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
-        const labels={core:tr('Core','Core Memory'),continuity:'Continuity',lt:tr('LT','Anchor'),npc:'NPC',
+        const labels={core:tr('Core','Core Memory'),continuity:tr('Continuity','Continuity'),lt:tr('LT','Anchor'),npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
         const num=n=>Number(n).toLocaleString();
         const amount=(n,missing=0)=>n===0&&missing?'—':'~ '+num(n);
@@ -1362,23 +1363,53 @@ export async function showSlothNexusHealth(){
             '</span><span>'+html(stored)+'</span><span>'+html(always)+'</span></div>'+groupRows+'</div>'+
             '<details class="stmb-health-section" data-health-entries><summary>'+html(tr('Inspect','Inspect entries by size'))+
             ' <span>('+num(report.rows.length)+')</span></summary>'+chooser('data-health-entry',tr('Inspect','Inspect entries by size'),tr('Choose','Choose an entry'))+
-            '<div class="stmb-health-text" data-health-body hidden></div></details>'+
+            '<div class="stmb-health-reader-controls" data-health-reader-controls hidden><button type="button" class="menu_button" data-health-original aria-pressed="false">'+html(tr('ViewOriginal','View original'))+'</button></div>'+
+            '<div class="stmb-health-text stmb-health-markdown" data-health-body hidden></div></details>'+
             '<details class="stmb-health-section" data-health-repeats><summary>'+html(tr('Duplicates','Identical paragraphs'))+
             ' <span>('+num(report.duplicates.length)+')</span></summary><p class="stmb-health-help">'+
             html(tr('RepeatHelp','Literal repeated paragraphs are review clues, not proof of redundant meaning.'))+'</p>'+
             (report.duplicates.length?chooser('data-health-repeat',tr('Duplicates','Identical paragraphs'),tr('Choose','Choose an entry'))+
-                '<div class="stmb-health-text" data-health-repeat-body hidden></div>':'')+'</details></div>',
+                '<div class="stmb-health-text stmb-health-markdown" data-health-repeat-body hidden></div>':'')+'</details></div>',
             POPUP_TYPE.TEXT,'',{wide:false,large:false,allowVerticalScrolling:true}));
         popup.dlg.classList.add('stmb-nexus-health-popup');
         const helpButton=popup.dlg.querySelector('[data-health-help-toggle]'),help=popup.dlg.querySelector('#stmb-health-help');
         helpButton.addEventListener('click',()=>{help.hidden=!help.hidden;helpButton.setAttribute('aria-expanded',String(!help.hidden));});
-        // Populate long select lists only once, on explicit expansion, and
-        // render one selected body at a time. No observer, polling or rerender.
-        const mountList=(detailsSelector,selectSelector,bodySelector,items,labelFor,textFor)=>{
+        // Reuse the exact WorldInfoInfo file lookup. Read one book only after
+        // an entry is selected; render the original immediately, never wait
+        // for translation before showing the popup or the selected body.
+        const legacySettings=extension_settings['simple-lorebook'];
+        const translations=createSlothHealthTranslationSession(roles.nexus,
+            (url,options)=>fetch(url,options),getRequestHeaders(),legacySettings,
+            Boolean(legacySettings||globalThis.__slbLoreManagerActive));
+        const renderMarkdown=createSlothHealthMarkdownRenderer(showdown.Converter,(value,options)=>DOMPurify.sanitize(value,options));
+        const mountList=(detailsSelector,selectSelector,bodySelector,items,labelFor,textFor,readEntry=false)=>{
             const details=popup.dlg.querySelector(detailsSelector),select=details?.querySelector(selectSelector);
             if(!select)return;
             const body=details.querySelector(bodySelector);
-            let populated=false;
+            const controls=readEntry?details.querySelector('[data-health-reader-controls]'):null;
+            const switchButton=controls?.querySelector('[data-health-original]');
+            let populated=false,selection=0,current=null,showOriginal=false,lastRendered=null;
+            const render=(text)=>{
+                body.hidden=false;
+                if(text===lastRendered)return;
+                renderMarkdown(body,text);
+                lastRendered=text;
+                body.scrollTop=0;
+            };
+            const updateReader=()=>{
+                if(!current)return;
+                const translated=translations.body(current);
+                if(controls)controls.hidden=!translated;
+                if(switchButton){
+                    switchButton.textContent=showOriginal?tr('ViewTranslation','View translation'):tr('ViewOriginal','View original');
+                    switchButton.setAttribute('aria-pressed',String(showOriginal));
+                }
+                render(!showOriginal&&translated?translated:textFor(current));
+            };
+            if(switchButton)switchButton.addEventListener('click',()=>{
+                showOriginal=!showOriginal;
+                updateReader();
+            });
             details.addEventListener('toggle',()=>{
                 if(!details.open||populated)return;
                 const options=document.createDocumentFragment();
@@ -1388,13 +1419,40 @@ export async function showSlothNexusHealth(){
                 }
                 select.append(options);populated=true;
             });
-            select.addEventListener('change',()=>{
-                const item=select.value===''?null:items[Number(select.value)];
-                body.textContent=item?textFor(item):'';body.hidden=!item;
+            select.addEventListener('change',async()=>{
+                const ticket=++selection;
+                current=select.value===''?null:items[Number(select.value)];
+                showOriginal=false;
+                if(!current){
+                    body.replaceChildren();body.hidden=true;lastRendered=null;
+                    if(controls)controls.hidden=true;
+                    return;
+                }
+                if(!readEntry){render(textFor(current));return;}
+                updateReader();
+                const first=!translations.started;
+                await translations.load();
+                if(!popup.dlg.open||ticket!==selection)return;
+                if(first){
+                    // Update existing option labels in place once; do not rebuild
+                    // the select or hash every body. Source token counts stay put.
+                    for(const option of select.options){
+                        if(option.value==='')continue;
+                        const row=items[Number(option.value)];
+                        if(!row)continue;
+                        const label=labelFor(row);
+                        if(option.textContent!==label)option.textContent=label;
+                    }
+                }else{
+                    const label=labelFor(current);
+                    if(select.selectedOptions[0]?.textContent!==label&&select.selectedOptions[0])
+                        select.selectedOptions[0].textContent=label;
+                }
+                updateReader();
             });
         };
         mountList('[data-health-entries]','[data-health-entry]','[data-health-body]',report.rows,
-            row=>slothDisplayAnchorTitle(row.title||'UID '+row.uid,labels.lt)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
+            row=>slothDisplayAnchorTitle(translations.title(row)||row.title||'UID '+row.uid,labels.lt)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body,true);
         mountList('[data-health-repeats]','[data-health-repeat]','[data-health-repeat-body]',report.duplicates,
             item=>item.entries.map(e=>slothDisplayAnchorTitle(e.title||'UID '+e.uid,labels.lt)).join(' · '),item=>item.text);
         await popup.show();

@@ -74,7 +74,10 @@ test('health UI keeps two summary values, on-demand help and list bodies, withou
     assert.match(fn,/aria-expanded="false"/);
     assert.match(fn,/details\.addEventListener\('toggle'/);
     assert.match(fn,/if\(!details\.open\|\|populated\)return/);
-    assert.match(fn,/body\.textContent=item\?textFor\(item\)/);
+    assert.match(fn,/renderMarkdown\(body,text\)/);
+    assert.match(fn,/updateReader\(\);\s*const first=!translations\.started;\s*await translations\.load\(\)/);
+    assert.match(fn,/ticket!==selection/);
+    assert.match(fn,/Boolean\(legacySettings\|\|globalThis\.__slbLoreManagerActive\)/);
     assert.match(fn,/wide:false,large:false/);
     assert.doesNotMatch(fn,/MutationObserver|ResizeObserver|setInterval|requestAnimationFrame|<table/);
     assert.match(read('./style.css'),/\.popup\.stmb-popup\.stmb-nexus-health-popup\{[^}]*height:fit-content/);
