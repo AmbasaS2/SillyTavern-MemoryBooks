@@ -27,7 +27,7 @@ const row=(segments,title='The letter')=>({title,complete:true,reason:'Distinct 
     timeline:'Unknown',scene:'The letter was delivered.',result:'The letter arrived.',keywords:['letter']});
 
 function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnResponse=false,editAfterBookCommit=false,extraHidden=false,
-    failUpload=false,failRead=false,legacyDraft=false}={}) {
+    failUpload=false,failRead=false,legacyDraft=false,importantLt=false}={}) {
     const ref={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
     const key='chat-a-key';
     const chat=Array.from({length:openTail||brokenScene?4:2},(_,id)=>({name:'A',mes:'Original '+id,is_system:false}));
@@ -40,7 +40,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
     let markers={},calls=0,dialogs=0;
     const logs=[],stats=[];
     const good={kind:'lt',action:'append',uid:1,text:'The gate was closed.'};
-    const bad={kind:'lt',action:'append',uid:99,text:'The letter arrived.'};
+    const bad=importantLt?{kind:'lt',action:'replace_exact',uid:2,find:'The letter was expected.',text:'The letter was promised.',risk:'ordinary'}:{kind:'lt',action:'append',uid:99,text:'The letter arrived.'};
     const response={events:[row([0,1]),...(brokenScene?[row([2,99],'The second letter')]:openTail?[{complete:false,segments:[2,3],reason:'Unfinished'}]:[])],edits:[good,bad]};
     if(legacyDraft){
         const digest=value=>{const json=typeof value==='string'?value:JSON.stringify(value);return [json.length,stableHashString(json)];};
@@ -114,7 +114,7 @@ function harness({openTail=false,brokenScene=false,editOnRecovery=false,editOnRe
             const pending=JSON.parse(record.raw);
             assert.deepEqual(pending.edits,[bad]);
             assert.ok(!pending.events.some(e=>e.title==='The letter'));
-            pending.edits=[{...bad,uid:2}];
+            pending.edits=importantLt?[{...bad,text:'The letter was received.',evidence:[{messageId:1,quote:'Original 1'}]}]:[{...bad,uid:2}];
             if(brokenScene)pending.events[0].segments=[2,3];
             return {raw:JSON.stringify(pending)};
         },
@@ -279,4 +279,24 @@ test('collection statistics distinguish verified writes, held rows and replay wi
     assert.equal(replay.trigger,'recovery');assert.equal(replay.groups.collection.requests,0);
     assert.equal(replay.counts.sceneCreated,0);assert.equal(replay.counts.sceneReused,1);
     assert.equal(replay.counts.nexusUpdated,1);assert.equal(replay.status,'recovered');assert.equal(h.calls,1);
+});
+
+test('v4 partial LT hold retains original, policy version and previously saved Scene across a new session',async()=>{
+    const h=harness({importantLt:true});
+    const first=await h.run();
+    assert.equal(first.saved,true);assert.equal(first.skippedNexusEdits,1);
+    assert.equal(h.recoveryRecord.evidencePolicyVersion,4);
+    assert.equal(h.books.N.entries[2].content,'The letter was expected.');
+    assert.match(h.recoveryRecord.originalRaw,/The letter was promised/);
+    assert.match(JSON.stringify(h.recoveryRecord.raw),/needs one to three/);
+    assert.equal(h.stats[0].evidencePolicyVersion,4);
+    const memory=clone(h.books.M);
+    const second=await h.run();
+    assert.equal(second.saved,true);assert.equal(second.skippedNexusEdits,0);
+    assert.equal(h.calls,1);
+    assert.deepEqual(h.books.M,memory);
+    assert.equal(h.books.N.entries[2].content,'The letter was received.');
+    assert.equal(h.recoveryRecord,null);
+    assert.equal(h.stats[1].evidencePolicyVersion,4);
+    assert.equal(h.stats[1].groups.collection.requests,0);
 });

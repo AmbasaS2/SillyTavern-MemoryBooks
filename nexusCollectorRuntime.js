@@ -1706,7 +1706,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if (partialReplay) {
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{partial:partialReplay,
                 originalRaw:previousDraft.originalRaw??previousDraft.raw,
-                ...([1,2].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
+                ...([1,2,3,4].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
         } else if (previousDraft) {
             if (automatic) {
                 if (sameSlothDraftBinding(previousDraft,draftBinding))
@@ -1719,7 +1719,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 if (typeof rawDraft==='string')
                     activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{
                         originalRaw:previousDraft.originalRaw??previousDraft.raw,
-                        ...([1,2].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
+                        ...([1,2,3,4].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
             }
         }
         const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames,
@@ -1739,7 +1739,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
         // Record eligible collection chunks, not idle automatic threshold checks.
-        runMetric=createSlothCollectionRun({ids:currentChunk.map(message=>message.id),startedAt:collectionStartedAt,automatic:!!automatic,replayed:typeof rawDraft==='string',initial,partialSource,reviewSummaries,evidencePolicyVersion:typeof rawDraft!=='string'?2:(activeDraft?.evidencePolicyVersion??0)});
+        runMetric=createSlothCollectionRun({ids:currentChunk.map(message=>message.id),startedAt:collectionStartedAt,automatic:!!automatic,replayed:typeof rawDraft==='string',initial,partialSource,reviewSummaries,evidencePolicyVersion:typeof rawDraft!=='string'?4:(activeDraft?.evidencePolicyVersion??0)});
         const onRequestMetric=metric=>addSlothRequestMetric(runMetric,metric);
         // Also refuse a new paid request/replay if the loaded chat is already stale.
         requireDurableSlothDraft(ref,activeDraft);
@@ -1751,11 +1751,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const collection=await composeSingleSlothCollection({nexus:originalBooks.nexus,memory:originalBooks.memory,
             messages:currentChunk,profile,settings,initial,characterContext,partialSource,signal,
             reviewSummaries,verifyOrigin:checkBeforeSave,rawDraft,onRequestMetric,
-            strictNexusEvidence:typeof rawDraft!=='string'||[1,2].includes(activeDraft?.evidencePolicyVersion),
-            evidencePolicyVersion:typeof rawDraft!=='string'?2:(activeDraft?.evidencePolicyVersion??0),
+            strictNexusEvidence:typeof rawDraft!=='string'||[1,2,3,4].includes(activeDraft?.evidencePolicyVersion),
+            evidencePolicyVersion:typeof rawDraft!=='string'?4:(activeDraft?.evidencePolicyVersion??0),
             lockedScenes:partialReplay?.lockedScenes??[],committedEdits:partialReplay?.committedEdits??[],
             onDraft:async raw=>{
-                activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw,{evidencePolicyVersion:2},recoveryBaseline);
+                activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw,{evidencePolicyVersion:4},recoveryBaseline);
                 requireDurableSlothDraft(ref,activeDraft);
             }});
         checkBeforeSave();
@@ -1786,7 +1786,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),{
                     ...(activeDraft.partial?{partial:activeDraft.partial}:{}),
                     originalRaw:activeDraft.originalRaw??activeDraft.raw,
-                    ...([1,2].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
+                    ...([1,2,3,4].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
                     slothRecoveryStore.revisionFor(key,activeDraft));
             }
             showSkipped();
@@ -1864,7 +1864,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 lockedScenes:scenes,committedEdits:collection.committedEdits??[]};
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),
                 {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw,
-                    ...([1,2].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
+                    ...([1,2,3,4].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
                 slothRecoveryStore.revisionFor(key,activeDraft));
             return !slothPaidDrafts.has(key);
         };
