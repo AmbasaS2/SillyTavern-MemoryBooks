@@ -2076,17 +2076,19 @@
   "STMemoryBooks_SlothHealthReviewNewEntry": "신규 항목",
   "STMemoryBooks_SlothHealthReviewKeywords": "키워드",
   "STMemoryBooks_SlothHealthReviewSummary": "검토 대상 {{count}} · 제외 {{excluded}} · 발견 {{findings}} · 무효 {{rejected}}",
-  "STMemoryBooks_SlothHealthReviewHelp": "저장된 기억을 바탕으로 제안한 검토 단서이며 실제 현재 상태를 증명하지는 않습니다. 후보와 인용을 하나씩 확인하세요. 완전히 같은 문단의 중복 제거와 원문 그대로의 Core→LT 이동만 적용할 수 있습니다. 나머지는 검토용입니다.",
+  "STMemoryBooks_SlothHealthReviewHelp": "저장된 기억에서 찾은 검토 단서이며 실제 현재 상태를 증명하지는 않습니다. 완전히 같은 문단의 중복 제거와 구조적 조건을 충족한 Core→LT 이동만 선택할 수 있습니다. 합쳐진 변경 전후를 확인하세요. 구조 검사를 통과했다고 의미상 안전한 것은 아닙니다.",
   "STMemoryBooks_SlothHealthReviewSelect": "검토 항목 선택",
   "STMemoryBooks_SlothHealthReviewNoFindings": "근거가 확인된 검토 후보가 없습니다. 모든 기억이 정확하다는 의미는 아닙니다.",
   "STMemoryBooks_SlothHealthReviewApply": "검토한 변경 적용",
   "STMemoryBooks_SlothHealthReviewClose": "닫기",
   "STMemoryBooks_SlothHealthReviewApproval": "변경 전후의 정확한 본문을 확인하세요. 적용 시 기억의 주입 동작이 달라질 수 있고 같은 로어북을 사용하는 다른 채팅의 보류 중 복구에 영향을 줄 수 있습니다. 선택한 변경만 저장합니다.",
-  "STMemoryBooks_SlothHealthReviewUnavailable": "현재 Nexus 또는 주입 설정에서 안전한 적용 대상이 아닙니다. 직접 검토해 주세요.",
+  "STMemoryBooks_SlothHealthReviewUnavailable": "현재 구조 또는 Core 보존 조건으로는 이 변경을 적용 후보로 만들 수 없습니다. 직접 검토해 주세요.",
   "STMemoryBooks_SlothHealthReviewAdvice": "검토용 제안입니다. 이 항목은 자동으로 변경할 수 없습니다.",
   "STMemoryBooks_SlothHealthReviewCancel": "건강검진 취소",
   "STMemoryBooks_SlothHealthReviewCancelled": "건강검진을 취소했습니다.",
   "STMemoryBooks_SlothHealthReviewPlan": "선택한 변경",
   "STMemoryBooks_SlothHealthReviewInclude": "이 변경을 승인 목록에 추가",
-  "STMemoryBooks_SlothHealthReviewPlanConflict": "선택한 변경끼리 충돌합니다. 충돌하는 선택을 해제한 뒤 적용해 주세요."
+  "STMemoryBooks_SlothHealthReviewPlanConflict": "선택한 변경끼리 충돌합니다. 충돌하는 선택을 해제한 뒤 적용해 주세요.",
+  "STMemoryBooks_SlothHealthReviewCoreAck": "선택한 Core 문단이 매 턴 필요하지 않은 정보인지 확인했습니다. 이동하면 이후 턴에서 회수되지 않을 수 있으며 AI는 안전성을 보장하지 못합니다.",
+  "STMemoryBooks_SlothHealthReviewPreviewInPlan": "이 변경을 선택하면 아래 승인 목록에서 전체 변경 전후를 확인할 수 있습니다."
 }

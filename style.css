@@ -1688,3 +1688,6 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 
 .popup.stmb-popup .stmb-health-review-choice{padding:7px 2px;align-items:center;gap:6px;text-align:start}
 .popup.stmb-popup .stmb-health-review [data-health-review-plan] .stmb-health-review-change{margin-top:8px}
+
+.popup.stmb-popup .stmb-health-review [data-health-core-ack]{flex:none}
+.popup.stmb-popup .stmb-health-review [data-health-review-plan]>details>p{margin:6px 0;line-height:1.4}

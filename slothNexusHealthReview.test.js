@@ -168,3 +168,48 @@ test('health analysis uses exactly one guarded request; opening the original hea
     assert.match(dialog,/onClosing:.*Boolean\(approved\)/);assert.match(dialog,/stageSlothHealthReviewBatch/);
     assert.doesNotMatch(dialog,/requestCompletion|saveWorldInfo|MutationObserver|setInterval|requestAnimationFrame/);
 });
+
+test('numbered paragraph references resolve original labels without model copying',()=>{
+    const book=mk(),labeled='[Past visit] '+para;
+    book.entries[1].content=rule+'\n\n'+labeled;
+    const finding={kind:'core_to_lt',reason:'The past visit is historical.',refs:[{uid:1,paragraphId:2},{uid:2,paragraphId:1}],
+        change:{type:'move',sourceUid:1,paragraphId:2,targetUid:2}};
+    const catalog=buildSlothHealthCatalog(book);
+    const prompt=buildSlothHealthReviewPrompt(catalog);
+    assert.match(prompt,/"paragraphId":2/);
+    assert.equal(prompt.split(labeled).length,2);
+    const review=validateSlothHealthReview(catalog,{findings:[finding]});
+    assert.equal(review.findings.length,1);
+    assert.equal(review.findings[0].change.paragraph,labeled);
+    assert.equal(review.findings[0].refs[0].quote,labeled);
+    const {staged}=stageSlothHealthReviewBatch(book,review.findings);
+    assert.equal(staged.entries[1].content,rule);
+    assert.equal(staged.entries[2].content,lt+'\n\n'+labeled);
+    assert.equal(validateSlothHealthReview(catalog,{findings:[{...finding,refs:[{uid:1,paragraphId:999}]}]}).rejected,1);
+    assert.equal(validateSlothHealthReview(catalog,{findings:[{...finding,change:{...finding.change,paragraphId:999}}]}).findings[0].change,null);
+    assert.equal(validateSlothHealthReview(catalog,{findings:[{...finding,refs:[{uid:1,paragraphId:2,quote:para}]}]}).rejected,1);
+});
+test('numbered exact duplicates remain eligible; Core operational rules stay advice only',()=>{
+    const book=mk(),secret='Only Mara knows the hidden code.';
+    book.entries[1].content=rule+'\n\n'+secret+'\n\n'+para;
+    book.entries[2].content=lt+'\n\n'+lt+'\n\nOther detail.';
+    const findings=[
+        {kind:'core_to_lt',reason:'Unsafe suggestion to move a secret.',refs:[{uid:1,paragraphId:2},{uid:2,paragraphId:1}],
+            change:{type:'move',sourceUid:1,paragraphId:2,targetUid:2}},
+        {kind:'duplicate',reason:'An exact duplicate.',refs:[{uid:2,paragraphId:1},{uid:2,paragraphId:2}],
+            change:{type:'dedupe',uid:2,paragraphId:2}},
+    ];
+    const report=validateSlothHealthReview(buildSlothHealthCatalog(book),{findings});
+    assert.equal(report.findings.length,2);
+    assert.equal(report.findings[0].change,null);
+    assert.equal(report.findings[0].changeUnavailable,true);
+    assert.throws(()=>stageSlothHealthReviewChange(book,report.findings[0]),/advice only/);
+    assert.equal(stageSlothHealthReviewChange(book,report.findings[1]).staged.entries[2].content,lt+'\n\nOther detail.');
+});
+test('health preview displays complete change text only in combined approval and requires Core acknowledgement',()=>{
+    const dialog=readFileSync(new URL('./slothNexusHealthReviewDialog.js',import.meta.url),'utf8');
+    assert.equal((dialog.match(/changes\.map\(renderChange\)/g)||[]).length,1);
+    assert.match(dialog,/data-health-core-ack/);
+    assert.match(dialog,/if\(!moves\)approved=prepared/);
+    assert.match(dialog,/approved=ack\.checked\?prepared:null/);
+});

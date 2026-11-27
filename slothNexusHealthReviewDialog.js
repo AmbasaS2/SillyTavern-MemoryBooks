@@ -21,13 +21,13 @@ function renderChange(change){
 }
 export async function showSlothHealthReviewFindings({review,catalog,original,moduleSettings,showPopup}){
     const rows=review.findings;
-    let approved=null;
+    let approved=null,prepared=null;
     const selected=new Set();
     const summary=tr('Summary','Eligible: {{count}} · Excluded: {{excluded}} · Findings: {{findings}} · Rejected: {{rejected}}')
         .replace('{{count}}',String(catalog.entries.length)).replace('{{excluded}}',String(catalog.excluded))
         .replace('{{findings}}',String(rows.length)).replace('{{rejected}}',String(review.rejected));
     const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-health-review"><h3>'+html(tr('Title','AI Nexus health review'))+'</h3>'+
-        '<p>'+html(summary)+'</p><small>'+html(tr('Help','These are review clues from stored memories, not proof of current truth. Review one finding and its citations. Only an exact duplicate removal or a verbatim Core-to-LT move can be applied. Everything else remains advice.'))+'</small>'+
+        '<p>'+html(summary)+'</p><small>'+html(tr('Help','These are review clues from stored memories, not proof of current truth. Only exact duplicate removal and eligible verbatim Core-to-LT moves may be selected. Review the combined before/after plan; a structurally valid move is not proof that it is safe.'))+'</small>'+
         (rows.length?'<select class="text_pole" data-health-review-select aria-label="'+html(tr('Select','Select a finding'))+'"><option value="">'+
             html(tr('Select','Select a finding'))+'</option>'+rows.map((row,i)=>'<option value="'+i+'">'+html((i+1)+'. '+kindLabel(row.kind)+' · '+row.reason.slice(0,100))+'</option>').join('')+
             '</select><div data-health-review-body></div><div data-health-review-plan></div>':'<p>'+html(tr('NoFindings','No grounded findings were returned. This does not establish that all memories are correct.'))+'</p>')+'</div>',
@@ -40,16 +40,23 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
     const body=popup.dlg.querySelector('[data-health-review-body]'),plan=popup.dlg.querySelector('[data-health-review-plan]'),button=popup.dlg.querySelector('.popup-button-ok');
     const enabled=()=>{button?.toggleAttribute('disabled',!approved);button?.setAttribute('aria-disabled',String(!approved));};
     const updatePlan=()=>{
-        approved=null;
+        approved=null;prepared=null;
         if(!selected.size){plan.replaceChildren();enabled();return true;}
         try{
             const findings=[...selected].sort((a,b)=>a-b).map(i=>rows[i]);
             const {changes}=stageSlothHealthReviewBatch(original,findings,{moduleSettings});
-            approved={findings,changes};
+            prepared={findings,changes};
+            const moves=findings.some(f=>f.change?.type==='move');
             plan.innerHTML='<details class="stmb-health-section" open><summary>'+
                 html(tr('Plan','Selected changes'))+' ('+selected.size+')</summary><p>'+
                 html(tr('Approval','Review the exact before and after text. Applying may change recall behavior and affect pending recovery in other chats sharing this book. Only the selected changes will be saved.'))+
-                '</p>'+changes.map(renderChange).join('')+'</details>';
+                '</p>'+changes.map(renderChange).join('')+
+                (moves?'<label class="checkbox_label stmb-health-review-choice"><input type="checkbox" data-health-core-ack><span>'+
+                    html(tr('CoreAck','I checked that the selected Core paragraphs need not be present every turn. Moving them may make them unavailable in future turns; the AI cannot establish that this is safe.'))+
+                    '</span></label>':'')+'</details>';
+            const ack=plan.querySelector('[data-health-core-ack]');
+            if(!moves)approved=prepared;
+            ack?.addEventListener('change',()=>{approved=ack.checked?prepared:null;enabled();});
             enabled();return true;
         }catch{
             plan.innerHTML='<p>'+html(tr('PlanConflict','The selected changes conflict. Remove a conflicting choice before applying.'))+'</p>';
@@ -62,12 +69,12 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
         let preview='',note='';
         if(finding.change){
             try{
-                const {changes}=stageSlothHealthReviewChange(original,finding,{moduleSettings});
-                preview=changes.map(renderChange).join('')+
+                stageSlothHealthReviewChange(original,finding,{moduleSettings});
+                preview='<p>'+html(tr('PreviewInPlan','Select this change to see its complete before/after text in the combined approval plan below.'))+'</p>'+
                     '<label class="checkbox_label stmb-health-review-choice"><input type="checkbox" data-health-review-include '+(selected.has(i)?'checked':'')+'><span>'+
                     html(tr('Include','Include this change in the approval plan'))+'</span></label>';
-            }catch{note=tr('Unavailable','This change is not eligible under the current Nexus or recall settings. Review manually.');}
-        }else note=finding.changeUnavailable?tr('Unavailable','This change is not eligible under the current Nexus or recall settings. Review manually.'):
+            }catch{note=tr('Unavailable','This change cannot be staged under the current structural or Core retention rules. Review manually.');}
+        }else note=finding.changeUnavailable?tr('Unavailable','This change cannot be staged under the current structural or Core retention rules. Review manually.'):
             tr('Advice','Review only. No automatic change is available for this finding.');
         body.innerHTML='<h4>'+html(kindLabel(finding.kind))+'</h4><p>'+html(finding.reason)+'</p>'+
             finding.refs.map(ref=>'<div class="stmb-health-section"><small>'+html(catalog.entries.find(e=>e.uid===ref.uid)?.title)+' · UID '+html(ref.uid)+'</small><pre>'+html(ref.quote)+'</pre></div>').join('')+
