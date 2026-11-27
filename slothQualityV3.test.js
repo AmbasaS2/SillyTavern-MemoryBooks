@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {getActiveSlothSummaryPreset} from './slothSummaryPrompts.js';
 
 const source=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
@@ -36,4 +37,34 @@ test('fixed synthetic reference facts and closure citations have exact source ev
             assert.ok(fact.evidenceIds.every(id=>byId.has(id)));
         }
     }
+});
+
+test('actual single collection request changes causal merge pressure and keeps source, custom preset and output contract',async()=>{
+    const start=source.indexOf('const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze(');
+    const end=source.indexOf('const DEEPSEEK_FLASH_TAIL_GUIDANCE',start);
+    assert.ok(start>=0&&end>start);
+    const captured=[];
+    const stop=new Error('stop before external generation');
+    const compose=vm.runInNewContext(source.slice(start,end)+'\n'+
+        single.replace('export async','async')+'\ncomposeSingleSlothCollection',{
+        getActiveSlothSummaryPreset,SCENE_KEYWORD_GUIDANCE:'Keywords',
+        compact:JSON.stringify,slothNexusGuidance:()=> 'Nexus reference',
+        requester:()=>async prompt=>{captured.push(prompt);throw stop;},
+    });
+    const preset={id:'custom',name:'Custom',text:'My exact style instruction.\nKeep the voice.'};
+    const settings={moduleSettings:{slothSummaryPresets:[preset],slothSummaryPresetId:'custom'}};
+    const item=benchmark.cases[0];
+    await assert.rejects(compose({nexus:{entries:{}},memory:{entries:{}},messages:item.messages,
+        settings,characterContext:'Unique reference card.'}),e=>e===stop);
+    assert.equal(captured.length,1);
+    const prompt=captured[0];
+    assert.match(prompt,/Identify every distinct consequential outcome/);
+    assert.match(prompt,/Keep the setup, reaction, correction, answer and repair of ONE driving issue together/);
+    assert.doesNotMatch(prompt,/Outline the fewest complete memories|If either explanation starts with/);
+    assert.ok(prompt.includes(preset.text));
+    assert.ok(prompt.includes(JSON.stringify(item.messages)));
+    assert.equal(prompt.split('Unique reference card.').length,2);
+    assert.match(prompt,/Return only one complete JSON object/);
+    assert.match(prompt,/Also cite evidence for every LT replace_exact/);
+    for(const fact of item.facts)assert.ok(!prompt.includes(fact.mustPreserve),'evaluation answer must not be included in request');
 });

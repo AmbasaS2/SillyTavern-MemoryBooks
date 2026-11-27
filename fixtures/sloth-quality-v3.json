@@ -207,6 +207,7 @@
           "id": "disclosure-question",
           "complete": false,
           "requiredIds": [
+            5,
             6
           ]
         }
