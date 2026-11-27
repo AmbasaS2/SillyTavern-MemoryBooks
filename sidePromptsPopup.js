@@ -830,7 +830,7 @@ async function openEditSet(parentPopup, key = null) {
         window.dispatchEvent(new CustomEvent('stmb-sideprompts-updated'));
         await refreshSetControls(parentPopup);
     } catch (err) {
-        console.error('STMemoryBooks: Error saving side prompt set:', err);
+        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error saving side prompt set:', err);
         toastr.error(translate('Failed to save side prompt set.', 'STMemoryBooks_FailedToSaveSidePromptSet'), translate('STMemoryBooks', 'index.toast.title'));
     }
 }
@@ -1234,7 +1234,7 @@ async function openEditTemplate(parentPopup, key, slothNexusName) {
             await refreshList(parentPopup, tpl.key);
         }
     } catch (err) {
-        console.error('STMemoryBooks: Error editing side prompt:', err);
+        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error editing side prompt:', err);
         toastr.error(translate('Failed to edit SidePrompt', 'STMemoryBooks_FailedToEditSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
     }
 }
@@ -1566,7 +1566,7 @@ async function openNewTemplate(parentPopup, slothNexusName) {
             toastr.success(translate('SidePrompt created', 'STMemoryBooks_SidePromptCreated'), translate('STMemoryBooks', 'index.toast.title'));
             await refreshList(parentPopup, key);
         } catch (err) {
-            console.error('STMemoryBooks: Error creating side prompt:', err);
+            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error creating side prompt:', err);
             toastr.error(translate('Failed to create SidePrompt', 'STMemoryBooks_FailedToCreateSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
         }
     }
@@ -1587,7 +1587,7 @@ async function exportTemplates() {
         URL.revokeObjectURL(url);
         toastr.success(translate('Side prompts exported successfully', 'STMemoryBooks_SidePromptsExported'), translate('STMemoryBooks', 'index.toast.title'));
     } catch (err) {
-        console.error('STMemoryBooks: Error exporting side prompts:', err);
+        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error exporting side prompts:', err);
         toastr.error(translate('Failed to export side prompts', 'STMemoryBooks_FailedToExportSidePrompts'), translate('STMemoryBooks', 'index.toast.title'));
     }
 }
@@ -1621,7 +1621,7 @@ async function importTemplates(event, parentPopup) {
         await refreshList(parentPopup);
         await refreshSetControls(parentPopup);
     } catch (err) {
-        console.error('STMemoryBooks: Error importing side prompts:', err);
+        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error importing side prompts:', err);
         toastr.error(tr('STMemoryBooks_FailedToImportSidePrompts', 'Failed to import: {{message}}', { message: err?.message || 'Unknown error' }), translate('STMemoryBooks', 'index.toast.title'));
     }
 }
@@ -1745,7 +1745,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                         window.dispatchEvent(new CustomEvent('stmb-sideprompts-updated'));
                         await refreshList(popup);
                     } catch (err) {
-                        console.error('STMemoryBooks: Error recreating built-in side prompts:', err);
+                        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error recreating built-in side prompts:', err);
                         toastr.error(translate('Failed to recreate built-in side prompts', 'STMemoryBooks_SidePrompts_RecreateFailed'), translate('STMemoryBooks', 'index.toast.title'));
                     }
                 }
@@ -1776,7 +1776,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                             window.dispatchEvent(new CustomEvent('stmb-sideprompts-updated'));
                             await refreshSetControls(popup);
                         } catch (err) {
-                            console.error('STMemoryBooks: Error duplicating side prompt set:', err);
+                            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error duplicating side prompt set:', err);
                             toastr.error(translate('Failed to duplicate side prompt set.', 'STMemoryBooks_FailedToDuplicateSidePromptSet'), translate('STMemoryBooks', 'index.toast.title'));
                         }
                     } else if (setActionBtn.classList.contains('stmb-sp-set-action-delete')) {
@@ -1802,7 +1802,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                                 window.dispatchEvent(new CustomEvent('stmb-sideprompts-updated'));
                                 await refreshSetControls(popup);
                             } catch (err) {
-                                console.error('STMemoryBooks: Error deleting side prompt set:', err);
+                                console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error deleting side prompt set:', err);
                                 toastr.error(translate('Failed to delete side prompt set.', 'STMemoryBooks_FailedToDeleteSidePromptSet'), translate('STMemoryBooks', 'index.toast.title'));
                             }
                         }
@@ -1841,7 +1841,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                         } catch (err) {
                             actionBtn.disabled = false;
                             delete actionBtn.dataset.pending;
-                            console.error('STMemoryBooks: Error toggling side prompt:', err);
+                            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error toggling side prompt:', err);
                             toastr.error(translate('Failed to change Side Prompt enabled state.', 'STMemoryBooks_FailedToToggleSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
                         }
                     } else if (actionBtn.classList.contains('stmb-sp-action-edit')) {
@@ -1861,7 +1861,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                             window.dispatchEvent(new CustomEvent('stmb-sideprompts-updated'));
                             await refreshList(popup, tplKey);
                         } catch (err) {
-                            console.error('STMemoryBooks: Error resetting Memory Assistance:', err);
+                            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error resetting Memory Assistance:', err);
                             toastr.error(translate('Failed to reset Memory Assistance', 'STMemoryBooks_SidePrompts_RecreateFailed'), translate('STMemoryBooks', 'index.toast.title'));
                         }
                     } else if (actionBtn.classList.contains('stmb-sp-action-duplicate')) {
@@ -1870,7 +1870,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                             toastr.success(translate('SidePrompt duplicated', 'STMemoryBooks_SidePromptDuplicated'), translate('STMemoryBooks', 'index.toast.title'));
                             await refreshList(popup, newKey);
                         } catch (err) {
-                            console.error('STMemoryBooks: Error duplicating side prompt:', err);
+                            console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error duplicating side prompt:', err);
                             toastr.error(translate('Failed to duplicate SidePrompt', 'STMemoryBooks_FailedToDuplicateSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
                         }
                     } else if (actionBtn.classList.contains('stmb-sp-action-delete')) {
@@ -1887,7 +1887,7 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
                                 toastr.success(translate('SidePrompt deleted', 'STMemoryBooks_SidePromptDeleted'), translate('STMemoryBooks', 'index.toast.title'));
                                 await refreshList(popup);
                             } catch (err) {
-                                console.error('STMemoryBooks: Error deleting side prompt:', err);
+                                console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error deleting side prompt:', err);
                                 toastr.error(translate('Failed to delete SidePrompt', 'STMemoryBooks_FailedToDeleteSidePrompt'), translate('STMemoryBooks', 'index.toast.title'));
                             }
                         }
@@ -1904,7 +1904,9 @@ export async function showSidePromptsPopup({ slothNexusName = null } = {}) {
         await popup.show();
         try { applyLocale(popup); } catch (e) { /* no-op */ }
     } catch (error) {
-        console.error('STMemoryBooks: Error showing Side Prompts:', error);
+        console.error('🦥 STMemoryBooks', 'STMemoryBooks: Error showing Side Prompts:', error);
         toastr.error(translate('Failed to open Side Prompts', 'STMemoryBooks_FailedToOpenSidePrompts'), translate('STMemoryBooks', 'index.toast.title'));
     }
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

@@ -145,13 +145,13 @@ export function getCurrentApiInfo() {
 
         // Validate completion source
         if (!SUPPORTED_COMPLETION_SOURCES.includes(completionSource)) {
-            console.warn(`${MODULE_NAME}: Unsupported completion source: ${completionSource}, falling back to openai`);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Unsupported completion source: ${completionSource}, falling back to openai`);
             completionSource = 'openai';
         }
 
         return { api, model, completionSource };
     } catch (e) {
-        console.warn(`${MODULE_NAME}: Error getting API info:`, e);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Error getting API info:`, e);
         return {
             api: $(SELECTORS.mainApi).val() || 'unknown',
             model: 'unknown',
@@ -269,7 +269,7 @@ export function getCurrentMemoryBooksContext() {
                     chatName = chatId;
                 }
             } catch (error) {
-                console.warn(`${MODULE_NAME}: Could not get context, trying fallback methods`);
+                console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Could not get context, trying fallback methods`);
                 if (typeof window.getCurrentChatId === 'function') {
                     chatId = window.getCurrentChatId();
                     chatName = chatId;
@@ -311,7 +311,7 @@ export function getCurrentMemoryBooksContext() {
             };
             
         } catch (error) {
-            console.warn(`${MODULE_NAME}: Could not get current model/temperature settings:`, error);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Could not get current model/temperature settings:`, error);
             modelSettings = null;
         }
 
@@ -340,7 +340,7 @@ export function getCurrentMemoryBooksContext() {
         return result;
 
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Error getting context:`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Error getting context:`, error);
         return {
             characterName: null,
             chatId: null,
@@ -575,7 +575,7 @@ export function getCurrentModelSettings(profile) {
             temperature: temp,
         };
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Error getting current model settings:`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Error getting current model settings:`, error);
         throw error;
     }
 }
@@ -600,7 +600,7 @@ export function getUIModelSettings() {
             temperature: currentTemp,
         };
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Error getting UI model settings:`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Error getting UI model settings:`, error);
         return {
             model: '',
             temperature: 0.7
@@ -729,7 +729,7 @@ export function resolveGroupParticipantFilterName(message, resolver, messageId =
     const avatarMatches = resolver.avatarsBySpeaker.get(speakerName);
     if (!avatarMatches || avatarMatches.size !== 1) {
         if (avatarMatches?.size > 1) {
-            console.warn(
+            console.warn('🦥 STMemoryBooks', 
                 `${logPrefix}: Ambiguous group participant name "${speakerName}" at message ${messageId ?? 'unknown'}; skipping character filter participant because original_avatar is unavailable or does not match a group member.`,
                 { speakerName, avatarMatches: Array.from(avatarMatches) },
             );
@@ -1203,18 +1203,18 @@ export async function getEffectivePrompt(profile) {
  */
 export function validateProfile(profile) {
     if (!profile || typeof profile !== 'object') {
-        console.warn(`${MODULE_NAME}: Profile validation failed - not an object`);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Profile validation failed - not an object`);
         return false;
     }
     
     if (!profile.name || typeof profile.name !== 'string') {
-        console.warn(`${MODULE_NAME}: Profile validation failed - invalid name`);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Profile validation failed - invalid name`);
         return false;
     }
     
     // Connection is optional but if present should be an object
     if (profile.connection && typeof profile.connection !== 'object') {
-        console.warn(`${MODULE_NAME}: Profile validation failed - invalid connection`);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Profile validation failed - invalid connection`);
         return false;
     }
     
@@ -1633,3 +1633,5 @@ export function stmbStopAllInFlight(reason = 'stmb-stop') {
     }
     return { stoppedCount: entries.length, epoch: stmbStopEpoch };
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

@@ -199,7 +199,7 @@ function schedulePrompt() {
                 const result = await recovery;
                 if (result.status === 'applied') hooks?.resolved?.(live.chatKey);
             } catch (error) {
-                console.warn('STMB: Pending progress recovery failed', error);
+                console.warn('🦥 STMemoryBooks', 'STMB: Pending progress recovery failed', error);
             } finally { recovery = null; }
         }
         if (visit !== attemptedVisit || current()?.chatKey !== live.chatKey) { schedulePrompt(); return; }
@@ -396,3 +396,5 @@ export function initializePendingProgress(options) {
     });
     progressChatLoaded();
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

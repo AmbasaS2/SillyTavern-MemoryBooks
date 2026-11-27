@@ -32,6 +32,6 @@ test('all outgoing call sites opt into strict mode and rethrow before fallback',
     for (const file of ['stmemory.js', 'sidePrompts.js', 'clipReview.js', 'clipManager.js']) {
         const text = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
         assert.match(text, /applySelectedRegex\((?:finalPrompt|prompt), selectedKeys, \{ throwOnError: true \}\)/);
-        assert.match(text, /console.warn\('STMemoryBooks: [^'\n]*outgoing regex application failed', e\);\s*throw e;/);
+        assert.match(text, /console.warn\('🦥 STMemoryBooks', 'STMemoryBooks: [^'\n]*outgoing regex application failed', e\);\s*throw e;/);
     }
 });

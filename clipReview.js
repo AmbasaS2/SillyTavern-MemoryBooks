@@ -158,7 +158,7 @@ async function requestMemoryAssistanceCompletion(template, profile, prompt, temp
             prompt = applySelectedRegex(prompt, selectedKeys, { throwOnError: true });
         }
     } catch (e) {
-        console.warn('STMemoryBooks: Memory Assistance outgoing regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Memory Assistance outgoing regex application failed', e);
         throw e;
     }
     const { text } = await requestCompletion({
@@ -182,7 +182,7 @@ async function requestMemoryAssistanceCompletion(template, profile, prompt, temp
             return applySelectedRegex(text || '', selectedKeys);
         }
     } catch (e) {
-        console.warn('STMemoryBooks: Memory Assistance incoming regex application failed', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Memory Assistance incoming regex application failed', e);
     }
     return text;
 }
@@ -342,7 +342,7 @@ export async function runClipReviewAfterMemory(compiledScene, profile = null, op
                 if (options.signal?.aborted || error?.name === 'AbortError') throw error;
                 suggestionPassFailed = true;
                 errors.push(String(error?.message || error));
-                console.error(`${MODULE_NAME}: topic suggestion pass failed for "${lorebookName}":`, error);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: topic suggestion pass failed for "${lorebookName}":`, error);
                 toastr.error(error?.message || tr('STMemoryBooks_ClipSuggestions_Failed', 'Memory Assistance topic discovery failed.'), 'STMemoryBooks');
             }
         }
@@ -369,7 +369,7 @@ export async function runClipReviewAfterMemory(compiledScene, profile = null, op
                 if (options.signal?.aborted || error?.name === 'AbortError') throw error;
                 failedBatches++;
                 errors.push(String(error?.message || error));
-                console.error(`${MODULE_NAME}: batch failed for "${lorebookName}":`, error);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: batch failed for "${lorebookName}":`, error);
                 toastr.error(error?.message || tr('STMemoryBooks_ClipReview_BatchFailed', 'A Memory Assistance batch failed.'), 'STMemoryBooks');
             }
         }
@@ -385,7 +385,7 @@ export async function runClipReviewAfterMemory(compiledScene, profile = null, op
             suggestionPassRequested: shouldSuggestTopics,
             suggestionPassSucceeded,
         })) {
-            console.error(`${MODULE_NAME}: every batch failed for "${lorebookName}"; preserving the previous report.`);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: every batch failed for "${lorebookName}"; preserving the previous report.`);
             results.push({
                 lorebookName,
                 status: 'failed',
@@ -411,7 +411,7 @@ export async function runClipReviewAfterMemory(compiledScene, profile = null, op
                     if (await applyClipReviewSuggestion(lorebookName, candidate, { skipLongEntryWarning: true })) appliedCount++;
                 } catch (error) {
                     if (options.signal?.aborted || error?.name === 'AbortError') throw error;
-                    console.error(`${MODULE_NAME}: automatic update failed for "${candidate.title}" in "${lorebookName}":`, error);
+                    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: automatic update failed for "${candidate.title}" in "${lorebookName}":`, error);
                     failedCount++;
                     errors.push(String(error?.message || error));
                     pendingCandidates.push({ ...candidate, applyError: error?.message || 'Automatic update failed.' });
@@ -820,3 +820,5 @@ export async function showClipReviewSuggestionsPopup(options = {}) {
     await load(defaultName);
     await showPromise;
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

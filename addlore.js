@@ -119,7 +119,7 @@ function parseSceneRange(sceneRange) {
  */
 async function executeHideCommand(hideCommand, context = '') {
     const contextStr = context ? ` (${context})` : '';
-    console.log(i18n('addlore.log.executingHideCommand', `${MODULE_NAME}: Executing hide command${contextStr}: {{hideCommand}}`, { hideCommand }));
+    console.log('🦥 STMemoryBooks', i18n('addlore.log.executingHideCommand', `${MODULE_NAME}: Executing hide command${contextStr}: {{hideCommand}}`, { hideCommand }));
     await executeSlashCommands(hideCommand);
 }
 
@@ -133,7 +133,7 @@ async function safeExecuteHideCommand(hideCommand, context = '') {
     try {
         await executeHideCommand(hideCommand, context);
     } catch (e) {
-        console.warn(i18n('addlore.warn.autohideFailed', `${MODULE_NAME}: Auto-hide failed:`), e);
+        console.warn('🦥 STMemoryBooks', i18n('addlore.warn.autohideFailed', `${MODULE_NAME}: Auto-hide failed:`), e);
     }
 }
 
@@ -675,7 +675,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
             try {
                 await Promise.resolve(reloadEditor(lorebookValidation.name));
             } catch (e) {
-                console.warn(i18n('addlore.warn.refreshEditorFailed', `${MODULE_NAME}: reloadEditor failed:`), e);
+                console.warn('🦥 STMemoryBooks', i18n('addlore.warn.refreshEditorFailed', `${MODULE_NAME}: reloadEditor failed:`), e);
             }
         }
         
@@ -684,7 +684,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
 
         if (!rotateNexusMemory && options.autoHide !== false && autoHidePlan.mode !== 'none') {
             if (autoHidePlan.invalidRange) {
-                console.warn(i18n('addlore.warn.autohideSkippedInvalidRange', `${MODULE_NAME}: Auto-hide skipped - invalid scene range: "{{range}}"`, { range: autoHidePlan.rawRange }));
+                console.warn('🦥 STMemoryBooks', i18n('addlore.warn.autohideSkippedInvalidRange', `${MODULE_NAME}: Auto-hide skipped - invalid scene range: "{{range}}"`, { range: autoHidePlan.rawRange }));
                 toastr.warning(
                     i18n('addlore.toast.autohideInvalidRange', 'Auto-hide skipped: invalid scene range metadata'),
                     i18n('addlore.toast.title', 'STMemoryBooks')
@@ -713,7 +713,7 @@ export async function addMemoryToLorebook(memoryResult, lorebookValidation, opti
         };
         
     } catch (error) {
-        console.error(i18n('addlore.log.addFailed', `${MODULE_NAME}: Failed to add memory to lorebook:`), error);
+        console.error('🦥 STMemoryBooks', i18n('addlore.log.addFailed', `${MODULE_NAME}: Failed to add memory to lorebook:`), error);
         
         if (extension_settings.STMemoryBooks?.moduleSettings?.showNotifications !== false) {
             toastr.error(
@@ -1280,7 +1280,7 @@ export async function getLorebookStats() {
         };
         
     } catch (error) {
-        console.error(i18n('addlore.log.getStatsError', `${MODULE_NAME}: Error getting lorebook stats:`), error);
+        console.error('🦥 STMemoryBooks', i18n('addlore.log.getStatsError', `${MODULE_NAME}: Error getting lorebook stats:`), error);
         return { valid: false, error: error.message };
     }
 }
@@ -1291,33 +1291,33 @@ export async function getLorebookStats() {
  */
 function updateHighestMemoryProcessed(memoryResult) {
     try {
-        console.log(i18n('addlore.log.updateHighestCalled', `${MODULE_NAME}: updateHighestMemoryProcessed called with:`), memoryResult);
+        console.log('🦥 STMemoryBooks', i18n('addlore.log.updateHighestCalled', `${MODULE_NAME}: updateHighestMemoryProcessed called with:`), memoryResult);
 
         // Extract the end message number from the scene range
         const sceneRange = memoryResult.metadata?.sceneRange;
-        console.log(i18n('addlore.log.sceneRangeExtracted', `${MODULE_NAME}: sceneRange extracted:`), sceneRange);
+        console.log('🦥 STMemoryBooks', i18n('addlore.log.sceneRangeExtracted', `${MODULE_NAME}: sceneRange extracted:`), sceneRange);
 
         if (!sceneRange) {
-            console.warn(i18n('addlore.warn.noSceneRange', `${MODULE_NAME}: No scene range found in memory result, cannot update highest processed`));
+            console.warn('🦥 STMemoryBooks', i18n('addlore.warn.noSceneRange', `${MODULE_NAME}: No scene range found in memory result, cannot update highest processed`));
             return;
         }
 
         const rangeParts = sceneRange.split('-');
         if (rangeParts.length !== 2) {
-            console.warn(i18n('addlore.warn.invalidSceneRangeFormat', `${MODULE_NAME}: Invalid scene range format: {{range}}`, { range: sceneRange }));
+            console.warn('🦥 STMemoryBooks', i18n('addlore.warn.invalidSceneRangeFormat', `${MODULE_NAME}: Invalid scene range format: {{range}}`, { range: sceneRange }));
             return;
         }
 
         const endMessage = parseInt(rangeParts[1], 10);
         if (isNaN(endMessage)) {
-            console.warn(i18n('addlore.warn.invalidEndMessage', `${MODULE_NAME}: Invalid end message number: {{end}}`, { end: rangeParts[1] }));
+            console.warn('🦥 STMemoryBooks', i18n('addlore.warn.invalidEndMessage', `${MODULE_NAME}: Invalid end message number: {{end}}`, { end: rangeParts[1] }));
             return;
         }
 
         // Get current scene markers (which handles both single and group chats)
         const sceneMarkers = getSceneMarkers();
         if (!sceneMarkers) {
-            console.warn(i18n('addlore.warn.noSceneMarkers', `${MODULE_NAME}: Could not get scene markers to update highest processed`));
+            console.warn('🦥 STMemoryBooks', i18n('addlore.warn.noSceneMarkers', `${MODULE_NAME}: Could not get scene markers to update highest processed`));
             return;
         }
 
@@ -1328,10 +1328,10 @@ function updateHighestMemoryProcessed(memoryResult) {
         // Save the metadata (works for both group chats and single-character chats)
         saveMetadataForCurrentContext();
 
-        console.log(i18n('addlore.log.setHighest', `${MODULE_NAME}: Set highest memory processed to message {{endMessage}}`, { endMessage }));
+        console.log('🦥 STMemoryBooks', i18n('addlore.log.setHighest', `${MODULE_NAME}: Set highest memory processed to message {{endMessage}}`, { endMessage }));
 
     } catch (error) {
-        console.error(i18n('addlore.log.updateHighestError', `${MODULE_NAME}: Error updating highest memory processed:`), error);
+        console.error('🦥 STMemoryBooks', i18n('addlore.log.updateHighestError', `${MODULE_NAME}: Error updating highest memory processed:`), error);
     }
 }
 
@@ -1597,3 +1597,5 @@ export async function upsertLorebookEntryByTitle(lorebookName, lorebookData, tit
 
     return { uid: entry.uid, created };
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

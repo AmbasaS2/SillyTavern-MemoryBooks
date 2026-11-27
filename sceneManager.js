@@ -561,7 +561,7 @@ export async function getSceneData({ includeHiddenMessages = false, warnOnHidden
             estimatedTokens
         };
     } catch (e) {
-        console.warn('STMemoryBooks-SceneManager: getSceneData failed:', e);
+        console.warn('🦥 STMemoryBooks', 'STMemoryBooks-SceneManager: getSceneData failed:', e);
         try {
             const msg = e?.message || '';
             if (warnOnHiddenMessages && msg.includes('No visible messages')) {
@@ -629,3 +629,5 @@ export function updateSceneStateCache() {
 export function getCurrentSceneState() {
     return { ...currentSceneState };
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

@@ -49,7 +49,7 @@ function safePlayMessageSound() {
     // Play notification sound when popup appears
     playMessageSound();
   } catch (error) {
-    console.error("playMessageSound failed", error);
+    console.error('🦥 STMemoryBooks', "playMessageSound failed", error);
   }
 }
 
@@ -235,13 +235,13 @@ async function handleAdvancedConfirmation(popup, settings) {
         await saveNewProfileFromAdvancedSettings(popupElement, settings, newProfileName);
         toastr.success(tr('STMemoryBooks_Toast_ProfileSaved', 'Profile "{{name}}" saved successfully', { name: newProfileName }), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
       } catch (error) {
-        console.error(translate(`${MODULE_NAME}: Failed to save profile:`, 'confirmationPopup.log.saveFailed'), error);
+        console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Failed to save profile:`, 'confirmationPopup.log.saveFailed'), error);
         toastr.error(tr('STMemoryBooks_Toast_ProfileSaveFailed', 'Failed to save profile: {{message}}', { message: error.message }), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
         // Continues with memory creation even if profile save fails
       }
     } else {
       // No profile name provided, show error and don't proceed
-      console.error(translate(`${MODULE_NAME}: Profile creation cancelled - no name provided`, 'confirmationPopup.log.saveCancelledNoName'));
+      console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Profile creation cancelled - no name provided`, 'confirmationPopup.log.saveCancelledNoName'));
       toastr.error(translate('Please enter a profile name or use "Create Memory" to proceed without saving', 'STMemoryBooks_Toast_ProfileNameOrProceed'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
       return { confirmed: false };
     }
@@ -288,7 +288,7 @@ async function handleAdvancedConfirmation(popup, settings) {
 async function handleSaveNewProfile(popup, settings) {
   const newProfileName = popup.dlg.querySelector('#stmb-new-profile-name-advanced').value.trim();
   if (!newProfileName) {
-    console.error(translate(`${MODULE_NAME}: Profile name validation failed - empty name`, 'confirmationPopup.log.validationFailedEmptyName'));
+    console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Profile name validation failed - empty name`, 'confirmationPopup.log.validationFailedEmptyName'));
     toastr.error(translate('Please enter a profile name', 'STMemoryBooks_Toast_ProfileNameRequired'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
     return { confirmed: false };
   }
@@ -618,17 +618,17 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
   try {
     // Input validation
     if (!memoryResult || typeof memoryResult !== 'object') {
-      console.error(translate(`${MODULE_NAME}: Invalid memoryResult passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidMemoryResult'));
+      console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Invalid memoryResult passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidMemoryResult'));
       return { action: 'cancel' };
     }
 
     if (!sceneData || typeof sceneData !== 'object') {
-      console.error(translate(`${MODULE_NAME}: Invalid sceneData passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidSceneData'));
+      console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Invalid sceneData passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidSceneData'));
       return { action: 'cancel' };
     }
 
     if (!profileSettings || typeof profileSettings !== 'object') {
-      console.error(translate(`${MODULE_NAME}: Invalid profileSettings passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidProfileSettings'));
+      console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Invalid profileSettings passed to showMemoryPreviewPopup`, 'confirmationPopup.log.invalidProfileSettings'));
       return { action: 'cancel' };
     }
 
@@ -636,7 +636,7 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
     if (typeof sceneData.sceneStart !== 'number' ||
       typeof sceneData.sceneEnd !== 'number' ||
       typeof sceneData.messageCount !== 'number') {
-      console.error(translate(`${MODULE_NAME}: sceneData missing required numeric properties`, 'confirmationPopup.log.sceneDataMissingProps'));
+      console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: sceneData missing required numeric properties`, 'confirmationPopup.log.sceneDataMissingProps'));
       return { action: 'cancel' };
     }
 
@@ -697,7 +697,7 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
 
         // Check if popup element is still available
         if (!popupElement) {
-          console.error(translate(`${MODULE_NAME}: Popup element not available for reading edited values`, 'confirmationPopup.log.popupNotAvailable'));
+          console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Popup element not available for reading edited values`, 'confirmationPopup.log.popupNotAvailable'));
           toastr.error(translate('Unable to read edited values', 'STMemoryBooks_Toast_UnableToReadEditedValues'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
           return { action: 'cancel' };
         }
@@ -708,7 +708,7 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
         const keywordsElement = popupElement.querySelector('#stmb-preview-keywords');
 
         if (!titleElement || !contentElement || !keywordsElement) {
-          console.error(translate(`${MODULE_NAME}: Required input elements not found in popup`, 'confirmationPopup.log.inputsNotFound'));
+          console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Required input elements not found in popup`, 'confirmationPopup.log.inputsNotFound'));
           toastr.error(translate('Unable to find input fields', 'STMemoryBooks_Toast_UnableToFindInputFields'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
           return { action: 'cancel' };
         }
@@ -724,13 +724,13 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
 
         // Validate required fields
         if (!editedTitle || editedTitle.length === 0) {
-          console.error(translate(`${MODULE_NAME}: Memory title validation failed - empty title`, 'confirmationPopup.log.titleValidationFailed'));
+          console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Memory title validation failed - empty title`, 'confirmationPopup.log.titleValidationFailed'));
           toastr.error(translate('Memory title cannot be empty', 'STMemoryBooks_Toast_TitleCannotBeEmpty'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
           return { action: 'cancel' };
         }
 
         if (!editedContent || editedContent.length === 0) {
-          console.error(translate(`${MODULE_NAME}: Memory content validation failed - empty content`, 'confirmationPopup.log.contentValidationFailed'));
+          console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Memory content validation failed - empty content`, 'confirmationPopup.log.contentValidationFailed'));
           toastr.error(translate('Memory content cannot be empty', 'STMemoryBooks_Toast_ContentCannotBeEmpty'), translate('STMemoryBooks', 'confirmationPopup.toast.title'));
           return { action: 'cancel' };
         }
@@ -771,7 +771,7 @@ export async function showMemoryPreviewPopup(memoryResult, sceneData, profileSet
     }
 
   } catch (error) {
-    console.error(translate(`${MODULE_NAME}: Error showing memory preview popup:`, 'confirmationPopup.log.previewError'), error);
+    console.error('🦥 STMemoryBooks', translate(`${MODULE_NAME}: Error showing memory preview popup:`, 'confirmationPopup.log.previewError'), error);
     return {
       action: 'cancel'
     };
@@ -969,7 +969,7 @@ export async function showRegenerationReviewPopup({
       keywords: parsePreviewKeywords(keywordsText),
     };
   } catch (error) {
-    console.error(`${MODULE_NAME}: Error showing regeneration review popup:`, error);
+    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error showing regeneration review popup:`, error);
     return { action: 'cancel' };
   } finally {
     if (popup) activeMemoryPreviewPopups.delete(popup);
@@ -1128,7 +1128,7 @@ export async function showConsolidationPreviewPopup({
       rejectedCandidates,
     };
   } catch (error) {
-    console.error(`${MODULE_NAME}: Error showing consolidation preview popup:`, error);
+    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error showing consolidation preview popup:`, error);
     return { action: 'cancel' };
   } finally {
     if (popup) {
@@ -1136,3 +1136,5 @@ export async function showConsolidationPreviewPopup({
     }
   }
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

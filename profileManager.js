@@ -57,7 +57,7 @@ function getChatCompletionPresetOptions(selectedPreset = '') {
             });
         }
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Failed to load Chat Completion presets`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to load Chat Completion presets`, error);
     }
 
     if (selected && !options.some(option => option.value === selected)) {
@@ -375,7 +375,7 @@ export async function editProfile(settings, profileIndex, refreshCallback) {
     const profile = settings.profiles[profileIndex];
 
     if (!profile) {
-        console.error(`${MODULE_NAME}: No profile found at index ${profileIndex}`);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: No profile found at index ${profileIndex}`);
         return;
     }
 
@@ -482,7 +482,7 @@ export async function editProfile(settings, profileIndex, refreshCallback) {
             toastr.success(translate('Profile updated successfully', 'STMemoryBooks_ProfileUpdatedSuccess'), 'STMemoryBooks');
         }
     } catch (error) {
-        console.error(`${MODULE_NAME}: Error editing profile:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error editing profile:`, error);
         toastr.error(translate('Failed to edit profile', 'STMemoryBooks_FailedToEditProfile'), 'STMemoryBooks');
     }
 }
@@ -590,7 +590,7 @@ export async function newProfile(settings, refreshCallback) {
             toastr.success(translate('Profile created successfully', 'STMemoryBooks_ProfileCreatedSuccess'), 'STMemoryBooks');
         }
     } catch (error) {
-        console.error(`${MODULE_NAME}: Error creating profile:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error creating profile:`, error);
         toastr.error(translate('Failed to create profile', 'STMemoryBooks_FailedToCreateProfile'), 'STMemoryBooks');
     }
 }
@@ -639,7 +639,7 @@ export async function deleteProfile(settings, profileIndex, refreshCallback) {
             toastr.success(translate('Profile deleted successfully', 'STMemoryBooks_ProfileDeletedSuccess'), 'STMemoryBooks');
         }
     } catch (error) {
-        console.error(`${MODULE_NAME}: Error deleting profile:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error deleting profile:`, error);
         toastr.error(translate('Failed to delete profile', 'STMemoryBooks_FailedToDeleteProfile'), 'STMemoryBooks');
     }
 }
@@ -672,7 +672,7 @@ export function exportProfiles(settings) {
 
         toastr.success(translate('Profiles exported successfully', 'STMemoryBooks_ProfilesExportedSuccess'), 'STMemoryBooks');
     } catch (error) {
-        console.error(`${MODULE_NAME}: Error exporting profiles:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error exporting profiles:`, error);
         toastr.error(translate('Failed to export profiles', 'STMemoryBooks_FailedToExportProfiles'), 'STMemoryBooks');
     }
 }
@@ -749,13 +749,13 @@ export function importProfiles(event, settings, refreshCallback) {
             }
 
         } catch (error) {
-            console.error(`${MODULE_NAME}: Error importing profiles:`, error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error importing profiles:`, error);
             toastr.error(__st_t_tag`Failed to import profiles: ${error.message}`, 'STMemoryBooks');
         }
     };
 
     reader.onerror = function() {
-        console.error(`${MODULE_NAME}: Error reading import file`);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error reading import file`);
         toastr.error(translate('Failed to read import file', 'STMemoryBooks_ImportReadError'), 'STMemoryBooks');
     };
 
@@ -798,7 +798,7 @@ async function resolveAdditionalContextRows(refs) {
                 }
             }
         } catch (error) {
-            console.warn(`${MODULE_NAME}: Failed to resolve additional context entry`, ref, error);
+            console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to resolve additional context entry`, ref, error);
             staleReason = translate('Load failed', 'STMemoryBooks_Profile_AlsoIncludeLoadFailedShort');
         }
 
@@ -832,7 +832,7 @@ function setupSortableAdditionalContextList(list) {
             handle: '.stmb-additional-context-drag',
         });
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Failed to initialize additional context sorting`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to initialize additional context sorting`, error);
     }
 }
 
@@ -926,7 +926,7 @@ async function populateAdditionalContextEntrySelect(select, lorebookName) {
         ].join('');
         select.disabled = false;
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Failed to load entries for additional context picker`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to load entries for additional context picker`, error);
         select.innerHTML = `<option value="">${escapeHtml(translate('Failed to load entries', 'STMemoryBooks_Profile_AlsoIncludeLoadFailed'))}</option>`;
     }
 }
@@ -1060,7 +1060,7 @@ function setupProfileEditEventHandlers(popupInstance, settings, options = {}) {
                 toastr.error(translate('Prompt Manager button not found. Open main settings and try again.', 'STMemoryBooks_PromptManagerNotFound'), 'STMemoryBooks');
             }
         } catch (err) {
-            console.error(`${MODULE_NAME}: Error opening prompt manager from profile editor:`, err);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error opening prompt manager from profile editor:`, err);
             toastr.error(translate('Failed to open Summary Prompt Manager', 'STMemoryBooks_FailedToOpenSummaryPromptManager'), 'STMemoryBooks');
         }
     });
@@ -1070,7 +1070,7 @@ function setupProfileEditEventHandlers(popupInstance, settings, options = {}) {
         try {
             await refreshSummaryPresetSelects(true);
         } catch (err) {
-            console.error(`${MODULE_NAME}: Error refreshing presets:`, err);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error refreshing presets:`, err);
             toastr.error(translate('Failed to refresh presets', 'STMemoryBooks_FailedToRefreshPresets'), 'STMemoryBooks');
         }
     });
@@ -1080,7 +1080,7 @@ function setupProfileEditEventHandlers(popupInstance, settings, options = {}) {
         try {
             await refreshSummaryPresetSelects(false);
         } catch (e) {
-            console.error(`${MODULE_NAME}: Error auto-refreshing presets on update:`, e);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error auto-refreshing presets on update:`, e);
         }
     };
     window.addEventListener('stmb-presets-updated', stmbOnPresetsUpdated);
@@ -1126,7 +1126,7 @@ function setupProfileEditEventHandlers(popupInstance, settings, options = {}) {
                 toastr.success(translate('Preset created and selected. Remember to Save.', 'STMemoryBooks_CustomPromptMigrated'), 'STMemoryBooks');
             }
         } catch (error) {
-            console.error(`${MODULE_NAME}: Error moving custom prompt to preset:`, error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Error moving custom prompt to preset:`, error);
             toastr.error(translate('Failed to move custom prompt to preset', 'STMemoryBooks_FailedToMigrateCustomPrompt'), 'STMemoryBooks');
         }
     });
@@ -1265,12 +1265,12 @@ function setupProfileEditEventHandlers(popupInstance, settings, options = {}) {
                     settings.moduleSettings.convertExistingRecursion = !!input.checked;
                     saveSettingsDebounced();
                 } catch (e) {
-                    console.error(`${MODULE_NAME}: Failed to save convertExistingRecursion flag`, e);
+                    console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to save convertExistingRecursion flag`, e);
                 }
             });
         }
     } catch (e) {
-        console.warn(`${MODULE_NAME}: Failed to inject convertExistingRecursion checkbox`, e);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to inject convertExistingRecursion checkbox`, e);
     }
 }
 
@@ -1418,7 +1418,7 @@ export function validateAndFixProfiles(settings) {
             fixes.push('Fixed multiple builtin Current ST profiles (kept first, cleared others).');
         }
     } catch (e) {
-        console.warn(`${MODULE_NAME}: Failed to enforce builtin Current ST profile invariants`, e);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to enforce builtin Current ST profile invariants`, e);
     }
 
     const seenProfileKeys = new Set();
@@ -1553,3 +1553,5 @@ export function validateAndFixProfiles(settings) {
         profileCount: settings.profiles.length
     };
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';

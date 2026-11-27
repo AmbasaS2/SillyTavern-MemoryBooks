@@ -897,7 +897,7 @@ export async function openClipModalFromSelection({ selectedText, source = 'messa
             toastr.success(tr('STMemoryBooks_Clip_SaveSuccess', 'Clip saved to Memory Book.'), 'STMemoryBooks');
         }
     } catch (error) {
-        console.error(`${MODULE_NAME}: Failed to save clip:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to save clip:`, error);
         toastr.error(error?.message || tr('STMemoryBooks_Clip_SaveFailed', 'Failed to save clip.'), 'STMemoryBooks');
     }
 }
@@ -1385,7 +1385,7 @@ export async function showCompactReviewPopup(lorebookName, lorebookData, entry, 
         compacted = await requestCompaction({ ...entry, content: originalContent }, entryKind, getCompactionPromptTemplate(), profileIndex);
     } catch (error) {
         notifyCompactionRequestSettled(options);
-        console.error(`${MODULE_NAME}: Compaction failed:`, error);
+        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Compaction failed:`, error);
         toastr.error(error?.message || tr('STMemoryBooks_Compaction_Failed', 'Compaction failed.'), 'STMemoryBooks');
         return false;
     }
@@ -1523,7 +1523,7 @@ function notifyCompactionRequestSettled(options) {
     try {
         options.onCompactionRequestSettled();
     } catch (error) {
-        console.warn(`${MODULE_NAME}: Failed to clear Compaction loading state:`, error);
+        console.warn('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to clear Compaction loading state:`, error);
     }
 }
 
@@ -1773,7 +1773,7 @@ async function requestTopicalClipDraft(prompt, profileIndex, hasMessageSource = 
                 prompt = applySelectedRegex(prompt, selectedKeys, { throwOnError: true });
             }
         } catch (e) {
-            console.warn('STMemoryBooks: Topical Clip outgoing regex application failed', e);
+            console.warn('🦥 STMemoryBooks', 'STMemoryBooks: Topical Clip outgoing regex application failed', e);
             throw e;
         }
     }
@@ -2432,7 +2432,7 @@ export async function showTopicalClipPopup(options = {}) {
             }
             renderTargets(false);
         } catch (error) {
-            console.error(`${MODULE_NAME}: Failed to load Topical Clip lorebook:`, error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to load Topical Clip lorebook:`, error);
             currentLorebookData = null;
             renderTargets(false);
             renderDiagnostics(tr('STMemoryBooks_Error_FailedToLoadLorebook', 'Failed to load lorebook'));
@@ -2688,7 +2688,7 @@ export async function showTopicalClipPopup(options = {}) {
             renderDiagnostics(tr('STMemoryBooks_TopicalClip_DraftReady', 'Draft generated. Review and edit before saving.'));
         } catch (error) {
             generationContext = null;
-            console.error(`${MODULE_NAME}: Topical Clip generation failed:`, error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Topical Clip generation failed:`, error);
             toastr.error(error?.message || tr('STMemoryBooks_TopicalClip_Failed', 'Topical Clip generation failed.'), 'STMemoryBooks');
         } finally {
             generateButton.disabled = false;
@@ -2729,12 +2729,12 @@ export async function showTopicalClipPopup(options = {}) {
                         popup.completeAffirmative();
                         return;
                     } catch (fallbackError) {
-                        console.error(`${MODULE_NAME}: Failed to save stale Topical Clip as a new entry:`, fallbackError);
+                        console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to save stale Topical Clip as a new entry:`, fallbackError);
                         toastr.error(fallbackError?.message || tr('STMemoryBooks_TopicalClip_SaveFailed', 'Failed to save Topical Clip.'), 'STMemoryBooks');
                     }
                 }
             } else {
-                console.error(`${MODULE_NAME}: Failed to save Topical Clip:`, error);
+                console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to save Topical Clip:`, error);
                 toastr.error(error?.message || tr('STMemoryBooks_TopicalClip_SaveFailed', 'Failed to save Topical Clip.'), 'STMemoryBooks');
             }
             saveButton.disabled = false;
@@ -3038,7 +3038,7 @@ export async function showStmbEntryReviewPopup(options = {}) {
             currentEntries = loaded.entries;
             renderEntries();
         } catch (error) {
-            console.error(`${MODULE_NAME}: Failed to load compaction lorebook:`, error);
+            console.error('🦥 STMemoryBooks', `${MODULE_NAME}: Failed to load compaction lorebook:`, error);
             currentLorebookData = null;
             currentEntries = [];
             renderEntries(tr('STMemoryBooks_Compaction_Failed', 'Compaction failed.'));
@@ -3093,3 +3093,5 @@ export async function showStmbEntryReviewPopup(options = {}) {
     await loadSelectedLorebook(defaultLorebookName);
     await showPromise;
 }
+
+import { slothToastr as toastr } from './sloth-notifications.js';
