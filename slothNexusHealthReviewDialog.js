@@ -55,8 +55,8 @@ export async function showSlothHealthReviewFindings({review,catalog,original,mod
             details+'</article>';
     }
     const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-health-review">'+
-        '<header class="stmb-workshop-heading"><i class="fa-solid fa-wrench" aria-hidden="true"></i><h3>'+html(tr('Title','Memory Workshop'))+'</h3>'+
-        '<button type="button" class="stmb-health-info" data-workshop-help aria-expanded="false" aria-label="'+html(tr('HelpLabel','About Memory Workshop'))+'" title="'+html(tr('HelpLabel','About Memory Workshop'))+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
+        '<header class="stmb-workshop-heading"><i class="fa-solid fa-wrench" aria-hidden="true"></i><h3>'+html(tr('Title','AI memory review and cleanup'))+'</h3>'+
+        '<button type="button" class="stmb-health-info" data-workshop-help aria-expanded="false" aria-label="'+html(tr('HelpLabel','About AI memory review'))+'" title="'+html(tr('HelpLabel','About AI memory review'))+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
         '<div class="stmb-workshop-help" hidden>'+html(tr('Help','Review suggested changes to Nexus memories. Only selected changes are saved. Memories moved from Core to Anchor may not appear in every conversation turn. Other chats sharing the book may have pending recovery affected. AI suggestions can be wrong.'))+
         '<p>'+html(summary)+'</p></div>'+
         '<div class="stmb-workshop-metrics"><div><span>'+html(tr('Available','Changes'))+'</span><strong>'+count+'</strong></div><div><span>'+html(tr('ReviewOnly','Review only'))+'</span><strong>'+(rows.length-count)+'</strong></div></div>'+

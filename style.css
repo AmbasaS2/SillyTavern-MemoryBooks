@@ -1056,6 +1056,31 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     font-weight: 600;
     min-block-size: 24px;
 }
+.popup.stmb-popup #stmb-sloth-panel > details {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+}
+.popup.stmb-popup #stmb-sloth-panel .stmb-workspace-drawer > summary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-block-size: 24px;
+    min-width: 0;
+    margin: 0;
+    list-style: none;
+    line-height: 1.32;
+    text-align: start;
+}
+.popup.stmb-popup #stmb-sloth-panel .stmb-workspace-drawer > summary::-webkit-details-marker { display: none; }
+.popup.stmb-popup #stmb-sloth-panel .stmb-workspace-drawer > summary::before {
+    content: "";
+    flex: none;
+    border-inline-start: 6px solid currentColor;
+    border-block: 4px solid transparent;
+}
+.popup.stmb-popup #stmb-sloth-panel .stmb-workspace-drawer[open] > summary::before { transform: rotate(90deg); }
+.popup.stmb-popup #stmb-sloth-panel .stmb-workspace-drawer > summary > span { min-width: 0; overflow-wrap: anywhere; }
 .popup.stmb-popup #stmb-sloth-panel > details[open] > summary { margin-block-end: 5px; }
 .popup.stmb-popup .stmb-workspace :is(summary, button, select):focus-visible {
     outline: 2px solid var(--SmartThemeEmColor, currentColor);
@@ -1383,10 +1408,53 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     min-width:0;max-width:100%;
 }
 .popup.stmb-popup .stmb-sloth-detail summary {cursor:pointer;font-weight:600;overflow-wrap:anywhere;}
-.popup.stmb-popup .stmb-sloth-maintenance { margin-block: 12px; }
 .popup.stmb-popup .stmb-sloth-maintenance > div {
     display: grid;
+    gap: 6px;
+    min-width: 0;
     margin-block: 4px 0;
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-workshop-tools {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    padding-block-start: 7px;
+    border-top: 1px solid var(--stmb-workspace-rule);
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-workshop-tools > h4 {
+    margin: 0 0 2px;
+    font-size: .88em;
+    font-weight: 600;
+    opacity: .8;
+    overflow-wrap: anywhere;
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-management-action {
+    grid-template-columns: minmax(0, 1fr) 24px;
+    gap: 4px;
+    min-width: 0;
+    border-top: 0;
+    padding-block: 2px;
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-management-action > .stmb-sloth-help-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 24px;
+    gap: 4px;
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-management-action > small { grid-column: 1 / -1; }
+.popup.stmb-popup #stmb-sloth-panel .stmb-sloth-maintenance .stmb-management-action .menu_button {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 34px;
+    justify-content: flex-start;
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.popup.stmb-popup .stmb-sloth-maintenance .stmb-sloth-help-row > .stmb-sloth-info {
+    justify-self: center;
 }
 .popup.stmb-popup .stmb-management-action {
     display: grid;

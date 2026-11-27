@@ -379,7 +379,7 @@ function assertSlothLegacyCoverage(receipt, messages = chat) {
         if (receipt.version === 1 && receipt.ranges.length &&
             fingerprintSlothReviewedRanges(messages, receipt.ranges) === receipt.fingerprint) return;
     } catch { /* The original range is no longer available. */ }
-    throw new Error(t('Previously reviewed messages changed. Review or clear their ranges in Manage existing memories.',
+    throw new Error(t('Previously reviewed messages changed. Review or clear their ranges in Memory Workshop.',
         'STMemoryBooks_SlothLegacyCoverageChanged'));
 }
 
@@ -1220,7 +1220,7 @@ export async function reviewSlothLegacyCoverage() {
         const memoryDigest=digestSlothSnapshot(memory);
         const untracked=listSlothUntrackedScenes(memory,ref,chat.length);
         const previous = getSlothLegacyCoverage(getSceneMarkers(), chatKey, roles);
-        const title = t('Review previously summarized messages', 'STMemoryBooks_SlothLegacyCoverage');
+        const title = t('Register previously summarized ranges', 'STMemoryBooks_SlothLegacyCoverage');
         const instructions = t('Enter only message ranges already covered by the selected Memory book. Use chat message numbers, for example 0-18, 22-25. Leave blank to clear these ranges.', 'STMemoryBooks_SlothLegacyCoverageInstructions');
         let review;
         const popup = markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>' + html(title) +
@@ -1468,7 +1468,7 @@ export async function runSlothNexusHealthReview({profileIndex,stConnectionProfil
         };
         verifyOrigin();
         const confirmation=markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>'+
-            html(tr('Title','Memory Workshop'))+'</h3><p>'+
+            html(tr('Title','AI memory review and cleanup'))+'</h3><p>'+
             html(tr('Consent','Analyze memories with AI? Active Nexus memories are sent to the selected AI. Chats are not sent. Only approved changes are saved. AI usage may apply.'))+
             '</p><small>'+html(tr('Excluded','Protected, disabled and archived source entries are excluded.'))+'</small></div>',
             POPUP_TYPE.CONFIRM,'',{wide:false,allowVerticalScrolling:true,
