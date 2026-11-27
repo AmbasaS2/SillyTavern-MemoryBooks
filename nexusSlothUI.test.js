@@ -124,29 +124,45 @@ test('injection settings use a closed drawer, compact wrapping columns and icon 
     assert.doesNotMatch(js,/SlothNPCOff/);
 });
 
-test('recall popover opens as a narrow vertical list immediately below its trigger',()=>{
+test('recall popover uses an intrinsic horizontal row under its trigger',()=>{
     const js=file('./index.js'),css=file('./style.css');
     const choices=js.slice(js.indexOf('function buildSlothRecallSections('),js.indexOf('const field = (kind,title',js.indexOf('function buildSlothRecallSections(')));
     assert.deepEqual([...choices.matchAll(/\['(constant|keyword|vector|disabled)'/g)].map(m=>m[1]),['constant','keyword','vector','disabled']);
     const position=js.slice(js.indexOf('function positionSlothRecallPicker('),js.indexOf('function showSlothIconPicker('));
-    assert.match(position,/const width=anchor\.width/);
-    assert.match(position,/menu\.style\.width=width\+'px'/);
-    assert.match(position,/menu\.style\.top=anchor\.bottom\+gap\+'px'/);
-    assert.match(css,/\.stmb-sloth-icon-popover\.stmb-sloth-recall-popover\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?width: 100%; max-width: 100%; padding: 0/);
+    assert.match(position,/const width=menu\.getBoundingClientRect\(\)\.width/);
+    assert.match(position,/anchor\.left\+\(anchor\.width-width\)\/2/);
+    assert.match(position,/anchor\.bottom\+gap-origin\.top/);
+    assert.doesNotMatch(position,/menu\.style\.width/);
+    assert.match(css,/\.stmb-sloth-icon-popover\.stmb-sloth-recall-popover\s*\{[\s\S]*?flex-flow: row nowrap;[\s\S]*?width: max-content; max-width: calc\(100vw - 16px\); padding: 3px/);
+    assert.match(css,/\.stmb-sloth-recall-popover \.stmb-sloth-recall-icon\s*\{[\s\S]*?flex: 0 0 29px; width: 29px/);
 });
-
-test('recall menu geometry follows each desktop and mobile trigger exactly',()=>{
+test('recall row fits two or four options, stays centered when possible, and clamps at screen edges',()=>{
     const js=file('./index.js');
     const body=js.slice(js.indexOf('function positionSlothRecallPicker('),js.indexOf('function showSlothIconPicker('));
-    for(const viewport of [{width:1280,height:800,left:720,bottom:240},{width:390,height:700,left:332,bottom:440}]) {
-        const document={documentElement:{clientWidth:viewport.width,clientHeight:viewport.height}};
+    const cases=[
+        {width:1280,left:720,bottom:240,options:4,expected:668},
+        {width:1280,left:720,bottom:240,options:2,expected:700},
+        {width:390,left:332,bottom:440,options:4,expected:249},
+        {width:390,left:332,bottom:440,options:2,expected:312},
+        {width:390,left:9,bottom:440,options:4,expected:8},
+    ];
+    for(const c of cases) {
+        const document={documentElement:{clientWidth:c.width}};
         const position=vm.runInNewContext(body+'\npositionSlothRecallPicker',{document});
-        const menu={style:{}};
-        const trigger={getBoundingClientRect:()=>({width:29,left:viewport.left,bottom:viewport.bottom})};
+        const intrinsic=c.options*29+(c.options-1)*3+8;
+        const menu={style:{},getBoundingClientRect:()=>({width:intrinsic})};
+        const trigger={getBoundingClientRect:()=>({width:29,left:c.left,bottom:c.bottom})};
         position(menu,trigger);
-        assert.equal(menu.style.width,'29px');
-        assert.equal(menu.style.maxWidth,'29px');
-        assert.equal(menu.style.left,viewport.left+'px');
-        assert.equal(menu.style.top,(viewport.bottom+3)+'px');
+        assert.equal(menu.style.width,undefined,'do not stretch or shrink the intrinsic row');
+        assert.equal(parseFloat(menu.style.left),c.expected);
+        assert.equal(menu.style.top,(c.bottom+4)+'px');
+        assert.ok(parseFloat(menu.style.left)+intrinsic<=c.width-8);
     }
+    const document={documentElement:{clientWidth:390}};
+    const position=vm.runInNewContext(body+'\npositionSlothRecallPicker',{document});
+    const menu={style:{},getBoundingClientRect:()=>({width:69}),offsetParent:{getBoundingClientRect:()=>({left:160,top:90})}};
+    const trigger={getBoundingClientRect:()=>({width:29,left:160,bottom:119})};
+    position(menu,trigger,false);
+    assert.equal(menu.style.left,'-20px');
+    assert.equal(menu.style.top,'33px');
 });
