@@ -6,7 +6,7 @@
 import { getMemoryBooksMode } from './memoryBooksMode.js';
 import { sameSlothDraftBinding, canReplaySlothPartial } from './slothSingleRecovery.js';
 import { stableHashString } from './clipReviewPolicy.js';
-import { chat, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
+import { chat, eventSource, getRequestHeaders, menu_type, saveSettings, main_api } from '../../../../script.js';
 import { Popup, POPUP_TYPE, POPUP_RESULT } from '../../../popup.js';
 import { hideChatMessageRange } from '../../../chats.js';
 import { extension_settings } from '../../../extensions.js';
@@ -475,8 +475,29 @@ const pendingSideRenames = settings => Array.isArray(settings?.moduleSettings?.s
     ? settings.moduleSettings.slothSidePendingRenames : [];
 let sideRenameTail = Promise.resolve();
 let sideRenameRunning = 0;
+let sideRenameFailureNotice = null;
+export const SLOTH_RENAME_RETRIED_EVENT = 'stmb_sloth_rename_retried';
 
-async function retargetActiveSlothReceipts(change) {
+function getSlothRenameReceiptChatKey(change) {
+    if (change.type !== 'lorebook') return '';
+    const ref=getCurrentStmbChatRef();
+    if (ref?.type !== 'character' || !ref.fileName) return '';
+    const key=getStmbChatKey(ref), markers=getSceneMarkers();
+    const hasBook=books=>books?.nexus===change.oldBook || books?.memory===change.oldBook;
+    if (['slothCollection','slothAutomatic'].some(field=>
+        markers[field]?.chatKey===key && hasBook(markers[field].books))) return key;
+    for (const [pair,receipt] of Object.entries(markers.slothLegacyCoverage || {})) {
+        if (receipt?.chatKey !== key) continue;
+        try { const books=JSON.parse(pair); if(Array.isArray(books)&&books.includes(change.oldBook))return key; }
+        catch { /* Existing migration validation handles invalid legacy keys. */ }
+    }
+    return '';
+}
+
+async function retargetActiveSlothReceipts(change, expectedChatKey='') {
+    if(expectedChatKey && getStmbChatKey()!==expectedChatKey)
+        throw new Error(t('Switch back to the original chat before retrying the lorebook link update.',
+            'STMemoryBooks_SlothRenameOriginalChat'));
     const ref=getCurrentStmbChatRef();
     if (ref?.type !== 'character' || !ref.fileName) return;
     const current=getStmbChatKey(ref);
@@ -506,11 +527,31 @@ async function retargetActiveSlothReceipts(change) {
         }
         return next;
     };
-    const markers=getSceneMarkers();
-    if (stringify(markers) !== stringify(replace(markers))) await patchVerifiedSlothMetadata(ref,replace);
+    // A host refresh can replace the metadata object during the awaited
+    // verification. Retry only this pre-write identity conflict, never an
+    // external edit, and run the complete verification again on the same chat.
+    for(let attempt=0;attempt<3;attempt++){
+        if(getStmbChatKey()!==current)throw slothWriteConflict();
+        const markers=getSceneMarkers();
+        try {
+            const needsPatch=stringify(markers)!==stringify(replace(markers));
+            const saved=needsPatch?await patchVerifiedSlothMetadata(ref,replace):markers;
+            // An earlier partial save may have updated local metadata only.
+            // Verify persistence before removing its queued rename.
+            if(needsPatch||expectedChatKey){
+                const stored=await readCurrentSlothChatForWrite(ref);
+                if(canonicalSlothWriteSnapshot(normalizeSlothWriteMarkers(saved))!==
+                    canonicalSlothWriteSnapshot(normalizeSlothWriteMarkers(stored[0].chat_metadata.STMemoryBooks)))
+                    throw slothWriteConflict();
+            }
+            return;
+        }catch(error){
+            if(error?.code!=='STMB_METADATA_REPLACED'||attempt===2||getStmbChatKey()!==current)throw error;
+        }
+    }
 }
 
-function hasPendingSlothSideRename(ref) {
+export function hasPendingSlothSideRename(ref) {
     return pendingSideRenames(extension_settings.STMemoryBooks).some(change=>sideRenameMatches(change,ref));
 }
 function assertSideRenameReady(ref) {
@@ -579,18 +620,29 @@ async function processSlothSideRenames() {
         }
         verifyOrigin();
         // Recheck rather than replacing any settings edited during the reads.
+        await retargetActiveSlothReceipts(change,record.receiptChatKey);
+        verifyOrigin();
         const freshPatch = planSlothSideSettingsRename(params,change);
-        await retargetActiveSlothReceipts(change);
         if (change.type === 'lorebook') retargetSlothLorebookRoles(settings,change);
         Object.assign(params,freshPatch);
         await persistSideRenameQueue(params,pendingSideRenames(settings).slice(1));
     }
 }
 
+function clearSideRenameFailureNotice() {
+    const notice=sideRenameFailureNotice;
+    sideRenameFailureNotice=null;
+    if(notice)toastr.clear(notice);
+}
+
 function reportSideRenameFailure(error) {
     console.warn('Memory Books Side Prompt identity migration stopped:',error);
-    toastr.warning(t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
-        'STMemoryBooks_SlothSideRenamePending'),'STMemoryBooks',{preventDuplicates:true});
+    clearSideRenameFailureNotice();
+    sideRenameFailureNotice=toastr.warning(t('Lorebook link update is pending. Click this notification to retry in the original chat. If the saved chat changed, reload it first.',
+        'STMemoryBooks_SlothRenameRetry'),'STMemoryBooks',{
+        timeOut:0,extendedTimeOut:0,tapToDismiss:false,closeButton:true,
+        onclick:()=>{void retrySlothSideRenames();},
+    });
 }
 
 export function queueSlothSideRename(rawChange, books = []) {
@@ -598,7 +650,9 @@ export function queueSlothSideRename(rawChange, books = []) {
     const params = extension_settings.STMemoryBooks?.moduleSettings;
     if (!change || !params) return Promise.resolve();
     const records = pendingSideRenames(extension_settings.STMemoryBooks);
-    const record = {...change,books:[...new Set([...books,...slothSideRenameBooks(extension_settings.STMemoryBooks,change)])]};
+    const receiptChatKey=getSlothRenameReceiptChatKey(change);
+    const record = {...change,books:[...new Set([...books,...slothSideRenameBooks(extension_settings.STMemoryBooks,change)])],
+        ...(receiptChatKey?{receiptChatKey}:{})};
     // Add synchronously so an in-flight Side Prompt cannot write under an old identity.
     params.slothSidePendingRenames = [...records,record];
     sideRenameRunning++;
@@ -609,6 +663,7 @@ export function queueSlothSideRename(rawChange, books = []) {
         if(!pendingSideRenames(extension_settings.STMemoryBooks).length)return true;
         await persistSideRenameQueue(params,pendingSideRenames(extension_settings.STMemoryBooks));
         await processSlothSideRenames();
+        clearSideRenameFailureNotice();
         return true;
     }).catch(error=>{reportSideRenameFailure(error);return false;}).finally(()=>{
         sideRenameRunning--;
@@ -618,12 +673,27 @@ export function queueSlothSideRename(rawChange, books = []) {
 }
 
 export function retrySlothSideRenames() {
-    if (!pendingSideRenames(extension_settings.STMemoryBooks).length) return Promise.resolve();
-    sideRenameTail = sideRenameTail.catch(()=>{}).then(async()=>{
-        const settings = extension_settings.STMemoryBooks;
+    if(sideRenameRunning)return sideRenameTail;
+    if(!pendingSideRenames(extension_settings.STMemoryBooks).length){
+        clearSideRenameFailureNotice();
+        return Promise.resolve(true);
+    }
+    sideRenameRunning++;
+    clearSideRenameFailureNotice();
+    const notice=toastr.info(t('Updating lorebook links. Try again after the update finishes.',
+        'STMemoryBooks_SlothRenameUpdating'),'STMemoryBooks',{timeOut:0,extendedTimeOut:0});
+    sideRenameTail=sideRenameTail.catch(()=>{}).then(async()=>{
+        const settings=extension_settings.STMemoryBooks;
         await persistSideRenameQueue(settings.moduleSettings,pendingSideRenames(settings));
         await processSlothSideRenames();
-    }).catch(reportSideRenameFailure);
+        clearSideRenameFailureNotice();
+        try { await eventSource.emit(SLOTH_RENAME_RETRIED_EVENT); }
+        catch(error){console.warn('Memory Books rename UI refresh failed:',error);}
+        return true;
+    }).catch(error=>{reportSideRenameFailure(error);return false;}).finally(()=>{
+        sideRenameRunning--;
+        if(notice)toastr.clear(notice);
+    });
     return sideRenameTail;
 }
 

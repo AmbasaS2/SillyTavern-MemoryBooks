@@ -35,7 +35,7 @@ test('generic metadata patches reject inactive chats and asynchronous switches',
     await assert.rejects(api.patchStmbMetadataForChatRef(ref, async metadata => {
         state.metadata = { STMemoryBooks: { otherChat: true } };
         return { ...metadata, changed: true };
-    }));
+    }), {code:'STMB_METADATA_REPLACED'});
     assert.equal(state.saves, 0);
     assert.deepEqual(state.metadata, { STMemoryBooks: { otherChat: true } });
 });
