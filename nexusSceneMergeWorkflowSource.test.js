@@ -8,7 +8,7 @@ const source = file => readFileSync(new URL(file,import.meta.url),'utf8');
 test('Scene merge is an explicit button, not an automatic collector or migration',()=>{
     const index=source('./index.js');
     assert.match(index,/runNexusSceneMerge\(\{\s*profileIndex/);
-    assert.match(source('./templates.js'),/data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton"/);
+    assert.match(source('./templates.js'),/data-stmb-sloth-action="merge"><i[^>]*><\/i><span data-i18n="STMemoryBooks_SlothMergeButton"/);
     const runtime=source('./nexusCollectorRuntime.js');
     assert.match(runtime,/export async function runNexusSceneMerge/);
     assert.match(runtime,/if\(collectorBusy\)/);
