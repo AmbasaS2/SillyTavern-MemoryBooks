@@ -17,8 +17,10 @@ test('single collection uses the new writing guidance for the built-in preset an
     assert.match(SLOTH_R07_DISPLAY_TEXT,/each distinct apology, including whether contact occurred without asking/);
     assert.match(SLOTH_R07_CLOSING,/leave the final unanswered exchange open/);
     assert.equal(SLOTH_R07_DISPLAY_TEXT,[...SLOTH_R07_OPENING.slice(1),SLOTH_R07_CLOSING].join('\n\n'));
-    assert.match(single,/useBuiltInWriting \? SLOTH_R07_OPENING/);
-    assert.match(single,/useBuiltInWriting \? \[SLOTH_R07_CLOSING\]/);
+    assert.match(single,/useBuiltInWriting \? r07Opening/);
+    assert.match(single,/useBuiltInWriting && r07Closing \? \[r07Closing\]/);
+    assert.match(SLOTH_R07_DISPLAY_TEXT,/ordinary life, humor, shared experiences, exploration, work, action/);
+    assert.match(SLOTH_R07_CLOSING,/If a negotiation is central to the source/);
     assert.match(single,/evidencePolicyVersion=4/);
     assert.doesNotMatch(single,/silently enumerate every independent change/i);
 });

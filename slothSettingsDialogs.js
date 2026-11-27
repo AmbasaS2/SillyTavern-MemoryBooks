@@ -6,7 +6,7 @@ import { DOMPurify } from '../../../../lib.js';
 import { Popup, POPUP_RESULT, POPUP_TYPE } from '../../../popup.js';
 import { translate } from '../../../i18n.js';
 import { escapeHtml } from '../../../utils.js';
-import { getActiveSlothSummaryPreset, getSlothSummaryPresets, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
+import { getActiveSlothSummaryPreset, getSlothSummaryPresets, isR07SummaryPreset, SLOTH_BUILTIN_PROMPT_ID } from './slothSummaryPrompts.js';
 import { SLOTH_R07_DISPLAY_TEXT } from './slothR07Prompt.js';
 import { getSlothSideDestination, getSlothSidePresets, getSlothSideRecall,
     isSlothSideLinked, normalizeSlothSideRecall, SLOTH_CREATE_SIDE_BOOK, slothSideBookName, SLOTH_DIARY_ID, SLOTH_NPC_DIRECTORY_ID, SLOTH_QUOTES_ID } from './slothSidePrompts.js';
@@ -28,7 +28,8 @@ async function askPresetName(title, initial = '') {
 
 function writePresetFile(record, format) {
     const data={format,version:1,name:record.name,text:record.text,
-        ...(format==='sloth-side-prompt'?{responseFormat:record.responseFormat||'',recallMode:record.recallMode||'disabled'}:{})};
+        ...(format==='sloth-side-prompt'?{responseFormat:record.responseFormat||'',recallMode:record.recallMode||'disabled'}:{}),
+        ...(format==='sloth-summary-prompt'&&isR07SummaryPreset(record)?{writingMode:'r07'}:{})};
     const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
     const link=document.createElement('a');
     link.href=url;
@@ -197,7 +198,8 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
     const saveRecord=async (draft,activate=true)=>{
         if(!draft.text.trim())return;
         const id=await save(draft,activate);
-        const stored={id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat||''};
+        const stored={id,name:draft.name,text:draft.text,responseFormat:draft.responseFormat||'',
+            ...(isSummary&&isR07SummaryPreset(draft)?{writingMode:'r07'}:{})};
         if(card&&current.id&&id!==current.id) {
             await card.added(stored);
             return;
@@ -217,7 +219,8 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         const name=await askPresetName(t('Save as new prompt','SlothPromptSaveAs'));
         if(name===null)return;
         if(!validName(name,'')) {toastr.warning(warning,'STMemoryBooks');return;}
-        await saveRecord({...draft,id:'',name,recallMode:recall?.get(draft.id)});
+        await saveRecord({...draft,id:'',name,recallMode:recall?.get(draft.id),
+            ...(isSummary&&isR07SummaryPreset(draft)?{writingMode:'r07'}:{})});
         drafts.delete('');
     };
     if(card)select.addEventListener('focus',renderChoices);
@@ -323,6 +326,7 @@ function mountPromptLibrary({target, title, heading=title, records, appliedId, f
         for(let number=2;!validName(name,'');number++)name=`${label} (${number})`;
         if(dirty()) drafts.set(current.id,value());
         await saveRecord({id:'',name,text:data.text,
+            ...(isSummary&&data.writingMode==='r07'?{writingMode:'r07'}:{}),
             responseFormat:!isSummary&&typeof data.responseFormat==='string'?data.responseFormat:'',
             recallMode:!isSummary?normalizeSlothSideRecall(data.recallMode):undefined});
     }));
@@ -334,7 +338,7 @@ const randomId=()=>Array.from(crypto.getRandomValues(new Uint32Array(4)),value=>
 export function mountSlothCollectionPrompts(target,settings) {
     const params=settings.moduleSettings;
     const active=getActiveSlothSummaryPreset(settings);
-    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('🦥 Prompt (Default)','SlothPromptDefault'),text:SLOTH_R07_DISPLAY_TEXT,builtin:true},
+    const records=[{id:SLOTH_BUILTIN_PROMPT_ID,name:t('🦥 Prompt (Default)','SlothPromptDefault'),text:SLOTH_R07_DISPLAY_TEXT,builtin:true,writingMode:'r07'},
         ...getSlothSummaryPresets(settings).map(preset=>({...preset}))];
     if(active.id==='previous'&&!records.some(preset=>preset.id===active.id)) {
         records.push({...active,name:t('Previous instructions','SlothPromptPrevious')});
@@ -349,7 +353,8 @@ export function mountSlothCollectionPrompts(target,settings) {
         save:async(draft,activate)=>{
             const id=draft.id||randomId();
             const entries=records.filter(record=>record.id!==SLOTH_BUILTIN_PROMPT_ID&&record.id!==id);
-            if(id!==SLOTH_BUILTIN_PROMPT_ID)entries.push({id,name:draft.name,text:draft.text});
+            if(id!==SLOTH_BUILTIN_PROMPT_ID)entries.push({id,name:draft.name,text:draft.text,
+                ...(isR07SummaryPreset(draft)?{writingMode:'r07'}:{})});
             await write(entries,activate?id:getActiveSlothSummaryPreset(settings).id);
             return id;
         },
