@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,existsSync} from 'node:fs';
 import * as mb from '../lore-manager-translations.js';
 import * as wi from '../../info/lore-manager-translations.js';
 import {translationBookPath,TRANSLATION_STORE_FORMAT} from '../../manager/translation-storage.js';
@@ -123,4 +123,31 @@ test('actual ST emitter awaits Memory Books enrichment before Ordering calculate
     assert.equal(all[0].world,'narrator-book');
     assert.equal(all[0].order,50100);
     assert.equal(state.scanWorldSettings.has('narrator-book'),true);
+});
+
+const orderingLaneUrl=new URL('../../ordering/slothWriteLane.js',import.meta.url);
+test('the actual three Sloth writer modules share a lane and preserve all changes',{
+    skip:!existsSync(orderingLaneUrl) && 'Ordering checkout predates the shared write lane',
+},async()=>{
+    const {withSlothLorebookWriteLane:orderingWrite}=await import(orderingLaneUrl.href);
+    let release,started;
+    const gate=new Promise(r=>release=r),ready=new Promise(r=>started=r);
+    const data={entries:{0:{content:'old'}},stlo:{budget:100}},events=[];
+    const first=memoryWrite('three-writer-book',async()=>{
+        events.push('memory start');started();await gate;
+        data.entries[1]={content:'new memory'};events.push('memory end');
+    });
+    await ready;
+    const second=orderingWrite('three-writer-book',()=>{
+        events.push('ordering');assert.equal(data.entries[1].content,'new memory');data.stlo.budget=400;
+    });
+    const third=managerWrite('three-writer-book',()=>{
+        events.push('manager');assert.equal(data.stlo.budget,400);data.entries[0].content='edited original';
+    });
+    await managerWrite('independent-three-writer-book',()=>events.push('different'));
+    assert.deepEqual(events,['memory start','different']);
+    release();await Promise.all([first,second,third]);
+    assert.deepEqual(events,['memory start','different','memory end','ordering','manager']);
+    assert.deepEqual(data,{entries:{0:{content:'edited original'},1:{content:'new memory'}},stlo:{budget:400}});
+    assert.equal(globalThis[Symbol.for('sloth.worldinfo.write-lanes.v1')].has('three-writer-book'),false);
 });
