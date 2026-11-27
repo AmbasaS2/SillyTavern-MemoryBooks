@@ -34,6 +34,11 @@ test('single collection sends the source once, reads active Nexus and only recen
     const result=await run(opt);
     assert.equal(calls.length,1);
     assert.equal(calls[0].split(messages[0].mes).length,2);
+    assert.match(calls[0],/response to a request or pressure from an unprompted choice/);
+    assert.match(calls[0],/Attribute stated feelings and interpretations to their actual holders/);
+    assert.match(calls[0],/Scene, Result and proposed Nexus claims independently against the original wording/);
+    assert.match(calls[0],/original speaker, number and counted action or object/);
+    assert.match(calls[0],/leave an unanswered response or unresolved feeling pending/);
     assert.match(calls[0],/Core reference/);assert.match(calls[0],/Outcome4/);
     assert.doesNotMatch(calls[0],/Outcome1|PrivateScene/);
     assert.equal(result.scenes.length,1);assert.equal(result.plan.deferred.length,1);

@@ -1,0 +1,126 @@
+{
+  "description": "Synthetic held-out semantic evaluation cases, not production prompts or real user chat. Feed messages only; compare against mustPreserve/reject after generation. Ending quotes are exact but do not prove all claims.",
+  "cases": [
+    {
+      "id": "requested_then_independent_choice",
+      "messages": [
+        {
+          "id": 0,
+          "mes": "Nora asked Ivo to announce their partnership. He read the requested words aloud."
+        },
+        {
+          "id": 1,
+          "mes": "Nora said, \"You said it because I asked. That is different from choosing to say it yourself.\" Ivo nodded."
+        },
+        {
+          "id": 2,
+          "mes": "Later, without another request, Ivo told the clerk, \"Nora is my partner.\" Nora smiled and thanked him."
+        }
+      ],
+      "closure": {
+        "messageId": 2,
+        "quote": "Nora smiled and thanked him."
+      },
+      "mustPreserve": [
+        "The first announcement was requested, not spontaneous.",
+        "The later announcement was unprompted and was a distinct choice.",
+        "Nora distinguished the two and thanked him after the second."
+      ],
+      "reject": [
+        "Both announcements were spontaneous.",
+        "The first announcement alone fulfilled Nora's wish for an unprompted declaration."
+      ]
+    },
+    {
+      "id": "attributed_feeling",
+      "messages": [
+        {
+          "id": 0,
+          "mes": "Lena said, \"I felt embarrassed when you offered help in front of the others.\""
+        },
+        {
+          "id": 1,
+          "mes": "Oren thought she must be angry at him, but she had not said that."
+        },
+        {
+          "id": 2,
+          "mes": "Oren apologized for making the offer publicly. Lena accepted the apology for that act, then asked whether he understood why she was embarrassed."
+        }
+      ],
+      "closure": {
+        "messageId": 2,
+        "quote": "Lena accepted the apology for that act"
+      },
+      "mustPreserve": [
+        "Lena reported embarrassment; anger was Oren's interpretation, not her stated feeling.",
+        "Oren apologized for the public offer and Lena accepted that apology.",
+        "Her final question remains unanswered."
+      ],
+      "reject": [
+        "Lena confirmed that she was angry.",
+        "They fully resolved her embarrassment or answered her question."
+      ]
+    },
+    {
+      "id": "choice_actor_and_conditions",
+      "messages": [
+        {
+          "id": 0,
+          "mes": "Tess chose to leave the repaired clock with the shopkeeper. Ari offered to take it home instead."
+        },
+        {
+          "id": 1,
+          "mes": "Tess declined. Ari agreed to leave the choice to her and to call before arranging a pickup."
+        },
+        {
+          "id": 2,
+          "mes": "Ari apologized for arranging yesterday's pickup without asking. Tess accepted the apology, but said the advance call still mattered."
+        }
+      ],
+      "closure": {
+        "messageId": 2,
+        "quote": "Tess accepted the apology"
+      },
+      "mustPreserve": [
+        "Tess chose the shopkeeper; Ari offered the alternative.",
+        "Ari agreed to respect her decision and call before pickup.",
+        "The apology concerned the previous unapproved arrangement; acceptance did not remove the advance-call condition."
+      ],
+      "reject": [
+        "Ari chose to leave the clock.",
+        "Tess accepted the pickup offer or waived the advance-call condition."
+      ]
+    },
+    {
+      "id": "counted_actions_and_responsibility",
+      "messages": [
+        {
+          "id": 0,
+          "mes": "Mae said, \"I want us to make tea together a hundred times, not buy a hundred cups.\""
+        },
+        {
+          "id": 1,
+          "mes": "Sol replied, \"I'll help clean up each time; we'll both be responsible for it.\""
+        },
+        {
+          "id": 2,
+          "mes": "Mae agreed to that arrangement. They put the kettle away."
+        }
+      ],
+      "closure": {
+        "messageId": 2,
+        "quote": "Mae agreed to that arrangement."
+      },
+      "mustPreserve": [
+        "Mae spoke of making tea together on a hundred occasions, not purchasing cups.",
+        "Sol offered to help clean each time and named shared responsibility; Mae agreed.",
+        "No hundred tea-making sessions have been completed yet."
+      ],
+      "reject": [
+        "Mae planned to buy a hundred cups.",
+        "Sol alone took responsibility.",
+        "They already made tea a hundred times."
+      ]
+    }
+  ]
+}
