@@ -7,8 +7,15 @@ export function createNarratorGenerationState() {
 
     return {
         start({ castIds, type, chatKey, chat, dryRun = false, narratorMode = false }) {
+            // Token counting and quiet prompts are not a new visible reply.
+            // Keep its original cast until a correlated receipt or explicit
+            // cancellation; never retain a snapshot across chat/mode changes.
+            if (dryRun || type === 'quiet') {
+                if (!narratorMode || pending?.chatKey !== chatKey) pending = null;
+                return;
+            }
             pending = null;
-            if (!narratorMode || dryRun || ['quiet', 'impersonate'].includes(type)) return;
+            if (!narratorMode || type === 'impersonate') return;
             const lastIndex = chat.length - 1;
             const lastMessage = chat[lastIndex];
             pending = {
@@ -22,11 +29,14 @@ export function createNarratorGenerationState() {
             };
         },
         end({ processor, chat }) {
-            if (!pending) return;
-            if (!processor || !processor.isFinished || processor.isStopped || processor.abortController?.signal?.aborted) {
+            // GENERATION_ENDED also represents a host UI unlock. A missing
+            // or unfinished processor cannot identify the completed reply.
+            if (!pending || !processor || ['quiet', 'impersonate'].includes(processor.type)) return;
+            if (processor.isStopped || processor.abortController?.signal?.aborted) {
                 pending = null;
                 return;
             }
+            if (!processor.isFinished) return;
             const messageId = processor.messageId;
             const message = chat[messageId];
             if (!Number.isInteger(messageId) || messageId < 0 || !message || message.is_user || message.is_system) {

@@ -142,3 +142,36 @@ test('bound target rejects chat switch, replacement, changed swipe, and unrelate
             change === 'chat' ? { chatKey: 'chat-b' } : {}), null);
     }
 });
+
+
+test('quiet and dry-run starts and ambiguous UI unlocks preserve the original non-streaming cast', () => {
+    const state = createNarratorGenerationState();
+    const chat = [{ is_user: true }];
+    start(state, chat, 'normal', ['alice']);
+    start(state, chat, 'quiet', ['bob']);
+    state.end({ processor: null, chat });
+    start(state, chat, 'normal', ['charlie'], { dryRun: true });
+    chat.push({ is_user: false });
+    assert.deepEqual(receive(state, chat, 1)?.castIds, ['alice']);
+    assert.equal(receive(state, chat, 1), null);
+});
+
+test('unrelated starts and incomplete UI unlocks do not erase the streaming cast; explicit cancellation still does', () => {
+    const state = createNarratorGenerationState();
+    const chat = [{ is_user: true }];
+    start(state, chat, 'normal', ['alice']);
+    chat.push({ is_user: false, swipe_id: 0, gen_started: 100 });
+    state.end({ processor: processorFor(chat, 1, { isFinished: false }), chat });
+    start(state, chat, 'quiet', ['bob']);
+    const processor = processorFor(chat, 1, { type: 'normal' });
+    state.end({ processor, chat });
+    assert.deepEqual(receive(state, chat, 1, 'normal', processor)?.castIds, ['alice']);
+    start(state, chat, 'normal', ['alice']);
+    start(state, chat, 'quiet', ['bob'], { chatKey: 'chat-b' });
+    chat.push({ is_user: false });
+    assert.equal(receive(state, chat, 2), null);
+    start(state, chat, 'normal', ['alice']);
+    state.clear();
+    chat.push({ is_user: false });
+    assert.equal(receive(state, chat, 3), null);
+});
