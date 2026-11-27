@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {validateNexusEventPlan,stageNexusEdits,describeNexusCollectionEntry,getNexusRecallModes,stageNexusRecallSettings} from './nexusCollectionPolicy.js';
 import {isCompletedSceneEntry,sceneNumberFromTitle} from './nexusSceneRotation.js';
 import {validateSlothSceneResponse} from './nexusSlothScenePrompt.js';
+import {parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes} from './slothSingleRecovery.js';
 import {buildSidePromptHistoryRequest,resolveSidePromptHistory} from './sidePromptHistory.js';
 import {slothSideStoryKey,canContinueSlothSideEntry} from './slothSidePrompts.js';
 import {scopeNexusWorldInfo} from './nexusWorldInfoScope.js';
@@ -23,8 +24,9 @@ test('single collection sends the source once, reads active Nexus and only recen
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Recall',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         isCompletedSceneEntry,sceneNumberFromTitle,validateNexusEventPlan,validateSlothSceneResponse,
+        parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,
         readSlothNexusEdits:raw=>({edits:raw.edits,skippedNexusEdits:0}),
-        requester:(_p,_s,_sig,one)=>async prompt=>{assert.equal(one,true);calls.push(prompt);return structuredClone(draft);},
+        requester:(_p,_s,_sig,one)=>async (prompt,phase,parse)=>{assert.equal(one,true);calls.push(prompt);return parse(JSON.stringify(draft),phase);},
     });
     const memory={entries:Object.fromEntries([1,2,3,4].map(i=>[i,{uid:i,comment:i+' - Event',
         content:'**Timeline**: Unknown\n\n**Scene**\nPrivateScene'+i+'\n\n**Result**\nOutcome'+i}]))};
@@ -36,7 +38,17 @@ test('single collection sends the source once, reads active Nexus and only recen
     assert.doesNotMatch(calls[0],/Outcome1|PrivateScene/);
     assert.equal(result.scenes.length,1);assert.equal(result.plan.deferred.length,1);
     draft.events[0].segments=[[1,3]];
-    await assert.rejects(run(opt),/already assigned/);
+    let captured;
+    const recovered=await run({...opt,onDraft:raw=>{captured=raw;}});
+    assert.equal(calls.length,2);
+    assert.equal(recovered.scenes.length,1);
+    assert.deepEqual(Array.from(recovered.scenes[0].collectedRanges.flat()),[1,2]);
+    assert.deepEqual(Array.from(recovered.pendingRanges.flat()),[3,3]);
+    assert.match(captured,/Question unanswered/);
+    const replay=await run({...opt,rawDraft:captured});
+    assert.equal(calls.length,2,'recovery must not call AI');
+    assert.equal(replay.replayed,true);
+    assert.equal(replay.scenes.length,1);
 });
 test('Nexus recall settings are independent; uninjected entries remain updateable and legacy NPC off resumes collection',()=>{
     const entries={entries:{}};

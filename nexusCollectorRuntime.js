@@ -257,7 +257,8 @@ function activeSource(ref, memoryBook, roleNames, afterId = -1) {
     const sourceChatIds=new Set([String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean));
     for(const entry of Object.values(memoryBook?.entries||{})){
         if(!sourceChatIds.has(String(entry?.STMB_chatId||'')))continue;
-        for(const pair of Array.isArray(entry.STMB_sourceRanges)?entry.STMB_sourceRanges:[])addRange(pair);
+        const coverage=Object.hasOwn(entry,'STMB_collectedRanges')?entry.STMB_collectedRanges:entry.STMB_sourceRanges;
+        for(const pair of Array.isArray(coverage)?coverage:[])addRange(pair);
     }
     ranges.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
     const merged=[];
@@ -821,7 +822,7 @@ async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions,
 
 async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow) {
     const savedRanges=[...(prior.savedRanges||[])];
-    for(const event of events)for(const range of event.segments)savedRanges.push([...range]);
+    for(const event of events)for(const range of event.collectedRanges??event.segments)savedRanges.push([...range]);
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
     const previous = await readReviewedChat(ref, sourceIds, fingerprint);
@@ -1108,7 +1109,6 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             reviewSummaries,verifyOrigin:checkBeforeSave});
         checkBeforeSave();
         const {plan,scenes,edits,skippedNexusEdits,reviewFailed,skippedScenes}=collection;
-        if (automatic && !plan.events.length) return {saved:false,reason:'no-completed-events'};
         const approval={hideRanges:!automatic&&settings.moduleSettings?.slothHideAfter===true
             ? getSlothHideRanges(scenes,chat,normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent)) : [],
             keepRecent:normalizeSlothVisibleTail(settings.moduleSettings?.slothHideRecent)};
@@ -1139,7 +1139,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     olderMode:settings.moduleSettings?.nexusOlderSceneMode==='keyword'?'keyword':'vector',
                 }):null;
             const staged=memoryStage?.staged??structuredClone(originalBooks.memory);
-            if(memoryStage) savedEntries=memoryStage.writes.map(({uid})=>staged.entries[uid]);
+            if(memoryStage) savedEntries=memoryStage.writes.filter(write=>!write.reused).map(({uid})=>staged.entries[uid]);
             states.push({name:roleNames.memory,original:originalBooks.memory,staged});
         }
         if(edits.length||initial) {

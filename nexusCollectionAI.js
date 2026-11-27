@@ -10,6 +10,7 @@ import { getTokenCountAsync } from '../../../tokenizers.js';
 import { getContext } from '../../../extensions.js';
 import { getSelectedConnectionProfile } from './connectionProfileRequest.js';
 import { normalizeSlothCollectionDraft, recoverSlothCollectionDraft } from './nexusCollectionDraft.js';
+import { parseSingleSlothCollectionDraft, normalizeSingleSlothPlan, finalizeSingleSlothScenes } from './slothSingleRecovery.js';
 import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, includeDeepSeekTailEvent, fitDeepSeekSceneBatch, stageNexusEdits,
     describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
 import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
@@ -585,17 +586,20 @@ export async function composeApprovedSlothCollection(options) {
 /** One generation per source chunk; existing memories are reference only. */
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
-        partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false}=options;
+        partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
+        rawDraft=null,onDraft=()=>{}}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
         .slice(-3).map(e=>({title:e.comment,result:String(e.content).split(/^\s*(?:\*\*Result\*\*|#{1,6}\s+Result)\s*$/im).at(-1).trim()}));
     const prompt=[
-        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
+        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan.replace(
+            'Use whole messages and assign each original ID exactly once. When one message closes an incident and briefly opens another, assign it to the action it primarily carries and do not list it twice.',
+            'Use actual original message IDs as evidence. A message that closes one incident and opens another may belong to both. Keep both causal boundaries; distinguish completed outcomes from unfinished incidents.'),
         getActiveSlothSummaryPreset(settings).text,
         'Perform causal event classification, complete Scene writing, and minimal Nexus patches in this ONE response. Return only one complete JSON object.',
-        'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]}],"deferred":[{"reason":"why still open","segments":[[3,3]]}],"edits":[]}.',
-        'Each complete event contains its own Scene and Result. Assign original IDs exactly once. An open incident belongs only in deferred; never summarize it as completed. Keep all essential details. Return complete JSON within the output budget.',
+        'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]},{"title":"open incident","complete":false,"reason":"why still open","segments":[[2,3]]}],"edits":[]}.',
+        'Return one row per causal incident in events. Complete events contain their own Scene and Result. Open incidents have complete:false; leave their outcome pending. Use inclusive source ranges with real original IDs. Shared boundary messages are allowed when they support distinct incidents. Do not duplicate the same incident. Keep all essential details and return complete JSON within the output budget.',
         'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences.',
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
@@ -610,13 +614,20 @@ export async function composeSingleSlothCollection(options) {
         const count=usage?.prompt_tokens??usage?.input_tokens;
         if(Number.isFinite(count)&&count>=0){inputTokens=count;inputTokensExact=true;}
     });
-    const raw=await ask(prompt,'Single collection');
-    if(inputTokens===null){
+    const replayed=typeof rawDraft==='string';
+    const raw=replayed ? parseSingleSlothCollectionDraft(rawDraft) :
+        await ask(prompt,'Single collection',async (response,phase)=>{
+            await onDraft(response);
+            return parseSingleSlothCollectionDraft(response,phase);
+        });
+    if(!replayed&&inputTokens===null){
         try{const count=await getTokenCountAsync(prompt);if(Number.isFinite(count)&&count>=0)inputTokens=count;}catch{}
     }
     verifyOrigin();
-    const plan=validateNexusEventPlan(raw,ids,{deferUnclassified:true,originalMessages:messages});
-    const rows=raw.events.map((event,i)=>({...event,id:'event-'+(i+1)}));
+    const plan=normalizeSingleSlothPlan(raw,ids,{originalMessages:messages});
+    const oneLine=value=>typeof value==='string'?value.replace(/\s*\r?\n\s*/gu,' ').trim():'';
+    const rows=(Array.isArray(raw.events)?raw.events:[]).map((event,i)=>({...event,id:'event-'+(i+1),
+        timeline:oneLine(event?.timeline)||'Unknown',result:oneLine(event?.result)}));
     const drafts=readSlothBatchScenes({scenes:rows},plan.events);
     let reviewFailed=false;
     if(reviewSummaries&&plan.events.length){
@@ -626,9 +637,9 @@ export async function composeSingleSlothCollection(options) {
         }catch(error){reviewFailed=true;console.warn('Collection summary review failed; keeping original drafts.',error);}
         verifyOrigin();
     }
-    const scenes=plan.events.map(event=>drafts.get(event.id)).filter(Boolean);
-    return {plan,scenes,...readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource}),
-        skippedScenes:plan.events.length-scenes.length,reviewFailed,inputTokens,inputTokensExact};
+    const accepted=finalizeSingleSlothScenes(plan,drafts);
+    return {plan,...accepted,...readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource}),
+        reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain};
 }
 
 export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext='',signal=null}) {

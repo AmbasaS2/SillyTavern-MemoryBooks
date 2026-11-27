@@ -159,6 +159,18 @@ export function stageNexusSceneMerge(memory, {
         Array.isArray(entry.key) ? entry.key : []), ...keywords]
         .map(x => String(x || '').trim()).filter(Boolean))].slice(0, 64);
     surviving.STMB_sourceRanges = structuredClone(plan.sourceRanges);
+    if (plan.sourceEntries.some(entry=>Object.hasOwn(entry,'STMB_collectedRanges'))) {
+        const ranges=plan.sourceEntries.flatMap(entry=>Object.hasOwn(entry,'STMB_collectedRanges')
+            ? (Array.isArray(entry.STMB_collectedRanges)?entry.STMB_collectedRanges:[]) : entryRanges(entry));
+        const union=[];
+        for (const pair of ranges.filter(pair=>Array.isArray(pair)&&pair.length===2&&
+            pair.every(Number.isSafeInteger)&&pair[0]<=pair[1]).sort((a,b)=>a[0]-b[0])) {
+            const last=union.at(-1);
+            if (last&&pair[0]<=last[1]+1) last[1]=Math.max(last[1],pair[1]);
+            else union.push([...pair]);
+        }
+        surviving.STMB_collectedRanges=union;
+    }
     if (plan.sourceRanges.length !== 1) {
         delete surviving.STMB_start;
         delete surviving.STMB_end;

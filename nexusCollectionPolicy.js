@@ -34,7 +34,9 @@ export function normalizeSlothVisibleTail(value) {
 }
 
 export function getSlothHideRanges(events, messages, keepRecent) {
-    const collected = new Set(events.flatMap(event => event.messageIds));
+    const collected = new Set(events.flatMap(event => Array.isArray(event.collectedRanges)
+        ? event.messageIds.filter(id=>event.collectedRanges.some(([a,b])=>id>=a&&id<=b))
+        : event.messageIds));
     const visible = messages.flatMap((message, id) =>
         collected.has(id) && message && !message.is_system && typeof message.mes === 'string' && message.mes.trim() ? [id] : []);
     const hideCount = Math.max(0, visible.length - normalizeSlothVisibleTail(keepRecent));
@@ -469,6 +471,26 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
             /(?:\*\*Result\*\*|#{1,6}\s+Result)/i.test(content) &&
             Array.isArray(item.messageIds) && item.messageIds.length,
             'Scene is missing Timeline / Scene / Result or source IDs.');
+        if (Array.isArray(item.collectedRanges)) {
+            requireThat(item.collectedRanges.every(pair=>Array.isArray(pair)&&pair.length===2&&
+                pair.every(Number.isSafeInteger)&&pair[0]<=pair[1]&&
+                item.segments.some(([a,b])=>a<=pair[0]&&pair[1]<=b)),
+                'Collected coverage must be inside verified Scene references.');
+            // A paid response can be replayed after a partial commit. Reuse only
+            // an exact, active same-chat Scene, never a guessed semantic match.
+            const existing=chatId&&Object.values(staged.entries).find(e=>e.STMB_chatId===chatId&&
+                !e.disable&&!e.STMB_slothSceneSplitFrom&&!e.STMB_slothSceneMerge&&
+                e.stmemorybooks===true&&e.content===content&&
+                str(e.comment).replace(/^\d+\s*-\s*/u,'')===title&&
+                JSON.stringify(e.STMB_sourceRanges)===JSON.stringify(item.segments));
+            if (existing) {
+                const old=Array.isArray(existing.STMB_collectedRanges)?existing.STMB_collectedRanges:existing.STMB_sourceRanges;
+                const ranges=[...old,...item.collectedRanges];
+                existing.STMB_collectedRanges=slothSourceRanges(item.messageIds.filter(id=>ranges.some(([a,b])=>id>=a&&id<=b)));
+                writes.push({uid:existing.uid,title:existing.comment,segments:item.segments,reused:true});
+                continue;
+            }
+        }
         const entry=createEntry(staged);
         requireThat(entry && intUid(entry.uid)!==null,'Memory entry constructor failed.');
         entry.comment=String(next++).padStart(3,'0')+' - '+title;
@@ -484,6 +506,7 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
             entry.STMB_discontiguous=true;
         }
         entry.STMB_sourceRanges=structuredClone(item.segments);
+        if(Array.isArray(item.collectedRanges)) entry.STMB_collectedRanges=structuredClone(item.collectedRanges);
         if(chatId)entry.STMB_chatId=chatId;
         entry.key=Array.isArray(item.keywords)?[...new Set(item.keywords.map(str).filter(Boolean))].slice(0,16):[];
         entry.disable=false;entry.position=0;entry.outletName='';
