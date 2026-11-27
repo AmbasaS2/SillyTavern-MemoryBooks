@@ -14018,6 +14018,7 @@ function registerSlashCommands() {
  * Create main menu UI
  */
 function createUI() {
+  if (document.getElementById("stmb-menu-item-container")) return;
   const menuItem = $(
     `
         <div id="stmb-menu-item-container" class="extension_container interactable" tabindex="0">
@@ -14918,43 +14919,45 @@ function setupEventListeners() {
     slothAutoTimer = undefined;
   });
 
-  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, lists => {
+  // Enrich the native scan payload before normal-priority listeners such as
+  // Lorebook Ordering calculate priorities and budgets. Stage async results
+  // locally so switching chats or ending a generation cannot append stale lore.
+  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, async lists => {
     const ref = getCurrentStmbChatRef();
     const settings = extension_settings.STMemoryBooks;
     const chatKey = getStmbChatKey(ref);
-    scopeNexusWorldInfo(lists, {
+    const scope = () => scopeNexusWorldInfo(lists, {
       settings, ref, chatKey, avatar: ref?.avatarUrl,
     });
-  });
-  eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED, async ({ globalLore, characterLore, chatLore, personaLore }) => {
-    if (!narratorGenerationSnapshot && !manualGroupGenerationSnapshot) return;
+    scope();
+    const narrator = narratorGenerationSnapshot;
+    const manual = manualGroupGenerationSnapshot;
+    if (!narrator && !manual) return;
     const context = getCurrentMemoryBooksContext();
-    if (!(narratorGenerationSnapshot && context.isNarratorMode) &&
-        !(manualGroupGenerationSnapshot && context.isGroupChat)) return;
-    const arrays = [globalLore, characterLore, chatLore, personaLore].filter(Array.isArray);
-    const existingKeys = new Set(arrays.flatMap(entries => entries.map(entry => `${entry?.world}.${entry?.uid}`)));
-
-    if (narratorGenerationSnapshot && context.isNarratorMode) {
-      const config = getCurrentNarratorConfig();
-      const members = config.members.filter(member => !member.retired && narratorGenerationSnapshot.includes(member.id));
-      for (const member of members) {
-        const data = await loadWorldInfo(member.lorebookName);
-        if (!data?.entries) continue;
-        mergeNarratorLorebookEntries(characterLore, data, member.lorebookName, existingKeys);
-      }
-      return;
+    const speaker = String(characters?.[this_chid]?.avatar || "").trim();
+    let books = [];
+    if (narrator && context.isNarratorMode) {
+      books = getCurrentNarratorConfig().members
+        .filter(member => !member.retired && narrator.includes(member.id))
+        .map(member => member.lorebookName);
+    } else if (manual && context.isGroupChat) {
+      books = [getManualGroupSpeakerLorebook(manual, speaker)];
     }
-
-    if (manualGroupGenerationSnapshot && context.isGroupChat) {
-      const speakingAvatar = String(characters?.[this_chid]?.avatar || "").trim();
-      const lorebookName = getManualGroupSpeakerLorebook(
-        manualGroupGenerationSnapshot,
-        speakingAvatar,
-      );
-      if (!lorebookName) return;
-      const data = await loadWorldInfo(lorebookName);
-      if (!data?.entries) return;
-      mergeNarratorLorebookEntries(characterLore, data, lorebookName, existingKeys);
+    if (!Array.isArray(lists.characterLore)) return;
+    const arrays = [lists.globalLore, lists.characterLore, lists.chatLore, lists.personaLore].filter(Array.isArray);
+    const existingKeys = new Set(arrays.flatMap(entries => entries.map(entry => `${entry?.world}.${entry?.uid}`)));
+    const staged = [];
+    for (const name of new Set(books.filter(Boolean))) {
+      const data = await loadWorldInfo(name);
+      if (chatKey !== getStmbChatKey() || narrator !== narratorGenerationSnapshot ||
+          manual !== manualGroupGenerationSnapshot ||
+          (context.isGroupChat && speaker !== String(characters?.[this_chid]?.avatar || "").trim())) return;
+      if (data?.entries) mergeNarratorLorebookEntries(staged, data, name, existingKeys);
+    }
+    if (staged.length) {
+      for (const entry of staged) lists.characterLore.push(entry);
+      // Apply story scope to newly added entries as well.
+      scope();
     }
   });
 
@@ -15955,6 +15958,7 @@ async function init() {
   while (attempts < maxAttempts) {
     if (
       $(SELECTORS.extensionsMenu).length > 0 &&
+      document.getElementById("chat") &&
       eventSource &&
       typeof Popup !== "undefined"
     ) {
@@ -15962,6 +15966,13 @@ async function init() {
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
     attempts++;
+  }
+
+  if (attempts >= maxAttempts) {
+    // No UI or listeners have been installed yet; a later APP_READY may retry.
+    hasBeenInitialized = false;
+    console.warn("🦥 STMemoryBooks", "Host UI not ready; initialization deferred.");
+    return;
   }
 
   // Create UI now that extensions menu is available
