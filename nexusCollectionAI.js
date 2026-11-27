@@ -211,7 +211,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         '- append_section: uid, section (one named Current Continuity section), text (one grounded addition). For continuity.',
         '- create: unique title, content, and optional keywords array.',
         'Match the existing entry by role or subject before choosing an action. Reuse its UID for the update. An existing entry can hold both core and continuity: update only the relevant part. Only create Core Memory, Current Continuity or NPC Index if that role has no existing active entry.',
-        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues only when they need to remain available across unrelated scenes. Classify by the need for continuous recall, not emotional importance alone: keep situation-specific durable facts and recall cues in LT, person-specific facts in NPC, live or unfinished states in Current Continuity, and actual past incidents in Scene. Update existing matching entries in place; this collection is not a reclassification or deletion of earlier memories.',
+        'Core Memory stores durable operative rules, habits, wounds, boundaries, promises, secrets, lasting changes and concrete Recall Cues only when they need to remain available across unrelated scenes. Classify by the need for continuous recall, not emotional importance alone: keep situation-specific durable facts and recall cues in LT, person-specific facts in NPC, live or unfinished states in Current Continuity, and actual past incidents in Scene. Compare proposed facts with existing text across roles; retain a reconfirmed fact in its existing home without appending it again. Update existing matching entries in place; this collection is not a reclassification or deletion of earlier memories.',
         'Do not promote one continuous incident to a recurring habit. Preserve conditions, beneficiaries and chooser-owned exceptions individually.',
         'A promise to change behavior does not prove the habit changed. An unaffected or still uncertain mechanism keeps its wording.',
         'For a recall cue keep its perceivable trigger, grounded meaning and distinctly supported future function.',
@@ -608,7 +608,7 @@ export async function composeSingleSlothCollection(options) {
         'Perform causal event classification, complete Scene writing, and minimal Nexus patches in this ONE response. Return only one complete JSON object.',
         'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]},{"title":"open incident","complete":false,"reason":"why still open","segments":[[2,3]]}],"edits":[]}.',
         'Return one row per causal incident in events. Complete events contain their own Scene and Result. Open incidents have complete:false; leave their outcome pending. Use inclusive source ranges with real original IDs. Shared boundary messages are allowed when they support distinct incidents. Do not duplicate the same incident. Keep all essential details and return complete JSON within the output budget.',
-        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences.',
+        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences. Before finalizing each completed row, check that its ranges include the actual ending and every consequential decision, distinct condition, boundary, action and response described in its prose. Copy the closure quote from its actual original ID inside those ranges. Keep separate completed incidents separate even if they share a topic. Leave genuinely unfinished incidents open.',
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
@@ -654,7 +654,7 @@ export async function composeSingleSlothCollection(options) {
     }
     const accepted=finalizeSingleSlothScenes(plan,drafts);
     const nexusResult=readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource,committedEdits});
-    const pendingDraft=buildSlothPendingDraft(raw,accepted.scenes,lockedScenes.length,nexusResult.pendingEdits);
+    const pendingDraft=buildSlothPendingDraft(raw,accepted.scenes,lockedScenes.length,nexusResult.pendingEdits,plan.issues);
     return {plan,...accepted,...nexusResult,pendingDraft,
         committedEdits:[...committedEdits,...(nexusResult.acceptedRawEdits??[])],
         reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain};

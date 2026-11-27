@@ -179,6 +179,7 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
     let uncertain=raw.recoveryUncertain===true || !Array.isArray(raw.events) ||
         (Object.hasOwn(raw,'deferred')&&!Array.isArray(raw.deferred));
     let invalidScenes=0;
+    const issues=[];
     const postpone=(row,range,reason,explicitOpen=false)=>{
         uncertain ||= range.unknown;
         if (range.ids.length) deferred.push({title:text(row?.title),reason,explicitOpen,
@@ -203,6 +204,17 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
         if(!matches.includes(id)&&matches.length===1&&
             (quote.length>=8||quote===originals.get(matches[0]).trim())) id=matches[0];
         const verified=matches.includes(id);
+        // A supplied but contradictory closure is a local evidence failure,
+        // not a reason to discard other scenes or consume this source range.
+        // Old drafts with no closure remain compatible; the prompt encourages
+        // exact closures but a missing field alone does not erase paid prose.
+        if(closure!=null&&originals.size&&!verified){
+            const reason='Closure quote does not match an original message inside this Scene range.';
+            issues.push({row:i+1,reason,segments:collectionRanges(range.ids)});
+            invalidScenes++;
+            postpone(row,range,reason);
+            continue;
+        }
         events.push({id:'event-'+(i+1),title,reason:text(row.reason),result,segments:collectionRanges(range.ids),
             messageIds:range.ids,start:range.ids[0],end:range.ids.at(-1),
             ...(verified?{closure:{messageId:id,quote}}:{}),
@@ -231,7 +243,7 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
     if (missing.length) deferred.push({reason:'Unclassified source.',unclassified:true,segments:collectionRanges(missing),messageIds:missing});
     completed.sort((a,b)=>a.end-b.end);
     return {events:completed,deferred,sourceIds:[...sourceIds],start:sourceIds[0],end:sourceIds.at(-1),
-        fullyCollected:!uncertain&&!deferred.length,uncertain,invalidScenes};
+        fullyCollected:!uncertain&&!deferred.length,uncertain,invalidScenes,issues};
 }
 
 // Reference ranges describe the evidence a Scene actually read. Collected
@@ -272,12 +284,13 @@ export function joinSlothRecoveryScenes(raw,lockedScenes=[]) {
         recoveryUncertain:raw.recoveryUncertain===true||!Array.isArray(raw.events)};
 }
 
-export function buildSlothPendingDraft(raw,scenes,lockedCount,pendingEdits) {
+export function buildSlothPendingDraft(raw,scenes,lockedCount,pendingEdits,issues=[]) {
     const saved=new Set(scenes.map(scene=>Number(scene.id.slice(6))-1));
     return {
         events:(Array.isArray(raw.events)?raw.events:[]).filter((_,i)=>!saved.has(i+lockedCount)),
         deferred:raw.deferred??[],
         edits:pendingEdits??[],
+        ...(issues.length?{recoveryIssues:issues.map(({row,reason,segments})=>({row,reason,segments}))}:{}),
         ...(raw.recoveryUncertain===true?{recoveryUncertain:true}:{}),
         ...(raw.recoveredIncompleteEdits===true?{recoveredIncompleteEdits:true}:{}),
     };

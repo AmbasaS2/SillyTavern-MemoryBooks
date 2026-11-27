@@ -7,7 +7,7 @@ import { SLOTH_DEFAULT_SUMMARY_PROMPT, SLOTH_SCENE_PROMPT_V13 } from './nexusSlo
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
 
 test('the built-in scene guidance retains source-grounded atmosphere, factual sequence and independent terms',()=>{
-    for(const phrase of ['lived texture','distinctive sensory details','meaningful silences','source-supported actions','meaningful atmosphere',
+    for(const phrase of ['lived texture','distinctive sensory details','meaningful silences','Attribute perceptions and private thoughts','meaningful atmosphere',
         'Follow the cause, actions, turning point and observed outcome in order.',
         'Keep independent agreement conditions separate','private thoughts','concrete recall cues','supported answer or unanswered choice'])
         assert.ok(SLOTH_DEFAULT_SUMMARY_PROMPT.toLowerCase().includes(phrase.toLowerCase()),phrase);
