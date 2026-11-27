@@ -15,7 +15,7 @@ function harness() {
         initializeSettings: () => ({ moduleSettings: { autoRollbackEnabled: state.enabled } }),
         extension_settings: { STMemoryBooks: { moduleSettings: { get autoRollbackEnabled() { return state.enabled; } } } },
         getCurrentChatLorebookNames: () => new Set(['deleted', 'failed', 'healthy']),
-        loadWorldInfo: async name => {
+        loadRollbackWorldInfo: async name => {
             state.loads.push(name);
             if (name === 'deleted') return null;
             if (name === 'failed') throw new Error('load rejected');

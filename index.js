@@ -46,6 +46,8 @@ import {
 import { lodash, Handlebars, DOMPurify } from "../../../../lib.js";
 import { escapeHtml, getCharaFilename } from "../../../utils.js";
 import * as worldInfoHost from "../../../world-info.js";
+import { commitVerifiedWorldInfoBooks } from './nexusCollectionCommit.js';
+import { bindSlothPointerDrag } from './slothPointerDrag.js';
 import { autoLinkCharacterBooks, getCharacterAuxBooks, assignedNexusBooks, planNexusAuxBooks, withSlothRoleSync, isSlothRoleSyncPending } from "./nexusAuxLinks.js";
 import {
   compileScene,
@@ -802,7 +804,6 @@ let currentPopupInstance = null;
 let isProcessingMemory = false;
 let isProcessingArc = false;
 let currentProfile = null;
-let isDryRun = false;
 /* Ephemeral failure state for AI errors */
 let lastFailedAIError = null;
 let lastFailureToast = null;
@@ -987,34 +988,43 @@ function saveNarratorDrawerPosition() {
 }
 
 function beginNarratorDrawerDrag(event) {
-  if (event.button !== undefined && event.button !== 0) return;
-  const collapsed = narratorCastDrawer?.classList.contains("collapsed");
+  const drawer = narratorCastDrawer;
+  if (!drawer || narratorCastDrawerDragState || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+  const collapsed = drawer.classList.contains("collapsed");
   if (!collapsed && event.target.closest("button, input, label")) return;
-  const rect = narratorCastDrawer.getBoundingClientRect();
-  narratorCastDrawerDragState = {
+  const rect = drawer.getBoundingClientRect();
+  const state = {
     offsetX: event.clientX - rect.left,
     offsetY: event.clientY - rect.top,
     startX: event.clientX,
     startY: event.clientY,
     moved: false,
   };
-  const move = (moveEvent) => {
-    if (!narratorCastDrawerDragState || !narratorCastDrawer) return;
-    if (Math.hypot(moveEvent.clientX - narratorCastDrawerDragState.startX, moveEvent.clientY - narratorCastDrawerDragState.startY) > 4) {
-      narratorCastDrawerDragState.moved = true;
+  narratorCastDrawerDragState = state;
+  state.cancel = bindSlothPointerDrag(event, drawer, moveEvent => {
+    if (narratorCastDrawer !== drawer) return state.cancel();
+    if (Math.hypot(moveEvent.clientX - state.startX, moveEvent.clientY - state.startY) > 4) {
+      state.moved = true;
     }
-    narratorCastDrawer.style.left = `${clampInt(moveEvent.clientX - narratorCastDrawerDragState.offsetX, 12, Math.max(12, window.innerWidth - narratorCastDrawer.offsetWidth - 12))}px`;
-    narratorCastDrawer.style.top = `${clampInt(moveEvent.clientY - narratorCastDrawerDragState.offsetY, 12, Math.max(12, window.innerHeight - narratorCastDrawer.offsetHeight - 12))}px`;
-  };
-  const up = () => {
-    document.removeEventListener("pointermove", move);
-    document.removeEventListener("pointerup", up);
-    narratorCastDrawer.dataset.dragged = narratorCastDrawerDragState?.moved ? "true" : "false";
+    if (!state.moved) return;
+    drawer.style.left = `${clampInt(moveEvent.clientX - state.offsetX, 12, Math.max(12, window.innerWidth - drawer.offsetWidth - 12))}px`;
+    drawer.style.top = `${clampInt(moveEvent.clientY - state.offsetY, 12, Math.max(12, window.innerHeight - drawer.offsetHeight - 12))}px`;
+  }, completed => {
+    if (narratorCastDrawerDragState !== state) return;
     narratorCastDrawerDragState = null;
-    saveNarratorDrawerPosition();
-  };
-  document.addEventListener("pointermove", move);
-  document.addEventListener("pointerup", up);
+    if (narratorCastDrawer !== drawer || !drawer.isConnected) return;
+    if (!completed) {
+      delete drawer.dataset.dragged;
+      applyNarratorDrawerPosition();
+      return;
+    }
+    if (state.moved) {
+      drawer.dataset.dragged = "true";
+      saveNarratorDrawerPosition();
+      // Suppress only the click associated with this drag, not the next tap.
+      setTimeout(() => { delete drawer.dataset.dragged; }, 0);
+    }
+  });
 }
 
 function createNarratorCastDrawer() {
@@ -1028,6 +1038,9 @@ function createNarratorCastDrawer() {
 
 function refreshNarratorCastDrawer() {
   const context = getCurrentMemoryBooksContext();
+  // The cast drawer replaces its children on refresh, including the pointer
+  // capture target. Cancel the current gesture before replacing/removing them.
+  narratorCastDrawerDragState?.cancel();
   if (!context.isNarratorMode || context.isGroupChat) {
     narratorCastDrawer?.remove();
     narratorCastDrawer = null;
@@ -1235,45 +1248,37 @@ function scrollToMemoryBoundaryTarget() {
 }
 
 function handleMemoryBoundaryButtonPointerMove(event) {
-  if (!memoryBoundaryButtonDragState || !memoryBoundaryButton) return;
-
+  const state = memoryBoundaryButtonDragState;
+  const button = memoryBoundaryButton;
+  if (!state || !button) return;
   const position = clampMemoryBoundaryButtonPosition({
-    left: event.clientX - memoryBoundaryButtonDragState.offsetX,
-    top: event.clientY - memoryBoundaryButtonDragState.offsetY,
+    left: event.clientX - state.offsetX,
+    top: event.clientY - state.offsetY,
   });
-
-  if (
-    Math.abs(position.left - memoryBoundaryButtonDragState.startLeft) > 2 ||
-    Math.abs(position.top - memoryBoundaryButtonDragState.startTop) > 2
-  ) {
-    memoryBoundaryButtonDragState.moved = true;
+  if (Math.abs(position.left - state.startLeft) > 2 || Math.abs(position.top - state.startTop) > 2) {
+    state.moved = true;
   }
-
-  memoryBoundaryButton.style.left = `${position.left}px`;
-  memoryBoundaryButton.style.top = `${position.top}px`;
+  if (!state.moved) return;
+  button.style.left = `${position.left}px`;
+  button.style.top = `${position.top}px`;
 }
 
-function handleMemoryBoundaryButtonPointerUp() {
-  if (!memoryBoundaryButtonDragState || !memoryBoundaryButton) return;
-
-  const moved = memoryBoundaryButtonDragState.moved;
-  const position = {
-    left: parseInt(memoryBoundaryButton.style.left, 10),
-    top: parseInt(memoryBoundaryButton.style.top, 10),
-  };
-
-  document.removeEventListener("pointermove", handleMemoryBoundaryButtonPointerMove);
-  document.removeEventListener("pointerup", handleMemoryBoundaryButtonPointerUp);
+function handleMemoryBoundaryButtonPointerUp(state, button, completed) {
+  if (memoryBoundaryButtonDragState !== state) return;
   memoryBoundaryButtonDragState = null;
-  saveMemoryBoundaryButtonPosition(position);
-
-  if (moved) {
-    memoryBoundaryButton.dataset.stmbDragged = "true";
-    setTimeout(() => {
-      if (memoryBoundaryButton) {
-        delete memoryBoundaryButton.dataset.stmbDragged;
-      }
-    }, 0);
+  if (memoryBoundaryButton !== button || !button.isConnected) return;
+  if (!completed) {
+    delete button.dataset.stmbDragged;
+    applyMemoryBoundaryButtonPosition();
+    return;
+  }
+  if (state.moved) {
+    saveMemoryBoundaryButtonPosition({
+      left: parseInt(button.style.left, 10),
+      top: parseInt(button.style.top, 10),
+    });
+    button.dataset.stmbDragged = "true";
+    setTimeout(() => { delete button.dataset.stmbDragged; }, 0);
   }
 }
 
@@ -1287,19 +1292,20 @@ function createMemoryBoundaryButton() {
   button.innerHTML = '<i class="fa-solid fa-angles-up" aria-hidden="true"></i>';
 
   button.addEventListener("pointerdown", (event) => {
-    if (event.button !== undefined && event.button !== 0) return;
+    if (memoryBoundaryButtonDragState || event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
     event.preventDefault();
     event.stopPropagation();
     const rect = button.getBoundingClientRect();
-    memoryBoundaryButtonDragState = {
+    const state = {
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
       startLeft: rect.left,
       startTop: rect.top,
       moved: false,
     };
-    document.addEventListener("pointermove", handleMemoryBoundaryButtonPointerMove);
-    document.addEventListener("pointerup", handleMemoryBoundaryButtonPointerUp);
+    memoryBoundaryButtonDragState = state;
+    state.cancel = bindSlothPointerDrag(event, button, handleMemoryBoundaryButtonPointerMove,
+      completed => handleMemoryBoundaryButtonPointerUp(state, button, completed));
   });
 
   button.addEventListener("click", (event) => {
@@ -1318,6 +1324,7 @@ function createMemoryBoundaryButton() {
 
 function refreshMemoryBoundaryButton() {
   if (!isMemoryBoundaryButtonEnabled()) {
+    memoryBoundaryButtonDragState?.cancel();
     memoryBoundaryButton?.remove();
     memoryBoundaryButton = null;
     return;
@@ -1327,7 +1334,7 @@ function refreshMemoryBoundaryButton() {
     memoryBoundaryButton = createMemoryBoundaryButton();
   }
 
-  applyMemoryBoundaryButtonPosition();
+  if (!memoryBoundaryButtonDragState) applyMemoryBoundaryButtonPosition();
   if (memoryBoundaryButton.style.display !== "inline-flex") memoryBoundaryButton.style.display = "inline-flex";
 }
 
@@ -1566,6 +1573,8 @@ function refreshSlothRecoveryForCurrentChat() {
 }
 
 async function handleChatChanged(chatId) {
+  narratorCastDrawerDragState?.cancel();
+  memoryBoundaryButtonDragState?.cancel();
   const originChatKey = getStmbChatKey();
   refreshSlothRecoveryForCurrentChat();
   invalidateSlothAutomaticProgress();
@@ -4892,8 +4901,8 @@ async function generateBaseRegenerationDraft(prepared, task) {
       { timeOut: 0 },
     );
   }
-  // Direct regeneration uses the legacy global profile hook. Queued generation
-  // follows the existing queued-memory path and relies on its captured profile.
+  // Retain the exported profile for compatibility; requests use the captured
+  // profile directly rather than modifying SillyTavern's generation events.
   if (!isQueued) {
     currentProfile = prepared.profileSettings;
   }
@@ -14049,6 +14058,44 @@ function getLorebookDataFingerprint(data) {
   return fingerprintRollbackEntry(data);
 }
 
+async function loadRollbackWorldInfo(name) {
+  // Native loadWorldInfo can return a shared, unsaved cache object. Never use
+  // it as a server comparison or a mutable rollback draft.
+  const response = await fetch('/api/worldinfo/get', {
+    method: 'POST', headers: getRequestHeaders(), cache: 'no-store',
+    body: JSON.stringify({ name }),
+  });
+  if (!response.ok) throw new Error(`World Info server read failed for ${name}: ${response.status}`);
+  const data = await response.json();
+  if (!data?.entries || typeof data.entries !== 'object' || Array.isArray(data.entries)) {
+    throw new Error(`Invalid World Info data: ${name}`);
+  }
+  // ST returns {entries:{}} for a nonexistent book. Do not recreate a deleted
+  // book during recovery; only resolve this ambiguity for empty responses.
+  if (Object.keys(data).length === 1 && !Object.keys(data.entries).length) {
+    const list = await fetch('/api/worldinfo/list', {
+      method: 'POST', headers: getRequestHeaders(), cache: 'no-store', body: '{}',
+    });
+    if (!list.ok) throw new Error(`World Info existence check failed for ${name}: ${list.status}`);
+    const books = await list.json();
+    if (!Array.isArray(books) || !books.some(book => book.file_id === name)) {
+      throw new Error(`World Info no longer exists: ${name}`);
+    }
+  }
+  return data;
+}
+
+function assertRollbackWorldInfoCache(name, ...allowed) {
+  const cached = worldInfoHost.worldInfoCache?.get(name);
+  if (cached && !allowed.some(book => getLorebookDataFingerprint(cached) === getLorebookDataFingerprint(book))) {
+    throw new Error(tr(
+      "STMemoryBooks_AutoRollback_Conflict",
+      "Memory Book {{name}} changed while rollback was being prepared. Nothing else was changed.",
+      { name },
+    ));
+  }
+}
+
 async function loadMemoryRollbackLorebooks(settings, namesOverride = null, { skipUnavailable = false } = {}) {
   const names = Array.from(namesOverride || getCurrentChatLorebookNames(settings))
     .sort((left, right) => left.localeCompare(right));
@@ -14056,7 +14103,7 @@ async function loadMemoryRollbackLorebooks(settings, namesOverride = null, { ski
   for (const name of names) {
     let data;
     try {
-      data = await loadWorldInfo(name);
+      data = await loadRollbackWorldInfo(name);
       if (!data || typeof data !== "object") {
         throw new Error(tr(
           "STMemoryBooks_AutoRollback_LoadFailed",
@@ -14071,7 +14118,7 @@ async function loadMemoryRollbackLorebooks(settings, namesOverride = null, { ski
     }
     states.push({
       name,
-      data,
+      data: deepClone(data),
       originalData: deepClone(data),
       originalFingerprint: getLorebookDataFingerprint(data),
     });
@@ -14160,48 +14207,48 @@ async function confirmConsolidationRollback(parentItems) {
 }
 
 async function saveMemoryRollbackLorebooks(changedStates) {
-  const saved = [];
+  if (!changedStates.length) return;
+  const chatKey = getStmbChatKey();
+  const chatId = getMemoryRollbackChatId();
+  // Preserve the approved draft and baseline even if native editor/cache code
+  // mutates an object during an awaited save or refresh.
+  const states = changedStates.map(state => ({
+    name: state.name,
+    original: deepClone(state.originalData),
+    staged: deepClone(state.data),
+  }));
   try {
-    for (const state of changedStates.slice().sort((left, right) => left.name.localeCompare(right.name))) {
-      await withStmbWriteLane({ type: "lorebook", name: state.name }, async () => {
-        const fresh = await loadWorldInfo(state.name);
-        if (getLorebookDataFingerprint(fresh) !== state.originalFingerprint) {
-          throw new Error(tr(
-            "STMemoryBooks_AutoRollback_Conflict",
-            "Memory Book {{name}} changed while rollback was being prepared. Nothing else was changed.",
-            { name: state.name },
-          ));
+    await commitVerifiedWorldInfoBooks(states, {
+      loadFresh: loadRollbackWorldInfo,
+      save: (name, data) => saveWorldInfo(name, deepClone(data), true),
+      withLocks: withLorebookWriteLanes,
+      verifyOrigin: () => {
+        if (getStmbChatKey() !== chatKey || getMemoryRollbackChatId() !== chatId) {
+          throw new Error("Chat changed during Memory rollback.");
         }
-        await saveWorldInfo(state.name, state.data, true);
-      });
-      saved.push(state);
-    }
+      },
+      verifyBeforeWrite: assertRollbackWorldInfoCache,
+      resetCache: (name, data) => worldInfoHost.worldInfoCache?.set(name, deepClone(data)),
+    }, {
+      equals: (left, right) => getLorebookDataFingerprint(left) === getLorebookDataFingerprint(right),
+      label: "Memory rollback save",
+    });
   } catch (error) {
-    const compensationFailures = [];
-    for (const state of saved.reverse()) {
-      try {
-        await withStmbWriteLane({ type: "lorebook", name: state.name }, async () => {
-          await saveWorldInfo(state.name, state.originalData, true);
-        });
-      } catch (compensationError) {
-        compensationFailures.push(`${state.name}: ${compensationError?.message || compensationError}`);
-      }
-    }
-    if (compensationFailures.length > 0) {
-      throw new Error(`${error?.message || error} ${tr(
+    if (error?.partialRecovery) {
+      throw new Error(`${error.message} ${tr(
         "STMemoryBooks_AutoRollback_CompensationFailed",
         "Rollback recovery also failed for: {{books}}. Restore these Memory Books from backup before continuing.",
-        { books: compensationFailures.join(", ") },
-      )}`);
+        { books: states.map(state => state.name).join(", ") },
+      )}`, { cause: error });
     }
     throw error;
   }
 }
 
 async function revalidateMemoryRollbackLorebooks(states) {
-  for (const state of states.slice().sort((left, right) => left.name.localeCompare(right.name))) {
-    await withStmbWriteLane({ type: "lorebook", name: state.name }, async () => {
-      const fresh = await loadWorldInfo(state.name);
+  return withLorebookWriteLanes(states.map(state => state.name), async () => {
+    for (const state of states) {
+      const fresh = await loadRollbackWorldInfo(state.name);
       if (getLorebookDataFingerprint(fresh) !== state.originalFingerprint) {
         throw new Error(tr(
           "STMemoryBooks_AutoRollback_Conflict",
@@ -14209,8 +14256,9 @@ async function revalidateMemoryRollbackLorebooks(states) {
           { name: state.name },
         ));
       }
-    });
-  }
+      assertRollbackWorldInfoCache(state.name, state.originalData);
+    }
+  });
 }
 
 async function waitForMemoryRollbackIdle(chatKey) {
@@ -14825,9 +14873,7 @@ function setupEventListeners() {
 
   let slothGeneration = null;
   let slothAutoTimer;
-  // Track dry-run state for generation events
   eventSource.on(event_types.GENERATION_STARTED, (type, options, dryRun) => {
-    isDryRun = dryRun || false;
     // Dry runs and background generations are not a new visible RP reply.
     // Keep an already scheduled automatic collection intact.
     if (!dryRun && ['normal','continue','regenerate','swipe'].includes(type)) {
@@ -14965,63 +15011,8 @@ function setupEventListeners() {
     applyNarratorDrawerPosition();
   });
 
-  // Model settings change handlers
-  const modelSelectors = Object.values(SELECTORS)
-    .filter(
-      (selector) => selector.includes("model_") || selector.includes("temp_"),
-    )
-    .join(", ");
-
-  eventSource.on(event_types.GENERATE_AFTER_DATA, (generate_data) => {
-    if (isDryRun) {
-      return; // Skip all processing during dry-run
-    }
-    if (isProcessingMemory && currentProfile) {
-      const conn =
-        currentProfile.effectiveConnection || currentProfile.connection || {};
-      const apiToSource = {
-        openai: "openai",
-        claude: "claude",
-        openrouter: "openrouter",
-        ai21: "ai21",
-        makersuite: "makersuite",
-        google: "makersuite",
-        vertexai: "vertexai",
-        mistralai: "mistralai",
-        custom: "custom",
-        cohere: "cohere",
-        perplexity: "perplexity",
-        groq: "groq",
-        chutes: "chutes",
-        nanogpt: "nanogpt",
-        deepseek: "deepseek",
-        electronhub: "electronhub",
-        aimlapi: "aimlapi",
-        xai: "xai",
-        pollinations: "pollinations",
-        moonshot: "moonshot",
-        fireworks: "fireworks",
-        cometapi: "cometapi",
-        azure_openai: "azure_openai",
-        zai: "zai",
-        siliconflow: "siliconflow",
-      };
-      const src = apiToSource[conn.api] || "openai";
-
-      // Force source/model/temp
-      generate_data.chat_completion_source = src;
-
-      // Disable thinking mode for memory generation
-      generate_data.include_reasoning = false;
-
-      if (conn.model) {
-        generate_data.model = conn.model;
-      }
-      if (typeof conn.temperature === "number") {
-        generate_data.temperature = conn.temperature;
-      }
-    }
-  });
+  // Memory requests carry their own explicit profile in stmemory.js. Never
+  // rewrite SillyTavern's unscoped GENERATE_AFTER_DATA payload for a live RP.
 
   window.addEventListener("beforeunload", cleanupChatObserver);
   window.addEventListener("beforeunload", cleanupLorebookRegenerationObserver);

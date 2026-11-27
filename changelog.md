@@ -7,6 +7,13 @@ SPDX-License-Identifier: AGPL-3.0-only
 
 ← [Back to README](readme.md)
 
+## v9.4.0-ambasa.13 (November 28, 2026) — Sloth fork
+- Reuse the verified multi-book save protocol in Original auto-rollback. Stage detached server snapshots, acquire all affected write lanes together, check native editor conflicts, verify saved data, and refuse to overwrite newer changes during compensation.
+- Cancel floating narrator and memory-boundary gestures on pointer cancellation, lost capture, blur, chat changes and UI removal. Listeners exist only during an active gesture.
+- Keep Original memory request profile settings local to the actual request; remove the legacy unscoped RP generation override.
+- Regression: 688/688 Node tests (13 added), Bun runtime build and JavaScript syntax check passed. Existing Sloth behavior and data schemas retained. No live installed desktop/Safari verification; server writes remain best-effort, not an atomic cross-device transaction.
+- Rollback baseline: `3fd11ec2fdc7d35cf57220ee482a5a4d0932ae85` (9.4.0-ambasa.12); no schema migration.
+
 ## v9.4.0-ambasa.7 (November 27, 2026) — Sloth fork
 - Move Memory Workshop below Advanced settings and use compact icon actions grouped by purpose rather than AI/manual.
 - Render selected memory previews as sanitized Markdown. Reuse WorldInfo Info's exact read-only Lorebook Manager translation lookup, with a single on-demand current-book file read per overview and an original/translation switch.

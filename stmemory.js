@@ -1249,7 +1249,8 @@ async function generateMemoryWithAI(promptString, profile, options = {}) {
         // Prepare connection info
         // Note: ST base uses 'makersuite' as the canonical provider key for this source.
         const apiType = normalizeCompletionSource(conn.api || getCurrentApiInfo().api);
-        const extra = {};
+        // Apply this only to our own memory request, never to native RP.
+        const extra = apiType === 'full-manual' ? {} : { include_reasoning: false };
         const stmbMaxTokensRaw = extension_settings?.STMemoryBooks?.moduleSettings?.maxTokens;
         const stmbMaxTokens = Number.parseInt(stmbMaxTokensRaw, 10);
         if (Number.isFinite(stmbMaxTokens) && stmbMaxTokens > 0) {

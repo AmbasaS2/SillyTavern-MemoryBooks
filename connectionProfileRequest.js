@@ -45,6 +45,9 @@ export function prepareConnectionProfileRequest(connection, body, signal) {
     for (const field of ['max_tokens', 'max_completion_tokens', 'max_output_tokens', 'max_new_tokens', 'json_schema']) {
         overrides[field] = body[field];
     }
+    if (Object.hasOwn(body, 'include_reasoning')) {
+        overrides.include_reasoning = body.include_reasoning;
+    }
     return () => service.sendRequest(
         profileId,
         body.messages,
