@@ -1007,6 +1007,7 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 }
 .popup.stmb-popup .stmb-sloth-controls { display: flex; flex-wrap: wrap; gap: 6px; }
 .popup.stmb-popup .stmb-sloth-controls > [hidden] { display: none; }
+.popup.stmb-popup .stmb-sloth-companion-controls { justify-content: end; }
 .popup.stmb-popup :is(#stmb-sloth-panel, .stmb-sloth-form) .menu_button {
     margin: 0;
     min-height: 34px;

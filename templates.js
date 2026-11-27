@@ -112,7 +112,9 @@ export const settingsTemplate = Handlebars.compile(`
             <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothChatOverrideInvalid">This chat override is invalid. Turn it off, or choose two different connected lorebooks.</p>
             {{/if}}
             {{#if slothMissingCompanion}}
+            <div class="stmb-sloth-controls stmb-sloth-companion-controls">
               <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Create the missing lorebook</button>
+            </div>
             {{/if}}
             <hr class="stmb-sloth-settings-rule">
             <details id="stmb-sloth-injection-settings" class="stmb-sloth-injection-settings stmb-workspace-drawer">
@@ -218,11 +220,12 @@ export const settingsTemplate = Handlebars.compile(`
           </summary>
           <small id="stmb-sloth-side-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSidePromptHelp" hidden>Checked Side Prompts are linked only to the current character, not automatically to other characters. Choose a destination lorebook for each prompt.</small>
           <div data-stmb-prompt-library-slot="side"></div>
+          {{#if slothRoleActive}}
+          <hr class="stmb-sloth-settings-rule">
           <div class="stmb-sloth-controls">
-            {{#if slothRoleActive}}
             <button type="button" class="menu_button" data-stmb-sloth-action="followup" data-i18n="STMemoryBooks_SlothSidePromptAction">Run Side Prompts</button>
-            {{/if}}
           </div>
+          {{/if}}
         </details>
         <details id="stmb-sloth-advanced" class="stmb-workspace-drawer">
           <summary data-i18n="STMemoryBooks_SlothAdvanced">Advanced settings</summary>

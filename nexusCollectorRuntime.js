@@ -1233,7 +1233,7 @@ export async function reviewSlothLegacyCoverage() {
             '<div data-stmb-legacy-evidence role="status"></div></details><label for="stmb-legacy-coverage-ranges">' + html(instructions) +
             '</label><input id="stmb-legacy-coverage-ranges" class="text_pole" type="text">' +
             '<div class="stmb-legacy-coverage-preview" role="status"></div></div>', POPUP_TYPE.CONFIRM, '', {
-            wide:true,large:true,allowVerticalScrolling:true,
+            wide:true,allowVerticalScrolling:true,
             okButton:t('Save', 'STMemoryBooks_Save'), cancelButton:t('Cancel', 'STMemoryBooks_Cancel'),
             onClosing:({ result }) => result !== POPUP_RESULT.AFFIRMATIVE || Boolean(review),
         }));

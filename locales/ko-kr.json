@@ -114,7 +114,7 @@
   "STMemoryBooks_SlothHideHelp": "‘수집 후 숨기기’를 선택했을 때 적용됩니다. 0개면 이번에 저장한 메시지를 모두 숨깁니다. 6개면 저장한 메시지 중 마지막 6개를 남깁니다. 아직 수집하지 않은 메시지는 계속 보입니다.",
   "STMemoryBooks_SlothCommandHelp": "기억 수집 계획을 엽니다.",
   "STMemoryBooks_SlothCustomProfile": "별도 AI 프로필 만들기",
-  "STMemoryBooks_SlothHideAfter": "저장한 구간을 AI 대화 맥락에서 숨기기",
+  "STMemoryBooks_SlothHideAfter": "저장한 구간을 /hide 처리하기",
   "STMemoryBooks_SlothHideRange": "숨길 메시지",
   "STMemoryBooks_SlothHideNone": "숨길 메시지가 없습니다.",
   "STMemoryBooks_SlothHideInterrupted": "기억은 저장했습니다. 채팅에서 어느 메시지까지 숨겨졌는지 확인하세요.",
