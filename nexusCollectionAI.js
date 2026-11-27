@@ -664,7 +664,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2,onRequestMetric=null}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=3,onRequestMetric=null}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -686,7 +686,7 @@ export async function composeSingleSlothCollection(options) {
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
-        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Other edits retain the existing structural checks.',
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite evidence for every LT replace_exact and for LT creates or additions concerning promises, agreements, boundaries, permission, secrecy, or relationship status, whether the subject appears in its title or the new claim. Quote the exact quantity and unit when relevant. Ordinary LT additions need no extra evidence. A quote is a source reference, not permission to infer beyond it.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
