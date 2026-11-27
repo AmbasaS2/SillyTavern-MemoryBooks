@@ -224,37 +224,6 @@ export const settingsTemplate = Handlebars.compile(`
             {{/if}}
           </div>
         </details>
-        {{#if slothRoleActive}}
-          <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
-            <summary data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop</summary>
-            <div>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health" data-i18n="STMemoryBooks_SlothHealthTitle">Memory overview</button></div>
-              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-ai-heading">
-                <h4 id="stmb-workshop-ai-heading" data-i18n="STMemoryBooks_SlothWorkshopAI">AI maintenance</h4>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="nexus-health-review" data-i18n="STMemoryBooks_SlothHealthReviewTitle">AI memory review and cleanup</button></div>
-              </section>
-              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-manual-heading">
-                <h4 id="stmb-workshop-manual-heading" data-i18n="STMemoryBooks_SlothWorkshopManual">Manual maintenance</h4>
-              <div class="stmb-management-action">
-              <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
-              <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
-              </div><div class="stmb-management-action">
-              <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="split" data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</button> <button type="button" id="stmb-sloth-split-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-split-help" aria-label="Review splitting a Scene" data-i18n="[aria-label]STMemoryBooks_SlothSplitButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
-              <small id="stmb-sloth-split-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSplitHelp" hidden>Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
-              </div>
-              <div class="stmb-management-action">
-                <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="compress" data-i18n="STMemoryBooks_SlothCompress">Shorten an event</button> <button type="button" id="stmb-sloth-compress-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-compress-help" aria-label="Shorten an event" data-i18n="[aria-label]STMemoryBooks_SlothCompress"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
-                <small id="stmb-sloth-compress-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothCompressHelp" hidden>Choose what to keep and review the shorter memory.</small>
-              </div>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
-              </section>
-              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-existing-heading">
-                <h4 id="stmb-workshop-existing-heading" data-i18n="STMemoryBooks_SlothWorkshopExisting">Existing memory management</h4>
-              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="legacy-coverage" data-i18n="STMemoryBooks_SlothLegacyCoverage">Register previously summarized ranges</button></div>
-              </section>
-            </div>
-          </details>
-        {{/if}}
         <details id="stmb-sloth-advanced" class="stmb-workspace-drawer">
           <summary data-i18n="STMemoryBooks_SlothAdvanced">Advanced settings</summary>
           <div class="stmb-sloth-advanced-fields">
@@ -314,6 +283,43 @@ export const settingsTemplate = Handlebars.compile(`
             </div>
           </div>
         </details>
+
+        {{#if slothRoleActive}}
+          <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
+            <summary><i class="fa-solid fa-wrench" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop</span></summary>
+            <div class="stmb-workshop-menu">
+              <button type="button" class="stmb-workshop-overview" data-stmb-sloth-action="nexus-health"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i><span><strong data-i18n="STMemoryBooks_SlothHealthTitle">Memory overview</strong><small data-i18n="STMemoryBooks_SlothWorkshopOverviewHelp">Entries · tokens · injection</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-ai-heading">
+                <h4 id="stmb-workshop-ai-heading" data-i18n="STMemoryBooks_SlothWorkshopAI">Memory analysis</h4>
+                <div class="stmb-workshop-action-list"><button type="button" class="stmb-workshop-action" data-stmb-sloth-action="nexus-health-review"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothHealthReviewTitle">AI memory review and cleanup</span></button></div>
+              </section>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-manual-heading">
+                <h4 id="stmb-workshop-manual-heading" data-i18n="STMemoryBooks_SlothWorkshopManual">Scene maintenance</h4>
+                <div class="stmb-workshop-action-list">
+                <div class="stmb-workshop-tool">
+                  <div class="stmb-workshop-action-line"><button type="button" class="stmb-workshop-action" data-stmb-sloth-action="merge"><i class="fa-solid fa-code-merge" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</span></button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+                  <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
+                </div>
+                <div class="stmb-workshop-tool">
+                  <div class="stmb-workshop-action-line"><button type="button" class="stmb-workshop-action" data-stmb-sloth-action="split"><i class="fa-solid fa-code-branch" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothSplitButton">Review splitting a Scene</span></button> <button type="button" id="stmb-sloth-split-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-split-help" aria-label="Review splitting a Scene" data-i18n="[aria-label]STMemoryBooks_SlothSplitButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+                  <small id="stmb-sloth-split-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothSplitHelp" hidden>Review completed Scenes with visible original messages and verifiable order. Each source message is accounted for and the original is kept in the archive.</small>
+                </div>
+                <div class="stmb-workshop-tool">
+                  <div class="stmb-workshop-action-line"><button type="button" class="stmb-workshop-action" data-stmb-sloth-action="compress"><i class="fa-solid fa-compress" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothCompress">Shorten an event</span></button> <button type="button" id="stmb-sloth-compress-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-compress-help" aria-label="Shorten an event" data-i18n="[aria-label]STMemoryBooks_SlothCompress"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
+                  <small id="stmb-sloth-compress-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothCompressHelp" hidden>Choose what to keep and review the shorter memory.</small>
+                </div>
+                </div>
+              </section>
+              <section class="stmb-workshop-tools" aria-labelledby="stmb-workshop-existing-heading">
+                <h4 id="stmb-workshop-existing-heading" data-i18n="STMemoryBooks_SlothWorkshopExisting">Memory management</h4>
+                <div class="stmb-workshop-action-list">
+                  <button type="button" class="stmb-workshop-action" data-stmb-sloth-action="recall-apply"><i class="fa-solid fa-sliders" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</span></button>
+                  <button type="button" class="stmb-workshop-action" data-stmb-sloth-action="legacy-coverage"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i><span data-i18n="STMemoryBooks_SlothLegacyCoverage">Register previously summarized ranges</span></button>
+                </div>
+              </section>
+            </div>
+          </details>
+        {{/if}}
 
         {{#if slothCanCollect}}
         <div id="stmb-sloth-collection-footer" class="stmb-collection-footer">

@@ -173,7 +173,12 @@ test('Memory Workshop groups existing actions without extra rendering and only L
     assert.deepEqual([...panel.matchAll(/<details id="([^"]+)"[^>]*\sopen(?:\s|>)/g)].map(m=>m[1]),['stmb-sloth-lorebooks']);
     const start=panel.indexOf('<details id="stmb-manage-memories"');
     const block=panel.slice(start,panel.indexOf('</details>',start));
-    assert.match(block,/<summary data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop<\/summary>/);
+    assert.match(block,/<summary><i class="fa-solid fa-wrench"[^>]*><\/i><span data-i18n="STMemoryBooks_SlothManageBooks">Memory Workshop<\/span><\/summary>/);
+    assert.ok(start>panel.indexOf('<details id="stmb-sloth-advanced"'));
+    assert.equal((block.match(/class="stmb-workshop-action"/g)||[]).length,6);
+    assert.equal((block.match(/class="stmb-workshop-overview"/g)||[]).length,1);
+    assert.doesNotMatch(block,/class="menu_button"/);
+    assert.match(file('./index.js'),/replace\(oldMaintenance,newMaintenance,content\.querySelector\('#stmb-sloth-panel'\)\);/);
     assert.deepEqual([...block.matchAll(/data-stmb-sloth-action="([^"]+)"/g)].map(m=>m[1]),[
         'nexus-health','nexus-health-review','merge','split','compress','recall-apply','legacy-coverage']);
     assert.equal((block.match(/class="stmb-workshop-tools"/g)||[]).length,3);
@@ -186,7 +191,8 @@ test('Memory Workshop groups existing actions without extra rendering and only L
     assert.doesNotMatch(dispatcher,/MutationObserver|ResizeObserver|setInterval|requestAnimationFrame/);
     const css=file('./style.css');
     assert.match(css,/#stmb-sloth-panel \.stmb-workspace-drawer > summary \{[\s\S]*?display: flex;[\s\S]*?min-block-size: 24px/);
-    assert.match(css,/\.stmb-sloth-maintenance \.stmb-management-action > \.stmb-sloth-help-row \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) 24px/);
+    assert.match(css,/\.stmb-workshop-action \{[\s\S]*?width: fit-content;[\s\S]*?background: transparent/);
+    assert.match(css,/\.stmb-workshop-overview \{[\s\S]*?width: 100%/);
     for(const code of ['de-de','es-es','fr-fr','id-id','ja-jp','ko-kr','ms-my','pt-br','ru-ru','zh-cn','zh-tw']){
         const data=JSON.parse(file('./locales/'+code+'.json'));
         for(const key of ['SlothManageBooks','SlothHealthReviewTitle','SlothWorkshopAI','SlothWorkshopManual','SlothWorkshopExisting','SlothLegacyCoverage'])
