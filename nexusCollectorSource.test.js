@@ -104,9 +104,14 @@ test('the collection receipt is tied to persisted source and is reread after met
     assert.equal(metadataWrites, 1);
     assert.deepEqual(JSON.parse(JSON.stringify(stored.slothCollection)).savedRanges, [[0, 0]]);
     checks.patchStmbMetadataForChatRef = async () => {};
-    await assert.rejects(write(stored.slothCollection, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /did not persist/);
+    // A replay of identical coverage is intentionally idempotent.
+    await write(stored.slothCollection, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint);
+    // A genuinely new receipt must still be verified after persistence.
+    turns.push({mes:'The door opened.',name:'Tali',is_user:false});
+    const expanded=fingerprintSlothChat(turns,[0,1]);
+    await assert.rejects(write(stored.slothCollection, [{ segments: [[1, 1]] }], origin, pair, [0,1], expanded), /did not persist/);
     turns[0].mes = 'A different event happened.';
-    await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /saved chat differs/);
+    await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0,1], expanded), /saved chat differs/);
     assert.equal(metadataWrites, 1);
 });
 
