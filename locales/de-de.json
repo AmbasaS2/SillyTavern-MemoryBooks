@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "Sonstige",
   "STMemoryBooks_SlothHealthProtected": "Geschützt",
   "STMemoryBooks_SlothHealthHelp": "Schreibgeschützte Übersicht der gespeicherten Texte, geschätzt mit dem aktuellen Tokenizer. Immer-aktiv-Markierungen belegen keine tatsächliche Injektion. Nichts wird gelöscht oder neu zugeordnet.",
-  "STMemoryBooks_SlothHealthTotal": "Gespeicherte Tokens",
-  "STMemoryBooks_SlothHealthAlways": "Immer-aktive Tokens",
-  "STMemoryBooks_SlothHealthDuplicates": "Exakte Wiederholungen",
-  "STMemoryBooks_SlothHealthUnknown": "Nicht zählbare Texte: ",
+  "STMemoryBooks_SlothHealthTotal": "Gespeichert",
+  "STMemoryBooks_SlothHealthAlways": "Immer aktiv",
+  "STMemoryBooks_SlothHealthDuplicates": "Identische Absätze",
+  "STMemoryBooks_SlothHealthUnknown": "Nicht gezählt: ",
   "STMemoryBooks_SlothHealthRole": "Rolle",
   "STMemoryBooks_SlothHealthEntries": "Einträge",
   "STMemoryBooks_SlothHealthInspect": "Einträge nach Größe prüfen",
   "STMemoryBooks_SlothHealthChoose": "Eintrag auswählen",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Identische Absätze sind Hinweise zur Prüfung, kein Beweis für inhaltliche Redundanz."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Identische Absätze sind Hinweise zur Prüfung, kein Beweis für inhaltliche Redundanz.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Info zu diesen Werten"
 }

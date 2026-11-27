@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "Otros",
   "STMemoryBooks_SlothHealthProtected": "Protegidos",
   "STMemoryBooks_SlothHealthHelp": "Vista de solo lectura del texto guardado, estimada con el tokenizador actual. Las marcas de activación permanente no prueban la inyección real. No se elimina ni reclasifica nada.",
-  "STMemoryBooks_SlothHealthTotal": "Tokens guardados",
-  "STMemoryBooks_SlothHealthAlways": "Tokens siempre activos",
-  "STMemoryBooks_SlothHealthDuplicates": "Repeticiones exactas",
-  "STMemoryBooks_SlothHealthUnknown": "Textos que no se pudieron contar: ",
+  "STMemoryBooks_SlothHealthTotal": "Guardado",
+  "STMemoryBooks_SlothHealthAlways": "Siempre activo",
+  "STMemoryBooks_SlothHealthDuplicates": "Párrafos idénticos",
+  "STMemoryBooks_SlothHealthUnknown": "Sin contar: ",
   "STMemoryBooks_SlothHealthRole": "Rol",
   "STMemoryBooks_SlothHealthEntries": "Entradas",
   "STMemoryBooks_SlothHealthInspect": "Revisar entradas por tamaño",
   "STMemoryBooks_SlothHealthChoose": "Elegir una entrada",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Los párrafos idénticos son pistas para revisar, no prueba de redundancia semántica."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Los párrafos idénticos son pistas para revisar, no prueba de redundancia semántica.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Información sobre estas cifras"
 }

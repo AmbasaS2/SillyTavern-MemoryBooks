@@ -1328,42 +1328,70 @@ export async function showSlothNexusHealth(){
         const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
         const labels={core:'Core',continuity:'Continuity',lt:'LT',npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
-        const num=n=>n===null?'—':Number(n).toLocaleString();
-        const amount=(n,missing=false)=> '~ '+num(n)+(missing?' + ?':'');
-        const summary=(label,value)=>'<div class="stmb-health-stat"><span>'+html(label)+'</span><strong>'+html(value)+'</strong></div>';
-        const groupRows=SLOTH_HEALTH_ROLES.map(role=>{
+        const num=n=>Number(n).toLocaleString();
+        const amount=(n,missing=0)=>n===0&&missing?'—':'~ '+num(n);
+        const unknown=n=>n?'<small class="stmb-health-unknown">'+html(tr('Unknown','Uncounted: '))+num(n)+'</small>':'';
+        const value=(n,missing)=>'<span class="stmb-health-value">'+html(amount(n,missing))+unknown(missing)+'</span>';
+        const summary=(label,n,missing)=>'<div class="stmb-health-stat"><span>'+html(label)+'</span><strong>'+
+            html(amount(n,missing))+'</strong>'+unknown(missing)+'</div>';
+        const units=t('Tokens','STMemoryBooks_Tokens');
+        const stored=tr('Total','Stored'),always=tr('Always','Always-on');
+        const groupRows=SLOTH_HEALTH_ROLES.filter(role=>report.groups[role].entries>0).map(role=>{
             const group=report.groups[role];
-            return '<tr><td>'+html(labels[role])+'</td><td>'+num(group.entries)+'</td><td>'+html(amount(group.tokens,group.uncounted>0))+
-                '</td><td>'+html(amount(group.alwaysOnTokens,group.uncounted>0))+'</td></tr>';
+            return '<div class="stmb-health-row"><span class="stmb-health-role">'+html(labels[role])+
+                ' <small aria-label="'+html(tr('Entries','Entries')+': '+num(group.entries))+'">('+num(group.entries)+')</small></span>'+
+                value(group.tokens,group.uncounted)+value(group.alwaysOnTokens,group.alwaysOnUncounted)+'</div>';
         }).join('');
-        const options=report.rows.map((row,index)=>'<option value="'+index+'">'+
-            html((row.title||'UID '+row.uid)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)))+'</option>').join('');
-        const duplicates=report.duplicates.map(item=>'<details><summary>'+html(item.entries.map(e=>e.title||'UID '+e.uid).join(' · '))+
-            '</summary><div class="stmb-health-text">'+html(item.text)+'</div></details>').join('');
-        const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-nexus-health"><h3>'+
-            html(tr('Title','Nexus health check'))+'</h3><p class="stmb-health-book">'+html(roles.nexus)+'</p><p class="opacity50p">'+
+        const helpLabel=tr('HelpLabel','About these counts');
+        const chooser=(attribute,label,placeholder)=>'<select class="text_pole" '+attribute+' aria-label="'+html(label)+
+            '"><option value="">'+html(placeholder)+'</option></select>';
+        const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-nexus-health">'+
+            '<header class="stmb-health-heading"><h3>'+html(tr('Title','Nexus health check'))+
+            '</h3><button type="button" class="stmb-health-info stmb-sloth-info" data-health-help-toggle aria-expanded="false" aria-controls="stmb-health-help" title="'+
+            html(helpLabel)+'" aria-label="'+html(helpLabel)+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
+            '<p class="stmb-health-book">'+html(roles.nexus)+'</p><p id="stmb-health-help" class="stmb-health-help" hidden>'+
             html(tr('Help','Read-only snapshot of stored body text, estimated with the current tokenizer. Always-on flags are not proof of actual injection. Nothing is deleted or reclassified.'))+'</p>'+
-            '<div class="stmb-health-stats">'+summary(tr('Total','Stored tokens'),amount(report.total,report.uncounted>0))+
-            summary(tr('Always','Always-on tokens'),amount(report.alwaysOn,report.uncounted>0))+
-            summary(tr('Duplicates','Exact repeats'),num(report.duplicates.length))+'</div>'+
-            (report.uncounted?'<p role="status">'+html(tr('Unknown','Some bodies could not be counted: '))+num(report.uncounted)+'</p>':'')+
-            '<div class="stmb-health-table-wrap"><table class="stmb-health-table"><thead><tr><th>'+html(tr('Role','Role'))+'</th><th>'+
-            html(tr('Entries','Entries'))+'</th><th>'+html(tr('Total','Stored tokens'))+'</th><th>'+html(tr('Always','Always-on tokens'))+
-            '</th></tr></thead><tbody>'+groupRows+'</tbody></table></div>'+
-            '<details class="stmb-workspace-drawer" open><summary>'+html(tr('Inspect','Inspect entries by size'))+'</summary><select class="text_pole" data-health-entry aria-label="'+
-            html(tr('Inspect','Inspect entries by size'))+'"><option value="">'+html(tr('Choose','Choose an entry'))+'</option>'+options+'</select>'+
+            '<div class="stmb-health-stats">'+summary(stored+' · '+units,report.total,report.uncounted)+
+            summary(always+' · '+units,report.alwaysOn,report.alwaysOnUncounted)+'</div>'+
+            '<div class="stmb-health-breakdown"><div class="stmb-health-row stmb-health-labels"><span>'+html(tr('Role','Role'))+
+            '</span><span>'+html(stored)+'</span><span>'+html(always)+'</span></div>'+groupRows+'</div>'+
+            '<details class="stmb-health-section" data-health-entries><summary>'+html(tr('Inspect','Inspect entries by size'))+
+            ' <span>('+num(report.rows.length)+')</span></summary>'+chooser('data-health-entry',tr('Inspect','Inspect entries by size'),tr('Choose','Choose an entry'))+
             '<div class="stmb-health-text" data-health-body hidden></div></details>'+
-            '<details class="stmb-workspace-drawer"><summary>'+html(tr('Duplicates','Exact repeats'))+' ('+num(report.duplicates.length)+')</summary>'+
-            '<p class="opacity50p">'+html(tr('RepeatHelp','Literal repeated paragraphs are review clues, not proof of redundant meaning.'))+'</p>'+duplicates+'</details></div>',
-            POPUP_TYPE.TEXT,'',{wide:true,large:true,allowVerticalScrolling:true}));
-        const selector=popup.dlg.querySelector('[data-health-entry]'),body=popup.dlg.querySelector('[data-health-body]');
-        selector.addEventListener('change',()=>{
-            body.hidden=true;body.textContent='';
-            if(selector.value==='')return;
-            const row=report.rows[Number(selector.value)];
-            if(!row)return;
-            body.textContent=row.body;body.hidden=false;
-        });
+            '<details class="stmb-health-section" data-health-repeats><summary>'+html(tr('Duplicates','Identical paragraphs'))+
+            ' <span>('+num(report.duplicates.length)+')</span></summary><p class="stmb-health-help">'+
+            html(tr('RepeatHelp','Literal repeated paragraphs are review clues, not proof of redundant meaning.'))+'</p>'+
+            (report.duplicates.length?chooser('data-health-repeat',tr('Duplicates','Identical paragraphs'),tr('Choose','Choose an entry'))+
+                '<div class="stmb-health-text" data-health-repeat-body hidden></div>':'')+'</details></div>',
+            POPUP_TYPE.TEXT,'',{wide:false,large:false,allowVerticalScrolling:true}));
+        popup.dlg.classList.add('stmb-nexus-health-popup');
+        const helpButton=popup.dlg.querySelector('[data-health-help-toggle]'),help=popup.dlg.querySelector('#stmb-health-help');
+        helpButton.addEventListener('click',()=>{help.hidden=!help.hidden;helpButton.setAttribute('aria-expanded',String(!help.hidden));});
+        // Populate long select lists only once, on explicit expansion, and
+        // render one selected body at a time. No observer, polling or rerender.
+        const mountList=(detailsSelector,selectSelector,bodySelector,items,labelFor,textFor)=>{
+            const details=popup.dlg.querySelector(detailsSelector),select=details?.querySelector(selectSelector);
+            if(!select)return;
+            const body=details.querySelector(bodySelector);
+            let populated=false;
+            details.addEventListener('toggle',()=>{
+                if(!details.open||populated)return;
+                const options=document.createDocumentFragment();
+                for(const [i,item] of items.entries()){
+                    const option=document.createElement('option');
+                    option.value=String(i);option.textContent=labelFor(item);options.append(option);
+                }
+                select.append(options);populated=true;
+            });
+            select.addEventListener('change',()=>{
+                const item=select.value===''?null:items[Number(select.value)];
+                body.textContent=item?textFor(item):'';body.hidden=!item;
+            });
+        };
+        mountList('[data-health-entries]','[data-health-entry]','[data-health-body]',report.rows,
+            row=>(row.title||'UID '+row.uid)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
+        mountList('[data-health-repeats]','[data-health-repeat]','[data-health-repeat-body]',report.duplicates,
+            item=>item.entries.map(e=>e.title||'UID '+e.uid).join(' · '),item=>item.text);
         await popup.show();
         return {saved:false};
     }finally{collectorBusy=false;}

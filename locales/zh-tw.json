@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "其他",
   "STMemoryBooks_SlothHealthProtected": "受保護",
   "STMemoryBooks_SlothHealthHelp": "使用目前分詞器估算已儲存正文的唯讀快照。常駐標記不代表實際注入。不會刪除或重新分類任何內容。",
-  "STMemoryBooks_SlothHealthTotal": "已儲存權杖",
-  "STMemoryBooks_SlothHealthAlways": "常駐正文權杖",
-  "STMemoryBooks_SlothHealthDuplicates": "完全重複",
-  "STMemoryBooks_SlothHealthUnknown": "無法計數的正文：",
+  "STMemoryBooks_SlothHealthTotal": "已儲存",
+  "STMemoryBooks_SlothHealthAlways": "常駐設定",
+  "STMemoryBooks_SlothHealthDuplicates": "重複段落",
+  "STMemoryBooks_SlothHealthUnknown": "未計數：",
   "STMemoryBooks_SlothHealthRole": "角色",
   "STMemoryBooks_SlothHealthEntries": "項目數",
   "STMemoryBooks_SlothHealthInspect": "按大小查看項目",
   "STMemoryBooks_SlothHealthChoose": "選擇項目",
-  "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落僅供核查，並非語意冗餘的證明。"
+  "STMemoryBooks_SlothHealthRepeatHelp": "完全相同的段落僅供核查，並非語意冗餘的證明。",
+  "STMemoryBooks_SlothHealthHelpLabel": "計數說明"
 }

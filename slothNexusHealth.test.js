@@ -43,3 +43,39 @@ test('health button uses a read-only popup and scoped layout',()=>{
     assert.match(read('./index.js'),/'nexus-health': \(\) => showSlothNexusHealth\(\)/);
     assert.match(read('./style.css'),/\.popup\.stmb-popup \.stmb-health-stats\{/);
 });
+
+test('always-on unknowns are independent of inactive or vector-only unknowns; duplicate text counts once',async()=>{
+    const book={entries:{
+        1:{uid:1,comment:'Core Memory',content:'Known',constant:true},
+        2:{uid:2,comment:'NPC - A',content:'Unknown vector',constant:false},
+        3:{uid:3,comment:'LT - B',content:'Unknown vector',constant:false},
+    }};
+    const calls=[];
+    const measure=async s=>{calls.push(s);return s==='Known'?7:null;};
+    let report=await inspectSlothNexusHealth(book,measure);
+    assert.equal(report.total,7);
+    assert.equal(report.alwaysOn,7);
+    assert.equal(report.uncounted,2);
+    assert.equal(report.alwaysOnUncounted,0);
+    assert.equal(report.groups.npc.alwaysOnUncounted,0);
+    assert.deepEqual(calls,['Known','Unknown vector']);
+    book.entries[2].constant=true;
+    report=await inspectSlothNexusHealth(book,measure);
+    assert.equal(report.alwaysOnUncounted,1);
+    assert.equal(report.groups.npc.alwaysOnUncounted,1);
+    assert.equal(report.groups.lt.alwaysOnUncounted,0);
+});
+test('health UI keeps two summary values, on-demand help and list bodies, without a large or observed popup',()=>{
+    const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+    const source=read('./nexusCollectorRuntime.js');
+    const fn=source.slice(source.indexOf('export async function showSlothNexusHealth('),source.indexOf('export async function applySlothNexusRecallSettings('));
+    assert.match(fn,/report\.alwaysOnUncounted/);
+    assert.match(fn,/group\.alwaysOnUncounted/);
+    assert.match(fn,/aria-expanded="false"/);
+    assert.match(fn,/details\.addEventListener\('toggle'/);
+    assert.match(fn,/if\(!details\.open\|\|populated\)return/);
+    assert.match(fn,/body\.textContent=item\?textFor\(item\)/);
+    assert.match(fn,/wide:false,large:false/);
+    assert.doesNotMatch(fn,/MutationObserver|ResizeObserver|setInterval|requestAnimationFrame|<table/);
+    assert.match(read('./style.css'),/\.popup\.stmb-popup\.stmb-nexus-health-popup\{[^}]*height:fit-content/);
+});

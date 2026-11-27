@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "その他",
   "STMemoryBooks_SlothHealthProtected": "保護項目",
   "STMemoryBooks_SlothHealthHelp": "現在のトークナイザーによる保存本文の推定値を表示する読み取り専用の概要です。常時有効の設定は実際の注入を保証しません。削除や再分類は行いません。",
-  "STMemoryBooks_SlothHealthTotal": "保存トークン",
-  "STMemoryBooks_SlothHealthAlways": "常時有効トークン",
-  "STMemoryBooks_SlothHealthDuplicates": "完全一致の繰り返し",
-  "STMemoryBooks_SlothHealthUnknown": "計測できなかった本文：",
+  "STMemoryBooks_SlothHealthTotal": "保存済み",
+  "STMemoryBooks_SlothHealthAlways": "常時設定",
+  "STMemoryBooks_SlothHealthDuplicates": "同一の段落",
+  "STMemoryBooks_SlothHealthUnknown": "未計測：",
   "STMemoryBooks_SlothHealthRole": "ロール",
   "STMemoryBooks_SlothHealthEntries": "項目数",
   "STMemoryBooks_SlothHealthInspect": "サイズ順に項目を確認",
   "STMemoryBooks_SlothHealthChoose": "項目を選択",
-  "STMemoryBooks_SlothHealthRepeatHelp": "完全一致する段落は確認の手掛かりであり、意味の重複を証明するものではありません。"
+  "STMemoryBooks_SlothHealthRepeatHelp": "完全一致する段落は確認の手掛かりであり、意味の重複を証明するものではありません。",
+  "STMemoryBooks_SlothHealthHelpLabel": "計測値について"
 }

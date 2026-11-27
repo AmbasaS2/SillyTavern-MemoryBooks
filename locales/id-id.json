@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "Lainnya",
   "STMemoryBooks_SlothHealthProtected": "Terlindungi",
   "STMemoryBooks_SlothHealthHelp": "Ringkasan teks tersimpan hanya-baca, diperkirakan dengan tokenizer saat ini. Penanda selalu aktif bukan bukti injeksi sebenarnya. Tidak ada yang dihapus atau diklasifikasi ulang.",
-  "STMemoryBooks_SlothHealthTotal": "Token tersimpan",
-  "STMemoryBooks_SlothHealthAlways": "Token selalu aktif",
-  "STMemoryBooks_SlothHealthDuplicates": "Pengulangan persis",
-  "STMemoryBooks_SlothHealthUnknown": "Teks yang tidak dapat dihitung: ",
+  "STMemoryBooks_SlothHealthTotal": "Tersimpan",
+  "STMemoryBooks_SlothHealthAlways": "Selalu aktif",
+  "STMemoryBooks_SlothHealthDuplicates": "Paragraf identik",
+  "STMemoryBooks_SlothHealthUnknown": "Belum dihitung: ",
   "STMemoryBooks_SlothHealthRole": "Peran",
   "STMemoryBooks_SlothHealthEntries": "Entri",
   "STMemoryBooks_SlothHealthInspect": "Periksa entri berdasarkan ukuran",
   "STMemoryBooks_SlothHealthChoose": "Pilih entri",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Paragraf identik adalah petunjuk pemeriksaan, bukan bukti makna yang berlebihan."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Paragraf identik adalah petunjuk pemeriksaan, bukan bukti makna yang berlebihan.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Tentang angka ini"
 }

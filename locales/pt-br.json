@@ -1945,13 +1945,14 @@
   "STMemoryBooks_SlothHealthOther": "Outros",
   "STMemoryBooks_SlothHealthProtected": "Protegidos",
   "STMemoryBooks_SlothHealthHelp": "Visão somente leitura do texto armazenado, estimada com o tokenizador atual. As marcas de ativação permanente não comprovam a injeção real. Nada é excluído ou reclassificado.",
-  "STMemoryBooks_SlothHealthTotal": "Tokens armazenados",
-  "STMemoryBooks_SlothHealthAlways": "Tokens sempre ativos",
-  "STMemoryBooks_SlothHealthDuplicates": "Repetições exatas",
-  "STMemoryBooks_SlothHealthUnknown": "Textos que não puderam ser contados: ",
+  "STMemoryBooks_SlothHealthTotal": "Armazenado",
+  "STMemoryBooks_SlothHealthAlways": "Sempre ativo",
+  "STMemoryBooks_SlothHealthDuplicates": "Parágrafos idênticos",
+  "STMemoryBooks_SlothHealthUnknown": "Não contado: ",
   "STMemoryBooks_SlothHealthRole": "Papel",
   "STMemoryBooks_SlothHealthEntries": "Entradas",
   "STMemoryBooks_SlothHealthInspect": "Examinar entradas por tamanho",
   "STMemoryBooks_SlothHealthChoose": "Escolher uma entrada",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Parágrafos idênticos são pistas para revisão, não prova de redundância semântica."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Parágrafos idênticos são pistas para revisão, não prova de redundância semântica.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Sobre estes valores"
 }

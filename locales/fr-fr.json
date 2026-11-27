@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "Autres",
   "STMemoryBooks_SlothHealthProtected": "Protégés",
   "STMemoryBooks_SlothHealthHelp": "Aperçu en lecture seule du texte enregistré, estimé avec le tokenizer actuel. Les indicateurs permanents ne prouvent pas l’injection réelle. Rien n’est supprimé ni reclassé.",
-  "STMemoryBooks_SlothHealthTotal": "Tokens enregistrés",
-  "STMemoryBooks_SlothHealthAlways": "Tokens toujours actifs",
-  "STMemoryBooks_SlothHealthDuplicates": "Répétitions exactes",
-  "STMemoryBooks_SlothHealthUnknown": "Textes non comptés : ",
+  "STMemoryBooks_SlothHealthTotal": "Enregistré",
+  "STMemoryBooks_SlothHealthAlways": "Toujours actif",
+  "STMemoryBooks_SlothHealthDuplicates": "Paragraphes identiques",
+  "STMemoryBooks_SlothHealthUnknown": "Non compté : ",
   "STMemoryBooks_SlothHealthRole": "Rôle",
   "STMemoryBooks_SlothHealthEntries": "Entrées",
   "STMemoryBooks_SlothHealthInspect": "Examiner les entrées par taille",
   "STMemoryBooks_SlothHealthChoose": "Choisir une entrée",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Les paragraphes identiques sont des pistes de vérification, pas une preuve de redondance sémantique."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Les paragraphes identiques sont des pistes de vérification, pas une preuve de redondance sémantique.",
+  "STMemoryBooks_SlothHealthHelpLabel": "À propos de ces valeurs"
 }

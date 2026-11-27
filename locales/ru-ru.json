@@ -1948,13 +1948,14 @@
   "STMemoryBooks_SlothHealthOther": "Прочие",
   "STMemoryBooks_SlothHealthProtected": "Защищённые",
   "STMemoryBooks_SlothHealthHelp": "Обзор сохранённого текста только для чтения, оценённый текущим токенизатором. Постоянная активация не доказывает фактическую вставку. Ничего не удаляется и не переклассифицируется.",
-  "STMemoryBooks_SlothHealthTotal": "Сохранённые токены",
-  "STMemoryBooks_SlothHealthAlways": "Постоянно активные токены",
-  "STMemoryBooks_SlothHealthDuplicates": "Точные повторы",
-  "STMemoryBooks_SlothHealthUnknown": "Не удалось подсчитать тексты: ",
+  "STMemoryBooks_SlothHealthTotal": "Сохранено",
+  "STMemoryBooks_SlothHealthAlways": "Постоянно",
+  "STMemoryBooks_SlothHealthDuplicates": "Совпадающие абзацы",
+  "STMemoryBooks_SlothHealthUnknown": "Не подсчитано: ",
   "STMemoryBooks_SlothHealthRole": "Роль",
   "STMemoryBooks_SlothHealthEntries": "Записи",
   "STMemoryBooks_SlothHealthInspect": "Просмотр записей по размеру",
   "STMemoryBooks_SlothHealthChoose": "Выберите запись",
-  "STMemoryBooks_SlothHealthRepeatHelp": "Совпадающие абзацы — повод для проверки, а не доказательство смысловой избыточности."
+  "STMemoryBooks_SlothHealthRepeatHelp": "Совпадающие абзацы — повод для проверки, а не доказательство смысловой избыточности.",
+  "STMemoryBooks_SlothHealthHelpLabel": "Об этих значениях"
 }

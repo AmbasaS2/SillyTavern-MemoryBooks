@@ -1978,13 +1978,14 @@
   "STMemoryBooks_SlothHealthOther": "기타",
   "STMemoryBooks_SlothHealthProtected": "보호 항목",
   "STMemoryBooks_SlothHealthHelp": "현재 토크나이저로 저장 본문을 추정한 읽기 전용 현황입니다. 상시 설정은 실제 주입을 보증하지 않습니다. 삭제하거나 재분류하지 않습니다.",
-  "STMemoryBooks_SlothHealthTotal": "저장 토큰",
-  "STMemoryBooks_SlothHealthAlways": "상시 본문 토큰",
-  "STMemoryBooks_SlothHealthDuplicates": "동일 문단",
-  "STMemoryBooks_SlothHealthUnknown": "토큰을 계산하지 못한 본문: ",
+  "STMemoryBooks_SlothHealthTotal": "저장 본문",
+  "STMemoryBooks_SlothHealthAlways": "상시 설정",
+  "STMemoryBooks_SlothHealthDuplicates": "중복 문단",
+  "STMemoryBooks_SlothHealthUnknown": "미계측: ",
   "STMemoryBooks_SlothHealthRole": "역할",
   "STMemoryBooks_SlothHealthEntries": "항목 수",
   "STMemoryBooks_SlothHealthInspect": "크기순으로 항목 살펴보기",
   "STMemoryBooks_SlothHealthChoose": "항목 선택",
-  "STMemoryBooks_SlothHealthRepeatHelp": "완전히 같은 문단은 검토 단서일 뿐, 의미가 불필요하게 중복되었다는 증거는 아닙니다."
+  "STMemoryBooks_SlothHealthRepeatHelp": "완전히 같은 문단은 검토 단서일 뿐, 의미가 불필요하게 중복되었다는 증거는 아닙니다.",
+  "STMemoryBooks_SlothHealthHelpLabel": "토큰 수치 안내"
 }
