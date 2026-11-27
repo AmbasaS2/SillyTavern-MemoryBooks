@@ -115,33 +115,35 @@ export const settingsTemplate = Handlebars.compile(`
               <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Create the missing lorebook</button>
             {{/if}}
             <hr class="stmb-sloth-settings-rule">
-            <strong data-i18n="STMemoryBooks_SlothNexusInjection">Nexus injection</strong>
-            <div class="stmb-sloth-role-grid stmb-sloth-injection-grid">
-              {{#each slothNexusRecallFields}}
-                <label for="stmb-nexus-recall-{{kind}}">
-                  <span data-i18n="{{labelKey}}">{{title}}</span>
-                  <select class="text_pole" id="stmb-nexus-recall-{{kind}}" data-stmb-nexus-recall-kind="{{kind}}">
-                    {{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}} data-i18n="{{key}}">{{label}}</option>{{/each}}
-                  </select>
-                </label>
-              {{/each}}
-            </div>
-            <small class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothRecallNewEntries">For new entries. Existing entry settings are preserved.</small>
-            <hr class="stmb-sloth-settings-rule">
-            <strong data-i18n="STMemoryBooks_SlothMemoryInjection">Memory injection</strong>
-            <div class="stmb-sloth-role-grid stmb-sloth-injection-grid">
-              <label>
-                <span data-i18n="STMemoryBooks_SlothRecentScenes">Latest 3 Scenes</span>
-                <select class="text_pole" disabled aria-label="Always on"><option data-i18n="STMemoryBooks_SlothRecallConstant">Always on</option></select>
-              </label>
-              <label for="stmb-sloth-memory-recall">
-                <span data-i18n="STMemoryBooks_SlothOlderScenes">Older Scenes</span>
-                <select id="stmb-sloth-memory-recall" class="text_pole">
-                  <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
-                  <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
-                </select>
-              </label>
-            </div>
+            <details id="stmb-sloth-injection-settings" class="stmb-sloth-injection-settings stmb-workspace-drawer">
+              <summary data-i18n="STMemoryBooks_SlothInjectionSettings">Injection settings</summary>
+              <div class="stmb-sloth-recall-columns">
+                {{#each slothRecallSections}}
+                <section class="stmb-sloth-recall-column">
+                  <h4 data-i18n="{{key}}">{{title}}</h4>
+                  {{#each fields}}
+                  <div class="stmb-sloth-recall-row">
+                    <span id="{{id}}-label" class="stmb-sloth-recall-label" {{#if isNexus}}data-i18n="[title]{{labelKey}}" title="{{title}}"{{else}}data-i18n="{{labelKey}}"{{/if}}>{{title}}</span>
+                    {{#if locked}}
+                    <span class="stmb-sloth-recall-icon stmb-sloth-recall-locked" data-mode="{{current.value}}" title="{{current.label}}" data-i18n="[title]{{current.key}}"><i class="{{current.icon}}" aria-hidden="true"></i><span class="stmb-sloth-recall-sr" data-i18n="{{current.key}}">{{current.label}}</span></span>
+                    {{else}}
+                    <div class="stmb-sloth-recall-control">
+                      <select id="{{id}}" class="stmb-sloth-recall-value" hidden {{#if isNexus}}data-stmb-nexus-recall-kind="{{kind}}"{{/if}}>
+                        {{#each options}}<option value="{{value}}" data-recall-icon="{{icon}}" {{#if selected}}selected{{/if}} data-i18n="{{key}}">{{label}}</option>{{/each}}
+                      </select>
+                      <button type="button" id="{{id}}-trigger" class="stmb-sloth-recall-icon" data-stmb-recall-trigger="{{id}}" data-mode="{{current.value}}" aria-expanded="false" aria-controls="{{id}}-popover" aria-labelledby="{{id}}-label {{id}}-mode" title="{{current.label}}" data-i18n="[title]{{current.key}}"><i class="{{current.icon}}" aria-hidden="true"></i><span id="{{id}}-mode" class="stmb-sloth-recall-sr" data-i18n="{{current.key}}">{{current.label}}</span></button>
+                      <div id="{{id}}-popover" class="stmb-sloth-icon-popover stmb-sloth-recall-popover" popover="auto" hidden role="group" aria-labelledby="{{id}}-label">
+                        {{#each options}}<button type="button" class="stmb-sloth-recall-icon" data-stmb-recall-choice="{{value}}" data-mode="{{value}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}" title="{{label}}" aria-label="{{label}}" data-i18n="[title]{{key}};[aria-label]{{key}}"><i class="{{icon}}" aria-hidden="true"></i></button>{{/each}}
+                      </div>
+                    </div>
+                    {{/if}}
+                  </div>
+                  {{/each}}
+                </section>
+                {{/each}}
+              </div>
+              <small class="stmb-sloth-help stmb-sloth-recall-note" data-i18n="STMemoryBooks_SlothRecallNewEntries">For new entries. Existing entry settings are preserved.</small>
+            </details>
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}

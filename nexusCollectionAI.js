@@ -396,7 +396,6 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
         DEFAULT_SLOTH_COLLECTION_PROMPTS.nexus,
         ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword' || Object.values(settings?.moduleSettings?.nexusRecallModes||{}).includes('keyword')?
             ['Supply specific literal recall keywords for each new Nexus entry. Never overwrite existing entry activation settings.']:[]),
-        ...(settings?.moduleSettings?.nexusRecallModes?.npc==='off'?['NPC collection is turned off. Do not create or update NPC or NPC Index entries.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
         'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
         ...(initial?[

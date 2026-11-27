@@ -38,9 +38,9 @@ test('single collection sends the source once, reads active Nexus and only recen
     draft.events[0].segments=[[1,3]];
     await assert.rejects(run(opt),/already assigned/);
 });
-test('Nexus recall settings are independent; uninjected entries remain updateable and NPC off forbids edits',()=>{
+test('Nexus recall settings are independent; uninjected entries remain updateable and legacy NPC off resumes collection',()=>{
     const entries={entries:{}};
-    const modes={core:'disabled',continuity:'keyword',lt:'constant',npc:'off'};
+    const modes={core:'disabled',continuity:'keyword',lt:'constant',npc:'vector'};
     const options={recallModes:modes};
     assert.deepEqual(getNexusRecallModes({nexusRecallModes:modes}),modes);
     const ops=[{kind:'core',action:'create',title:'Core Memory',content:'They trust each other.'},
@@ -54,7 +54,12 @@ test('Nexus recall settings are independent; uninjected entries remain updateabl
     const revised=stageNexusEdits(staged,[{kind:'core',action:'append',uid:0,text:'She keeps her word.'}],make,options).staged;
     assert.match(revised.entries[0].content,/keeps her word/);assert.equal(revised.entries[0].disable,true);
     assert.throws(()=>stageNexusEdits(staged,[ops[0]],make,options),/Duplicate/);
-    assert.throws(()=>stageNexusEdits(staged,[{kind:'npc',action:'create',title:'NPC - Jane',content:'Friend.'}],make,options),/NPC collection/);
+    assert.equal(getNexusRecallModes({nexusRecallModes:{npc:'off'}}).npc,'vector');
+    const npc=stageNexusEdits(staged,[{kind:'npc',action:'create',title:'NPC - Jane',content:'Friend.'}],make,{recallModes:{npc:'off'}}).staged;
+    const entry=Object.values(npc.entries).find(e=>e.comment==='NPC - Jane');
+    assert.equal(entry.vectorized,true);
+    const updated=stageNexusEdits(npc,[{kind:'npc',action:'append',uid:entry.uid,text:'They met again.'}],make,{recallModes:{npc:'off'}}).staged;
+    assert.match(updated.entries[entry.uid].content,/met again/);
 });
 test('story-scoped side output follows chapters but never a distinct AU',()=>{
     const avatar='A.png',ref={type:'character',avatarUrl:avatar,fileName:'chapter-1'};

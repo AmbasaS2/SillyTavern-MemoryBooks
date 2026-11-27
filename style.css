@@ -1140,22 +1140,58 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     color: var(--warning-color, var(--SmartThemeEmColor));
 }
 @media (max-width: 620px) {
-    .popup.stmb-popup .stmb-sloth-role-grid:not(.stmb-sloth-injection-grid) { grid-template-columns: minmax(0, 1fr); }
+    .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Two compact label-above-select columns, independent of the host flex rules. */
-.popup.stmb-popup .stmb-sloth-injection-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Injection settings: a single collapsed drawer; columns wrap against the
+   panel's own width, not the screen. Icon choices reuse the native picker. */
+.popup.stmb-popup .stmb-sloth-injection-settings { margin-block: 8px 2px; min-width: 0; }
+.popup.stmb-popup .stmb-sloth-injection-settings > summary { padding-block: 4px; }
+.popup.stmb-popup .stmb-sloth-recall-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5em), 1fr));
+    align-items: start;
+    gap: 12px 20px;
+    margin-block-start: 10px;
     min-width: 0;
 }
-.popup.stmb-popup .stmb-sloth-injection-grid label > span {
-    min-width: 0;
-    overflow-wrap: anywhere;
+.popup.stmb-popup .stmb-sloth-recall-column { min-width: 0; }
+.popup.stmb-popup .stmb-sloth-recall-column > h4 { font-size: inherit; font-weight: 600; margin: 0 0 9px; }
+.popup.stmb-popup .stmb-sloth-recall-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    min-width: 0; min-height: 30px;
 }
-@media (max-width: 320px) {
-    .popup.stmb-popup .stmb-sloth-injection-grid { grid-template-columns: minmax(0, 1fr); }
+.popup.stmb-popup .stmb-sloth-recall-row + .stmb-sloth-recall-row { margin-block-start: 3px; }
+.popup.stmb-popup .stmb-sloth-recall-label { min-width: 0; overflow-wrap: anywhere; }
+.popup.stmb-popup .stmb-sloth-recall-control { position: relative; flex: 0 0 auto; }
+.popup.stmb-popup .stmb-sloth-recall-value[hidden],
+.popup.stmb-popup .stmb-sloth-recall-popover[hidden] { display: none !important; }
+.popup.stmb-popup .stmb-sloth-recall-icon {
+    box-sizing: border-box; display: inline-grid; place-items: center;
+    width: 29px; min-width: 29px; height: 29px; padding: 0; margin: 0;
+    color: var(--SmartThemeBodyColor); background: transparent;
+    border: 1px solid transparent; border-radius: 5px; flex: 0 0 auto;
 }
+.popup.stmb-popup button.stmb-sloth-recall-icon { cursor: pointer; }
+.popup.stmb-popup button.stmb-sloth-recall-icon:is(:hover,[aria-expanded="true"],[aria-pressed="true"]) {
+    border-color: var(--SmartThemeBorderColor);
+    background: var(--SmartThemeBlurTintColor);
+}
+.popup.stmb-popup .stmb-sloth-recall-icon[data-mode="constant"] { color: #4285f4; }
+.popup.stmb-popup .stmb-sloth-recall-icon[data-mode="keyword"] { color: #2ca25f; }
+.popup.stmb-popup .stmb-sloth-recall-icon[data-mode="disabled"] { opacity: .65; }
+.popup.stmb-popup .stmb-sloth-recall-popover {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 3px;
+    width: max-content; max-width: calc(100vw - 16px);
+    position: absolute; inset: auto 0 auto auto; top: calc(100% + 4px); z-index: 2;
+}
+.popup.stmb-popup .stmb-sloth-recall-popover:popover-open { position: fixed; inset: auto; }
+.popup.stmb-popup .stmb-sloth-recall-sr {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.popup.stmb-popup .stmb-sloth-recall-note { display: block; margin-block-start: 8px; }
 /* Sloth collector previews: scoped to STMB popups, never global ST styles. */
 .popup.stmb-popup .stmb-sloth-review {
     display:flex;flex-direction:column;gap:7px;min-width:0;

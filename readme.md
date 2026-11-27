@@ -22,7 +22,7 @@ Based on [Memory Books by Aiko Hanasaki](https://github.com/aikohanasaki/SillyTa
 
 - Preserve individual completed scenes without repeatedly compressing them into a single history summary.
 - Separate ongoing continuity and key facts (Nexus) from completed events (Memory).
-- Automatically identify completed events from unsaved chat, approve the plan, and optionally hide successfully collected messages.
+- Automatically identify and save completed events from uncollected chat, and optionally hide successfully saved messages.
 - Keep the latest three completed scenes always on, convert older scenes to keyword or vector recall, and retain their full text.
 - Collect manually or at a token/message interval, use different books for different chats with the same character, and keep the RP model unchanged.
 - Generate separate Side Prompts such as diaries; review merge, split, or shortening operations on stored scenes; or select the original Memory Books workflow per character.
@@ -33,20 +33,20 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 **Current version: 9.4.0-ambasa.3.**
 
-> **Roleplay → finish an event → collect memories → approve → continue RP.**
+> **Roleplay → finish an event → collect memories → continue RP.**
 >
 > Nexus keeps ongoing continuity; Memory keeps completed events. Sloth saves lore and SillyTavern recalls it. The original mode remains selectable per character; tabs only change the settings view.
 
 **Set up once**
 
 1. Install one Memory Books version only. In a one-to-one chat open Extensions → Memory Books → Usage mode → Sloth (default). Group chats use Original mode.
-2. Assign distinct Nexus and Memory books or create them on approved first collection if no books are linked. Use chat-only assignments for different AU histories.
+2. Assign distinct Nexus and Memory books or create them when the first collection is saved if no books are linked. Use chat-only assignments for different AU histories.
 3. Select a collection AI profile and Keyword or Vector for older scenes. Leave automatic collection off for your first try. Vector requires native vector setup.
 
 **During everyday RP**
 
 1. Finish an event → click **Collect memories** or use `/sloth-collect`.
-2. Confirm the range and approve the plan. The AI writes, validates and saves the memories.
+2. The AI analyzes and writes memories and Nexus updates in one request per source chunk. Validated results are saved directly.
 3. Inspect the saved memories in World Info or Lorebook Manager. Hide is optional and applies only to successfully saved ranges.
 4. Continue RP. The latest three completed scenes stay always-on; older scenes switch recall mode without losing their text.
 
@@ -78,12 +78,12 @@ The Sloth workflow separates two SillyTavern lorebook roles:
 | **Nexus** | Key facts, ongoing state and continuity | Their relationship and continuing agreements |
 | **Memory** | Individual completed events | The first meeting, an argument, a reconciliation |
 
-Nexus keeps its core state active; additional records follow their configured recall settings. Memory preserves completed events separately instead of repeatedly merging the entire history.
+Nexus keeps core facts, current state, individual long-term memories and NPC memories. Their injection modes are independently configurable. Memory preserves completed events separately instead of repeatedly merging the entire history.
 
 **Assign the books**
 
 - Already linked books: assign two distinct books.
-- No linked books: create and link both on approved first collection.
+- No linked books: create and link both when the first collection is saved.
 - Only one role assigned: use the missing-book creation option.
 - Multiple AUs with the same character: use **Choose books for this chat only** to separate their histories.
 
@@ -92,6 +92,8 @@ Nexus keeps its core state active; additional records follow their configured re
 >
 > When switching from hand-authored memories, verify the already summarized message ranges and the always-on flags of your older Scenes before the first collection. Older `STMB_start/end` fields alone are not a Sloth collection receipt; visible old messages may be collected again. Scenes without Sloth source metadata may not join automatic recent-three rotation. Test on a copy first. See [current compatibility notes](./AMBASA_NEXUS_DEV.md#open-compatibility-checks-for-replacing-manual-memory-updates).
 
+**Injection settings** are collapsed by default. Core Memory, Current Continuity, LT and NPC independently support Always on, Vector, Keywords and No injection. The latest three Scenes stay always on; older Scenes support Vector or Keywords. New-entry defaults preserve existing entries. Apply changes explicitly in Manage existing memories.
+
 #### 2. Collection settings
 
 <p align="left"><img src="assets/readme/mobile/ui-collection-settings.svg" alt="수집 설정 / Collection settings" width="480" /></p>
@@ -99,7 +101,6 @@ Nexus keeps its core state active; additional records follow their configured re
 | Setting | How to use it |
 | --- | --- |
 | **Memory collection AI** | Choose a saved Chat Completion or Memory Books AI profile. The RP model stays unchanged. |
-| **Older memory conversion** | Vector or Keywords. Older scenes change on the next collection; the latest three stay always-on. Vector requires native vector storage setup. |
 | **Review and retry summaries** | Off by default. Checks major omissions/distortions and may make one extra AI request. |
 | **Summary prompt** | Start with the built-in Sloth prompt. View, copy and customize it; save named presets or import/export compatible JSON. |
 
@@ -117,26 +118,11 @@ Use one of these:
 - **Collect memories** in Sloth's Memory Books.
 - `/sloth-collect`.
 
-Confirm the available message range to start analysis.
+Collection starts directly. Chat Top Bar (when installed) shows writing, validation and saving progress.
 
-#### Step 2 — Review the plan
+#### Step 2 — Save and inspect
 
-The collection AI reads messages that have not yet been collected and proposes completed events.
-
-Check:
-
-- Analyzed range, number of memories, event titles and message ranges.
-- Nexus review range.
-- Messages left for the next collection (including incomplete events).
-- Optional Hide.
-
-#### Step 3 — Approve, save, and read
-
-1. Approve the plan. The AI writes, validates and saves scene memories and relevant Nexus updates.
-2. Incomplete or unverifiable outputs may be retried or skipped; you can retry incomplete scenes or save completed work.
-3. Read or edit the resulting entries in World Info or the optional Lorebook Manager.
-
-There is no separate final editable Scene/Nexus draft popup in the current collection workflow. Optional summary review may make one additional AI request.
+The AI reads uncollected messages, editable Nexus entries and recent Scene titles/Results once per source chunk. It returns completed Scenes, deferred ranges and Nexus patches together. Valid results are saved without a plan approval popup. Optional summary review can add one request. Unfinished events remain visible. Inspect saved entries in World Info or Lorebook Manager. Enable Hide after collection in Advanced settings to hide successfully saved ranges.
 
 #### Step 4 — Continue RP
 
@@ -248,7 +234,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 - 반복 압축·통합으로 과거 사건의 디테일을 잃고 싶지 않은 분
 - 핵심 사실·현재 상태(Nexus)와 완료된 사건(Memory)을 두 권으로 분리하고 싶은 분
-- AI가 아직 수집하지 않은 대화에서 완료 사건을 골라 주고, 계획을 확인해 승인하고 싶은 분
+- AI가 아직 수집하지 않은 대화에서 완료 사건을 골라 자동으로 저장하고 싶은 분
 - 최근 완료 장면 3개는 상시 주입하고 이전 기억은 키워드·벡터로 자동 전환하되 본문을 유지하고 싶은 분
 - 메시지 수·토큰 기준 자동 수집 또는 수동 수집을 선택하고, 같은 캐릭터의 여러 채팅에서 별도 기억을 쓰고 싶은 분
 - 롤플 모델을 바꾸지 않고 별도 AI·맞춤 프롬프트를 사용하며, 일기 등 사이드 프롬프트를 작성하거나 기존 사건의 합치기·나누기·줄이기를 사용하고 싶은 분
@@ -260,20 +246,20 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 **현재 버전: 9.4.0-ambasa.3.**
 
-> **롤플 → 사건이 끝나면 기억 수집 → 계획 확인·승인 → 다시 롤플!**
+> **롤플 → 사건이 끝나면 기억 수집 → 다시 롤플!**
 >
 > Nexus에는 핵심 정보와 현재 상태, Memory에는 완료된 사건을 따로 저장합니다. 실제 기억 호출은 실리태번이 담당해요. 원본 모드도 캐릭터별로 선택할 수 있고 탭은 설정 화면만 바꿉니다.
 
 **처음 한 번만 설정하기**
 
 1. 원본과 동시에 켜지 말고 설치합니다. 1:1 채팅 → 확장 메뉴 → 메모리 북 → 사용 모드에서 For 게으름뱅이(기본값)를 확인합니다. 그룹은 기존 모드입니다.
-2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 승인 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
+2. 서로 다른 Nexus·Memory 책을 지정합니다. 연결된 책이 없으면 첫 수집 저장 시 생성할 수 있고 AU마다 채팅별 지정을 쓸 수 있습니다.
 3. 수집 AI와 이전 기억의 키워드/벡터 전환 방식 선택. 첫 수집은 수동으로 해 보세요. (벡터는 ST 자체 설정 필요)
 
 **평소 롤플할 때**
 
 1. 사건이 끝나면 **기억 수집 하기** 또는 `/sloth-collect`.
-2. 범위·사건 계획 확인 → 승인 → AI 작성·검증·저장.
+2. AI 분석·작성·검증·저장. 기본 수집은 구간당 한 번의 요청으로 진행합니다.
 3. 월드 인포나 로어북 매니저에서 저장된 기억 확인. Hide는 성공적으로 저장된 구간에만 선택 적용됩니다.
 4. 다시 롤플! 최근 완료 Scene 3개는 파란불, 오래된 장면은 조건부 호출. 본문은 그대로 유지합니다.
 
@@ -297,7 +283,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 | 역할 | 저장하는 내용 |
 | --- | --- |
-| 🧭 **Nexus · 핵심 정보와 현재 상태** | 캐릭터와의 관계, 지속되는 사실, 현재 상태. 핵심 상태는 상시 유지하고 추가 기록은 지정한 호출 방식에 따릅니다. |
+| 🧭 **Nexus · 핵심 정보와 현재 상태** | 캐릭터와의 관계, 지속되는 사실, 현재 상태. 핵심 장기 기억·현재 상태·개별 장기 기억·NPC의 주입 방식을 각각 지정할 수 있습니다. |
 | 📕 **Memory · 기억할 장면** | 실제로 일어난 사건을 장면별로 저장. 이전 기억을 삭제하거나 한 덩어리로 합치지 않습니다. |
 
 오늘 관계가 바뀌었다고 어제 있었던 사건이 없어지는 건 아니잖아요? 현재 상태와 과거의 사건을 따로 관리하는 방식입니다.
@@ -305,7 +291,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 **두 권을 지정하는 방법**
 
 - 이미 연결된 책이 있다면: 서로 다른 책 두 권 지정.
-- 연결된 책이 없다면: 첫 수집 승인 시 두 권 생성·연결.
+- 연결된 책이 없다면: 첫 수집 저장 시 두 권 생성·연결.
 - 한 권만 있다면: 부족한 책 만들기.
 
 > [!CAUTION]
@@ -314,6 +300,8 @@ The detailed sections below explain optional settings. Compatibility is version-
 > [!TIP]
 > 같은 캐릭터로 여러 AU를 진행한다면 **이 채팅에만 로어북 따로 지정**을 사용하세요. 다른 채팅의 기본 책은 유지됩니다.
 
+**주입 설정**은 기본 접힘 상태입니다. Core Memory·Current Continuity·LT·NPC의 주입 방식을 상시·벡터·키워드·미주입 중 각각 선택합니다. 최근 Scene 3개는 상시이고 이전 Scene은 벡터·키워드 중 선택합니다. 기존 항목은 기억 관리의 기존 기억 주입 방식 변경에서 명시적으로 적용합니다.
+
 #### 2. 수집 설정
 
 <p align="left"><img src="assets/readme/mobile/ui-collection-settings.svg" alt="수집 설정 / Collection settings" width="480" /></p>
@@ -321,7 +309,6 @@ The detailed sections below explain optional settings. Compatibility is version-
 | 설정 | 설명 |
 | --- | --- |
 | **수집에 사용할 AI** | 실리태번 채팅 완성 연결 프로필 또는 메모리북 AI 프로필. RP 모델은 그대로입니다. |
-| **이전 기억 전환 방식** | 벡터 또는 키워드. 다음 수집 때 오래된 장면을 전환합니다. 최근 3개는 파란불 유지. 벡터는 ST 벡터 저장소 설정 필요. |
 | **요약 검증 및 재시도** | 기본 꺼짐. 큰 누락·왜곡을 검사하며 AI 호출이 최대 한 번 추가될 수 있습니다. |
 | **사용할 요약 프롬프트** | 기본 게으름뱅이 프롬프트부터 시작. 전체 보기·복사 후 수정·이름 변경·저장·호환 JSON 가져오기/내보내기 가능. |
 
@@ -339,29 +326,11 @@ The detailed sections below explain optional settings. Compatibility is version-
 /sloth-collect
 ```
 
-화면에 표시된 메시지 범위를 확인하면 AI가 분석을 시작합니다.
+수집은 바로 시작됩니다. 챗탑바가 설치된 경우 작성·검증·저장 진행 상태가 표시됩니다.
 
-#### 2단계. 어떤 기억을 저장할지 확인하기
+#### 2단계. 저장 결과 보기
 
-AI가 아직 수집하지 않은 메시지에서 완료된 사건을 나눠 제안합니다.
-
-**계획창에서 확인할 것**
-
-- 분석할 메시지 범위와 저장할 기억 개수
-- 완료된 사건 제목·대화 범위
-- Nexus 갱신 범위
-- 다음 수집에 남길 구간 (아직 진행 중인 사건 등)
-- 숨기기 여부
-
-#### 3단계. 승인하고 저장 결과 보기
-
-1. **저장한 구간을 AI 대화 맥락에서 숨기기** 사용 여부를 선택합니다.
-2. 승인하면 AI가 사건별 기억과 필요한 Nexus 변경 내용을 작성·검증·저장합니다.
-3. 월드 인포 또는 로어북 매니저에서 저장된 항목을 확인·수정합니다.
-
-현재는 별도의 최종 Scene/Nexus 본문 편집 팝업이 없습니다.
-
-불완전하거나 검증되지 않은 결과는 재시도·제외될 수 있습니다. 미완료 기억을 재시도하거나 완료된 작업만 저장할 수 있어요. 선택형 요약 검증은 추가 AI 요청이 발생할 수 있습니다.
+AI는 미수집 원문, 수정 가능한 Nexus 전체, 최근 Scene의 제목과 Result를 구간당 한 번 읽고 완료 사건·보류 범위·Nexus 수정안을 반환합니다. 계획 승인 창 없이 검증된 결과를 저장합니다. 선택형 요약 검증은 요청을 한 번 추가할 수 있습니다. 미완결 사건은 표시 상태로 남습니다. 고급 설정의 수집 후 숨기기를 선택하면 저장에 성공한 범위만 숨깁니다. 월드 인포 또는 로어북 매니저에서 결과를 확인하세요.
 
 #### 4단계. 다시 롤플!
 

@@ -109,3 +109,16 @@ test('AU chat-only lorebook switch is opt-in and routed separately from characte
         }
     }
 });
+
+test('injection settings use a closed drawer, compact wrapping columns and icon choices',()=>{
+    const html=file('./templates.js'),css=file('./style.css'),js=file('./index.js');
+    assert.match(html,/<details id="stmb-sloth-injection-settings" class=/);
+    assert.doesNotMatch(html,/<details id="stmb-sloth-injection-settings"[^>]*\bopen\b/);
+    assert.match(html,/stmb-sloth-recall-columns[\s\S]*#each slothRecallSections[\s\S]*#each fields/);
+    assert.match(html,/class="stmb-sloth-recall-value" hidden/);
+    assert.match(html,/data-stmb-recall-trigger/);
+    assert.match(html,/data-stmb-recall-choice/);
+    assert.match(css,/repeat\(auto-fit, minmax\(min\(100%, 11\.5em\), 1fr\)\)/);
+    assert.match(js,/syncSlothRecallPicker\(e.target\)/);
+    assert.doesNotMatch(js,/SlothNPCOff/);
+});

@@ -265,7 +265,7 @@ export function getNexusRecallModes(moduleSettings={}) {
     const detail=moduleSettings.nexusDetailRecallMode==='keyword'?'keyword':'vector';
     const defaults={core:'constant',continuity:'constant',lt:detail,npc:detail};
     return Object.fromEntries(Object.entries(defaults).map(([kind,fallback])=>[kind,
-        ['constant','vector','keyword','disabled',...(kind==='npc'?['off']:[])].includes(modes[kind])?modes[kind]:fallback]));
+        ['constant','vector','keyword','disabled'].includes(modes[kind])?modes[kind]:fallback]));
 }
 function isUninjectedManagedEntry(entry) {
     return entry?.disable===true && entry.STMB_slothRecallMode==='disabled';
@@ -311,7 +311,6 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
     for(const [i,op] of edits.entries()){
         const kind=str(op?.kind).toLowerCase(), action=str(op?.action).toLowerCase();
         requireThat(['core','continuity','lt','npc','npc-index'].includes(kind),'Invalid Nexus entry kind '+i);
-        requireThat(modes.npc!=='off'||!['npc','npc-index'].includes(kind),'NPC collection is disabled.');
         requireThat(['replace_exact','append','append_section','create'].includes(action),'Invalid Nexus edit action '+i);
         requireThat(action!=='append_section' || kind==='continuity',
             'Only Current Continuity supports append_section.');
@@ -412,7 +411,7 @@ export function stageNexusRecallSettings(original,moduleSettings) {
         const {roles,legacyLayout,protected:isProtected}=describeNexusCollectionEntry(entry);
         if(isProtected||!roles.length||roles.includes('npc-index'))continue;
         const options=new Set(roles.map(role=>modes[role]));
-        if(options.size!==1||options.has('off')||options.has(undefined)){skipped.push(entry.uid);continue;}
+        if(options.size!==1||options.has(undefined)){skipped.push(entry.uid);continue;}
         const mode=[...options][0];
         if(mode==='keyword'&&!(entry.key||[]).some(key=>typeof key==='string'&&key.trim())){
             skipped.push(entry.uid);continue;

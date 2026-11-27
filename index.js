@@ -11085,6 +11085,36 @@ function initializeSettingsPopupSelect2(popupInstance = currentPopupInstance) {
   }, 0);
 }
 
+function buildSlothRecallSections(moduleSettings) {
+  const modes = getNexusRecallModes(moduleSettings);
+  const choices = [
+    ['constant','Always on','STMemoryBooks_SlothRecallConstant','fa-solid fa-circle'],
+    ['vector','Vector','STMemoryBooks_NexusRecallVector','fa-solid fa-link'],
+    ['keyword','Keywords','STMemoryBooks_SlothRecallKeywords','fa-solid fa-circle'],
+    ['disabled','No injection','STMemoryBooks_SlothRecallDisabled','fa-solid fa-ban'],
+  ];
+  const field = (kind,title,labelKey,mode,allowed,id,locked=false,isNexus=false) => {
+    const options = choices.filter(([value])=>allowed.includes(value)).map(([value,label,key,icon])=>
+      ({value,label,key,icon,selected:value===mode}));
+    return {kind,title,labelKey,id,locked,isNexus,options,current:options.find(option=>option.selected)};
+  };
+  const all = choices.map(([value])=>value);
+  return [
+    {title:'Nexus injection',key:'STMemoryBooks_SlothNexusInjection',fields:[
+      ...[
+        ['core','Core Memory','STMemoryBooks_SlothCoreRecall'],
+        ['continuity','Current Continuity','STMemoryBooks_SlothContinuityRecall'],
+        ['lt','LT','STMemoryBooks_SlothLTRecall'],
+        ['npc','NPC','STMemoryBooks_SlothNPCRecall'],
+      ].map(([kind,title,key])=>field(kind,title,key,modes[kind],all,'stmb-nexus-recall-'+kind,false,true)),
+    ]},
+    {title:'Memory injection',key:'STMemoryBooks_SlothMemoryInjection',fields:[
+      field('recent','Latest 3 Scenes','STMemoryBooks_SlothRecentScenes','constant',['constant'],'stmb-sloth-recent-recall',true),
+      field('older','Older Scenes','STMemoryBooks_SlothOlderScenes',moduleSettings.nexusOlderSceneMode==='keyword'?'keyword':'vector',['vector','keyword'],'stmb-sloth-memory-recall'),
+    ]},
+  ];
+}
+
 function buildSlothTemplateData(settings) {
   const sloth = getActiveNexusRoleContext(settings);
   const slothRoleMemory = getCurrentNexusRoleResolution('memory', settings);
@@ -11129,21 +11159,8 @@ function buildSlothTemplateData(settings) {
     slothModeActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
-    slothNexusRecallFields: [
-      ['core','Core Memory','STMemoryBooks_SlothCoreRecall'],
-      ['continuity','Current Continuity','STMemoryBooks_SlothContinuityRecall'],
-      ['lt','LT','STMemoryBooks_SlothLTRecall'],
-      ['npc','NPC','STMemoryBooks_SlothNPCRecall'],
-    ].map(([kind,title,labelKey])=>({kind,title,labelKey,options:[
-      ['constant','Always on','STMemoryBooks_SlothRecallConstant'],
-      ['vector','Vector','STMemoryBooks_NexusRecallVector'],
-      ['keyword','Keywords','STMemoryBooks_SlothRecallKeywords'],
-      ['disabled','No injection','STMemoryBooks_SlothRecallDisabled'],
-      ...(kind==='npc'?[['off','Do not collect','STMemoryBooks_SlothNPCOff']]:[]),
-    ].map(([value,label,key])=>({value,label,key,selected:getNexusRecallModes(settings.moduleSettings)[kind]===value}))})),
+    slothRecallSections: buildSlothRecallSections(settings.moduleSettings),
     slothHideAfter: settings.moduleSettings.slothHideAfter === true,
-    slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
-    slothMemoryUsesVector: settings.moduleSettings.nexusOlderSceneMode !== 'keyword',
     slothConnectionProfiles,
     slothConnectionProfileId: stConnectionProfileId,
     slothComposerEnabled: settings.moduleSettings.slothComposerEnabled !== false,
@@ -11876,6 +11893,10 @@ async function refreshSlothRoleControls({forceRoles=false} = {}) {
   const replace = (oldNode,newNode,parent,before=null) => {
     if (oldNode && newNode) {
       if (oldNode.tagName === 'DETAILS') newNode.open = oldNode.open;
+      for (const drawer of oldNode.querySelectorAll('details[id]')) {
+        const next = newNode.querySelector('#'+CSS.escape(drawer.id));
+        if (next) next.open = drawer.open;
+      }
       for (const help of oldNode.querySelectorAll('.stmb-sloth-help:not([hidden])[id]')) {
         const nextHelp = newNode.querySelector('#'+CSS.escape(help.id));
         if (nextHelp && nextHelp.getAttribute('data-i18n') === help.getAttribute('data-i18n')) {
@@ -11984,6 +12005,29 @@ function showSlothIconPicker(menu, trigger) {
   menu.querySelector('input:checked')?.focus({preventScroll:true});
 }
 
+function syncSlothRecallPicker(select) {
+  const option = select?.selectedOptions?.[0];
+  const control = select?.closest('.stmb-sloth-recall-control');
+  const trigger = control?.querySelector('[data-stmb-recall-trigger]');
+  if (!option || !trigger) return;
+  trigger.dataset.mode = option.value;
+  trigger.querySelector('i').className = option.dataset.recallIcon;
+  trigger.title = option.textContent.trim();
+  trigger.dataset.i18n = '[title]'+option.dataset.i18n;
+  const label = trigger.querySelector('.stmb-sloth-recall-sr');
+  label.textContent = option.textContent.trim();
+  label.dataset.i18n = option.dataset.i18n;
+  for (const choice of control.querySelectorAll('[data-stmb-recall-choice]'))
+    choice.setAttribute('aria-pressed', String(choice.dataset.stmbRecallChoice===option.value));
+}
+
+function closeSlothRecallPickers(root, except=null) {
+  for (const menu of root.querySelectorAll('.stmb-sloth-recall-popover:not([hidden])')) {
+    if (menu===except) continue;
+    closeSlothIconPicker(menu,menu.parentElement.querySelector('[data-stmb-recall-trigger]'));
+  }
+}
+
 function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   if (!popupInstance?.dlg) return;
 
@@ -12018,6 +12062,12 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
   };
 
   popupElement.addEventListener('keydown', e => {
+    const recall = popupElement.querySelector('.stmb-sloth-recall-popover:not([hidden])');
+    if (e.key==='Escape' && recall && typeof recall.hidePopover!=='function') {
+      e.preventDefault(); e.stopPropagation();
+      const trigger=recall.parentElement.querySelector('[data-stmb-recall-trigger]');
+      closeSlothIconPicker(recall,trigger); trigger?.focus({preventScroll:true}); return;
+    }
     const picker = popupElement.querySelector('#stmb-sloth-icon-popover');
     if (e.key === 'Escape' && picker && !picker.hidden && typeof picker.hidePopover !== 'function') {
       e.preventDefault();
@@ -12035,6 +12085,10 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     void activateTab(name,true);
   });
   popupElement.addEventListener('toggle', e => {
+    if (e.target.matches?.('.stmb-sloth-recall-popover') && e.newState==='closed')
+      closeSlothIconPicker(e.target,e.target.parentElement?.querySelector('[data-stmb-recall-trigger]'));
+    if (e.target.matches?.('#stmb-sloth-injection-settings:not([open]), #stmb-sloth-lorebooks:not([open])'))
+      closeSlothRecallPickers(e.target);
     if (e.target.id === 'stmb-sloth-icon-popover' && e.newState === 'closed') {
       closeSlothIconPicker(e.target,popupElement.querySelector('#stmb-sloth-icon-trigger'));
     }
@@ -12058,6 +12112,32 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
   // Use full event delegation for all interactions
   popupElement.addEventListener("click", async (e) => {
+    const recallTrigger=e.target.closest?.('[data-stmb-recall-trigger]');
+    if (recallTrigger) {
+      e.preventDefault();
+      const menu=recallTrigger.parentElement.querySelector('.stmb-sloth-recall-popover');
+      closeSlothRecallPickers(popupElement,menu);
+      if (!menu.hidden) closeSlothIconPicker(menu,recallTrigger);
+      else {
+        showSlothIconPicker(menu,recallTrigger);
+        menu.querySelector('[aria-pressed="true"]')?.focus({preventScroll:true});
+      }
+      return;
+    }
+    const recallChoice=e.target.closest?.('[data-stmb-recall-choice]');
+    if (recallChoice) {
+      e.preventDefault();
+      const control=recallChoice.closest('.stmb-sloth-recall-control');
+      const select=control.querySelector('.stmb-sloth-recall-value');
+      const trigger=control.querySelector('[data-stmb-recall-trigger]');
+      if ([...select.options].some(option=>option.value===recallChoice.dataset.stmbRecallChoice)) {
+        select.value=recallChoice.dataset.stmbRecallChoice;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      closeSlothIconPicker(control.querySelector('.stmb-sloth-recall-popover'),trigger);
+      trigger.focus({preventScroll:true}); return;
+    }
+    if (!e.target.closest?.('.stmb-sloth-recall-control')) closeSlothRecallPickers(popupElement);
     const infoToggle = e.target.closest?.('#stmb-sloth-panel .stmb-sloth-info, #stmb-sloth-collection-footer .stmb-sloth-info');
     if (infoToggle) {
       e.preventDefault();
@@ -12288,8 +12368,9 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       const kind=e.target.dataset.stmbNexusRecallKind;
       const value=e.target.value;
       if (!['core','continuity','lt','npc'].includes(kind) ||
-          !['constant','vector','keyword','disabled',...(kind==='npc'?['off']:[])].includes(value)) return;
+          !['constant','vector','keyword','disabled'].includes(value)) return;
       settings.moduleSettings.nexusRecallModes={...getNexusRecallModes(settings.moduleSettings),[kind]:value};
+      syncSlothRecallPicker(e.target);
       await saveSettings();
       return;
     }
@@ -12389,7 +12470,7 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       const original = popupElement.querySelector('#stmb-nexus-older-scene-mode');
       const sloth = popupElement.querySelector('#stmb-sloth-memory-recall');
       if (original) original.value = settings.moduleSettings.nexusOlderSceneMode;
-      if (sloth) sloth.value = settings.moduleSettings.nexusOlderSceneMode;
+      if (sloth) { sloth.value = settings.moduleSettings.nexusOlderSceneMode; syncSlothRecallPicker(sloth); }
       await saveSettings();
       return;
     }
