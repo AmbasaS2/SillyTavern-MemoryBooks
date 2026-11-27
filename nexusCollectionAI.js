@@ -18,6 +18,7 @@ import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, inc
     describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
 import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { assertSlothNexusEvidence } from './slothNexusEvidence.js';
+import { buildSlothHealthReviewPrompt, validateSlothHealthReview } from './slothNexusHealthReview.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
@@ -135,7 +136,7 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},ve
     return async (prompt,phase,parse=parseStrictJSON)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
         let estimate=null;
-        const beforeRequest=phase==='Single collection'||phase==='Summary review'?async request=>{
+        const beforeRequest=['Single collection','Summary review','Nexus health review'].includes(phase)?async request=>{
             estimate=await preflightSingleSlothCollection(request,signal);
             verifyOrigin();
             return estimate;
@@ -293,7 +294,7 @@ const DEFAULT_SLOTH_COLLECTION_PROMPTS=Object.freeze({
         'Never edit original === BEGIN ORIGINAL / END ORIGINAL === legacy source blocks.',
         'If the old Continuity has only legacy source blocks, add a grounded named section',
         'instead of rewriting or interpreting the original archive without an explicit review.',
-        'Match LT to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. Use the surrounding chat context to identify the same person, including unambiguous pronouns or aliases. Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new LT needs a distinct lasting subject with no existing home.',
+        'Match Anchor (kind lt) to the most specific existing subject after reading its body. Match NPC to the same explicitly named person, even if title numbers or honorifics differ. Use the surrounding chat context to identify the same person, including unambiguous pronouns or aliases. Never map one named person onto another merely because they share an occupation or courtesy title. If the source merely confirms an existing fact, omit it. A new Anchor needs a distinct lasting subject with no existing home.',
         'Create a new NPC entry for a durable relationship or a separate future encounter supported by the chat. One visit or expected follow-up during the same visit is insufficient. Record relevant immediate follow-up or knowledge boundaries in continuity.',
     ].join('\n\n'),
 });
@@ -461,7 +462,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             ['Supply specific literal recall keywords for each new Nexus entry. Never overwrite existing entry activation settings.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
         'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
-        'Before creating LT or NPC, match the subject with existing titles, aliases, former names, and body context. If the same relationship, topic, or person already has a UID, update that UID even if the new wording or name differs. A different surname spelling or honorific alone is not evidence of a new person.',
+        'Before creating an Anchor or NPC, match the subject with existing titles, aliases, former names, and body context. If the same relationship, topic, or person already has a UID, update that UID even if the new wording or name differs. A different surname spelling or honorific alone is not evidence of a new person.',
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',
@@ -482,7 +483,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             'Newer chat messages are outside this input. Only propose grounded durable edits. Do not create or modify Current Continuity or Present Handoff from this historical slice.',
         ] : []),
         'Current Nexus entries (exact UIDs):',source,
-        'New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. Use append_section only for continuity; additional LT or NPC text uses append.',
+        'New core and continuity titles are exactly "Core Memory" and "Current Continuity" without any subtitle. New Anchor entries use the title "Anchor - Subject" and the existing JSON kind lt. Existing LT and Anchor titles refer to the same role; reuse the matching UID without renaming old entries. Use append_section only for continuity; additional Anchor or NPC text uses append.',
         'Keep the complete JSON within the output budget. Patch existing entries with minimal spans. Keep the handoff and durable changes; omit redundant recaps and routine dialogue.',
     ].join('\n\n');
 }
@@ -664,7 +665,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2,onRequestMetric=null}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=4,onRequestMetric=null}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -677,12 +678,12 @@ export async function composeSingleSlothCollection(options) {
         'Perform causal event classification, complete Scene writing, and minimal Nexus patches in this ONE response. Return only one complete JSON object.',
         'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]},{"title":"open incident","complete":false,"reason":"why still open","segments":[[2,3]]}],"edits":[]}.',
         'Return one row per causal incident in events. Complete events contain their own Scene and Result. Open incidents have complete:false; leave their outcome pending. Use inclusive source ranges with real original IDs. Shared boundary messages are allowed when they support distinct incidents. Do not duplicate the same incident. Keep all essential details and return complete JSON within the output budget.',
-        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences.',
+        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Prioritize consequential actions, responses and choices over incidental detail: preserve prior notice, consent or refusal, each person’s decision and responsibility, and the specific act acknowledged in an apology with its actual response. Retain distinctive dialogue and source-grounded emotional texture. For every number or frequency that matters, keep its original unit, counted action or object and speaker; use the same source-supported wording in Scene, Result and Nexus. A thousand occasions is not a thousand objects. Check proposed Nexus claims directly against the source, rather than deriving them from a paraphrased Scene.',
         SCENE_KEYWORD_GUIDANCE,
         'Character context (reference only): '+characterContext,
         'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
         slothNexusGuidance({nexus,settings,initial,characterContext,partialSource,characterContextIncluded:true}),
-        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Other edits retain the existing structural checks.',
+        'For Core changes, Current Continuity retirement (a whole-line removal), and Knowledge Boundaries changes, include evidence:[{messageId:NUMBER,quote:"exact short original substring"}] with one to three exact quotes, each at most 240 characters. Cite the actual condition and answer when needed, using only current source IDs. Also cite every Anchor (kind lt) replace_exact and any newly stated Anchor promise, obligation, retained decision, condition, boundary, permission, secrecy, knowledge or relationship change, including indirect commitments. For Anchor additions, judge the new claim, not the existing title. Cite original wording that supports the specific claim, including the actor, condition, negation and unit; copy each quote as a single contiguous original substring without ellipses or stitched lines. Routine additions retain structural checks.',
         'Original source messages (use each record’s id as its original message number):',compact(messages),
     ].join('\n\n');
     let inputTokens=null,inputTokensExact=false;
@@ -927,4 +928,13 @@ export async function suggestSlothSceneSplit({
     if(!Array.isArray(answer.parts))throw new Error('Split plan response has no parts array.');
     if(!answer.parts.length)return null;
     return validateNexusSceneSplitProposal(plan,answer,messages);
+}
+
+// User-triggered maintenance only, not part of collection statistics.
+export async function suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,language}){
+    const prompt=buildSlothHealthReviewPrompt(catalog,language);
+    const ask=requester(profile,settings,signal,true,()=>{},verifyOrigin);
+    const raw=await ask(prompt,'Nexus health review');
+    verifyOrigin();
+    return validateSlothHealthReview(catalog,raw);
 }

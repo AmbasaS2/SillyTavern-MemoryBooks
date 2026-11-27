@@ -306,7 +306,12 @@ export function fingerprintSlothReviewedRanges(chat, ranges) {
 const SINGLETON_ROLES = new Map([
     ['core memory', 'core'], ['current continuity', 'continuity'], ['npc index', 'npc-index'],
 ]);
-const DETAIL_TITLE = /^(lt|npc)\s*\d*\s*[|:–—-]\s*(.+)$/iu;
+// Anchor is the public name of the existing lt role. Historical titles,
+// settings, kind IDs and recovery signatures are intentionally preserved.
+const DETAIL_TITLE = /^(lt|anchor|npc)\s*\d*\s*[|:–—-]\s*(.+)$/iu;
+export function slothDisplayAnchorTitle(value,label='Anchor'){
+    return String(value??'').replace(/^(?:lt|anchor)(?=\s*\d*\s*[|:–—-]|\s*$)/iu,()=>label);
+}
 const LEGACY_FOOTER = /(?:\r?\n)+=== END (?:LONG-TERM MEMORY|SCENE CONTINUITY|STATUS)\b[^\r\n]*===\s*$/iu;
 const normalizedTitle = title => str(title).normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ');
 const detailIdentity = title => normalizedTitle(title).replace(DETAIL_TITLE, '$2')
@@ -350,7 +355,8 @@ export function describeNexusCollectionEntry(entry) {
         if (legacy === 'continuity' || legacy === 'status' || recognizedState) roles.push('continuity');
     }
     if (!roles.length && !legacy) {
-        const kind = title.match(DETAIL_TITLE)?.[1].toLowerCase() || entry?.STMB_slothNexusKind;
+        const namedKind=title.match(DETAIL_TITLE)?.[1].toLowerCase();
+        const kind=(namedKind==='anchor'?'lt':namedKind)||entry?.STMB_slothNexusKind;
         if (kind === 'lt' || kind === 'npc') roles.push(kind);
     }
     const legacyLayout = !singleton && roles.some(role => role === 'core' || role === 'continuity');

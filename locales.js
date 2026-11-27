@@ -589,7 +589,7 @@ export const localeData_en = {
     "STMemoryBooks_ModeOriginalRequired": "Choose Original Memory Books mode to use the original memory tools.",
     "STMemoryBooks_ModeSeparateBook": "Choose a separate original Memory Book. Existing Sloth lorebooks are protected.",
     'STMemoryBooks_SlothAddConnectionProfile': 'Save a SillyTavern connection profile, or add a Memory Books profile on the Original tab.',
-    'STMemoryBooks_SlothNexusRecallHelp': 'Core Memory and Current Continuity are created as always-on entries. This choice applies only to new long-term and NPC details.',
+    'STMemoryBooks_SlothNexusRecallHelp': 'Core Memory and Current Continuity are created as always-on entries. This choice applies only to new Anchor and NPC details.',
     'STMemoryBooks_SlothNexusRole': 'Nexus · lasting knowledge and current state',
     'STMemoryBooks_SlothMemoryRole': 'Memory · complete event Scenes',
     'STMemoryBooks_SlothUnassigned': 'Not assigned',

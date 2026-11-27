@@ -74,7 +74,7 @@ import {
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
-  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage, showSlothNexusHealth,
+  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage, showSlothNexusHealth, runSlothNexusHealthReview,
   beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename, finishPendingSlothLorebookRenames,
   hasPendingSlothSideRename, SLOTH_RENAME_RETRIED_EVENT,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft,
@@ -11169,7 +11169,7 @@ function buildSlothRecallSections(moduleSettings) {
       ...[
         ['core','Core Memory','STMemoryBooks_SlothCoreRecall'],
         ['continuity','Current Continuity','STMemoryBooks_SlothContinuityRecall'],
-        ['lt','LT','STMemoryBooks_SlothLTRecall'],
+        ['lt','Anchor','STMemoryBooks_SlothLTRecall'],
         ['npc','NPC','STMemoryBooks_SlothNPCRecall'],
       ].map(([kind,title,key])=>field(kind,title,key,modes[kind],all,'stmb-nexus-recall-'+kind,false,true)),
     ]},
@@ -11739,7 +11739,7 @@ function cancelSlothCollectionFrom(button) {
   return true;
 }
 
-async function runCancellableSlothButton(button, start) {
+async function runCancellableSlothButton(button, start, labels={}) {
   if (cancelSlothCollectionFrom(button) || activeSlothCollectionButton) return;
   const controller = new AbortController();
   const run = {button,controller,saving:false};
@@ -11753,7 +11753,7 @@ async function runCancellableSlothButton(button, start) {
     if (!glyph) button.textContent = label;
   };
   if (glyph) glyph.className = 'fa-solid fa-xmark';
-  updateLabel(translate('Cancel memory collection','STMemoryBooks_SlothCancelCollection'));
+  updateLabel(labels.cancel??translate('Cancel memory collection','STMemoryBooks_SlothCancelCollection'));
   button.setAttribute('aria-busy','true');
   try {
     return await start({
@@ -11767,7 +11767,7 @@ async function runCancellableSlothButton(button, start) {
     });
   } catch (error) {
     if (controller.signal.aborted) {
-      toastr.info(translate('Memory collection canceled.','STMemoryBooks_SlothCollectionCanceled'),
+      toastr.info(labels.cancelled??translate('Memory collection canceled.','STMemoryBooks_SlothCollectionCanceled'),
         'STMemoryBooks',{timeOut:2500});
     } else {
       console.error('🦥 STMemoryBooks', 'Sloth operation stopped:',error);
@@ -11840,6 +11840,11 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     companion: () => createSlothCompanion(),
     'recall-apply': () => applySlothNexusRecallSettings(),
     'nexus-health': () => showSlothNexusHealth(),
+    'nexus-health-review': () => runCancellableSlothButton(button, controls =>
+      runSlothNexusHealthReview({profileIndex,stConnectionProfileId,...controls}),{
+        cancel:translate('Cancel memory workshop','STMemoryBooks_SlothHealthReviewCancel'),
+        cancelled:translate('Memory workshop canceled.','STMemoryBooks_SlothHealthReviewCancelled'),
+      }),
     'collection-stats': () => showSlothCollectionStats(),
     'legacy-coverage': () => reviewSlothLegacyCoverage(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
@@ -11850,7 +11855,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
   const action = button.dataset.stmbSlothAction;
   if (!Object.hasOwn(actions, action)) return;
   const buttons = popupElement.querySelectorAll('button[data-stmb-sloth-action]');
-  for (const item of buttons) item.disabled = action !== 'collect' || item !== button;
+  for (const item of buttons) item.disabled = !['collect','nexus-health-review'].includes(action) || item !== button;
   try {
     const result = await actions[action]();
     if (result?.saved) {

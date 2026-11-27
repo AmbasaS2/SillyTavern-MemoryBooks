@@ -22,9 +22,9 @@ import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, fingerprintSlothReviewedRanges, stageNexusEdits, stageMemoryScenes,
     listSlothUntrackedScenes, findSlothLegacyEvidence,
-    getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes } from './nexusCollectionPolicy.js';
+    getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes, slothDisplayAnchorTitle } from './nexusCollectionPolicy.js';
 import { composeSingleSlothCollection, composeSlothScene,
-    suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
+    suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene, suggestSlothNexusHealthReview } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
@@ -46,6 +46,8 @@ import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticToken
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { inspectSlothNexusHealth, SLOTH_HEALTH_ROLES } from './slothNexusHealth.js';
+import { buildSlothHealthCatalog, stageSlothHealthReviewBatch } from './slothNexusHealthReview.js';
+import { showSlothHealthReviewFindings, healthReviewLabel } from './slothNexusHealthReviewDialog.js';
 import { createSlothCollectionRun, addSlothRequestMetric, recordSlothCollectionRun } from './slothCollectionStats.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
     slothSideRenameBooks, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
@@ -1329,7 +1331,7 @@ export async function showSlothNexusHealth(){
         const report=await inspectSlothNexusHealth(book,getTokenCountAsync);
         verify();
         const tr=(key,fallback)=>t(fallback,'STMemoryBooks_SlothHealth'+key);
-        const labels={core:'Core',continuity:'Continuity',lt:'LT',npc:'NPC',
+        const labels={core:tr('Core','Core Memory'),continuity:'Continuity',lt:tr('LT','Anchor'),npc:'NPC',
             mixed:tr('Mixed','Mixed roles'),other:tr('Other','Other'),protected:tr('Protected','Protected')};
         const num=n=>Number(n).toLocaleString();
         const amount=(n,missing=0)=>n===0&&missing?'—':'~ '+num(n);
@@ -1349,7 +1351,7 @@ export async function showSlothNexusHealth(){
         const chooser=(attribute,label,placeholder)=>'<select class="text_pole" '+attribute+' aria-label="'+html(label)+
             '"><option value="">'+html(placeholder)+'</option></select>';
         const popup=markStmbPopup(new Popup('<div class="stmb-sloth-review stmb-nexus-health">'+
-            '<header class="stmb-health-heading"><h3>'+html(tr('Title','Nexus health check'))+
+            '<header class="stmb-health-heading"><h3>'+html(tr('Title','Memory overview'))+
             '</h3><button type="button" class="stmb-health-info stmb-sloth-info" data-health-help-toggle aria-expanded="false" aria-controls="stmb-health-help" title="'+
             html(helpLabel)+'" aria-label="'+html(helpLabel)+'"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></header>'+
             '<p class="stmb-health-book">'+html(roles.nexus)+'</p><p id="stmb-health-help" class="stmb-health-help" hidden>'+
@@ -1392,9 +1394,9 @@ export async function showSlothNexusHealth(){
             });
         };
         mountList('[data-health-entries]','[data-health-entry]','[data-health-body]',report.rows,
-            row=>(row.title||'UID '+row.uid)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
+            row=>slothDisplayAnchorTitle(row.title||'UID '+row.uid,labels.lt)+' · '+labels[row.role]+' · '+(row.tokens===null?'—':amount(row.tokens)),row=>row.body);
         mountList('[data-health-repeats]','[data-health-repeat]','[data-health-repeat-body]',report.duplicates,
-            item=>item.entries.map(e=>e.title||'UID '+e.uid).join(' · '),item=>item.text);
+            item=>item.entries.map(e=>slothDisplayAnchorTitle(e.title||'UID '+e.uid,labels.lt)).join(' · '),item=>item.text);
         await popup.show();
         return {saved:false};
     }finally{collectorBusy=false;}
@@ -1436,6 +1438,79 @@ export async function applySlothNexusRecallSettings(){
         });
         await Promise.resolve(reloadEditor(roles.nexus));
         return {saved:true,changed:changed.length,skipped:skipped.length};
+    }finally{collectorBusy=false;}
+}
+
+/** Explicit AI health review. Inspecting the ordinary health snapshot never calls AI. */
+export async function runSlothNexusHealthReview({profileIndex,stConnectionProfileId,signal,onSaveStart}={}){
+    if(collectorBusy)throw new Error('A Sloth operation is already in progress.');
+    collectorBusy=true;
+    const tr=healthReviewLabel;
+    try{
+        const settings=extension_settings.STMemoryBooks,ref=structuredClone(getCurrentStmbChatRef());
+        if(ref?.type!=='character'||!ref.fileName)throw new Error(tr('NeedChat','Open an individual character chat first.'));
+        const roles={nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings).name,
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings).name};
+        const profile=collectionProfile(settings,profileIndex,stConnectionProfileId);
+        if(!profile)throw new Error(tr('NeedProfile','Choose a collection AI profile first.'));
+        const moduleSettings=structuredClone(settings.moduleSettings||{});
+        const modes=stringify(getNexusRecallModes(moduleSettings));
+        const verifyOrigin=()=>{
+            signal?.throwIfAborted();
+            assertSlothBookRoles(ref,roles);assertSideRenameReady(ref);
+            if(getMemoryBooksMode(extension_settings.STMemoryBooks,ref,getStmbChatKey(ref))!=='sloth'||
+                roles.nexus===roles.memory||modes!==stringify(getNexusRecallModes(extension_settings.STMemoryBooks.moduleSettings)))
+                throw new Error(tr('Changed','The memory mode or recall settings changed. Start a new review.'));
+        };
+        const verifyRecovery=async()=>{
+            if(await refreshSlothPaidDraft(ref))throw new Error(tr('Pending','Finish the pending collection recovery before changing Nexus.'));
+            verifyOrigin();
+        };
+        verifyOrigin();
+        const confirmation=markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>'+
+            html(tr('Title','Memory Workshop'))+'</h3><p>'+
+            html(tr('Consent','Analyze memories with AI? Active Nexus memories are sent to the selected AI. Chats are not sent. Only approved changes are saved. AI usage may apply.'))+
+            '</p><small>'+html(tr('Excluded','Protected, disabled and archived source entries are excluded.'))+'</small></div>',
+            POPUP_TYPE.CONFIRM,'',{wide:false,allowVerticalScrolling:true,
+                okButton:tr('Analyze','Analyze with AI'),cancelButton:t('Cancel','STMemoryBooks_Cancel')}));
+        if(await showCollectionPopup(confirmation,signal)!==POPUP_RESULT.AFFIRMATIVE)return {saved:false};
+        await verifyRecovery();
+        const original=await loadServerWorld(roles.nexus,signal);
+        verifyOrigin();assertReviewedCache(roles.nexus,original);
+        const catalog=buildSlothHealthCatalog(original);
+        if(!catalog.entries.length){
+            toastr.info(tr('Empty','No eligible Nexus entries to review.'),'STMemoryBooks');
+            return {saved:false};
+        }
+        const review=await suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,
+            language:tr('Language','English')});
+        verifyOrigin();
+        if(stringify(await loadServerWorld(roles.nexus,signal))!==stringify(original))
+            throw new Error(tr('Stale','Nexus changed during the review. Nothing was saved.'));
+        verifyOrigin();assertReviewedCache(roles.nexus,original);
+        const approved=await showSlothHealthReviewFindings({review,catalog,original,moduleSettings,
+            showPopup:popup=>showCollectionPopup(popup,signal)});
+        if(!approved)return {saved:false};
+        await verifyRecovery();
+        const actual=stageSlothHealthReviewBatch(original,approved.findings,{moduleSettings,
+            createEntry:book=>createWorldInfoEntry(roles.nexus,book)});
+        // The preview allocates a provisional new UID. All visible text,
+        // title, flags and keywords must otherwise match the final stage.
+        const visible=changes=>changes.map(({uid,...change})=>({...change,...(change.before!==null?{uid}:{})}));
+        if(stringify(visible(actual.changes))!==stringify(visible(approved.changes)))
+            throw new Error(tr('Stale','Nexus changed during the review. Nothing was saved.'));
+        verifyOrigin();onSaveStart?.();
+        await commitSlothNexusMigration({name:roles.nexus,original,staged:actual.staged},{
+            loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
+            verifyBeforeWrite:assertReviewedCache,verifyOrigin,
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            operation:'Nexus health review',
+        });
+        try{await Promise.resolve(reloadEditor(roles.nexus));}
+        catch(error){console.warn('🦥 STMemoryBooks','Nexus health editor refresh failed.',error);}
+        toastr.success(tr('Saved','Reviewed Nexus change saved.'),'STMemoryBooks');
+        return {saved:true,changed:actual.changes.length};
     }finally{collectorBusy=false;}
 }
 
@@ -1631,7 +1706,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if (partialReplay) {
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{partial:partialReplay,
                 originalRaw:previousDraft.originalRaw??previousDraft.raw,
-                ...([1,2].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
+                ...([1,2,3,4].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
         } else if (previousDraft) {
             if (automatic) {
                 if (sameSlothDraftBinding(previousDraft,draftBinding))
@@ -1644,7 +1719,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 if (typeof rawDraft==='string')
                     activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{
                         originalRaw:previousDraft.originalRaw??previousDraft.raw,
-                        ...([1,2].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
+                        ...([1,2,3,4].includes(previousDraft.evidencePolicyVersion)?{evidencePolicyVersion:previousDraft.evidencePolicyVersion}:{})},recoveryBaseline);
             }
         }
         const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames,
@@ -1664,7 +1739,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
         // Record eligible collection chunks, not idle automatic threshold checks.
-        runMetric=createSlothCollectionRun({ids:currentChunk.map(message=>message.id),startedAt:collectionStartedAt,automatic:!!automatic,replayed:typeof rawDraft==='string',initial,partialSource,reviewSummaries,evidencePolicyVersion:typeof rawDraft!=='string'?2:(activeDraft?.evidencePolicyVersion??0)});
+        runMetric=createSlothCollectionRun({ids:currentChunk.map(message=>message.id),startedAt:collectionStartedAt,automatic:!!automatic,replayed:typeof rawDraft==='string',initial,partialSource,reviewSummaries,evidencePolicyVersion:typeof rawDraft!=='string'?4:(activeDraft?.evidencePolicyVersion??0)});
         const onRequestMetric=metric=>addSlothRequestMetric(runMetric,metric);
         // Also refuse a new paid request/replay if the loaded chat is already stale.
         requireDurableSlothDraft(ref,activeDraft);
@@ -1676,11 +1751,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const collection=await composeSingleSlothCollection({nexus:originalBooks.nexus,memory:originalBooks.memory,
             messages:currentChunk,profile,settings,initial,characterContext,partialSource,signal,
             reviewSummaries,verifyOrigin:checkBeforeSave,rawDraft,onRequestMetric,
-            strictNexusEvidence:typeof rawDraft!=='string'||[1,2].includes(activeDraft?.evidencePolicyVersion),
-            evidencePolicyVersion:typeof rawDraft!=='string'?2:(activeDraft?.evidencePolicyVersion??0),
+            strictNexusEvidence:typeof rawDraft!=='string'||[1,2,3,4].includes(activeDraft?.evidencePolicyVersion),
+            evidencePolicyVersion:typeof rawDraft!=='string'?4:(activeDraft?.evidencePolicyVersion??0),
             lockedScenes:partialReplay?.lockedScenes??[],committedEdits:partialReplay?.committedEdits??[],
             onDraft:async raw=>{
-                activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw,{evidencePolicyVersion:2},recoveryBaseline);
+                activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw,{evidencePolicyVersion:4},recoveryBaseline);
                 requireDurableSlothDraft(ref,activeDraft);
             }});
         checkBeforeSave();
@@ -1711,7 +1786,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),{
                     ...(activeDraft.partial?{partial:activeDraft.partial}:{}),
                     originalRaw:activeDraft.originalRaw??activeDraft.raw,
-                    ...([1,2].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
+                    ...([1,2,3,4].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
                     slothRecoveryStore.revisionFor(key,activeDraft));
             }
             showSkipped();
@@ -1789,7 +1864,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 lockedScenes:scenes,committedEdits:collection.committedEdits??[]};
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),
                 {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw,
-                    ...([1,2].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
+                    ...([1,2,3,4].includes(activeDraft.evidencePolicyVersion)?{evidencePolicyVersion:activeDraft.evidencePolicyVersion}:{})},
                 slothRecoveryStore.revisionFor(key,activeDraft));
             return !slothPaidDrafts.has(key);
         };
