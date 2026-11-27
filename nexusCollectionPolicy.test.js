@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateNexusEventPlan,includeDeepSeekTailEvent,fitDeepSeekSceneBatch,parseReviewedSegments,groupSlothSourceWindows,
   fingerprintSlothChat,describeNexusCollectionEntry,
-  stageNexusEdits,stageMemoryScenes} from './nexusCollectionPolicy.js';
+  stageNexusEdits,stageMemoryScenes,getSlothHideRanges} from './nexusCollectionPolicy.js';
 
 test('a collection keeps proposed events while forwarding only verified ending quotes', () => {
   const originalMessages=[
