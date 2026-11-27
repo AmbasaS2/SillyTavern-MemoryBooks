@@ -29,6 +29,8 @@ function conflict() {
 
 export function createSlothRecoveryStore({request,headers,hash,encode=encodeSlothRecoveryFile}) {
     const file=chatKey=>slothRecoveryFileName(chatKey,hash);
+    const serialize=(chatKey,record)=>JSON.stringify({format:FORMAT,version:1,chatKey,record});
+    const revisionFor=(chatKey,record)=>hash(serialize(chatKey,record));
     async function read(chatKey) {
         const response=await request('/user/files/'+file(chatKey),{method:'GET',cache:'no-store',credentials:'same-origin'});
         if(response.status===404)return {chatKey,revision:null,record:null};
@@ -45,7 +47,7 @@ export function createSlothRecoveryStore({request,headers,hash,encode=encodeSlot
         if(record!==null&&!isSlothRecoveryRecord(record,chatKey))throw new Error('Invalid Sloth recovery record.');
         if(expectedRevision!==null&&!(typeof expectedRevision==='string'&&/^[a-f0-9]{64}$/u.test(expectedRevision)))
             throw new Error('A verified Sloth recovery baseline is required.');
-        const raw=JSON.stringify({format:FORMAT,version:1,chatKey,record});
+        const raw=serialize(chatKey,record);
         const revision=hash(raw);
         const current=await read(chatKey);
         if(current.revision===revision)return current; // verified idempotent retry
@@ -59,7 +61,7 @@ export function createSlothRecoveryStore({request,headers,hash,encode=encodeSlot
         if(saved.revision!==revision)throw conflict();
         return saved;
     }
-    return {read,replace};
+    return {read,replace,revisionFor};
 }
 
 // A present file (including a cleared tombstone) takes precedence over a

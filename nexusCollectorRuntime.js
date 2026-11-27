@@ -14,7 +14,7 @@ import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
     charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
 import { getTokenCountAsync, getTokenizerModel } from '../../../tokenizers.js';
 import { DOMPurify, sha256 } from '../../../../lib.js';
-import { createSlothRecoveryStore, selectSlothRecoveryRecord, isSlothRecoveryRecord } from './slothRecoveryStore.js';
+import { createSlothRecoveryStore, selectSlothRecoveryRecord } from './slothRecoveryStore.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
 import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, setSlothCollectionProgress, withStmbWriteLane } from './stmbJobs.js';
@@ -143,9 +143,24 @@ async function forgetPaidSlothDraft(ref,record) {
     });
 }
 function requireDurableSlothDraft(ref,record) {
-    if(record&&stringify(slothRecoverySnapshots.get(getStmbChatKey(ref))?.record)!==stringify(record))
+    if(record&&slothRecoverySnapshots.get(getStmbChatKey(ref))?.revision!==
+        slothRecoveryStore.revisionFor(getStmbChatKey(ref),record))
         throw new Error(t('The response is retained in this tab, but its recovery file is not verified. Retry without another AI request before saving memories.',
             'STMemoryBooks_SlothRecoveryNotDurable'));
+}
+async function verifyDurableSlothDraft(ref,record) {
+    if(!record)return;
+    const key=getStmbChatKey(ref);
+    await recoveryLane(key,async()=>{
+        const current=await slothRecoveryStore.read(key);
+        cacheSlothRecovery(key,current);
+        if(current.revision!==slothRecoveryStore.revisionFor(key,record)){
+            // Another client may have cleared/replaced the record. Keep this
+            // paid response available in the tab without adopting its revision.
+            slothPaidDrafts.set(key,{record,expectedRevision:slothRecoveryStore.revisionFor(key,record)});
+            requireDurableSlothDraft(ref,record);
+        }
+    });
 }
 async function choosePaidSlothDraft(record,binding,signal,{noSource=false,partialReplay=false}={}) {
     const reusable=partialReplay||(!record.partial&&sameSlothDraftBinding(record,binding));
@@ -1333,7 +1348,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             if (automatic) return {saved:false,reason:'no-source'};
             if (previousDraft) {
                 const choice=await choosePaidSlothDraft(previousDraft,null,signal,{noSource:true});
-                if (choice?.dismiss) await forgetPaidSlothDraft(ref,previousDraft);
+                if (choice?.dismiss&&getStmbChatKey()===getStmbChatKey(ref)) await forgetPaidSlothDraft(ref,previousDraft);
             }
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
             return {saved:false,reason:'no-source'};
@@ -1481,6 +1496,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     role:other==='memory'?'nexus':'memory',pairedBook:roleNames[other]}};
             }
         }
+        await verifyDurableSlothDraft(ref,activeDraft);
         await readReviewedChat(ref,sourceIds,fingerprint,{...fingerprintOptions,requireCurrentChat:true,verifyStored: stored => {
             const storedCoverage=getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks,getStmbChatKey(ref),roleNames);
             if (stringify(storedCoverage) !== stringify(reviewed)) throw new Error('The reviewed ranges changed during collection.');
@@ -1510,7 +1526,8 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 partialSource,books:[digestSlothSnapshot(after('nexus')),digestSlothSnapshot(after('memory'))],
                 lockedScenes:scenes,committedEdits:collection.committedEdits??[]};
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),
-                {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw});
+                {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw},
+                slothRecoveryStore.revisionFor(key,activeDraft));
             return !slothPaidDrafts.has(key);
         };
         const recoveryVerified=!needsRecovery||await persistPartial();
