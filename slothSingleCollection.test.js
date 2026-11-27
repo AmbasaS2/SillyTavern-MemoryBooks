@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {selectNexusPromptEntries,validateSelectedNexusResponse} from './nexusCollectionInput.js';
 import {readFileSync} from 'node:fs';
 import {validateNexusEventPlan,stageNexusEdits,describeNexusCollectionEntry,getNexusRecallModes,stageNexusRecallSettings} from './nexusCollectionPolicy.js';
 import {isCompletedSceneEntry,sceneNumberFromTitle} from './nexusSceneRotation.js';
@@ -23,6 +24,7 @@ test('single collection sends the source once, reads active Nexus and only recen
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Recall',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         isCompletedSceneEntry,sceneNumberFromTitle,validateNexusEventPlan,validateSlothSceneResponse,
+        selectNexusPromptEntries,validateSelectedNexusResponse,
         readSlothNexusEdits:raw=>({edits:raw.edits,skippedNexusEdits:0}),
         requester:(_p,_s,_sig,one)=>async prompt=>{assert.equal(one,true);calls.push(prompt);return structuredClone(draft);},
     });
