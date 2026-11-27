@@ -76,7 +76,8 @@ import {
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
   beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename, finishPendingSlothLorebookRenames,
-  getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft } from './nexusCollectorRuntime.js';
+  getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft,
+  refreshSlothPaidDraft, isSlothRecoveryUnavailable } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
@@ -1536,7 +1537,16 @@ async function maybePromptContextSettingForChatOpen() {
   }
 }
 
+function refreshSlothRecoveryForCurrentChat() {
+  const ref=getCurrentStmbChatRef(),key=getStmbChatKey(ref);
+  if(ref?.type!=='character'||!ref.avatarUrl||!ref.fileName||
+      getMemoryBooksMode(extension_settings.STMemoryBooks,ref,key)!=='sloth')return;
+  void refreshSlothPaidDraft(ref).catch(error=>console.warn('Sloth recovery lookup failed:',error))
+    .finally(()=>{if(getStmbChatKey()===key)syncSlothAutomaticStatus();});
+}
+
 async function handleChatChanged(chatId) {
+  refreshSlothRecoveryForCurrentChat();
   invalidateSlothAutomaticProgress();
   syncSlothAutomaticStatus();
   invalidateTrackerCheckpoints();
@@ -11827,7 +11837,11 @@ function syncSlothAutomaticStatus() {
       const unit = mode === 'tokens' ? translate('Tokens','STMemoryBooks_Tokens')
         : translate('Messages','STMemoryBooks_SlothAutoMessageUnit');
       const attempt=getSceneMarkers()?.slothAutomatic;
-      if (hasSlothPaidDraft(ref)) {
+      if (isSlothRecoveryUnavailable(ref)) {
+        message=translate('Recovery file could not be checked. Automatic collection is paused.',
+          'STMemoryBooks_SlothRecoveryUnavailable');
+        reading=null;
+      } else if (hasSlothPaidDraft(ref)) {
         message=translate('Previous response needs recovery. Automatic requests are paused; collect manually to review it.',
           'STMemoryBooks_SlothAutoRecovery');
         reading=null;
@@ -15845,6 +15859,7 @@ async function init() {
   initializeLorebookRegenerationObserver();
   registerMemoryTierMacros();
   void retrySlothSideRenames();
+  refreshSlothRecoveryForCurrentChat();
   await refreshMemoryTierMacroCache();
   registerStmbJobExecutor("memory", executeQueuedMemoryJob);
   registerStmbJobExecutor("memoryAssistance", executeQueuedMemoryAssistanceJob);

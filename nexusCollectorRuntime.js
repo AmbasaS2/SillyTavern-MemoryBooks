@@ -13,7 +13,8 @@ import { extension_settings } from '../../../extensions.js';
 import { saveWorldInfo, createWorldInfoEntry, reloadEditor, worldInfoCache,
     charUpdateAddAuxWorld, updateWorldInfoList } from '../../../world-info.js';
 import { getTokenCountAsync, getTokenizerModel } from '../../../tokenizers.js';
-import { DOMPurify } from '../../../../lib.js';
+import { DOMPurify, sha256 } from '../../../../lib.js';
+import { createSlothRecoveryStore, selectSlothRecoveryRecord } from './slothRecoveryStore.js';
 import { escapeHtml } from '../../../utils.js';
 import { translate } from '../../../i18n.js';
 import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, setSlothCollectionProgress, withStmbWriteLane } from './stmbJobs.js';
@@ -50,43 +51,116 @@ const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
 const stringify=value=>JSON.stringify(value);
 let collectorBusy=false;
-// A same-session fallback keeps paid text even if chat metadata cannot be
-// written (for example, the user switched chats while the model was running).
+// Keep durable recovery in a separate per-chat user file. Session-only
+// responses must not be evicted merely because the user opens another chat.
 const slothPaidDrafts=new Map();
+const slothRecoverySnapshots=new Map();
+const slothRecoveryReadErrors=new Set();
 const digestSlothSnapshot=value=>{const json=typeof value==='string'?value:stringify(value);return [json.length,stableHashString(json)];};
+const slothRecoveryStore=createSlothRecoveryStore({request:(url,options)=>fetch(url,options),headers:getRequestHeaders,hash:sha256});
+const recoveryLane=(key,task)=>withStmbWriteLane({type:'sloth-recovery',chatKey:key},async()=>{
+    // Same-origin tabs can also serialize their independent file writes when
+    // Web Locks is available. Remote HTTP clients may not support Web Locks.
+    const locks=globalThis.navigator?.locks;
+    return locks?.request?locks.request('stmb-sloth-recovery-'+sha256(key),task):task();
+});
+
+function cacheSlothRecovery(key,snapshot) {
+    slothRecoverySnapshots.delete(key);
+    slothRecoverySnapshots.set(key,snapshot);
+    // Bound cached durable copies, never evict an unsaved paid response.
+    while(slothRecoverySnapshots.size>16)slothRecoverySnapshots.delete(slothRecoverySnapshots.keys().next().value);
+    slothRecoveryReadErrors.delete(key);
+}
 function getPaidSlothDraft(ref) {
     const key=getStmbChatKey(ref);
-    const memory=slothPaidDrafts.get(key);
-    const stored=getSceneMarkers()?.slothCollectionDraft;
-    const validStored=stored?.version===1&&stored.binding?.chatKey===key&&typeof stored.raw==='string'?stored:null;
-    return memory&&(!validStored||memory.receivedAt>=validStored.receivedAt)?memory:validStored;
+    const legacy=getStmbChatKey()===key?getSceneMarkers()?.slothCollectionDraft:null;
+    return selectSlothRecoveryRecord(key,slothRecoverySnapshots.get(key),legacy,slothPaidDrafts.get(key));
 }
-async function rememberPaidSlothDraft(ref,binding,raw,details={}) {
+export function isSlothRecoveryUnavailable(ref) {
+    return slothRecoveryReadErrors.has(getStmbChatKey(ref));
+}
+export async function refreshSlothPaidDraft(ref=getCurrentStmbChatRef()) {
+    if(ref?.type!=='character'||!ref.avatarUrl||!ref.fileName)return null;
+    const key=getStmbChatKey(ref);
+    return recoveryLane(key,async()=>{
+        try {
+            const snapshot=await slothRecoveryStore.read(key);
+            cacheSlothRecovery(key,snapshot);
+            const fallback=slothPaidDrafts.get(key);
+            // A failed response to an upload can still mean that the upload
+            // persisted. Resolve that exact retry without a second write.
+            if(fallback&&stringify(snapshot.record)===stringify(fallback.record))
+                slothPaidDrafts.delete(key);
+            return getPaidSlothDraft(ref);
+        }catch(error){
+            slothRecoveryReadErrors.add(key);
+            throw Object.assign(new Error(t('Could not verify the recovery file. Collection stopped before another AI request.',
+                'STMemoryBooks_SlothRecoveryReadFailed')),{cause:error});
+        }
+    });
+}
+async function rememberPaidSlothDraft(ref,binding,raw,details={},baseline) {
     const key=binding.chatKey;
+    if(key!==getStmbChatKey(ref))throw new Error('Invalid original Sloth recovery identity.');
     const record={...details,version:1,binding,raw:String(raw??''),receivedAt:Date.now()};
-    slothPaidDrafts.set(key,record);
-    // Keep only a small session fallback; the current chat owns durable data.
-    while (slothPaidDrafts.size>8) slothPaidDrafts.delete(slothPaidDrafts.keys().next().value);
-    try {
-        if (getStmbChatKey()!==key) return record;
-        await patchVerifiedSlothMetadata(ref,markers=>({...markers,slothCollectionDraft:record}));
-    } catch(error) {
-        console.warn('Paid Sloth response retained in this browser session; chat draft persistence failed.',error);
-        if(error?.code==='STMB_SLOTH_EXTERNAL_CHAT_CONFLICT')
-            toastr.warning(error.message,'STMemoryBooks',{preventDuplicates:true});
-    }
-    return record;
+    return recoveryLane(key,async()=>{
+        const fallback=slothPaidDrafts.get(key);
+        const snapshot=slothRecoverySnapshots.get(key);
+        const expectedRevision=baseline!==undefined?baseline:fallback?fallback.expectedRevision:snapshot?.revision;
+        slothPaidDrafts.set(key,{record,expectedRevision});
+        try {
+            const saved=await slothRecoveryStore.replace(key,record,expectedRevision);
+            cacheSlothRecovery(key,saved);
+            slothPaidDrafts.delete(key);
+        }catch(error){
+            console.warn('Paid Sloth response is retained only in this browser session.',error);
+            toastr.warning(t('Could not save the recovery file. The received response is retained in this tab only; copy it before refreshing.',
+                'STMemoryBooks_SlothRecoveryWriteFailed'),'STMemoryBooks',{preventDuplicates:true,timeOut:0,extendedTimeOut:0});
+        }
+        return record;
+    });
 }
 async function forgetPaidSlothDraft(ref,record) {
-    if (!record) return;
+    if(!record)return;
     const key=record.binding.chatKey;
-    try {
-        if (getStmbChatKey()===key) await patchVerifiedSlothMetadata(ref,markers=>{
-            if (markers.slothCollectionDraft?.receivedAt!==record.receivedAt) return markers;
-            const next={...markers};delete next.slothCollectionDraft;return next;
-        });
-        if (slothPaidDrafts.get(key)?.receivedAt===record.receivedAt) slothPaidDrafts.delete(key);
-    } catch(error) { console.warn('Collection saved; recovery record could not be cleared.',error); }
+    if(key!==getStmbChatKey(ref))return;
+    await recoveryLane(key,async()=>{
+        const fallback=slothPaidDrafts.get(key);
+        const snapshot=slothRecoverySnapshots.get(key);
+        if(stringify(getPaidSlothDraft(ref))!==stringify(record))return;
+        try {
+            // Keep a tiny cleared marker so old metadata drafts cannot revive
+            // after reload. No legacy chat header is written just for cleanup.
+            const saved=await slothRecoveryStore.replace(key,null,fallback?fallback.expectedRevision:snapshot?.revision);
+            cacheSlothRecovery(key,saved);
+            slothPaidDrafts.delete(key);
+        }catch(error){
+            console.warn('Collection saved; independent recovery record could not be cleared.',error);
+            toastr.warning(t('Collection was saved, but the recovery file could not be cleared. Review the retained response before another request.',
+                'STMemoryBooks_SlothRecoveryClearFailed'),'STMemoryBooks');
+        }
+    });
+}
+function requireDurableSlothDraft(ref,record) {
+    if(record&&slothRecoverySnapshots.get(getStmbChatKey(ref))?.revision!==
+        slothRecoveryStore.revisionFor(getStmbChatKey(ref),record))
+        throw new Error(t('The response is retained in this tab, but its recovery file is not verified. Retry without another AI request before saving memories.',
+            'STMemoryBooks_SlothRecoveryNotDurable'));
+}
+async function verifyDurableSlothDraft(ref,record) {
+    if(!record)return;
+    const key=getStmbChatKey(ref);
+    await recoveryLane(key,async()=>{
+        const current=await slothRecoveryStore.read(key);
+        cacheSlothRecovery(key,current);
+        if(current.revision!==slothRecoveryStore.revisionFor(key,record)){
+            // Another client may have cleared/replaced the record. Keep this
+            // paid response available in the tab without adopting its revision.
+            slothPaidDrafts.set(key,{record,expectedRevision:slothRecoveryStore.revisionFor(key,record)});
+            requireDurableSlothDraft(ref,record);
+        }
+    });
 }
 async function choosePaidSlothDraft(record,binding,signal,{noSource=false,partialReplay=false}={}) {
     const reusable=partialReplay||(!record.partial&&sameSlothDraftBinding(record,binding));
@@ -1196,7 +1270,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             {memory:roles.memory.name,nexus:roles.nexus.name};
         // The automatic checkpoint throttles attempts; it is not a collection
         // receipt. A paid failed draft pauses auto requests until reviewed.
-        if (automatic&&getPaidSlothDraft(ref)) {
+        if (automatic&&getPaidSlothDraft(ref)&&await refreshSlothPaidDraft(ref)) {
             invalidateSlothAutomaticProgress();
             return {saved:false,reason:'recovery-pending'};
         }
@@ -1227,6 +1301,15 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         // set further, which is checked before starting an AI request.
         const pending = automatic ? activeSource(ref,null,roleNames,through).source : null;
         if (automatic && !await thresholdMet(pending)) return {saved:false,reason:'below-threshold'};
+        let previousDraft=await refreshSlothPaidDraft(ref);
+        if(getStmbChatKey()!==getStmbChatKey(ref))throw slothWriteConflict();
+        if(automatic&&previousDraft){
+            invalidateSlothAutomaticProgress();
+            return {saved:false,reason:'recovery-pending'};
+        }
+        const key=getStmbChatKey(ref);
+        const fallbackAtStart=slothPaidDrafts.get(key);
+        const recoveryBaseline=fallbackAtStart?fallbackAtStart.expectedRevision:slothRecoverySnapshots.get(key)?.revision;
         const originalBooks=initial?{nexus:{entries:{}},memory:{entries:{}}}:{
             nexus:await loadServerWorld(roleNames.nexus,signal),
             memory:await loadServerWorld(roleNames.memory,signal),
@@ -1236,7 +1319,6 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         }
         const {source:liveSource,prior,reviewed}=activeSource(ref,originalBooks.memory,roleNames);
         let source=liveSource,partialReplay=null,rawDraft=null;
-        let previousDraft=getPaidSlothDraft(ref);
         // A partial save legitimately changes the books and removes collected
         // IDs from activeSource. Reuse the original input only against the
         // verified postcommit snapshot, including already hidden source turns.
@@ -1266,7 +1348,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             if (automatic) return {saved:false,reason:'no-source'};
             if (previousDraft) {
                 const choice=await choosePaidSlothDraft(previousDraft,null,signal,{noSource:true});
-                if (choice?.dismiss) await forgetPaidSlothDraft(ref,previousDraft);
+                if (choice?.dismiss&&getStmbChatKey()===getStmbChatKey(ref)) await forgetPaidSlothDraft(ref,previousDraft);
             }
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
             return {saved:false,reason:'no-source'};
@@ -1317,7 +1399,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             fingerprint:digestSlothSnapshot(fingerprint),books:booksFingerprint};
         if (partialReplay) {
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{partial:partialReplay,
-                originalRaw:previousDraft.originalRaw??previousDraft.raw});
+                originalRaw:previousDraft.originalRaw??previousDraft.raw},recoveryBaseline);
         } else if (previousDraft) {
             if (automatic) {
                 if (sameSlothDraftBinding(previousDraft,draftBinding))
@@ -1328,7 +1410,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 rawDraft=choice.raw;
                 checkBeforeSave();
                 if (typeof rawDraft==='string')
-                    activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft);
+                    activeDraft=await rememberPaidSlothDraft(ref,draftBinding,rawDraft,{},recoveryBaseline);
             }
         }
         const autoAttempt=automatic ? {chatKey:automaticChatKey,through:sourceIds.at(-1),books:roleNames,
@@ -1348,6 +1430,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             toastr.info(t('Analyzing causal events in the unsaved chat...','STMemoryBooks_SlothAnalyzing'),'STMemoryBooks');
         }
         // Also refuse a new paid request/replay if the loaded chat is already stale.
+        requireDurableSlothDraft(ref,activeDraft);
         await readCurrentSlothChatForWrite(ref);
         checkBeforeSave();
         progressChatKey = getStmbChatKey(ref);
@@ -1357,7 +1440,10 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             messages:currentChunk,profile,settings,initial,characterContext,partialSource,signal,
             reviewSummaries,verifyOrigin:checkBeforeSave,rawDraft,
             lockedScenes:partialReplay?.lockedScenes??[],committedEdits:partialReplay?.committedEdits??[],
-            onDraft:async raw=>{activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw);}});
+            onDraft:async raw=>{
+                activeDraft=await rememberPaidSlothDraft(ref,draftBinding,raw,{},recoveryBaseline);
+                requireDurableSlothDraft(ref,activeDraft);
+            }});
         checkBeforeSave();
         const {plan,scenes,edits,skippedNexusEdits,reviewFailed,skippedScenes}=collection;
         const needsRecovery=Boolean(skippedScenes||skippedNexusEdits||collection.recoveryUncertain);
@@ -1410,6 +1496,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     role:other==='memory'?'nexus':'memory',pairedBook:roleNames[other]}};
             }
         }
+        await verifyDurableSlothDraft(ref,activeDraft);
         await readReviewedChat(ref,sourceIds,fingerprint,{...fingerprintOptions,requireCurrentChat:true,verifyStored: stored => {
             const storedCoverage=getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks,getStmbChatKey(ref),roleNames);
             if (stringify(storedCoverage) !== stringify(reviewed)) throw new Error('The reviewed ranges changed during collection.');
@@ -1433,15 +1520,17 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         // Only the successful, read-back-verified write is allowed to advance
         // a partial replay's trusted baseline. Keep the original paid text too.
         const persistPartial=async()=>{
-            if (!activeDraft) return;
+            if (!activeDraft) return false;
             const after=role=>states.find(state=>state.name===roleNames[role])?.staged??originalBooks[role];
             const partial={version:1,sourceIds:[...sourceIds],chunkIds:currentChunk.map(message=>message.id),
                 partialSource,books:[digestSlothSnapshot(after('nexus')),digestSlothSnapshot(after('memory'))],
                 lockedScenes:scenes,committedEdits:collection.committedEdits??[]};
             activeDraft=await rememberPaidSlothDraft(ref,draftBinding,JSON.stringify(collection.pendingDraft,null,2),
-                {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw});
+                {partial,originalRaw:activeDraft.originalRaw??activeDraft.raw},
+                slothRecoveryStore.revisionFor(key,activeDraft));
+            return !slothPaidDrafts.has(key);
         };
-        if(needsRecovery) await persistPartial();
+        let recoveryVerified=!needsRecovery||await persistPartial();
         let receiptVerified=false;
         if(scenes.length){
             try {
@@ -1452,11 +1541,12 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                 console.warn('Memory Books saved, but the chat receipt could not be verified.',error);
             }
         }
-        if(!needsRecovery&&scenes.length&&!receiptVerified) await persistPartial();
+        if(!needsRecovery&&scenes.length&&!receiptVerified) recoveryVerified=await persistPartial();
         const hideRanges = approval.hideRanges.length ? getSlothHideRanges(scenes,chat,approval.keepRecent) : [];
         let hiddenMessages=0;
         if (hideRanges.length) {
             try {
+                if (!recoveryVerified) throw new Error('The partial recovery file could not be verified.');
                 if (!receiptVerified) throw new Error('The stored collection receipt could not be verified.');
                 let remaining = [...sourceIds];
                 assertOrigin(ref,roleNames,remaining,fingerprint,fingerprintOptions);
@@ -1522,7 +1612,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
             }
         }
         return {saved:true,scenes:scenes.length,nexusEdits:edits.length,skippedScenes,skippedNexusEdits,
-            receiptVerified,sidePromptsSaved,hiddenMessages,inputTokens:collection.inputTokens,inputTokensExact:collection.inputTokensExact,result:outcome};
+            receiptVerified,recoveryVerified,sidePromptsSaved,hiddenMessages,inputTokens:collection.inputTokens,inputTokensExact:collection.inputTokensExact,result:outcome};
     }catch(error){
         await settleSlothAutoAttempt(attemptedRef,attemptedAuto,activeDraft?'recovery':'failed');
         if(activeDraft&&!signal?.aborted) toastr.warning(t('The received AI response was retained. Press collect again to review or reuse it without another AI request.',
