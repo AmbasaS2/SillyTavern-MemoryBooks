@@ -254,6 +254,42 @@ export function fingerprintSlothChat(chat,ids,{allowHidden=false}={}) {
     })});
 }
 
+// A manual review may inspect untracked completed Scenes. It must not assume
+// a missing chat identity means the current chat, or mark ranges by similarity.
+export function listSlothUntrackedScenes(book,ref,chatLength) {
+    const chatIds=new Set([String(ref?.fileName||''),String(ref?.chatId||'')].filter(Boolean));
+    return Object.values(book?.entries||{}).filter(entry=>{
+        if(!isCompletedSceneEntry(entry)||intUid(entry.uid)===null||entry.STMB_slothSceneMergedInto!==undefined||
+            entry.STMB_slothSceneSplitArchive!==undefined||entry.STMB_slothLegacyArchive)return false;
+        const origin=String(entry.STMB_chatId||'');
+        if(origin&&!chatIds.has(origin))return false;
+        if(!origin)return true; // no proof that any stored numbers belong here
+        if(Object.hasOwn(entry,'STMB_collectedRanges'))return false; // intentional coverage, even []
+        const ranges=entry.STMB_sourceRanges??(entry.stmemorybooks===true&&
+            Number.isSafeInteger(entry.STMB_start)&&Number.isSafeInteger(entry.STMB_end)?
+            [[entry.STMB_start,entry.STMB_end]]:[]);
+        return !Array.isArray(ranges)||!ranges.length||ranges.some(pair=>!Array.isArray(pair)||pair.length!==2||
+            !pair.every(Number.isSafeInteger)||pair[0]<0||pair[1]<pair[0]||pair[1]>=chatLength);
+    }).sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment)||Number(a.uid)-Number(b.uid));
+}
+
+export function findSlothLegacyEvidence(content,messages) {
+    const normalized=text=>String(text||'').normalize('NFC').replace(/\s+/gu,' ').trim();
+    const quotes=[...new Set(Array.from(String(content||'').matchAll(/"([^"\r\n]{8,240})"|“([^”\r\n]{8,240})”|「([^」\r\n]{8,240})」/gu),
+        match=>normalized(match[1]??match[2]??match[3])).filter(q=>q.length>=8))].slice(0,12);
+    if(!quotes.length)return [];
+    const hits=[];
+    for(let id=0;id<messages.length;id++){
+        const message=messages[id];
+        if(typeof message?.mes!=='string')continue;
+        const text=normalized(message.mes);
+        const quote=quotes.find(value=>text.includes(value));
+        if(quote)hits.push({id,name:String(message.name||''),quote});
+        if(hits.length>=40)break;
+    }
+    return hits;
+}
+
 export function fingerprintSlothReviewedRanges(chat, ranges) {
     return stableHashString(JSON.stringify(ranges.map(([start, end]) => {
         requireThat(Number.isSafeInteger(start) && Number.isSafeInteger(end) &&

@@ -21,6 +21,7 @@ import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, set
 import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { parseReviewedSegments, fingerprintSlothChat, fingerprintSlothReviewedRanges, stageNexusEdits, stageMemoryScenes,
+    listSlothUntrackedScenes, findSlothLegacyEvidence,
     getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { composeSingleSlothCollection, composeSlothScene,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
@@ -473,6 +474,7 @@ async function listSlothSideBooks() {
 const pendingSideRenames = settings => Array.isArray(settings?.moduleSettings?.slothSidePendingRenames)
     ? settings.moduleSettings.slothSidePendingRenames : [];
 let sideRenameTail = Promise.resolve();
+let sideRenameRunning = 0;
 
 async function retargetActiveSlothReceipts(change) {
     const ref=getCurrentStmbChatRef();
@@ -508,9 +510,13 @@ async function retargetActiveSlothReceipts(change) {
     if (stringify(markers) !== stringify(replace(markers))) await patchVerifiedSlothMetadata(ref,replace);
 }
 
+function hasPendingSlothSideRename(ref) {
+    return pendingSideRenames(extension_settings.STMemoryBooks).some(change=>sideRenameMatches(change,ref));
+}
 function assertSideRenameReady(ref) {
-    if (pendingSideRenames(extension_settings.STMemoryBooks).some(change=>sideRenameMatches(change,ref)))
-        throw new Error(t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
+    if (hasPendingSlothSideRename(ref))
+        throw new Error(sideRenameRunning?t('Updating lorebook links. Try again after the update finishes.',
+            'STMemoryBooks_SlothRenameUpdating'):t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
             'STMemoryBooks_SlothSideRenamePending'));
 }
 
@@ -549,22 +555,27 @@ async function processSlothSideRenames() {
             if (pendingSideRenames(settings)[0] !== record)
                 throw new Error('Side Prompt rename recovery changed.');
         };
-        // The migration is rare and scoped to this character's known books.
-        // Do not write a book without an exact owner/history change.
-        for (const name of names) {
-            if (!available.has(name)) continue;
+        // Keep the same candidate set and sequential verified commits, but
+        // overlap the read-only preparation of up to four known books.
+        const candidates=[...names].filter(name=>available.has(name));
+        for(let offset=0;offset<candidates.length;offset+=4) {
             verifyOrigin();
-            const original = await loadServerWorld(name);
-            const staged = stageSlothSideIdentityRename(original,change);
-            if (!staged) continue;
-            await commitSlothNexusMigration({name,original,staged},{
+            const batch=await Promise.all(candidates.slice(offset,offset+4).map(async name=>{
+                const original=await loadServerWorld(name);
+                return {name,original,staged:stageSlothSideIdentityRename(original,change)};
+            }));
+            for(const {name,original,staged} of batch) {
+                verifyOrigin();
+                if(!staged)continue;
+                await commitSlothNexusMigration({name,original,staged},{
                 loadFresh:loadServerWorld, save:(book,data)=>saveWorldInfo(book,data,true),
                 withLock:(book,task)=>withStmbWriteLane({type:'lorebook',name:book},task),
                 verifyOrigin, verifyBeforeWrite:assertReviewedCache,
                 resetCache:(book,data)=>worldInfoCache.set(book,structuredClone(data)),
                 operation:'Side Prompt update',
             });
-            try { await Promise.resolve(reloadEditor(name)); } catch (error) { console.warn(error); }
+                try { await Promise.resolve(reloadEditor(name)); } catch (error) { console.warn(error); }
+            }
         }
         verifyOrigin();
         // Recheck rather than replacing any settings edited during the reads.
@@ -590,10 +601,19 @@ export function queueSlothSideRename(rawChange, books = []) {
     const record = {...change,books:[...new Set([...books,...slothSideRenameBooks(extension_settings.STMemoryBooks,change)])]};
     // Add synchronously so an in-flight Side Prompt cannot write under an old identity.
     params.slothSidePendingRenames = [...records,record];
+    sideRenameRunning++;
+    const notice=change.type==='lorebook'?toastr.info(t('Updating lorebook links. Try again after the update finishes.',
+        'STMemoryBooks_SlothRenameUpdating'),'STMemoryBooks',{timeOut:0,extendedTimeOut:0}):null;
     sideRenameTail = sideRenameTail.catch(()=>{}).then(async()=>{
+        // An earlier queue item can already have drained this record.
+        if(!pendingSideRenames(extension_settings.STMemoryBooks).length)return true;
         await persistSideRenameQueue(params,pendingSideRenames(extension_settings.STMemoryBooks));
         await processSlothSideRenames();
-    }).catch(reportSideRenameFailure);
+        return true;
+    }).catch(error=>{reportSideRenameFailure(error);return false;}).finally(()=>{
+        sideRenameRunning--;
+        if(notice)toastr.clear(notice);
+    });
     return sideRenameTail;
 }
 
@@ -623,13 +643,14 @@ export function beginSlothLorebookRename(oldBook,names) {
 export function observeSlothLorebookSave(newBook, data, names, editorName='') {
     if (!Array.isArray(names)||!newBook||!data?.entries) return;
     for (const [name, candidate] of possibleLorebookRenames) if (Date.now()>candidate.expires) possibleLorebookRenames.delete(name);
+    const intent=hostLorebookRename;
+    const explicit=intent&&Date.now()<=intent.expires&&intent.oldBook===editorName&&
+        newBook!==intent.oldBook&&names.includes(intent.oldBook)&&!intent.names.includes(newBook);
+    if(names.includes(newBook)&&!explicit)return false;
     const settings=extension_settings.STMemoryBooks;
     const recorded=slothSideRenameBooks(settings,{type:'lorebook',newBook});
     const fingerprint=stringify(data);
-    const intent=hostLorebookRename;
-    if (intent&&Date.now()<=intent.expires&&intent.oldBook===editorName&&
-        newBook!==intent.oldBook&&recorded.includes(intent.oldBook)&&names.includes(intent.oldBook)&&
-        !intent.names.includes(newBook)) {
+    if (explicit&&recorded.includes(intent.oldBook)) {
         // The editor explicitly initiated a rename. Do not require the old
         // cache to still contain an identical object after host normalization.
         possibleLorebookRenames.set(newBook,{oldBook:intent.oldBook,fingerprint,expires:Date.now()+300000,explicit:true});
@@ -644,7 +665,7 @@ export function observeSlothLorebookSave(newBook, data, names, editorName='') {
 
 const finishingLorebookRenames=new Set();
 
-export async function finishSlothLorebookRename(newBook, names) {
+async function finishVerifiedSlothLorebookRename(newBook, names, serverListVerified) {
     const candidate=possibleLorebookRenames.get(newBook);
     if (!candidate || finishingLorebookRenames.has(newBook)) return false;
     if(Date.now()>candidate.expires){possibleLorebookRenames.delete(newBook);return false;}
@@ -652,16 +673,20 @@ export async function finishSlothLorebookRename(newBook, names) {
     finishingLorebookRenames.add(newBook);
     try {
         // Check actual server files, not only the editor's cached options.
-        const available=(await listSlothSideBooks()).map(book=>book.file_id);
+        const available=serverListVerified?names:(await listSlothSideBooks()).map(book=>book.file_id);
         if(available.includes(candidate.oldBook)||!available.includes(newBook))return false;
         if(stringify(await loadServerWorld(newBook))!==candidate.fingerprint){
             possibleLorebookRenames.delete(newBook);return false;
         }
         if(possibleLorebookRenames.get(newBook)!==candidate)return false;
         possibleLorebookRenames.delete(newBook);
-        await queueSlothSideRename({type:'lorebook',oldBook:candidate.oldBook,newBook});
-        return true;
+        const completed=await queueSlothSideRename({type:'lorebook',oldBook:candidate.oldBook,newBook});
+        return completed!==false;
     }finally{finishingLorebookRenames.delete(newBook);}
+}
+
+export async function finishSlothLorebookRename(newBook,names) {
+    return finishVerifiedSlothLorebookRename(newBook,names,false);
 }
 
 // Native hosts can rebuild the list without selecting the renamed file.
@@ -673,7 +698,7 @@ export async function finishPendingSlothLorebookRenames() {
     if(!pending().length)return {changed:false,pending:false};
     const names=(await listSlothSideBooks()).map(book=>book.file_id);
     let changed=false;
-    for(const [name] of pending()) changed=await finishSlothLorebookRename(name,names)||changed;
+    for(const [name] of pending()) changed=await finishVerifiedSlothLorebookRename(name,names,true)||changed;
     return {changed,pending:pending().length>0};
 }
 
@@ -1113,17 +1138,53 @@ export async function reviewSlothLegacyCoverage() {
         const chatKey = getStmbChatKey(ref);
         const pair = legacyPairKey(roles);
         assertSlothBookRoles(ref, roles);
+        assertSideRenameReady(ref);
+        const memory=await loadServerWorld(roles.memory);
+        assertSlothBookRoles(ref,roles);
+        const memoryDigest=digestSlothSnapshot(memory);
+        const untracked=listSlothUntrackedScenes(memory,ref,chat.length);
         const previous = getSlothLegacyCoverage(getSceneMarkers(), chatKey, roles);
         const title = t('Review previously summarized messages', 'STMemoryBooks_SlothLegacyCoverage');
         const instructions = t('Enter only message ranges already covered by the selected Memory book. Use chat message numbers, for example 0-18, 22-25. Leave blank to clear these ranges.', 'STMemoryBooks_SlothLegacyCoverageInstructions');
         let review;
         const popup = markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>' + html(title) +
-            '</h3><label for="stmb-legacy-coverage-ranges">' + html(instructions) +
+            '</h3><details><summary>'+html(t('Compare existing Scenes without verified source ranges','STMemoryBooks_SlothLegacyCompare'))+
+            ' ('+untracked.length+')</summary><p>'+html(t('Choose a saved Scene to read its text and find exact quoted phrases in this chat. Matches are clues, not proof of a complete range. Only the ranges you enter below are marked reviewed.',
+                'STMemoryBooks_SlothLegacyCompareHelp'))+'</p><select class="text_pole" data-stmb-legacy-scene aria-label="'+
+            html(t('Existing Scene','STMemoryBooks_SlothLegacyScene'))+'"><option value="">'+html(t('Choose a Scene','STMemoryBooks_SlothLegacyChooseScene'))+
+            '</option></select><textarea class="text_pole" data-stmb-legacy-body readonly hidden style="width:100%;min-height:160px"></textarea>'+
+            '<div data-stmb-legacy-evidence role="status"></div></details><label for="stmb-legacy-coverage-ranges">' + html(instructions) +
             '</label><input id="stmb-legacy-coverage-ranges" class="text_pole" type="text">' +
             '<div class="stmb-legacy-coverage-preview" role="status"></div></div>', POPUP_TYPE.CONFIRM, '', {
+            wide:true,large:true,allowVerticalScrolling:true,
             okButton:t('Save', 'STMemoryBooks_Save'), cancelButton:t('Cancel', 'STMemoryBooks_Cancel'),
             onClosing:({ result }) => result !== POPUP_RESULT.AFFIRMATIVE || Boolean(review),
         }));
+        const selector=popup.dlg.querySelector('[data-stmb-legacy-scene]');
+        const body=popup.dlg.querySelector('[data-stmb-legacy-body]');
+        const evidence=popup.dlg.querySelector('[data-stmb-legacy-evidence]');
+        for(const [i,entry] of untracked.entries()){
+            const option=document.createElement('option');
+            option.value=String(i);option.textContent=entry.comment+' · UID '+entry.uid;
+            selector.append(option);
+        }
+        selector.addEventListener('change',()=>{
+            body.hidden=true;body.value='';evidence.replaceChildren();
+            if(!selector.value||getStmbChatKey()!==chatKey)return;
+            const selected=untracked[Number(selector.value)];
+            if(!selected)return;
+            body.hidden=false;body.value=selected.content;
+            const hits=findSlothLegacyEvidence(selected.content,chat);
+            const heading=document.createElement('p');
+            heading.textContent=hits.length?t('Matching original phrases (message IDs)','STMemoryBooks_SlothLegacyEvidence'):
+                t('No exact quoted phrases found. Compare the saved Scene and original chat manually.','STMemoryBooks_SlothLegacyNoEvidence');
+            evidence.append(heading);
+            for(const hit of hits){
+                const line=document.createElement('div');
+                line.textContent='#'+hit.id+' · '+hit.name+' · '+hit.quote;
+                evidence.append(line);
+            }
+        });
         const input = popup.dlg.querySelector('#stmb-legacy-coverage-ranges');
         const preview = popup.dlg.querySelector('.stmb-legacy-coverage-preview');
         input.value = readableSegments(Array.isArray(previous?.ranges) ? previous.ranges : []);
@@ -1150,6 +1211,7 @@ export async function reviewSlothLegacyCoverage() {
         const next = review.ranges.length ? review : null;
         const verify = () => {
             assertSlothBookRoles(ref, roles);
+            assertSideRenameReady(ref);
             assertSlothLegacyCoverage(next);
         };
         const readStored = async () => {
@@ -1160,6 +1222,11 @@ export async function reviewSlothLegacyCoverage() {
         verify();
         if (stringify(await readStored()) !== stringify(previous)) throw new Error('The saved reviewed ranges changed. Reload the chat.');
         if (stringify(previous) === stringify(next)) return { saved:false };
+        const latestMemory=await loadServerWorld(roles.memory);
+        if(stringify(digestSlothSnapshot(latestMemory))!==stringify(memoryDigest))
+            throw new Error(t('Memory changed while you were reviewing ranges. Reopen the review before saving.',
+                'STMemoryBooks_SlothLegacyMemoryChanged'));
+        assertReviewedCache(roles.memory,memory);
         await patchVerifiedSlothMetadata(ref, markers => {
             verify();
             if (stringify(getSlothLegacyCoverage(markers, chatKey, roles)) !== stringify(previous))
@@ -1253,6 +1320,10 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if (getMemoryBooksMode(settings, ref, getStmbChatKey(ref)) !== 'sloth') {
             if (automatic) return {saved:false,reason:'mode-inactive'};
             throw new Error(t('Choose Sloth mode in Memory Books settings first.', 'STMemoryBooks_ModeSlothRequired'));
+        }
+        if(hasPendingSlothSideRename(ref)){
+            if(automatic)return {saved:false,reason:'rename-pending'};
+            assertSideRenameReady(ref);
         }
         const roles={
             memory:getNexusRoleResolutionForChatRef('memory',ref,settings),
@@ -1361,6 +1432,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const characterContext=initialCharacterContext(character);
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector',recallModes:structuredClone(settings.moduleSettings?.nexusRecallModes)};
         const checkOrigin=()=>{
+            assertSideRenameReady(ref);
             assertSlothLegacyCoverage(reviewed);
             if (automatic) {
                 const now = getSlothAutomaticSettings(extension_settings.STMemoryBooks);

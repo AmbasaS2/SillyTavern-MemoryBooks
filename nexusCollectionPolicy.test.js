@@ -370,3 +370,19 @@ test('repeated generated sequence prefixes are stripped and exact same-chat lega
     const dated=stageMemoryScenes({entries:{}},[{...scene,title:'058 - 2026-11-27: Letter'}],create,{chatId:'chat'});
     assert.equal(dated.staged.entries[2].comment,'001 - 2026-11-27: Letter');
 });
+
+test('manual Scene review lists only untracked completed candidates and never infers a covered range',async()=>{
+    const {listSlothUntrackedScenes,findSlothLegacyEvidence}=await import('./nexusCollectionPolicy.js');
+    const content='**Timeline**: Unknown\n\n**Scene**\nShe said “Keep this promise.”\n\n**Result**\nThey agreed.';
+    const entry=(uid,extra={})=>({uid,comment:String(uid+1).padStart(3,'0')+' - Promise',content,...extra});
+    const book={entries:{0:entry(0),1:entry(1,{STMB_chatId:'chat',STMB_sourceRanges:[[0,1]]}),
+        2:entry(2,{STMB_chatId:'AU'}),3:entry(3,{STMB_chatId:'chat',STMB_collectedRanges:[],STMB_sourceRanges:[[1,2]]}),
+        4:entry(4,{STMB_slothSceneSplitArchive:{}}),5:entry(5,{STMB_chatId:'chat',STMB_sourceRanges:[[0,99]]}),
+        6:entry(6,{STMB_sourceRanges:[[0,1]]})}};
+    const before=structuredClone(book);
+    assert.deepEqual(listSlothUntrackedScenes(book,{fileName:'chat'},3).map(e=>e.uid),[0,5,6]);
+    assert.deepEqual(findSlothLegacyEvidence(content,[{mes:'Different text.'},{name:'A',mes:'He heard: Keep this promise.',is_system:true},
+        {name:'B',mes:'Keep   this promise.'}]),[{id:1,name:'A',quote:'Keep this promise.'},{id:2,name:'B',quote:'Keep this promise.'}]);
+    assert.deepEqual(findSlothLegacyEvidence('They agreed.',[{mes:'They agreed.'}]),[]);
+    assert.deepEqual(book,before);
+});
