@@ -14755,6 +14755,7 @@ function setupEventListeners() {
     // Keep an already scheduled automatic collection intact.
     if (!dryRun && ['normal','continue','regenerate','swipe'].includes(type)) {
       clearTimeout(slothAutoTimer);
+      slothAutoTimer = undefined;
       slothGeneration = {
         key:getStmbChatKey(), length:chat.length, automatic:type === 'normal' && getMemoryBooksMode(extension_settings.STMemoryBooks, getCurrentStmbChatRef(), getStmbChatKey()) === 'sloth',
       };
@@ -14820,11 +14821,25 @@ function setupEventListeners() {
     clearGenerationLorebookSnapshots();
   });
   eventSource.on(event_types.GENERATION_STOPPED, () => {
-    // A finished reply has already been received. Unrelated stop events must
-    // not cancel its scheduled collection.
-    slothGeneration = null;
+    // STOPPED has no generation identity. A matching aborted stream is
+    // authoritative; otherwise keep the candidate for a genuine completed
+    // normal MESSAGE_RECEIVED. The host does not save an aborted non-streaming
+    // response, and the next visible start or chat change invalidates it.
+    const processor = streamingProcessor;
+    if (slothGeneration && processor &&
+        processor.messageId >= slothGeneration.length &&
+        (!processor.type || processor.type === 'normal') &&
+        (processor.isStopped || processor.abortController?.signal?.aborted)) {
+      slothGeneration = null;
+    }
     narratorResponseGeneration.clear();
     clearGenerationLorebookSnapshots();
+  });
+
+  eventSource.on(event_types.CHAT_CHANGED, () => {
+    slothGeneration = null;
+    clearTimeout(slothAutoTimer);
+    slothAutoTimer = undefined;
   });
 
   eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, lists => {

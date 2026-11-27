@@ -114,7 +114,7 @@ test('Sloth auto collection is scheduled only by a completed normal reply, not g
    cut('  function scheduleSlothCollectionForReply(', '  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED')+
    '\nthis.receive=scheduleSlothCollectionForReply;';
  const callbacks={};const chat=[{is_user:true,mes:'question'}];
- const env={eventSource:{on(event,fn){callbacks[event]=fn;}},event_types:{GENERATION_STARTED:'start',GENERATION_ENDED:'end',GENERATION_STOPPED:'stop'},isDryRun:false,
+ const env={eventSource:{on(event,fn){callbacks[event]=fn;}},event_types:{GENERATION_STARTED:'start',GENERATION_ENDED:'end',GENERATION_STOPPED:'stop',CHAT_CHANGED:'chat'},isDryRun:false,
    getStmbChatKey:()=>key,chat,extension_settings:{STMemoryBooks:{}},getMemoryBooksMode:()=> 'sloth',getCurrentStmbChatRef:()=>({}),
    getSlothAutomaticSettings:()=>({enabled}),getSlothProfileConfiguration:()=>({}),streamingProcessor:null,
    setTimeout:fn=>{const id=++next;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),
@@ -123,7 +123,8 @@ test('Sloth auto collection is scheduled only by a completed normal reply, not g
  vm.runInNewContext(segment,env);
  callbacks.start('normal',{},false);
  chat.push({mes:'reply'});callbacks.end();
- assert.equal(timers.size,0,'UI unlock is not a completed reply');
+ callbacks.stop();
+ assert.equal(timers.size,0,'ambiguous UI unlock and stop are not a completed reply');
  env.receive(1,'quiet');env.receive(1,'first_message');
  assert.equal(timers.size,0);
  env.streamingProcessor={messageId:1,isFinished:false,isStopped:true};env.receive(1,'normal');
@@ -135,4 +136,19 @@ test('Sloth auto collection is scheduled only by a completed normal reply, not g
  await [...timers.values()][0]();timers.clear();assert.deepEqual(calls,['chat-1']);
  callbacks.start('normal',{},false);chat.push({mes:'another reply'});env.streamingProcessor=null;env.receive(2,'normal');
  enabled=false;await [...timers.values()][0]();assert.deepEqual(calls,['chat-1'],'turning auto collection off prevents a queued call');
+ timers.clear();enabled=true;
+ callbacks.start('normal',{},false);
+ chat.push({mes:'aborted reply'});
+ env.streamingProcessor={type:'normal',messageId:3,isFinished:false,isStopped:true};
+ callbacks.stop();env.receive(3,'normal');
+ assert.equal(timers.size,0,'an explicitly aborted stream never schedules');
+ callbacks.start('normal',{},false);env.streamingProcessor=null;
+ chat.push({mes:'reply after switching'});
+ callbacks.chat();env.receive(4,'normal');
+ assert.equal(timers.size,0,'chat switch invalidates the old reply candidate');
+ callbacks.start('normal',{},false);
+ chat.push({mes:'completed reply'});env.receive(5,'normal');
+ assert.equal(timers.size,1);
+ callbacks.chat();
+ assert.equal(timers.size,0,'chat switch cancels a previously queued timer');
 });
