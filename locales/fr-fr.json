@@ -1940,5 +1940,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "Vérifiez ou modifiez la proposition de modification de Nexus. La vérification des sources reste active.",
   "STMemoryBooks_SlothLegacyCoverage": "Vérifier les messages déjà résumés",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Saisis uniquement les plages de messages déjà couvertes par le livre Memory sélectionné. Utilise les numéros des messages, par exemple 0-18, 22-25. Laisse le champ vide pour effacer ces plages.",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "Les messages déjà vérifiés ont changé. Vérifie ou efface leurs plages dans Gérer les souvenirs existants."
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Les messages déjà vérifiés ont changé. Vérifie ou efface leurs plages dans Gérer les souvenirs existants.",
+  "STMemoryBooks_SlothRenameRetry": "La mise à jour des liens des lorebooks est en attente. Cliquez sur cette notification pour réessayer dans le chat d’origine. Si le chat enregistré a changé, rechargez-le d’abord.",
+  "STMemoryBooks_SlothRenameOriginalChat": "Revenez au chat d’origine avant de relancer la mise à jour des liens des lorebooks."
 }

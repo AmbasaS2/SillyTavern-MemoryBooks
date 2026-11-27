@@ -1940,5 +1940,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "Prüfe oder bearbeite die vorgeschlagene Nexus-Änderung. Die Quellenprüfung bleibt aktiv.",
   "STMemoryBooks_SlothLegacyCoverage": "Bereits zusammengefasste Nachrichten prüfen",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Gib nur Nachrichtenbereiche ein, die bereits im gewählten Memory-Buch erfasst sind. Verwende Chatnachrichtennummern, z. B. 0-18, 22-25. Lass das Feld leer, um die Bereiche zu löschen.",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "Bereits geprüfte Nachrichten wurden geändert. Prüfe oder lösche ihre Bereiche unter „Vorhandene Erinnerungen verwalten“."
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Bereits geprüfte Nachrichten wurden geändert. Prüfe oder lösche ihre Bereiche unter „Vorhandene Erinnerungen verwalten“.",
+  "STMemoryBooks_SlothRenameRetry": "Die Aktualisierung der Lorebook-Verknüpfungen steht aus. Klicke auf diese Meldung, um es im ursprünglichen Chat erneut zu versuchen. Falls der gespeicherte Chat geändert wurde, lade ihn zuerst neu.",
+  "STMemoryBooks_SlothRenameOriginalChat": "Wechsle zurück zum ursprünglichen Chat, bevor du die Aktualisierung der Lorebook-Verknüpfungen erneut versuchst."
 }

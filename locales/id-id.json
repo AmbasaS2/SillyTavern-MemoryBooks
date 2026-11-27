@@ -1940,5 +1940,7 @@
   "STMemoryBooks_SlothEditNexusOperation": "Tinjau atau sunting perubahan Nexus yang diusulkan. Pemeriksaan sumber tetap berlaku.",
   "STMemoryBooks_SlothLegacyCoverage": "Periksa pesan yang sudah dirangkum",
   "STMemoryBooks_SlothLegacyCoverageInstructions": "Masukkan hanya rentang pesan yang sudah tercakup dalam buku Memory terpilih. Gunakan nomor pesan obrolan, misalnya 0-18, 22-25. Kosongkan untuk menghapus rentang tersebut.",
-  "STMemoryBooks_SlothLegacyCoverageChanged": "Pesan yang telah diperiksa berubah. Periksa atau hapus rentangnya di Kelola memori yang ada."
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Pesan yang telah diperiksa berubah. Periksa atau hapus rentangnya di Kelola memori yang ada.",
+  "STMemoryBooks_SlothRenameRetry": "Pembaruan tautan lorebook tertunda. Klik notifikasi ini untuk mencoba lagi di obrolan asli. Jika obrolan tersimpan berubah, muat ulang terlebih dahulu.",
+  "STMemoryBooks_SlothRenameOriginalChat": "Kembali ke obrolan asli sebelum mencoba lagi pembaruan tautan lorebook."
 }
