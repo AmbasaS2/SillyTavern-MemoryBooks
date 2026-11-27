@@ -210,7 +210,7 @@ export function normalizeSingleSlothPlan(raw,sourceIds,{originalMessages=[]}={})
         // exact closures but a missing field alone does not erase paid prose.
         if(closure!=null&&originals.size&&!verified){
             const reason='Closure quote does not match an original message inside this Scene range.';
-            issues.push({row:i+1,reason,segments:collectionRanges(range.ids)});
+            issues.push({type:'scene',row:i+1,reason,segments:collectionRanges(range.ids)});
             invalidScenes++;
             postpone(row,range,reason);
             continue;
@@ -290,7 +290,7 @@ export function buildSlothPendingDraft(raw,scenes,lockedCount,pendingEdits,issue
         events:(Array.isArray(raw.events)?raw.events:[]).filter((_,i)=>!saved.has(i+lockedCount)),
         deferred:raw.deferred??[],
         edits:pendingEdits??[],
-        ...(issues.length?{recoveryIssues:issues.map(({row,reason,segments})=>({row,reason,segments}))}:{}),
+        ...(issues.length?{recoveryIssues:issues.map(({type,row,reason,segments})=>({type,row,reason,segments}))}:{}),
         ...(raw.recoveryUncertain===true?{recoveryUncertain:true}:{}),
         ...(raw.recoveredIncompleteEdits===true?{recoveredIncompleteEdits:true}:{}),
     };

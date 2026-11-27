@@ -144,7 +144,7 @@ test('a contradictory explicit closure holds just that Scene and keeps the origi
     assert.equal(out.skippedScenes,1);
     assert.deepEqual(out.scenes[0].collectedRanges,[[0,1]]);
     assert.deepEqual(out.pendingRanges,[[2,5]]);
-    const pending=buildSlothPendingDraft(raw,out.scenes,0,[],p.issues);
+    const pending=JSON.parse(JSON.stringify(buildSlothPendingDraft(raw,out.scenes,0,[],p.issues)));
     assert.deepEqual(pending.events,[bad,raw.events[2]]);
     assert.match(pending.recoveryIssues[0].reason,/Closure quote/);
     pending.events[0].segments=[2,4];
