@@ -915,8 +915,15 @@ async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions,
 }
 
 async function updateCollectedLedger(prior, events, ref, roleNames, sourceIds, fingerprint, autoWindow, fingerprintOptions) {
-    const savedRanges=[...(prior.savedRanges||[])];
-    for(const event of events)for(const range of event.collectedRanges??event.segments)savedRanges.push([...range]);
+    const allRanges=[...(prior.savedRanges||[])];
+    for(const event of events)for(const range of event.collectedRanges??event.segments)allRanges.push([...range]);
+    const savedRanges=[];
+    for(const pair of allRanges.filter(pair=>Array.isArray(pair)&&pair.length===2&&pair.every(Number.isSafeInteger)&&
+        pair[0]>=0&&pair[1]>=pair[0]).sort((a,b)=>a[0]-b[0]||a[1]-b[1])) {
+        const last=savedRanges.at(-1);
+        if(last&&pair[0]<=last[1]+1)last[1]=Math.max(last[1],pair[1]);
+        else savedRanges.push([...pair]);
+    }
     const receipt={chatKey:getStmbChatKey(ref),savedRanges,
         books:{nexus:roleNames.nexus,memory:roleNames.memory}};
     const previous = await readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions);

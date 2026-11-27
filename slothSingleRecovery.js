@@ -148,6 +148,10 @@ function sourceFor(row,sourceIds) {
             // Explicit nested lists longer than a pair contain individual IDs,
             // not an invented inclusive range from their first to last ID.
             if (Array.isArray(value)&&(!pair||pair.includes(null))&&value.length) {
+                if(value.length===2&&!value.some(Array.isArray)&&!value.some(record)&&
+                    !value.some(v=>typeof v==='string'&&/[-–—:]/u.test(v))) {
+                    invalid=true;unknown=true;
+                }
                 for(const part of value) visit(part);
                 return;
             }
