@@ -1,7 +1,7 @@
 name: Four Sloth extensions contract regression
 on:
   push:
-    branches: [main, verify/four-sloth-current-contracts-20261128]
+    branches: [main, test/sloth-suite-stability-20261128]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -14,24 +14,42 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: memory
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: AmbasaS2/SillyTavern-WorldInfoInfo
-          ref: 4e15a0ef7d2fd6fb618426499d78b26a2eb08374
+          ref: master
           path: info
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: AmbasaS2/SillyTavern-LorebookOrdering
-          ref: 31ad8334b835d96522a7a2687a3ff5aa74376cb5
+          ref: main
           path: ordering
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: AmbasaS2/lore-manager
-          ref: b0204e88478bda2ecd361431c33cab0a61007d09
+          ref: main
           path: manager
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: SillyTavern/SillyTavern
+          ref: 82b64a45c34facbc98ff4b9f33c067d3ccab6a17
+          path: host
+          sparse-checkout: |
+            public/lib/eventemitter.js
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Record exact checkout commits
+        run: |
+          for repo in memory info ordering manager host; do
+            echo "$repo $(git -C "$repo" rev-parse HEAD)"
+          done
       - run: node --test memory/ci/sloth-suite-contracts.mjs
       - working-directory: manager
         run: npm install --no-save --no-package-lock jsdom@26 jquery@3 rrweb-cssom
@@ -42,6 +60,7 @@ jobs:
           import fs from 'node:fs';
           const path='tests/ambasa-v65-worldinfoinfo-link.test.cjs';
           let s=fs.readFileSync(path,'utf8');
+          if(!s.includes('const loadLibrary = async')||!s.includes('dom, win, lib, stats, data, before,')||!s.includes('f.lib.openEntry(')) throw Error('Reader fixture changed; review integration test');
           s=s.replace('const loadLibrary = async', "const client = async () => import(pathToFileURL(join(root, '..', 'info', 'lore-library-link.js')).href);\nconst loadLibrary = async");
           s=s.replace('dom, win, lib, stats, data, before,', "dom, win, lib, stats, data, before,\n        async openViaInfo(book, uid) { const {tryOpenInLoreLibrary}=await client(); return tryOpenInLoreLibrary({world:book,uid},true,{apiVersion:1,openEntry:({book,uid})=>lib.openEntry(book,uid)}); },");
           s=s.replaceAll('f.lib.openEntry(', 'f.openViaInfo(');

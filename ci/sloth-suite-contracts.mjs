@@ -75,3 +75,52 @@ test('Memory Books and Manager share a per-book lane, including recovery from re
     assert.deepEqual(events,['memory:start','independent','memory:end','manager']);
     assert.equal(await memoryWrite('shared book',()=>17),17);
 });
+
+test('actual ST emitter awaits Memory Books enrichment before Ordering calculates budgets',async()=>{
+    const vm=await import('node:vm');
+    const {mergeNarratorLorebookEntries}=await import('../narratorMode.js');
+    const host=readFileSync(new URL('../../host/public/lib/eventemitter.js',import.meta.url),'utf8');
+    const errors=[];
+    const logger={debug(){},trace(){},error(...args){errors.push(args);}};
+    const EventEmitter=vm.runInNewContext(host.replace(/export\s*\{\s*EventEmitter\s*\}\s*;?/,'')+'\nEventEmitter',{
+        localStorage:{getItem:()=>null},console:logger
+    });
+    const eventSource=new EventEmitter();
+    const event_types={WORLDINFO_ENTRIES_LOADED:'worldinfo_entries_loaded'};
+    const ordering=readFileSync(new URL('../../ordering/index.js',import.meta.url),'utf8');
+    const a=ordering.indexOf('async function applyPriorityOrdering(');
+    const b=ordering.indexOf('\n// Extension initialization',a);
+    assert.ok(a>=0&&b>a);
+    const state={currentSpeakingCharacter:'A',scanWorldSettings:new Map()};
+    const settingsReads=[];
+    const apply=vm.runInNewContext(ordering.slice(a,b)+'\napplyPriorityOrdering',{
+        EXTENSION_STATE:state,PRIORITY_LEVELS:{DEFAULT:3},HAS_WORLDINFO_SCAN_DONE:false,
+        jevGeneration:null,getProtectAlwaysOn:()=>false,DEBUG_STLO:false,
+        getLorebookSettings:async name=>{settingsReads.push(name);return {priority:5};},console:logger
+    });
+    eventSource.on(event_types.WORLDINFO_ENTRIES_LOADED,async lists=>{assert.equal(await apply(lists),true);});
+    const memory=readFileSync(new URL('../index.js',import.meta.url),'utf8');
+    const start=memory.indexOf('  eventSource.makeFirst(event_types.WORLDINFO_ENTRIES_LOADED, async lists => {');
+    const end=memory.indexOf('\n  window.addEventListener("resize", () => {',start);
+    assert.ok(start>=0&&end>start);
+    const ref={type:'character',avatarUrl:'A.png',fileName:'narrator'};
+    vm.runInNewContext(memory.slice(start,end),{
+        eventSource,event_types,getCurrentStmbChatRef:()=>ref,extension_settings:{STMemoryBooks:{}},
+        getStmbChatKey:()=> 'character:A.png:narrator',scopeNexusWorldInfo,
+        narratorGenerationSnapshot:['member'],manualGroupGenerationSnapshot:null,
+        getCurrentMemoryBooksContext:()=>({isNarratorMode:true}),
+        getCurrentNarratorConfig:()=>({members:[{id:'member',lorebookName:'narrator-book'}]}),
+        characters:[{avatar:'A.png'}],this_chid:0,
+        loadWorldInfo:async()=>{await Promise.resolve();return {entries:{1:{uid:1,content:'Lore',order:100}}};},
+        mergeNarratorLorebookEntries
+    });
+    const lists={globalLore:[],characterLore:[],chatLore:[],personaLore:[]};
+    await eventSource.emit(event_types.WORLDINFO_ENTRIES_LOADED,lists);
+    assert.deepEqual(errors,[]);
+    assert.deepEqual(settingsReads,['narrator-book']);
+    const all=Object.values(lists).flat();
+    assert.equal(all.length,1);
+    assert.equal(all[0].world,'narrator-book');
+    assert.equal(all[0].order,50100);
+    assert.equal(state.scanWorldSettings.has('narrator-book'),true);
+});
