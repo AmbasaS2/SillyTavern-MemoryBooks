@@ -404,6 +404,7 @@ async function runLLM(prompt, overrides = null, options = {}) {
         signal: options?.signal || null,
         useChatCompletionService,
         chatCompletionPreset,
+        ...(options?.onRequestMetric?{onRequestMetric:options.onRequestMetric,metricPhase:'side'}:{}),
     });
     assertProviderDidNotTruncate(full, text);
     
@@ -807,11 +808,11 @@ export async function generateSidePromptFromSnapshot({ snapshot, compiledScene, 
     return { content: String(content).trim(), template: prepared.template };
 }
 
-async function runSidePromptAttempt({ taskLabel, finalPrompt, conn, runEpoch }) {
+async function runSidePromptAttempt({ taskLabel, finalPrompt, conn, runEpoch, onRequestMetric=null }) {
     throwIfStmbStopped(runEpoch);
     const task = createStmbInFlightTask(taskLabel);
     try {
-        const text = await runLLM(finalPrompt, conn, { signal: task.signal });
+        const text = await runLLM(finalPrompt, conn, { signal: task.signal, onRequestMetric });
         task.throwIfStopped();
         return text;
     } finally {
@@ -1576,7 +1577,7 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
 
 /** Prepare a reviewed Sloth note for the selected lorebook. */
 export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene,
-    { recallMode = 'disabled', nexus, chatRef, storyKey='', allowLegacyInheritance=false } = {}) {
+    { recallMode = 'disabled', nexus, chatRef, storyKey='', allowLegacyInheritance=false, onRequestMetric=null } = {}) {
     // A saved summary is not proof of exact dialogue.
     if (preset.id === SLOTH_QUOTES_ID && !compiledScene) {
         throw new Error('Memorable Quotes requires the original chat messages.');
@@ -1625,7 +1626,7 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         const finalPrompt = recallMode === 'keyword' ? contentPrompt + '\n\nReturn only JSON {"content":"the full requested note, in the requested format","keywords":["specific searchable phrase"]}. Suggest 2–5 distinct recall phrases based on the note. For no new details put [[NO_NEW_DETAILS]] in content.' : contentPrompt;
         const conn = resolveSidePromptConnection(profile);
         let text = await runSidePromptAttempt({taskLabel:'SidePrompts:reviewedSloth:'+tpl.key,
-            finalPrompt,conn,runEpoch:task.epoch});
+            finalPrompt,conn,runEpoch:task.epoch,onRequestMetric});
         let keywords = [];
         if (recallMode === 'keyword' && typeof text === 'string') {
             const fenced = text.trim().match(/^\x60{3}(?:json)?\s*\n([\s\S]*?)\n\x60{3}\s*$/iu);

@@ -123,7 +123,7 @@ async function preflightSingleSlothCollection(request,signal){
     return budget;
 }
 
-function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},verifyOrigin=()=>{}) {
+function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},verifyOrigin=()=>{},onRequestMetric=null) {
     const connection=resolveConnection(profile);
     const extra={},max=Number.parseInt(settings?.moduleSettings?.maxTokens,10);
     if(Number.isFinite(max)&&max>0)extra.max_tokens=max;
@@ -138,8 +138,9 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},ve
         const beforeRequest=phase==='Single collection'||phase==='Summary review'?async request=>{
             estimate=await preflightSingleSlothCollection(request,signal);
             verifyOrigin();
+            return estimate;
         }:null;
-        const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt,...(beforeRequest?{beforeRequest}:{})});
+        const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt,...(beforeRequest?{beforeRequest}:{}),...(onRequestMetric?{onRequestMetric,metricPhase:phase==='Summary review'?'review':'collection'}:{})});
         if(signal?.aborted)throw new Error('Collection cancelled.');
         if(full?.error)throw new Error(phase+': the selected provider returned an error instead of a draft.',{cause:full.error});
         onUsage(full?.usage,phase,estimate);
@@ -663,7 +664,7 @@ export async function composeApprovedSlothCollection(options) {
 export async function composeSingleSlothCollection(options) {
     const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
         partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false,
-        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2}=options;
+        rawDraft=null,onDraft=()=>{},lockedScenes=[],committedEdits=[],strictNexusEvidence=typeof rawDraft!=='string',evidencePolicyVersion=2,onRequestMetric=null}=options;
     const ids=messages.map(m=>m.id);
     const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
         .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
@@ -690,7 +691,7 @@ export async function composeSingleSlothCollection(options) {
         const count=usage?.prompt_tokens??usage?.input_tokens;
         if(Number.isFinite(count)&&count>=0){inputTokens=count;inputTokensExact=true;}
         else if(Number.isFinite(estimate?.input))inputTokens=estimate.input;
-    },verifyOrigin);
+    },verifyOrigin,onRequestMetric);
     const replayed=typeof rawDraft==='string';
     const raw=replayed ? parseSingleSlothCollectionDraft(rawDraft) :
         await ask(prompt,'Single collection',async (response,phase)=>{
@@ -727,7 +728,8 @@ export async function composeSingleSlothCollection(options) {
         [...(plan.issues??[]),...(nexusResult.pendingIssues??[])]);
     return {plan,...accepted,...nexusResult,pendingDraft,
         committedEdits:[...committedEdits,...(nexusResult.acceptedRawEdits??[])],
-        reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain};
+        reviewFailed,inputTokens,inputTokensExact,replayed,recoveryUncertain:plan.uncertain,
+        collectionProposals:{scenes:Array.isArray(raw.events)?raw.events.filter(event=>event?.complete===true).length:null,nexusEdits:Array.isArray(raw.edits)?raw.edits.length:null}};
 }
 
 export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext='',signal=null}) {
