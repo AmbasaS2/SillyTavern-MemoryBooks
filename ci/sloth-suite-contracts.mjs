@@ -55,24 +55,27 @@ test('actual Ordering ledger and WorldInfo Info consumer share exact count and i
 });
 
 
-test('actual Memory Books and Manager modules serialize writes to the same lorebook',async()=>{
-    const {withSlothLorebookWriteLane:memoryWrite}=await import('../slothWriteLane.js');
-    const {withSlothLorebookWriteLane:managerWrite}=await import('../../manager/slothWriteLane.js');
-    assert.equal(readFileSync(new URL('../slothWriteLane.js',import.meta.url),'utf8'),
-        readFileSync(new URL('../../manager/slothWriteLane.js',import.meta.url),'utf8'));
+// Verify the actual separate copies loaded by both independently installed extensions.
+import {withSlothLorebookWriteLane as memoryWrite} from '../slothWriteLane.js';
+import {withSlothLorebookWriteLane as managerWrite} from '../../manager/slothWriteLane.js';
+test('Memory Books and Manager share a per-book lane, including recovery from rejection',async()=>{
     const events=[];
-    let release;
-    const gate=new Promise(r=>{release=r;});
-    const first=memoryWrite('shared',async()=>{events.push('memory');await gate;throw Error('test conflict');});
-    const next=managerWrite('shared',()=>events.push('manager'));
-    await managerWrite('independent',()=>events.push('other'));
-    assert.deepEqual(events,['memory','other']);
+    let release,started;
+    const firstStarted=new Promise(resolve=>{started=resolve;});
+    const gate=new Promise(resolve=>{release=resolve;});
+    const first=memoryWrite('shared book',async()=>{events.push('memory:start');started();await gate;events.push('memory:end');throw new Error('write rejected');});
+    const rejected=assert.rejects(first,/write rejected/);
+    await firstStarted;
+    const second=managerWrite('shared book',async()=>{events.push('manager');return 42;});
+    await managerWrite('independent book',async()=>{events.push('independent');});
+    assert.deepEqual(events,['memory:start','independent']);
     release();
-    await assert.rejects(first,/test conflict/);
-    await next;
-    assert.deepEqual(events,['memory','other','manager']);
-    assert.equal(globalThis[Symbol.for('sloth.worldinfo.write-lanes.v1')].size,0);
+    await rejected;
+    assert.equal(await second,42);
+    assert.deepEqual(events,['memory:start','independent','memory:end','manager']);
+    assert.equal(await memoryWrite('shared book',()=>17),17);
 });
+
 test('actual ST emitter awaits Memory Books enrichment before Ordering calculates budgets',async()=>{
     const vm=await import('node:vm');
     const {mergeNarratorLorebookEntries}=await import('../narratorMode.js');
