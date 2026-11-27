@@ -75,8 +75,8 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
     assert.match(collector,/if\(scenes.length\)\{\s*try \{\s*await updateCollectedLedger\(prior,scenes,/);
     assert.match(collector,/states.length===1\?await commitSlothNexusMigration/);
     assert.match(collector,/operation:scenes.length\?'Memory Scene save':'Nexus current-state update'/);
-    assert.match(code,/const checkbox = popup\.dlg\.querySelector\('#stmb-sloth-plan-hide'\)/);
-    assert.match(code,/if \(checkbox\)[\s\S]*checkbox\.checked \? getSlothHideRanges/);
+    assert.match(collector,/slothHideAfter===true[\s\S]*getSlothHideRanges/);
+    assert.doesNotMatch(collector,/await planApproval/);
     const prompt=readFileSync(new URL('./nexusCollectionAI.js',import.meta.url),'utf8');
     assert.match(prompt,/canonicalizeNewNexusTitles\(response.edits\)[\s\S]*stageNexusEdits\(staged, \[edit\]/);
     assert.doesNotMatch(prompt,/validateGroundedNexusEdits|npcNexusSubjectIsGrounded/);
@@ -84,7 +84,7 @@ test('Nexus-only collection stages the changed book and leaves Memory and Hide a
 });
 test('approved collection can save Memory alone and hides only the saved scenes',()=>{
     const runtime=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-    assert.match(runtime,/const \{edits,skippedNexusEdits,reviewFailed\}=collection;[\s\S]*if\(scenes.length\|\|initial\)[\s\S]*if\(edits.length\|\|initial\)/);
+    assert.match(runtime,/const \{plan,scenes,edits,skippedNexusEdits,reviewFailed,skippedScenes\}=collection;[\s\S]*if\(scenes.length\|\|initial\)[\s\S]*if\(edits.length\|\|initial\)/);
     assert.match(runtime,/commitSlothBooks/);
     assert.match(runtime,/getSlothHideRanges\(scenes,chat,approval.keepRecent\)/);
 });

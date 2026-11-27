@@ -42,7 +42,7 @@ test('summary presets keep the built-in summary and preserve old instructions on
     settings.moduleSettings.slothSummaryPresetId='a';
     assert.equal(getActiveSlothSummaryPreset(settings).text,'Write short prose.');
     const ai=source('./nexusCollectionAI.js');
-    assert.equal(ai.match(/getActiveSlothSummaryPreset\(settings\)/g)?.length,3);
+    assert.match(ai,/async function composeSingleSlothCollection[\s\S]+?getActiveSlothSummaryPreset\(settings\)/);
     assert.match(ai,/async function composeSlothScene[\s\S]+?getActiveSlothSummaryPreset\(settings\)/);
 });
 

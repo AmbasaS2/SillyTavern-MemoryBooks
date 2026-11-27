@@ -19,6 +19,7 @@ import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
 import { SLOTH_SCENE_OUTPUT_CONTRACT, validateSlothSceneResponse } from './nexusSlothScenePrompt.js';
 import { getActiveSlothSummaryPreset } from './slothSummaryPrompts.js';
 import { getCompressibleScene, getSlothCompressionInstructions, stageSlothSceneCompression } from './nexusSceneCompression.js';
+import { isCompletedSceneEntry, sceneNumberFromTitle } from './nexusSceneRotation.js';
 
 function canonicalizeNewNexusTitles(edits) {
     return edits.map(edit=>{
@@ -65,7 +66,7 @@ function resolveConnection(profile) {
         useChatCompletionService:!!profile?.useChatCompletionService && conn.api!=='full-manual',
         chatCompletionPreset:String(profile?.chatCompletionPreset||'').trim()};
 }
-function requester(profile,settings,signal,singleAttempt=false) {
+function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{}) {
     const connection=resolveConnection(profile);
     const extra={},max=Number.parseInt(settings?.moduleSettings?.maxTokens,10);
     if(Number.isFinite(max)&&max>0)extra.max_tokens=max;
@@ -79,6 +80,7 @@ function requester(profile,settings,signal,singleAttempt=false) {
         const {text,full}=await requestCompletion({...connection,prompt,extra,signal,singleAttempt});
         if(signal?.aborted)throw new Error('Collection cancelled.');
         if(full?.error)throw new Error(phase+': the selected provider returned an error instead of a draft.',{cause:full.error});
+        onUsage(full?.usage,phase);
         return parse(text,phase);
     };
 }
@@ -392,8 +394,9 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
     const source=JSON.stringify(entries);
     return [
         DEFAULT_SLOTH_COLLECTION_PROMPTS.nexus,
-        ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword'?
-            ['Supply specific literal recall keywords for every new LT or NPC detail. Never overwrite existing entry activation settings.']:[]),
+        ...(settings?.moduleSettings?.nexusDetailRecallMode==='keyword' || Object.values(settings?.moduleSettings?.nexusRecallModes||{}).includes('keyword')?
+            ['Supply specific literal recall keywords for each new Nexus entry. Never overwrite existing entry activation settings.']:[]),
+        ...(settings?.moduleSettings?.nexusRecallModes?.npc==='off'?['NPC collection is turned off. Do not create or update NPC or NPC Index entries.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
         'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
         ...(initial?[
@@ -405,10 +408,10 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
         'Do not modify Kinks, PanelAssets, special Outlets, historical Side Prompt templates, disabled items.',
         'Do not invent facts, remove unresolved matters by mere absence, or confuse reports with observations.',
         'Reuse any active in-place legacy slot listed with the requested role. Never migrate, rename or disable it. On a combined legacy entry, Core edits stay in the durable preamble. Continuity edits stay in the current sections; use "Active Threads" for [Active threads — still unconfirmed] and "Active Conditions" for [Physical carryover]. Add or edit Present Handoff on the same UID.',
-        'Approved event classifications:',JSON.stringify({
-            events:(plan?.events||[]).map(x=>({title:x.title,segments:x.segments})),
-            deferred:(plan?.deferred||[]).map(x=>({reason:x.reason,segments:x.segments})),
-        }),
+        ...(plan ? ['Approved event classifications:',JSON.stringify({
+            events:(plan.events||[]).map(x=>({title:x.title,segments:x.segments})),
+            deferred:(plan.deferred||[]).map(x=>({reason:x.reason,segments:x.segments})),
+        })] : ['Use your event/deferred classifications to ground the Nexus changes.']),
         'Deferred source is still visible; use it to assess ongoing state without',
         'claiming a deferred or uncertain incident is complete.',
         ...(partialSource ? [
@@ -444,7 +447,7 @@ function readSlothNexusEdits(response, {messages,nexus,settings,initial,partialS
                 throw new Error('First collection cannot replace prior entries or create a default NPC Index.');
             }
             // Each accepted edit becomes the baseline for the next, with the regular World Info guards.
-            staged = stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode }).staged;
+            staged = stageNexusEdits(staged, [edit], createPreviewEntry, { detailRecallMode, recallModes:settings?.moduleSettings?.nexusRecallModes }).staged;
             edits.push(edit);
         } catch (error) {
             console.warn('Skipping collection Nexus edit ' + (index + 1), error);
@@ -577,6 +580,55 @@ export async function composeApprovedSlothCollection(options) {
     const scenes = events.map(event=>drafts.get(event.id)).filter(Boolean);
     return { scenes, ...readSlothNexusEdits(response,{messages,nexus,settings,initial,partialSource}),
         skippedScenes: events.length - scenes.length, reviewFailed };
+}
+
+/** One generation per source chunk; existing memories are reference only. */
+export async function composeSingleSlothCollection(options) {
+    const {nexus,memory,messages,profile,settings,characterContext='',initial=false,
+        partialSource=false,signal=null,verifyOrigin=()=>{},reviewSummaries=false}=options;
+    const ids=messages.map(m=>m.id);
+    const recent=Object.values(memory?.entries||{}).filter(e=>!e.disable&&isCompletedSceneEntry(e))
+        .sort((a,b)=>sceneNumberFromTitle(a.comment)-sceneNumberFromTitle(b.comment))
+        .slice(-3).map(e=>({title:e.comment,result:String(e.content).split(/^\s*(?:\*\*Result\*\*|#{1,6}\s+Result)\s*$/im).at(-1).trim()}));
+    const prompt=[
+        DEFAULT_SLOTH_COLLECTION_PROMPTS.plan,
+        getActiveSlothSummaryPreset(settings).text,
+        'Perform causal event classification, complete Scene writing, and minimal Nexus patches in this ONE response. Return only one complete JSON object.',
+        'Schema: {"events":[{"title":"title","complete":true,"reason":"causal boundary","segments":[[1,2]],"closure":{"messageId":2,"quote":"exact ending phrase"},"timeline":"YYYY/MM/DD or Unknown","scene":"full connected prose","result":"observed outcome","keywords":["recall cue"]}],"deferred":[{"reason":"why still open","segments":[[3,3]]}],"edits":[]}.',
+        'Each complete event contains its own Scene and Result. Assign original IDs exactly once. An open incident belongs only in deferred; never summarize it as completed. Keep all essential details. Return complete JSON within the output budget.',
+        'Use only the assigned original messages as evidence for each Scene. Existing memories and the character card are disambiguation and continuity context, not source material. Preserve the actual last answer, actions, attribution, distinctive dialogue, promises and consequences.',
+        SCENE_KEYWORD_GUIDANCE,
+        'Character context (reference only): '+characterContext,
+        'Recent saved Scene titles and outcomes (reference only; do not collect them again): '+JSON.stringify(recent),
+        slothNexusGuidance({nexus,settings,initial,characterContext,partialSource}),
+        'Original source IDs: '+JSON.stringify(ids),
+        'Original source messages:',compact(messages),
+    ].join('\n\n');
+    let inputTokens=null,inputTokensExact=false;
+    const ask=requester(profile,settings,signal,true,(usage,phase)=>{
+        if(phase!=='Single collection')return;
+        const count=usage?.prompt_tokens??usage?.input_tokens;
+        if(Number.isFinite(count)&&count>=0){inputTokens=count;inputTokensExact=true;}
+    });
+    const raw=await ask(prompt,'Single collection');
+    if(inputTokens===null){
+        try{const count=await getTokenCountAsync(prompt);if(Number.isFinite(count)&&count>=0)inputTokens=count;}catch{}
+    }
+    verifyOrigin();
+    const plan=validateNexusEventPlan(raw,ids,{deferUnclassified:true,originalMessages:messages});
+    const rows=raw.events.map((event,i)=>({...event,id:'event-'+(i+1)}));
+    const drafts=readSlothBatchScenes({scenes:rows},plan.events);
+    let reviewFailed=false;
+    if(reviewSummaries&&plan.events.length){
+        try {
+            const repairs=await reviewSlothSceneDrafts({events:plan.events,messages,scenes:drafts,settings,ask});
+            for(const [id,repair] of repairs)drafts.set(id,repair);
+        }catch(error){reviewFailed=true;console.warn('Collection summary review failed; keeping original drafts.',error);}
+        verifyOrigin();
+    }
+    const scenes=plan.events.map(event=>drafts.get(event.id)).filter(Boolean);
+    return {plan,scenes,...readSlothNexusEdits(raw,{messages,nexus,settings,initial,partialSource}),
+        skippedScenes:plan.events.length-scenes.length,reviewFailed,inputTokens,inputTokensExact};
 }
 
 export async function retryApprovedSlothScenes({events,messages,profile,settings,characterContext='',signal=null}) {

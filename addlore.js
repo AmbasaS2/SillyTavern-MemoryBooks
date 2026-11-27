@@ -50,7 +50,8 @@ function applySidePromptHistory(data, title, history, entry, createEntry, stampN
     const group = resolved.versions[0]?.group || history.group;
     const stamp = (target, sequence) => {
         target[SIDE_PROMPT_HISTORY_KEY] = { version: 1, templateKey: history.templateKey, chatKey: history.chatKey,
-            chatId: history.chatId, titleBase: history.titleBase, titleSource: history.titleSource, sequence };
+            chatId: history.chatId, titleBase: history.titleBase, titleSource: history.titleSource, sequence,
+            ...(history.storyKey?{storyKey:history.storyKey}:{}) };
         target.group = group;
     };
     const updateVersion = (old, disable) => {
@@ -74,8 +75,8 @@ function applySidePromptHistory(data, title, history, entry, createEntry, stampN
     const latest = resolved.latest;
     if (latest) {
         const priorEntry = structuredClone(latest);
-        if (resolved.legacy && history.existingEntryUid !== undefined) {
-            stamp(latest, 1);
+        if (history.storyKey || (resolved.legacy && history.existingEntryUid !== undefined)) {
+            stamp(latest, resolved.latest?.[SIDE_PROMPT_HISTORY_KEY]?.sequence || 1);
             latest.group = priorEntry.group || group;
         }
         for (const old of resolved.versions) updateVersion(old, old !== latest);

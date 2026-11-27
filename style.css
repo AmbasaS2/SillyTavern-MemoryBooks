@@ -1140,10 +1140,22 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
     color: var(--warning-color, var(--SmartThemeEmColor));
 }
 @media (max-width: 620px) {
-    .popup.stmb-popup .stmb-sloth-role-grid { grid-template-columns: minmax(0, 1fr); }
+    .popup.stmb-popup .stmb-sloth-role-grid:not(.stmb-sloth-injection-grid) { grid-template-columns: minmax(0, 1fr); }
     .popup.stmb-popup #stmb-collection-options > label:not(.checkbox_label) { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Two compact label-above-select columns, independent of the host flex rules. */
+.popup.stmb-popup .stmb-sloth-injection-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+}
+.popup.stmb-popup .stmb-sloth-injection-grid label > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 320px) {
+    .popup.stmb-popup .stmb-sloth-injection-grid { grid-template-columns: minmax(0, 1fr); }
+}
 /* Sloth collector previews: scoped to STMB popups, never global ST styles. */
 .popup.stmb-popup .stmb-sloth-review {
     display:flex;flex-direction:column;gap:7px;min-width:0;

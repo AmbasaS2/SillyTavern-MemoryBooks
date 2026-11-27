@@ -41,7 +41,7 @@ export const settingsTemplate = Handlebars.compile(`
               {{/unless}}
             {{else}}
               {{#if slothFirstSetup}}
-              <small id="stmb-sloth-roles-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothNoBooksYet" hidden>Nexus and Memory will be created and linked when you confirm your first collection.</small>
+              <small id="stmb-sloth-roles-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothNoBooksYet" hidden>Nexus and Memory will be created and linked when your first collection is saved.</small>
               {{else}}
               <p class="stmb-sloth-warning" data-i18n="STMemoryBooks_SlothNoLinkedBooks">No lorebooks are linked to this character in SillyTavern. Connect them in the character lorebook settings first.</p>
               {{/if}}
@@ -114,6 +114,34 @@ export const settingsTemplate = Handlebars.compile(`
             {{#if slothMissingCompanion}}
               <button type="button" class="menu_button" data-stmb-sloth-action="companion" data-i18n="STMemoryBooks_SlothPrepareCompanion">Create the missing lorebook</button>
             {{/if}}
+            <hr class="stmb-sloth-settings-rule">
+            <strong data-i18n="STMemoryBooks_SlothNexusInjection">Nexus injection</strong>
+            <div class="stmb-sloth-role-grid stmb-sloth-injection-grid">
+              {{#each slothNexusRecallFields}}
+                <label for="stmb-nexus-recall-{{kind}}">
+                  <span data-i18n="{{labelKey}}">{{title}}</span>
+                  <select class="text_pole" id="stmb-nexus-recall-{{kind}}" data-stmb-nexus-recall-kind="{{kind}}">
+                    {{#each options}}<option value="{{value}}" {{#if selected}}selected{{/if}} data-i18n="{{key}}">{{label}}</option>{{/each}}
+                  </select>
+                </label>
+              {{/each}}
+            </div>
+            <small class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothRecallNewEntries">For new entries. Existing entry settings are preserved.</small>
+            <hr class="stmb-sloth-settings-rule">
+            <strong data-i18n="STMemoryBooks_SlothMemoryInjection">Memory injection</strong>
+            <div class="stmb-sloth-role-grid stmb-sloth-injection-grid">
+              <label>
+                <span data-i18n="STMemoryBooks_SlothRecentScenes">Latest 3 Scenes</span>
+                <select class="text_pole" disabled aria-label="Always on"><option data-i18n="STMemoryBooks_SlothRecallConstant">Always on</option></select>
+              </label>
+              <label for="stmb-sloth-memory-recall">
+                <span data-i18n="STMemoryBooks_SlothOlderScenes">Older Scenes</span>
+                <select id="stmb-sloth-memory-recall" class="text_pole">
+                  <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
+                  <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
+                </select>
+              </label>
+            </div>
           {{else}}
             <p data-i18n="STMemoryBooks_SlothSelectCharacter">Choose a character to configure its lorebooks.</p>
           {{/if}}
@@ -139,15 +167,6 @@ export const settingsTemplate = Handlebars.compile(`
                 {{/each}}
             </select>
         </label>
-        <div class="stmb-sloth-select-row">
-          <span class="stmb-sloth-help-row"><label for="stmb-sloth-memory-recall" data-i18n="STMemoryBooks_SlothMemoryRecall">Older memory conversion</label>
-          <button type="button" id="stmb-sloth-native-recall-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-native-recall-help" aria-label="Older memory conversion" data-i18n="[aria-label]STMemoryBooks_SlothMemoryRecall"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></span>
-          <select id="stmb-sloth-memory-recall" class="text_pole" aria-describedby="stmb-sloth-native-recall-help">
-            <option value="vector" {{#if slothMemoryUsesVector}}selected{{/if}} data-i18n="STMemoryBooks_NexusRecallVector">Vector</option>
-            <option value="keyword" {{#if slothMemoryUsesKeywords}}selected{{/if}} data-i18n="STMemoryBooks_SlothRecallKeywords">Keywords</option>
-          </select>
-        </div>
-        <small id="stmb-sloth-native-recall-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMemoryRecallHelp" hidden>The next collection converts older memories to the selected type. The latest three stay always on.</small>
         <div class="stmb-sloth-help-row">
           <label class="checkbox_label">
             <input id="stmb-sloth-summary-review" type="checkbox" aria-describedby="stmb-sloth-summary-review-help" {{#if slothSummaryReview}}checked{{/if}}>
@@ -206,6 +225,7 @@ export const settingsTemplate = Handlebars.compile(`
           <details id="stmb-manage-memories" class="stmb-workspace-drawer stmb-sloth-maintenance">
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
               <div class="stmb-management-action">
               <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
               <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>
@@ -260,6 +280,10 @@ export const settingsTemplate = Handlebars.compile(`
             </label>
             <hr class="stmb-sloth-settings-rule">
             <div class="stmb-sloth-hide-setting">
+              <label class="checkbox_label">
+                <input id="stmb-sloth-hide-after" type="checkbox" {{#if slothHideAfter}}checked{{/if}}>
+                <span data-i18n="STMemoryBooks_SlothHideAfter">Hide saved chat messages after collection</span>
+              </label>
               <label for="stmb-sloth-hide-recent" class="stmb-sloth-inline-field">
                 <span data-i18n="STMemoryBooks_SlothHideRecent">Recent collected messages to keep visible</span>
                 <input id="stmb-sloth-hide-recent" type="number" min="0" max="9999" class="text_pole" value="{{slothHideRecent}}">

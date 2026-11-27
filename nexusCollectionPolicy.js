@@ -260,6 +260,16 @@ const normalizedTitle = title => str(title).normalize('NFKC').toLowerCase().repl
 const detailIdentity = title => normalizedTitle(title).replace(DETAIL_TITLE, '$2')
     .normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
     .replace(/^mme\s/u, 'madame ');
+export function getNexusRecallModes(moduleSettings={}) {
+    const modes=moduleSettings.nexusRecallModes||{};
+    const detail=moduleSettings.nexusDetailRecallMode==='keyword'?'keyword':'vector';
+    const defaults={core:'constant',continuity:'constant',lt:detail,npc:detail};
+    return Object.fromEntries(Object.entries(defaults).map(([kind,fallback])=>[kind,
+        ['constant','vector','keyword','disabled',...(kind==='npc'?['off']:[])].includes(modes[kind])?modes[kind]:fallback]));
+}
+function isUninjectedManagedEntry(entry) {
+    return entry?.disable===true && entry.STMB_slothRecallMode==='disabled';
+}
 export function describeNexusCollectionEntry(entry) {
     const title = str(entry?.comment);
     const content = str(entry?.content);
@@ -270,7 +280,7 @@ export function describeNexusCollectionEntry(entry) {
         /^\[Enduring relationship \/ shared priorities\][ \t]*\r?$/imu.test(content);
     const roles = [];
     if (singleton) roles.push(singleton);
-    else if (entry?.constant === true && (legacy || recognizedCore)) {
+    else if ((entry?.constant === true || entry?.STMB_slothManagedLegacyRole === true) && (legacy || recognizedCore)) {
         if (legacy === 'core' || recognizedCore) roles.push('core');
         if (legacy === 'continuity' || recognizedState) roles.push('continuity');
     }
@@ -279,7 +289,7 @@ export function describeNexusCollectionEntry(entry) {
         if (kind === 'lt' || kind === 'npc') roles.push(kind);
     }
     const legacyLayout = !singleton && roles.some(role => role === 'core' || role === 'continuity');
-    const protectedEntry = !!(entry?.disable || Number(entry?.position) === 7 || str(entry?.outletName) ||
+    const protectedEntry = !!((entry?.disable && !isUninjectedManagedEntry(entry)) || Number(entry?.position) === 7 || str(entry?.outletName) ||
         /^(?:Kinks|PanelAssets)(?:\b|$)/iu.test(title) || entry?.STMB_sidePromptHistory ||
         entry?.STMB_slothLegacyArchive || (legacy && !roles.length) ||
         entry?.stmemorybooks || entry?.stmbSummary || entry?.stmbArc);
@@ -291,15 +301,17 @@ function getUidEntry(book,uid){
     requireThat(matches.length===1,'Nexus UID '+uid+' is ambiguous/missing.');
     return matches[0];
 }
-export function stageNexusEdits(original, edits, createEntry, {detailRecallMode='vector'}={}) {
+export function stageNexusEdits(original, edits, createEntry, {detailRecallMode='vector',recallModes}={}) {
     requireThat(plain(original?.entries) && Array.isArray(edits) && typeof createEntry==='function',
         'Invalid Nexus staging input.');
     requireThat(['vector','keyword'].includes(detailRecallMode),'Unsupported Nexus detail recall mode.');
+    const modes=getNexusRecallModes({nexusDetailRecallMode:detailRecallMode,nexusRecallModes:recallModes});
     const staged=structuredClone(original),changes=[];
     const titles=new Set(Object.values(staged.entries).map(e=>str(e?.comment).toLowerCase()));
     for(const [i,op] of edits.entries()){
         const kind=str(op?.kind).toLowerCase(), action=str(op?.action).toLowerCase();
         requireThat(['core','continuity','lt','npc','npc-index'].includes(kind),'Invalid Nexus entry kind '+i);
+        requireThat(modes.npc!=='off'||!['npc','npc-index'].includes(kind),'NPC collection is disabled.');
         requireThat(['replace_exact','append','append_section','create'].includes(action),'Invalid Nexus edit action '+i);
         requireThat(action!=='append_section' || kind==='continuity',
             'Only Current Continuity supports append_section.');
@@ -315,7 +327,7 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
             if(title==='Current Continuity')requireThat(kind==='continuity','Continuity must use continuity kind.');
             const identity = detailIdentity(title);
             const target = Object.values(staged.entries).find(entry => {
-                if (!entry || entry.disable || entry.STMB_slothLegacyArchive) return false;
+                if (!entry || (entry.disable && !isUninjectedManagedEntry(entry)) || entry.STMB_slothLegacyArchive) return false;
                 const {roles} = describeNexusCollectionEntry(entry);
                 if (kind === 'core' || kind === 'continuity' || kind === 'npc-index') return roles.includes(kind);
                 return identity && detailIdentity(entry.comment) === identity &&
@@ -327,15 +339,17 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
             if(kind==='continuity')guardNewContinuityContent(content);
             const entry=createEntry(staged);
             requireThat(entry && intUid(entry.uid)!==null,'World Info entry constructor failed.');
-            entry.comment=title;entry.content=content;entry.disable=false;entry.position=0;
-            entry.constant=['core','continuity','npc-index'].includes(kind);
+            const mode=kind==='npc-index'?'constant':modes[kind];
+            entry.comment=title;entry.content=content;entry.disable=mode==='disabled';entry.position=0;
+            entry.constant=mode==='constant';
             const detail=['lt','npc'].includes(kind);
             if (detail) entry.STMB_slothNexusKind=kind;
-            entry.vectorized=detail && detailRecallMode==='vector';
-            entry.selective=detail;
+            if (mode==='disabled') entry.STMB_slothRecallMode='disabled';
+            entry.vectorized=mode==='vector';
+            entry.selective=mode==='vector'||mode==='keyword'||detail;
             entry.key=Array.isArray(op.keywords)?[...new Set(op.keywords.map(str).filter(Boolean))].slice(0,16):[];
-            requireThat(!detail||detailRecallMode!=='keyword'||entry.key.length,
-                'A new keyword-triggered Nexus detail requires a recall keyword.');
+            requireThat(mode!=='keyword'||entry.key.length,
+                'A new keyword-triggered Nexus entry requires a recall keyword.');
             titles.add(title.toLowerCase());
             changes.push({action,kind,title,uid:entry.uid,before:'',after:content,
                 ...(detail?{keywords:[...entry.key]}:{})});
@@ -387,6 +401,33 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
         changes.push({action,kind,title,uid,before:originalText,after:entry.content});
     }
     return {staged,changes};
+}
+
+/** Apply the current type settings to existing recognized entries only. */
+export function stageNexusRecallSettings(original,moduleSettings) {
+    requireThat(plain(original?.entries),'Invalid Nexus recall settings input.');
+    const modes=getNexusRecallModes(moduleSettings),staged=structuredClone(original);
+    const changed=[],skipped=[];
+    for(const entry of Object.values(staged.entries)){
+        const {roles,legacyLayout,protected:isProtected}=describeNexusCollectionEntry(entry);
+        if(isProtected||!roles.length||roles.includes('npc-index'))continue;
+        const options=new Set(roles.map(role=>modes[role]));
+        if(options.size!==1||options.has('off')||options.has(undefined)){skipped.push(entry.uid);continue;}
+        const mode=[...options][0];
+        if(mode==='keyword'&&!(entry.key||[]).some(key=>typeof key==='string'&&key.trim())){
+            skipped.push(entry.uid);continue;
+        }
+        const before=JSON.stringify(entry);
+        if(legacyLayout)entry.STMB_slothManagedLegacyRole=true;
+        entry.disable=mode==='disabled';
+        entry.constant=mode==='constant';
+        entry.vectorized=mode==='vector';
+        if(mode==='keyword'||mode==='vector')entry.selective=true;
+        if(mode==='disabled')entry.STMB_slothRecallMode='disabled';
+        else delete entry.STMB_slothRecallMode;
+        if(JSON.stringify(entry)!==before)changed.push(entry.uid);
+    }
+    return {staged,changed,skipped};
 }
 
 export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMode='vector'}={}) {

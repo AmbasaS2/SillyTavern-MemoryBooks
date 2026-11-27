@@ -40,6 +40,14 @@ export function validateSidePromptHistoryRequest(history) {
     }
     let identity;
     try { identity = JSON.parse(history.chatKey); } catch { throw sidePromptHistoryError(400); }
+    if(history.storyKey!==undefined){
+        let story;
+        try{story=JSON.parse(history.storyKey);}catch{throw sidePromptHistoryError(400);}
+        if(history.append||!Array.isArray(story)||story.length!==3||
+            story.some(value=>typeof value!=='string'||!value.trim())||
+            story[0]!==identity?.[1]||story[1]===story[2]||identity?.[0]!=='character')
+            throw sidePromptHistoryError(400);
+    }
     if (!Array.isArray(identity) || identity.length !== 3 || !['character', 'group'].includes(identity[0])
         || identity.some(value => typeof value !== 'string' || !value.trim()) || identity[2] !== history.chatId) {
         throw sidePromptHistoryError(400);
@@ -48,7 +56,8 @@ export function validateSidePromptHistoryRequest(history) {
 
 /** Matches a stored stream; display-name changes never merge unrelated macro variants. */
 function isSameSidePromptHistory(stored, requested) {
-    return stored?.version === 1 && stored.templateKey === requested.templateKey && stored.chatKey === requested.chatKey
+    return stored?.version === 1 && stored.templateKey === requested.templateKey &&
+        (requested.storyKey ? stored.storyKey === requested.storyKey : !stored.storyKey && stored.chatKey === requested.chatKey)
         && stored.titleSource === requested.titleSource
         && (stored.titleSource === 'name' || stored.titleBase === requested.titleBase);
 }
@@ -57,7 +66,7 @@ function isSameSidePromptHistory(stored, requested) {
 export function getSidePromptHistoryStreamKey(history) {
     if (!history || history.version !== 1 || typeof history.templateKey !== 'string' || typeof history.chatKey !== 'string'
         || !['name', 'override'].includes(history.titleSource)) return null;
-    return JSON.stringify([history.templateKey, history.chatKey, history.titleSource,
+    return JSON.stringify([history.templateKey, history.storyKey ? ['story',history.storyKey] : history.chatKey, history.titleSource,
         history.titleSource === 'override' ? String(history.titleBase || '') : '']);
 }
 

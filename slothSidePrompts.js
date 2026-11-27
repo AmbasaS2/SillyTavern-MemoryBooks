@@ -147,7 +147,17 @@ export function pickSlothSidePresets(settings, ids, ref) {
     return getRunnableSlothSidePresets(settings, ref).filter(preset => selected.has(preset.id));
 }
 
-export function canContinueSlothSideEntry(entry, presetId, ref) {
+export function slothSideStoryKey(ref, roles) {
+    return ref?.avatarUrl && roles?.nexus && roles?.memory && roles.nexus!==roles.memory
+        ? JSON.stringify([ref.avatarUrl,roles.nexus,roles.memory]) : '';
+}
+export function sameSlothSideOwner(history, ref) {
+    try {
+        const key=JSON.parse(history?.chatKey);
+        return Array.isArray(key)&&key[0]==='character'&&key[1]===ref.avatarUrl;
+    }catch{return false;}
+}
+export function canContinueSlothSideEntry(entry, presetId, ref, {storyKey='',allowLegacyInheritance=false}={}) {
     if (!entry || !Number.isSafeInteger(entry.uid) || typeof entry.content !== 'string' ||
         !entry.content.trim() || entry.outletName || Number(entry.position) === 7 ||
         entry.STMB_slothLegacyArchive || entry.STMB_sourceRanges?.length || isCompletedSceneEntry(entry) ||
@@ -155,10 +165,12 @@ export function canContinueSlothSideEntry(entry, presetId, ref) {
         classifyNexusLegacyTitle(entry.comment)) return false;
     const history = entry.STMB_sidePromptHistory;
     const chatKey = JSON.stringify(['character', ref.avatarUrl, ref.fileName]);
-    if (history && history.chatKey !== chatKey) return false;
+    if (history?.storyKey) return history.storyKey===storyKey && history.templateKey===presetId && history.titleSource==='name';
+    if (history && history.chatKey !== chatKey && !(allowLegacyInheritance && sameSlothSideOwner(history,ref) && history.templateKey===presetId && history.titleSource==='name')) return false;
     if (entry.STMB_slothSideNote) return history?.templateKey === presetId && history.titleSource === 'name';
     const chatId = entry.STMB_chatId || entry.STMB_sidePromptRegeneration?.chatId;
-    return !chatId || String(chatId).replace(/\.jsonl$/iu, '') === ref.fileName;
+    return !chatId || String(chatId).replace(/\.jsonl$/iu, '') === ref.fileName ||
+        !!(allowLegacyInheritance && history && sameSlothSideOwner(history,ref) && history.templateKey===presetId);
 }
 
 export function slothSideBookName(character, names = [], suffix = '', bookSuffix = 'MemoryBook Side Prompt') {

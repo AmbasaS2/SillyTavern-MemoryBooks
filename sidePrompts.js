@@ -39,7 +39,7 @@ import {
     SIDE_PROMPT_REGENERATION_METADATA_KEY,
 } from './memoryRegeneration.js';
 import { buildSidePromptHistoryRequest, resolveSidePromptHistory } from './sidePromptHistory.js';
-import { buildSlothSideReference, canContinueSlothSideEntry, normalizeSlothSideKeywords,
+import { buildSlothSideReference, canContinueSlothSideEntry, sameSlothSideOwner, normalizeSlothSideKeywords,
     SLOTH_DIARY_ID, SLOTH_QUOTES_ID, SLOTH_NO_SIDE_DETAILS } from './slothSidePrompts.js';
 
 
@@ -1576,7 +1576,7 @@ async function resolveAfterMemoryItems(sceneMarkers, moduleSettings, sceneContex
 
 /** Prepare a reviewed Sloth note for the selected lorebook. */
 export async function proposeReviewedSidePrompt(preset, lorebookName, original, compiledScene, profile, savedScene,
-    { recallMode = 'disabled', nexus, chatRef } = {}) {
+    { recallMode = 'disabled', nexus, chatRef, storyKey='', allowLegacyInheritance=false } = {}) {
     // A saved summary is not proof of exact dialogue.
     if (preset.id === SLOTH_QUOTES_ID && !compiledScene) {
         throw new Error('Memorable Quotes requires the original chat messages.');
@@ -1586,24 +1586,37 @@ export async function proposeReviewedSidePrompt(preset, lorebookName, original, 
         const tpl = {key: preset.id, name: '🦥 '+preset.name};
         const sidePromptHistory = getSidePromptHistory(tpl, {}, [], chatRef);
         sidePromptHistory.legacyTitles = [];
+        if(storyKey)sidePromptHistory.storyKey=storyKey;
         const resolved = resolveSidePromptHistory(original, sidePromptHistory);
         let existingUid = preset.destination.entry?.uid;
+        if(storyKey&&existingUid===undefined&&!resolved.latest){
+            const candidates=Object.values(original.entries).filter(entry=>{
+                const history=entry.STMB_sidePromptHistory;
+                return !history?.storyKey&&history?.templateKey===preset.id&&sameSlothSideOwner(history,chatRef)&&
+                    history.titleSource==='name'&&canContinueSlothSideEntry(entry,preset.id,chatRef,
+                        {storyKey,allowLegacyInheritance:true});
+            });
+            const local=candidates.filter(entry=>entry.STMB_sidePromptHistory.chatKey===sidePromptHistory.chatKey);
+            const eligible=allowLegacyInheritance?candidates:local;
+            if(eligible.length===1)existingUid=eligible[0].uid;
+            else if(candidates.length)throw new Error('Choose the existing Side Prompt entry; its story is ambiguous.');
+        }
         if (existingUid === undefined && !resolved.latest && preset.id === SLOTH_DIARY_ID) {
             const legacy = Object.values(original.entries).filter(entry =>
                 entry.STMB_sidePromptHistory?.chatKey === sidePromptHistory.chatKey &&
                 /^Diary\s*\(Don['’]t read it\)(?:$|\s|-)/iu.test(entry.comment || '') &&
-                canContinueSlothSideEntry(entry, preset.id, chatRef));
+                canContinueSlothSideEntry(entry, preset.id, chatRef,{storyKey,allowLegacyInheritance}));
             if (legacy.length === 1) existingUid = legacy[0].uid;
         }
         let target = resolved.latest;
         if (existingUid !== undefined) {
             sidePromptHistory.existingEntryUid = existingUid;
             target = resolveSidePromptHistory(original, sidePromptHistory).latest;
-            if (!canContinueSlothSideEntry(target, preset.id, chatRef)) throw new Error('Side Prompt target entry changed.');
+            if (!canContinueSlothSideEntry(target, preset.id, chatRef,{storyKey,allowLegacyInheritance:true})) throw new Error('Side Prompt target entry changed.');
         }
         const prior = target?.content ?? '';
         const adopted = target && existingUid !== undefined && !resolved.latest;
-        const preserveTitle = adopted || target?.STMB_slothPreserveTitle === true;
+        const preserveTitle = adopted || target?.STMB_slothPreserveTitle === true || !!(storyKey&&target);
         const reference = buildSlothSideReference(savedScene, nexus);
         const prompt = [preset.text, '\n=== EXISTING MEMORY FOR REFERENCE (NOT NEW EVIDENCE) ===', reference,
             '=== END REFERENCE ==='].join('\n');

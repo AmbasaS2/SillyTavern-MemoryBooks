@@ -40,10 +40,12 @@ export function scopeNexusWorldInfo(lists, { settings, ref, chatKey, avatar }) {
     ]);
     const isSolo = ref?.type === 'character' && typeof avatar === 'string' && avatar.length > 0;
     const override = isSolo ? getNexusChatRoleOverride(overrides, ref, chatKey) : null;
+    const pair=isSolo?(override?.invalid?null:override||getCharacterNexusRoles(defaults,avatar)):null;
     const allowed = new Set(isSolo
-        ? names(override?.invalid ? null : override || getCharacterNexusRoles(defaults, avatar))
-            .filter(book => !isAssignedToAnotherNexusCharacter(settings, avatar, book))
+        ? names(pair).filter(book => !isAssignedToAnotherNexusCharacter(settings, avatar, book))
         : defaultBooks);
+    const storyKey=pair?.nexus&&pair?.memory&&pair.nexus!==pair.memory&&allowed.has(pair.nexus)&&allowed.has(pair.memory)
+        ?JSON.stringify([avatar,pair.nexus,pair.memory]):null;
     if (isSolo) for (const book of defaultBooks) managed.add(book);
     const sideChatKey = isSolo && ref.fileName ? JSON.stringify(['character',ref.avatarUrl,ref.fileName]) : null;
 
@@ -54,7 +56,10 @@ export function scopeNexusWorldInfo(lists, { settings, ref, chatKey, avatar }) {
         if (!Array.isArray(entries)) continue;
         let writeIndex = 0;
         for (const entry of entries) {
-            if (entry?.STMB_slothSideNote && (!sideChatKey || entry.STMB_sidePromptHistory?.chatKey !== sideChatKey)) continue;
+            if(entry?.STMB_slothSideNote){
+                const history=entry.STMB_sidePromptHistory;
+                if(history?.storyKey ? !storyKey||history.storyKey!==storyKey : !sideChatKey||history?.chatKey!==sideChatKey)continue;
+            }
             if (managed.has(entry?.world) && !allowed.has(entry.world)) continue;
             if (entry?.STMB_slothSideNote) {
                 const stream = getSidePromptHistoryStreamKey(entry.STMB_sidePromptHistory);

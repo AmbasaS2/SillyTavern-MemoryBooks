@@ -74,10 +74,10 @@ import {
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
-  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames,
+  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
-import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail } from './nexusCollectionPolicy.js';
+import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { SLOTH_AUTOMATIC_DEFAULTS, getSlothAutomaticSettings } from './slothAutomaticCollection.js';
 import { createBranchLorebookController } from "./branchLorebooks.js";
 import {
@@ -656,6 +656,8 @@ const defaultSettings = {
     nexusSceneRotationEnabled: false,
     nexusOlderSceneMode: "vector",
     nexusDetailRecallMode: "vector",
+    nexusRecallModes: {},
+    slothHideAfter: false,
     slothConnectionProfileId: "",
     slothProfileName: "",
     slothCollectionPrompt: "",
@@ -11127,6 +11129,19 @@ function buildSlothTemplateData(settings) {
     slothModeActive,
     slothFirstSetup,
     slothCanCollect: slothRoleActive || slothFirstSetup,
+    slothNexusRecallFields: [
+      ['core','Core Memory','STMemoryBooks_SlothCoreRecall'],
+      ['continuity','Current Continuity','STMemoryBooks_SlothContinuityRecall'],
+      ['lt','LT','STMemoryBooks_SlothLTRecall'],
+      ['npc','NPC','STMemoryBooks_SlothNPCRecall'],
+    ].map(([kind,title,labelKey])=>({kind,title,labelKey,options:[
+      ['constant','Always on','STMemoryBooks_SlothRecallConstant'],
+      ['vector','Vector','STMemoryBooks_NexusRecallVector'],
+      ['keyword','Keywords','STMemoryBooks_SlothRecallKeywords'],
+      ['disabled','No injection','STMemoryBooks_SlothRecallDisabled'],
+      ...(kind==='npc'?[['off','Do not collect','STMemoryBooks_SlothNPCOff']]:[]),
+    ].map(([value,label,key])=>({value,label,key,selected:getNexusRecallModes(settings.moduleSettings)[kind]===value}))})),
+    slothHideAfter: settings.moduleSettings.slothHideAfter === true,
     slothMemoryUsesKeywords: settings.moduleSettings.nexusOlderSceneMode === 'keyword',
     slothMemoryUsesVector: settings.moduleSettings.nexusOlderSceneMode !== 'keyword',
     slothConnectionProfiles,
@@ -11735,6 +11750,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
     collect: () => runCancellableSlothButton(button, controls =>
       runNexusCollector({ profileIndex, stConnectionProfileId, ...controls })),
     companion: () => createSlothCompanion(),
+    'recall-apply': () => applySlothNexusRecallSettings(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
     followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
@@ -12265,6 +12281,20 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       }
       if (e.target.id === 'stmb-sloth-auto-enabled' && !params.slothAutoEnabled) invalidateSlothAutomaticProgress();
       syncSlothAutomaticStatus();
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('[data-stmb-nexus-recall-kind]')) {
+      const kind=e.target.dataset.stmbNexusRecallKind;
+      const value=e.target.value;
+      if (!['core','continuity','lt','npc'].includes(kind) ||
+          !['constant','vector','keyword','disabled',...(kind==='npc'?['off']:[])].includes(value)) return;
+      settings.moduleSettings.nexusRecallModes={...getNexusRecallModes(settings.moduleSettings),[kind]:value};
+      await saveSettings();
+      return;
+    }
+    if (e.target.matches('#stmb-sloth-hide-after')) {
+      settings.moduleSettings.slothHideAfter=e.target.checked;
       await saveSettings();
       return;
     }

@@ -91,7 +91,11 @@ function remapHistory(history, change) {
     const tuple = parse(history?.chatKey);
     if (!Array.isArray(tuple) || tuple.length !== 3 || tuple[0] !== 'character' || tuple[1] !== change.avatar)
         return false;
-    if (change.type === 'avatar') tuple[1] = change.newAvatar;
+    if (change.type === 'avatar') {
+        tuple[1] = change.newAvatar;
+        const story=parse(history.storyKey);
+        if(Array.isArray(story)&&story.length===3&&story[0]===change.avatar){story[0]=change.newAvatar;history.storyKey=JSON.stringify(story);}
+    }
     else {
         if (tuple[2] !== change.oldFile || history.chatId !== change.oldFile) return false;
         tuple[2] = change.newFile;
