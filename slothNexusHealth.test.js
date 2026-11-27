@@ -75,7 +75,8 @@ test('health UI keeps two summary values, on-demand help and list bodies, withou
     assert.match(fn,/details\.addEventListener\('toggle'/);
     assert.match(fn,/if\(!details\.open\|\|populated\)return/);
     assert.match(fn,/renderMarkdown\(body,text\)/);
-    assert.match(fn,/updateReader\(\);\s*const first=!translations\.started;\s*await translations\.load\(\)/);
+    assert.match(fn,/updateReader\(\);\s*await translations\.load\(\)/);
+    assert.match(fn,/if\(!translatedLabelsApplied\)\{\s*translatedLabelsApplied=true/);
     assert.match(fn,/ticket!==selection/);
     assert.match(fn,/Boolean\(legacySettings\|\|globalThis\.__slbLoreManagerActive\)/);
     assert.match(fn,/wide:false,large:false/);

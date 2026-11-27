@@ -1388,7 +1388,7 @@ export async function showSlothNexusHealth(){
             const body=details.querySelector(bodySelector);
             const controls=readEntry?details.querySelector('[data-health-reader-controls]'):null;
             const switchButton=controls?.querySelector('[data-health-original]');
-            let populated=false,selection=0,current=null,showOriginal=false,lastRendered=null;
+            let populated=false,selection=0,current=null,showOriginal=false,lastRendered=null,translatedLabelsApplied=false;
             const render=(text)=>{
                 body.hidden=false;
                 if(text===lastRendered)return;
@@ -1430,10 +1430,10 @@ export async function showSlothNexusHealth(){
                 }
                 if(!readEntry){render(textFor(current));return;}
                 updateReader();
-                const first=!translations.started;
                 await translations.load();
                 if(!popup.dlg.open||ticket!==selection)return;
-                if(first){
+                if(!translatedLabelsApplied){
+                    translatedLabelsApplied=true;
                     // Update existing option labels in place once; do not rebuild
                     // the select or hash every body. Source token counts stay put.
                     for(const option of select.options){
