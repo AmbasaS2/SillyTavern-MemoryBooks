@@ -18,6 +18,7 @@ import { groupSlothSourceWindows, slothSourceRanges, validateNexusEventPlan, inc
     describeNexusCollectionEntry } from './nexusCollectionPolicy.js';
 import { validateSlothEventWindowEvidence, validateSlothNexusWindowEvidence } from './nexusEditEvidence.js';
 import { assertSlothNexusEvidence } from './slothNexusEvidence.js';
+import { buildSlothHealthReviewPrompt, validateSlothHealthReview } from './slothNexusHealthReview.js';
 import { buildNexusSceneMergeCatalog, validateNexusSceneMergeCandidates } from './nexusSceneMergeProposals.js';
 import { validateSlothLegacyContinuityProposal } from './nexusLegacySemantic.js';
 import {validateNexusSceneSplitProposal} from './nexusSceneSplit.js';
@@ -135,7 +136,7 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},ve
     return async (prompt,phase,parse=parseStrictJSON)=>{
         if(signal?.aborted)throw new Error('Collection cancelled.');
         let estimate=null;
-        const beforeRequest=phase==='Single collection'||phase==='Summary review'?async request=>{
+        const beforeRequest=['Single collection','Summary review','Nexus health review'].includes(phase)?async request=>{
             estimate=await preflightSingleSlothCollection(request,signal);
             verifyOrigin();
             return estimate;
@@ -146,6 +147,14 @@ function requester(profile,settings,signal,singleAttempt=false,onUsage=()=>{},ve
         onUsage(full?.usage,phase,estimate);
         return parse(text,phase);
     };
+}
+// User-triggered maintenance only, not part of collection statistics.
+export async function suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,language}){
+    const prompt=buildSlothHealthReviewPrompt(catalog,language);
+    const ask=requester(profile,settings,signal,true,()=>{},verifyOrigin);
+    const raw=await ask(prompt,'Nexus health review');
+    verifyOrigin();
+    return validateSlothHealthReview(catalog,raw);
 }
 const originalMessages=messages=>messages.map(m=>({id:m.id,name:m.name,
     mes:m.mes,is_user:!!m.is_user,send_date:m.send_date}));

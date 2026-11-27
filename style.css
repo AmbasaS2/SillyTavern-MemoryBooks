@@ -1676,3 +1676,12 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-stats-pair strong{text-align:end;font-weight:500;font-variant-numeric:tabular-nums}
 .popup.stmb-popup .stmb-stats-phase{margin-top:5px;padding-top:5px;border-top:1px solid var(--SmartThemeBorderColor)}
 .popup.stmb-popup .stmb-stats-phase summary{cursor:pointer;font-size:.88em}
+
+/* Sloth: explicit semantic health review, one selected preview. */
+.popup.stmb-popup.stmb-health-review-popup{width:560px;max-height:min(90dvh,calc(100dvh - 2em));min-height:0}
+.popup.stmb-popup .stmb-health-review{min-width:0;text-align:start;gap:9px;--stmb-health-border:var(--SmartThemeBorderColor);--stmb-health-border:color-mix(in srgb,var(--SmartThemeBorderColor) 45%,var(--SmartThemeBodyColor) 55%)}
+.popup.stmb-popup .stmb-health-review h3,.popup.stmb-popup .stmb-health-review h4,.popup.stmb-popup .stmb-health-review p{margin:0}
+.popup.stmb-popup .stmb-health-review select{width:100%;min-width:0}
+.popup.stmb-popup .stmb-health-review [data-health-review-body]{display:flex;flex-direction:column;gap:8px;min-width:0}
+.popup.stmb-popup .stmb-health-review pre{margin:5px 0;padding:7px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:26dvh;overflow:auto;border-inline-start:2px solid var(--stmb-health-border);font-size:.88em}
+.popup.stmb-popup .stmb-health-review-change h4{margin-bottom:6px;overflow-wrap:anywhere}

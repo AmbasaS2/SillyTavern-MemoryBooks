@@ -24,7 +24,7 @@ import { parseReviewedSegments, fingerprintSlothChat, fingerprintSlothReviewedRa
     listSlothUntrackedScenes, findSlothLegacyEvidence,
     getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { composeSingleSlothCollection, composeSlothScene,
-    suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
+    suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene, suggestSlothNexusHealthReview } from './nexusCollectionAI.js';
 import { getCompressibleScene, SLOTH_COMPRESSION_AMOUNTS } from './nexusSceneCompression.js';
 import { commitSlothBooks } from './nexusCollectionCommit.js';
 import { commitSlothNexusMigration } from './nexusLegacyMigrationCommit.js';
@@ -46,6 +46,8 @@ import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticToken
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { inspectSlothNexusHealth, SLOTH_HEALTH_ROLES } from './slothNexusHealth.js';
+import { buildSlothHealthCatalog, stageSlothHealthReviewChange } from './slothNexusHealthReview.js';
+import { showSlothHealthReviewFindings, healthReviewLabel } from './slothNexusHealthReviewDialog.js';
 import { createSlothCollectionRun, addSlothRequestMetric, recordSlothCollectionRun } from './slothCollectionStats.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
     slothSideRenameBooks, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
@@ -1436,6 +1438,79 @@ export async function applySlothNexusRecallSettings(){
         });
         await Promise.resolve(reloadEditor(roles.nexus));
         return {saved:true,changed:changed.length,skipped:skipped.length};
+    }finally{collectorBusy=false;}
+}
+
+/** Explicit AI health review. Inspecting the ordinary health snapshot never calls AI. */
+export async function runSlothNexusHealthReview({profileIndex,stConnectionProfileId,signal,onSaveStart}={}){
+    if(collectorBusy)throw new Error('A Sloth operation is already in progress.');
+    collectorBusy=true;
+    const tr=healthReviewLabel;
+    try{
+        const settings=extension_settings.STMemoryBooks,ref=structuredClone(getCurrentStmbChatRef());
+        if(ref?.type!=='character'||!ref.fileName)throw new Error(tr('NeedChat','Open an individual character chat first.'));
+        const roles={nexus:getNexusRoleResolutionForChatRef('nexus',ref,settings).name,
+            memory:getNexusRoleResolutionForChatRef('memory',ref,settings).name};
+        const profile=collectionProfile(settings,profileIndex,stConnectionProfileId);
+        if(!profile)throw new Error(tr('NeedProfile','Choose a collection AI profile first.'));
+        const moduleSettings=structuredClone(settings.moduleSettings||{});
+        const modes=stringify(getNexusRecallModes(moduleSettings));
+        const verifyOrigin=()=>{
+            signal?.throwIfAborted();
+            assertSlothBookRoles(ref,roles);assertSideRenameReady(ref);
+            if(getMemoryBooksMode(extension_settings.STMemoryBooks,ref,getStmbChatKey(ref))!=='sloth'||
+                roles.nexus===roles.memory||modes!==stringify(getNexusRecallModes(extension_settings.STMemoryBooks.moduleSettings)))
+                throw new Error(tr('Changed','The memory mode or recall settings changed. Start a new review.'));
+        };
+        const verifyRecovery=async()=>{
+            if(await refreshSlothPaidDraft(ref))throw new Error(tr('Pending','Finish the pending collection recovery before changing Nexus.'));
+            verifyOrigin();
+        };
+        verifyOrigin();
+        const confirmation=markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>'+
+            html(tr('Title','AI Nexus health review'))+'</h3><p>'+
+            html(tr('Consent','Send eligible active Nexus memory text to the selected collection AI once for review? No chat messages are sent. Nothing changes until you approve a specific preview. Provider costs may apply.'))+
+            '</p><small>'+html(tr('Excluded','Protected, disabled and archived source entries are excluded.'))+'</small></div>',
+            POPUP_TYPE.CONFIRM,'',{wide:false,allowVerticalScrolling:true,
+                okButton:tr('Analyze','Analyze with AI'),cancelButton:t('Cancel','STMemoryBooks_Cancel')}));
+        if(await showCollectionPopup(confirmation,signal)!==POPUP_RESULT.AFFIRMATIVE)return {saved:false};
+        await verifyRecovery();
+        const original=await loadServerWorld(roles.nexus,signal);
+        verifyOrigin();assertReviewedCache(roles.nexus,original);
+        const catalog=buildSlothHealthCatalog(original);
+        if(!catalog.entries.length){
+            toastr.info(tr('Empty','No eligible Nexus entries to review.'),'STMemoryBooks');
+            return {saved:false};
+        }
+        const review=await suggestSlothNexusHealthReview({catalog,profile,settings,signal,verifyOrigin,
+            language:tr('Language','English')});
+        verifyOrigin();
+        if(stringify(await loadServerWorld(roles.nexus,signal))!==stringify(original))
+            throw new Error(tr('Stale','Nexus changed during the review. Nothing was saved.'));
+        verifyOrigin();assertReviewedCache(roles.nexus,original);
+        const approved=await showSlothHealthReviewFindings({review,catalog,original,moduleSettings,
+            showPopup:popup=>showCollectionPopup(popup,signal)});
+        if(!approved)return {saved:false};
+        await verifyRecovery();
+        const actual=stageSlothHealthReviewChange(original,approved.finding,{moduleSettings,
+            createEntry:book=>createWorldInfoEntry(roles.nexus,book)});
+        // The preview allocates a provisional new UID. All visible text,
+        // title, flags and keywords must otherwise match the final stage.
+        const visible=changes=>changes.map(({uid,...change})=>({...change,...(change.before!==null?{uid}:{})}));
+        if(stringify(visible(actual.changes))!==stringify(visible(approved.changes)))
+            throw new Error(tr('Stale','Nexus changed during the review. Nothing was saved.'));
+        verifyOrigin();onSaveStart?.();
+        await commitSlothNexusMigration({name:roles.nexus,original,staged:actual.staged},{
+            loadFresh:loadServerWorld,save:(name,book)=>saveWorldInfo(name,book,true),
+            verifyBeforeWrite:assertReviewedCache,verifyOrigin,
+            resetCache:(name,book)=>worldInfoCache.set(name,structuredClone(book)),
+            withLock:(name,task)=>withStmbWriteLane({type:'lorebook',name},task),
+            operation:'Nexus health review',
+        });
+        try{await Promise.resolve(reloadEditor(roles.nexus));}
+        catch(error){console.warn('🦥 STMemoryBooks','Nexus health editor refresh failed.',error);}
+        toastr.success(tr('Saved','Reviewed Nexus change saved.'),'STMemoryBooks');
+        return {saved:true,changed:actual.changes.length};
     }finally{collectorBusy=false;}
 }
 
