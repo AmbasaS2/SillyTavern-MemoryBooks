@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {fingerprintSlothChat,fingerprintSlothReviewedRanges} from './nexusCollectionPolicy.js';
+import {isCompletedSceneEntry} from './nexusSceneRotation.js';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
 const start=source.indexOf('const legacyPairKey');
@@ -16,7 +17,7 @@ function harness() {
         slothCollection:{chatKey:'character:A.png:chat-a',books:{nexus:'N',memory:'M'},savedRanges:[[1,1]]},
     };
     const current={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
-    const scope={chat,getSceneMarkers:()=>metadata,t:message=>message,fingerprintSlothReviewedRanges,
+    const scope={chat,getSceneMarkers:()=>metadata,t:message=>message,fingerprintSlothReviewedRanges,isCompletedSceneEntry,
         getStmbChatKey:ref=> 'character:A.png:'+(ref?.fileName||'chat-a')};
     const fn=vm.runInNewContext(body+'\nactiveSource',scope);
     return {fn,metadata,chat,current};
@@ -103,9 +104,14 @@ test('the collection receipt is tied to persisted source and is reread after met
     assert.equal(metadataWrites, 1);
     assert.deepEqual(JSON.parse(JSON.stringify(stored.slothCollection)).savedRanges, [[0, 0]]);
     checks.patchStmbMetadataForChatRef = async () => {};
-    await assert.rejects(write(stored.slothCollection, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /did not persist/);
+    // A replay of identical coverage is intentionally idempotent.
+    await write(stored.slothCollection, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint);
+    // A genuinely new receipt must still be verified after persistence.
+    turns.push({mes:'The door opened.',name:'Tali',is_user:false});
+    const expanded=fingerprintSlothChat(turns,[0,1]);
+    await assert.rejects(write(stored.slothCollection, [{ segments: [[1, 1]] }], origin, pair, [0,1], expanded), /did not persist/);
     turns[0].mes = 'A different event happened.';
-    await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0], fingerprint), /saved chat differs/);
+    await assert.rejects(write({}, [{ segments: [[0, 0]] }], origin, pair, [0,1], expanded), /saved chat differs/);
     assert.equal(metadataWrites, 1);
 });
 
@@ -130,4 +136,13 @@ test('reference-only overlaps stay in future collection even when a Scene is sto
         15:{STMB_chatId:'chat-a',STMB_sourceRanges:[[6,7]],STMB_collectedRanges:[]}}};
     const ids=Array.from(h.fn(h.current,memory,pair).source,m=>m.id);
     assert.deepEqual(ids,[0,4,5,6,7,8,9]);
+});
+
+test('legacy same-chat completed Memory receipts are inherited, unproven manual Scenes are not',()=>{
+    const h=harness();h.metadata.slothCollection.savedRanges=[];
+    const content='**Timeline**: Unknown\n\n**Scene**\nAn old event.\n\n**Result**\nFinished.';
+    const memory={entries:{1:{uid:1,comment:'001 - Old',content,STMB_chatId:'chat-a',stmemorybooks:true,STMB_start:2,STMB_end:3},
+        2:{uid:2,comment:'002 - Unknown origin',content,STMB_start:4,STMB_end:5},
+        3:{uid:3,comment:'003 - Other chat',content,STMB_chatId:'other-chat',stmemorybooks:true,STMB_start:6,STMB_end:7}}};
+    assert.deepEqual(Array.from(h.fn(h.current,memory,{nexus:'N',memory:'M'}).source,m=>m.id),[0,1,4,5,6,7,8,9]);
 });

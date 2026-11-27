@@ -75,7 +75,7 @@ import {
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
   runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
-  observeSlothLorebookSave, finishSlothLorebookRename,
+  beginSlothLorebookRename, observeSlothLorebookSave, finishSlothLorebookRename,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy, hasSlothPaidDraft } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
@@ -4350,7 +4350,9 @@ async function validateMultiCharacterLorebookBindingsForMemory(settings, context
 }
 
 function getCurrentLorebookEditorName() {
-  const index = Number($("#world_editor_select").val());
+  const selected=$("#world_editor_select").val();
+  if(selected===null||selected===undefined||String(selected).trim()==='')return '';
+  const index = Number(selected);
   if (Number.isInteger(index) && index >= 0 && world_names[index]) {
     return world_names[index];
   }
@@ -14478,8 +14480,13 @@ function setupEventListeners() {
   eventSource.on(event_types.CHAT_CHANGED, handleChatChanged);
   eventSource.on(MEMORY_TIER_CACHE_REFRESH_EVENT, refreshMemoryTierMacroCache);
   eventSource.on(event_types.SETTINGS_UPDATED, invalidateTrackerCheckpoints);
+  // Capture the old name before the native rename dialog changes the editor.
+  document.addEventListener('click',event=>{
+    if(event.target?.closest?.('#world_popup_name_button'))
+      beginSlothLorebookRename(getCurrentLorebookEditorName(),world_names);
+  },true);
   eventSource.on(event_types.WORLDINFO_UPDATED, (name, data) => {
-    observeSlothLorebookSave(name, data, world_names);
+    observeSlothLorebookSave(name, data, world_names, getCurrentLorebookEditorName());
     invalidateTrackerCheckpoints();
     updateMemoryTierMacroCache(name, data);
     if (name === getCurrentLorebookEditorName()) scheduleLorebookRegenerationActionsRefresh();

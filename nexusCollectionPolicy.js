@@ -458,6 +458,15 @@ export function stageNexusRecallSettings(original,moduleSettings) {
     return {staged,changed,skipped};
 }
 
+// Only recognized sequence prefixes are removed; dates and actual event
+// titles remain intact. Old manual Scenes keep their original title/body.
+export function slothUnnumberedSceneTitle(value) {
+    let title=str(value),previous;
+    do { previous=title;title=title.replace(/^\s*(?:\[\d+\]\s*[-–—]\s*|\d{1,3}\s*[-–—]\s*|\d{4,}\s+[-–—]\s+)/u,'').trim(); }
+    while(title!==previous);
+    return title;
+}
+
 export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMode='vector'}={}) {
     requireThat(plain(original?.entries) && Array.isArray(scenes) && scenes.length &&
         typeof createEntry==='function','Invalid Memory staging input.');
@@ -465,7 +474,7 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
     const numbers=Object.values(staged.entries).map(e=>sceneNumberFromTitle(e.comment)).filter(number=>number!==null);
     let next=Math.max(0,...numbers)+1;const writes=[];
     for(const item of scenes){
-        const content=str(item?.content),title=str(item?.title);
+        const content=str(item?.content),title=slothUnnumberedSceneTitle(item?.title);
         requireThat(content && title && /(?:\*\*Timeline\*\*|#{1,6}\s+Timeline)/i.test(content) &&
             /(?:\*\*Scene\*\*|#{1,6}\s+Scene)/i.test(content) &&
             /(?:\*\*Result\*\*|#{1,6}\s+Result)/i.test(content) &&
@@ -481,11 +490,15 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
             const existing=chatId&&Object.values(staged.entries).find(e=>e.STMB_chatId===chatId&&
                 !e.disable&&!e.STMB_slothSceneSplitFrom&&!e.STMB_slothSceneMerge&&
                 e.stmemorybooks===true&&e.content===content&&
-                str(e.comment).replace(/^\d+\s*-\s*/u,'')===title&&
-                JSON.stringify(e.STMB_sourceRanges)===JSON.stringify(item.segments));
+                slothUnnumberedSceneTitle(e.comment)===title&&
+                JSON.stringify(e.STMB_sourceRanges??(Number.isSafeInteger(e.STMB_start)&&Number.isSafeInteger(e.STMB_end)
+                    ?[[e.STMB_start,e.STMB_end]]:null))===JSON.stringify(item.segments));
             if (existing) {
-                const old=Array.isArray(existing.STMB_collectedRanges)?existing.STMB_collectedRanges:existing.STMB_sourceRanges;
+                const old=Array.isArray(existing.STMB_collectedRanges)?existing.STMB_collectedRanges:
+                    existing.STMB_sourceRanges??[[existing.STMB_start,existing.STMB_end]];
                 const ranges=[...old,...item.collectedRanges];
+                // Retain the authoritative explicit legacy bounds as provenance.
+                if(!Array.isArray(existing.STMB_sourceRanges)) existing.STMB_sourceRanges=structuredClone(item.segments);
                 existing.STMB_collectedRanges=slothSourceRanges(item.messageIds.filter(id=>ranges.some(([a,b])=>id>=a&&id<=b)));
                 writes.push({uid:existing.uid,title:existing.comment,segments:item.segments,reused:true});
                 continue;

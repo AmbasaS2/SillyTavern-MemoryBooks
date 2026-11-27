@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {validateNexusEventPlan,stageNexusEdits,describeNexusCollectionEntry,getNexusRecallModes,stageNexusRecallSettings} from './nexusCollectionPolicy.js';
 import {isCompletedSceneEntry,sceneNumberFromTitle} from './nexusSceneRotation.js';
 import {validateSlothSceneResponse} from './nexusSlothScenePrompt.js';
-import {parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes} from './slothSingleRecovery.js';
+import {parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,joinSlothRecoveryScenes,buildSlothPendingDraft} from './slothSingleRecovery.js';
 import {buildSidePromptHistoryRequest,resolveSidePromptHistory} from './sidePromptHistory.js';
 import {slothSideStoryKey,canContinueSlothSideEntry} from './slothSidePrompts.js';
 import {scopeNexusWorldInfo} from './nexusWorldInfoScope.js';
@@ -24,8 +24,8 @@ test('single collection sends the source once, reads active Nexus and only recen
         DEFAULT_SLOTH_COLLECTION_PROMPTS:{plan:'Plan'},getActiveSlothSummaryPreset:()=>({text:'Summary'}),
         SCENE_KEYWORD_GUIDANCE:'Recall',compact:JSON.stringify,slothNexusGuidance:({nexus})=>JSON.stringify(nexus),
         isCompletedSceneEntry,sceneNumberFromTitle,validateNexusEventPlan,validateSlothSceneResponse,
-        parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,
-        readSlothNexusEdits:raw=>({edits:raw.edits,skippedNexusEdits:0}),
+        parseSingleSlothCollectionDraft,normalizeSingleSlothPlan,finalizeSingleSlothScenes,joinSlothRecoveryScenes,buildSlothPendingDraft,
+        readSlothNexusEdits:raw=>({edits:raw.edits,skippedNexusEdits:0,pendingEdits:[],acceptedRawEdits:raw.edits}),
         requester:(_p,_s,_sig,one)=>async (prompt,phase,parse)=>{assert.equal(one,true);calls.push(prompt);return parse(JSON.stringify(draft),phase);},
     });
     const memory={entries:Object.fromEntries([1,2,3,4].map(i=>[i,{uid:i,comment:i+' - Event',
@@ -49,6 +49,11 @@ test('single collection sends the source once, reads active Nexus and only recen
     assert.equal(calls.length,2,'recovery must not call AI');
     assert.equal(replay.replayed,true);
     assert.equal(replay.scenes.length,1);
+    const partialReplay=await run({...opt,rawDraft:JSON.stringify(recovered.pendingDraft),lockedScenes:recovered.scenes});
+    assert.equal(calls.length,2);
+    assert.equal(partialReplay.scenes.length,1);
+    assert.equal(partialReplay.scenes[0].content,recovered.scenes[0].content);
+    assert.deepEqual(Array.from(partialReplay.scenes[0].collectedRanges.flat()),[1,2]);
 });
 test('Nexus recall settings are independent; uninjected entries remain updateable and legacy NPC off resumes collection',()=>{
     const entries={entries:{}};
