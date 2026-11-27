@@ -70,11 +70,12 @@ import {
 import { getActiveNexusRoleContext, getCurrentNexusRoleResolution, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
 import { isAssignedToAnotherNexusCharacter, isManagedNexusWorld, rememberNexusChatWorlds, scopeNexusWorldInfo } from './nexusWorldInfoScope.js';
 import {
-  getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
+  getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride, renameNexusChatRoleOverride,
   moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
 } from './nexusChatRoleOverrides.js';
 import { canStartNexusSetup, getSlothCompanion, createSlothCompanion, runNexusCollector, runNexusSceneMerge, runNexusSceneSplit,
-  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings,
+  runNexusSidePromptFollowup, runSlothSceneCompression, queueSlothSideRename, retrySlothSideRenames, applySlothNexusRecallSettings, reviewSlothLegacyCoverage,
+  observeSlothLorebookSave, finishSlothLorebookRename,
   getSlothAutomaticProgress, invalidateSlothAutomaticProgress, isSlothOperationBusy } from './nexusCollectorRuntime.js';
 import { mountSlothCollectionPrompts, mountSlothSidePromptSettings } from './slothSettingsDialogs.js';
 import { DEFAULT_SLOTH_VISIBLE_TAIL, normalizeSlothVisibleTail, getNexusRecallModes } from './nexusCollectionPolicy.js';
@@ -11768,6 +11769,7 @@ async function runSlothSettingsAction(button, popupElement, settings) {
       runNexusCollector({ profileIndex, stConnectionProfileId, ...controls })),
     companion: () => createSlothCompanion(),
     'recall-apply': () => applySlothNexusRecallSettings(),
+    'legacy-coverage': () => reviewSlothLegacyCoverage(),
     merge: () => runNexusSceneMerge({ profileIndex, stConnectionProfileId }),
     split: () => runNexusSceneSplit({ profileIndex, stConnectionProfileId }),
     followup: () => runNexusSidePromptFollowup({ profileIndex, stConnectionProfileId }),
@@ -14429,10 +14431,20 @@ function setupEventListeners() {
   eventSource.on(MEMORY_TIER_CACHE_REFRESH_EVENT, refreshMemoryTierMacroCache);
   eventSource.on(event_types.SETTINGS_UPDATED, invalidateTrackerCheckpoints);
   eventSource.on(event_types.WORLDINFO_UPDATED, (name, data) => {
+    observeSlothLorebookSave(name, data, world_names);
     invalidateTrackerCheckpoints();
     updateMemoryTierMacroCache(name, data);
     if (name === getCurrentLorebookEditorName()) scheduleLorebookRegenerationActionsRefresh();
     populateInlineButtons();
+  });
+  $(document).on('change', '#world_editor_select', () => {
+    const name = getCurrentLorebookEditorName();
+    void finishSlothLorebookRename(name, world_names).then(changed => {
+      if (!changed) return;
+      invalidateSlothAutomaticProgress();
+      populateInlineButtons();
+      void refreshSlothRoleControls({forceRoles:true});
+    }).catch(error => console.warn('Memory Books lorebook rename verification stopped:', error));
   });
   eventSource.on(event_types.CHARACTER_RENAMED, async (oldAvatar, newAvatar) => {
     const settings = initializeSettings();
@@ -14463,8 +14475,16 @@ function setupEventListeners() {
   });
   eventSource.on(event_types.CHAT_RENAMED, async event => {
     if (!event?.avatarId || event.groupId) return;
+    const oldFile = String(event.oldFileName || '').replace(/\.jsonl$/iu, '');
+    const newFile = String(event.newFileName || '').replace(/\.jsonl$/iu, '');
+    const settings = initializeSettings();
+    if (renameNexusChatRoleOverride(settings.nexusChatRoleOverrides, event.avatarId, oldFile, newFile)) {
+      saveSettingsDebounced();
+      populateInlineButtons();
+      await refreshSlothRoleControls({forceRoles:true});
+    }
     const character = characters?.find(item=>item?.avatar===event.avatarId);
-    await queueSlothSideRename({type:'chat',avatar:event.avatarId,oldFile:event.oldFileName,newFile:event.newFileName},
+    await queueSlothSideRename({type:'chat',avatar:event.avatarId,oldFile,newFile},
       getLinkedCharacterWorlds({character,worldInfo:world_info,worldNames:world_names}));
   });
   eventSource.on(event_types.CHARACTER_EDITED, (payload) => {

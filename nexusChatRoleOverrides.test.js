@@ -5,13 +5,22 @@ import assert from 'node:assert/strict';
 import {
     getNexusChatRoleOverride, setNexusChatRoleOverride, clearNexusChatRoleOverride,
     moveNexusChatRoleOverrides, removeNexusChatRoleOverrides,
-    canChangeNexusChatRolePair,
+    canChangeNexusChatRolePair, renameNexusChatRoleOverride,
 } from './nexusChatRoleOverrides.js';
 
 const original = {type:'character',avatarUrl:'Remus.png',fileName:'Paris-AU'};
 const key = 'character:Remus.png:Paris-AU';
 const other = {...original,fileName:'Paris-AU-copy'};
 const defaults = {nexus:'Remus Nexus',memory:'Remus Memory'};
+
+test('native chat rename carries only that chat’s AU override forward',()=>{
+    const store={};
+    setNexusChatRoleOverride(store,original,key,defaults);
+    assert.equal(renameNexusChatRoleOverride(store,'Remus.png','Paris-AU','Paris-continued'),true);
+    const renamed={...original,fileName:'Paris-continued'};
+    assert.deepEqual(getNexusChatRoleOverride(store,renamed,'character:Remus.png:Paris-continued'),{...defaults,invalid:false});
+    assert.equal(getNexusChatRoleOverride(store,original,key),null);
+});
 
 test('chat override is explicitly opt-in, does not mutate defaults or apply to a fork', () => {
     const store={};

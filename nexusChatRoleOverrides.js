@@ -47,6 +47,17 @@ export function clearNexusChatRoleOverride(store, ref, chatKey) {
     return true;
 }
 
+export function renameNexusChatRoleOverride(store, avatar, oldFile, newFile) {
+    if (!isRecord(store) || !name(avatar) || !name(oldFile) || !name(newFile) || oldFile === newFile) return false;
+    const previousKey = 'character:' + avatar + ':' + oldFile;
+    const nextKey = 'character:' + avatar + ':' + newFile;
+    const record = store[previousKey];
+    if (record?.version !== 1 || record.avatar !== avatar || Object.hasOwn(store, nextKey)) return false;
+    store[nextKey] = record;
+    delete store[previousKey];
+    return true;
+}
+
 // Avatar filenames, not character display names, define ST character identity.
 // Preserve per-chat separation if a character's avatar filename changes.
 export function moveNexusChatRoleOverrides(store, fromAvatar, toAvatar) {

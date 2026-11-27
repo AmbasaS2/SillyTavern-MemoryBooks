@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · Prüfen und speichern",
   "STMemoryBooks_SlothAIModule": "KI-Profil für die Erinnerungssammlung",
   "STMemoryBooks_SlothAdvancedLegacy": "Ursprüngliche Memory-Books-Werkzeuge und erweiterte Einstellungen",
-  "STMemoryBooks_SlothEditNexusOperation": "Prüfe oder bearbeite die vorgeschlagene Nexus-Änderung. Die Quellenprüfung bleibt aktiv."
+  "STMemoryBooks_SlothEditNexusOperation": "Prüfe oder bearbeite die vorgeschlagene Nexus-Änderung. Die Quellenprüfung bleibt aktiv.",
+  "STMemoryBooks_SlothLegacyCoverage": "Bereits zusammengefasste Nachrichten prüfen",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "Gib nur Nachrichtenbereiche ein, die bereits im gewählten Memory-Buch erfasst sind. Verwende Chatnachrichtennummern, z. B. 0-18, 22-25. Lass das Feld leer, um die Bereiche zu löschen.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Bereits geprüfte Nachrichten wurden geändert. Prüfe oder lösche ihre Bereiche unter „Vorhandene Erinnerungen verwalten“."
 }

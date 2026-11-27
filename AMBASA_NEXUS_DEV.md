@@ -14,13 +14,13 @@ Reviewed source baseline: [main `0883ddc`](https://github.com/AmbasaS2/SillyTave
 
 - **2026-11-27 recall UI:** injection settings default to collapsed; Nexus and Memory columns wrap according to panel width. Icon pickers choose each type independently. NPC collection remains enabled (legacy off falls back to the configured detail mode). Node tests 548/548 and Bun build passed; actual ST rendering and real-model comparison remain pending.
 
-### Open compatibility checks for replacing manual memory updates
+### Taking over a manually maintained story
 
-These are source-review findings, not completed fixes:
-
-1. `stageMemoryScenes` in `nexusCollectionPolicy.js` rotates active entries with both `stmemorybooks === true` and `STMB_sourceRanges`, plus recognized merge/split history. A previously hand-authored complete Scene without those markers can retain its old constant flag when new Scenes arrive. Verify/import the old completed Scene set and ordering without blindly changing unrelated or disabled entries; add a mixed legacy/new rotation regression.
-2. `activeSource` in `nexusCollectorRuntime.js` excludes hidden/system messages and verified Sloth collection receipts / matching `STMB_sourceRanges`. It intentionally does not treat old `STMB_start/end` or a legacy processed checkpoint alone as collection proof. Previously summarized but still-visible messages may therefore be collected again. A reviewed legacy boundary or provenance import is needed for a seamless handoff; never invent a receipt or Hide uncertain ranges.
-3. Model completion judgments and Nexus delta coverage are imperfect. A structurally valid Scene can be saved (and optionally hidden) while some Nexus changes are skipped. Keep Hide optional; inspect saved Scene and Nexus content, especially at migration and on incomplete events. Test old/manual and new collections with a copied chat and both books before trusting unattended use. Prompt parity, original-data preservation and actual injection must be checked separately.
+1. Numbered, active entries with a completed Scene and Result participate in recent-three rotation when a new Scene is saved. Existing content, source metadata, archived entries, Outlets, and disabled entries are preserved. Keyword rotation still requires older Scenes to have recall keywords.
+2. In **Manage existing memories → Review previously summarized messages**, enter the exact ranges that are already covered. Check the displayed endpoints before saving. The record is scoped to this chat and Nexus/Memory pair. A source edit inside a reviewed span requires reviewing or clearing the span again. Legacy numeric hints alone do not skip any messages.
+3. Reuse the existing active Long-Term Memory, Scene Continuity, Status, LT, and NPC UIDs. Preserve their activation settings. Compare aliases and topic context before creating an entry. An explicit NPC alias or a qualified form of an existing name can block a duplicate without merging two existing entries.
+4. A native chat rename carries the same per-chat role assignment forward. A native World Info rename can retarget Sloth role names and Side Prompt story links when the editor supplies a unique, exact copy followed by the removal of the old filename. An ambiguous copy cannot be used to infer a rename.
+5. Model classification and proposed edits still require empirical comparison. A structurally valid Scene can be saved while an invalid Nexus change is skipped.
 
 Historical development log follows. Do not treat its old draft-only, no-main, or not-implemented statements as present instructions.
 

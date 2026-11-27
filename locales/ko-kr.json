@@ -1938,5 +1938,8 @@
   "STMemoryBooks_SlothStepSave": "3 · 승인 후 저장",
   "STMemoryBooks_SlothAIModule": "수집에 사용할 AI",
   "STMemoryBooks_SlothAdvancedLegacy": "메모리북 프로필·프롬프트 설정과 기존 구간 지정 도구입니다.",
-  "STMemoryBooks_SlothEditNexusOperation": "제안된 Nexus 변경을 검토하거나 수정하세요. 원문 근거 검사는 유지됩니다."
+  "STMemoryBooks_SlothEditNexusOperation": "제안된 Nexus 변경을 검토하거나 수정하세요. 원문 근거 검사는 유지됩니다.",
+  "STMemoryBooks_SlothLegacyCoverage": "이미 요약한 메시지 범위 확인",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "선택된 Memory에 이미 담긴 범위만 채팅 메시지 번호로 입력하세요. 예시는 0-18, 22-25입니다. 비워 두고 저장하면 범위를 해제합니다.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "이전에 확인한 메시지가 변경되었습니다. 기억 관리에서 범위를 다시 확인하거나 해제하세요."
 }

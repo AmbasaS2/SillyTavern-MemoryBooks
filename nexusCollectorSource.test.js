@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {fingerprintSlothChat} from './nexusCollectionPolicy.js';
+import {fingerprintSlothChat,fingerprintSlothReviewedRanges} from './nexusCollectionPolicy.js';
 
 const source=readFileSync(new URL('./nexusCollectorRuntime.js',import.meta.url),'utf8');
-const start=source.indexOf('function activeSource(');
+const start=source.indexOf('const legacyPairKey');
 const end=source.indexOf('\nfunction readableSegments(',start);
 assert.ok(start>=0&&end>start);
 const body=source.slice(start,end);
@@ -16,8 +16,8 @@ function harness() {
         slothCollection:{chatKey:'character:A.png:chat-a',books:{nexus:'N',memory:'M'},savedRanges:[[1,1]]},
     };
     const current={type:'character',avatarUrl:'A.png',fileName:'chat-a'};
-    const scope={chat,getSceneMarkers:()=>metadata,
-        getStmbChatKey:()=> 'character:A.png:chat-a'};
+    const scope={chat,getSceneMarkers:()=>metadata,t:message=>message,fingerprintSlothReviewedRanges,
+        getStmbChatKey:ref=> 'character:A.png:'+(ref?.fileName||'chat-a')};
     const fn=vm.runInNewContext(body+'\nactiveSource',scope);
     return {fn,metadata,chat,current};
 }
@@ -37,6 +37,26 @@ test('branch copy of collection ledger is ignored when chat key differs',()=>{
     h.metadata.slothCollection.chatKey='character:A.png:another-branch';
     const out=h.fn(h.current,{entries:{}},{nexus:'N',memory:'M'});
     assert.deepEqual(Array.from(out.source,m=>m.id),[0,1,2,3,4,5,6,7,8,9]);
+});
+
+test('reviewed legacy ranges exclude only the confirmed messages of the same chat and book pair',()=>{
+    const h=harness();
+    const pair={nexus:'N',memory:'M'};
+    const ranges=[[0,2],[4,4]];
+    h.metadata.slothLegacyCoverage={
+        '["N","M"]':{version:1,chatKey:'character:A.png:chat-a',ranges,
+            fingerprint:fingerprintSlothReviewedRanges(h.chat,ranges)},
+    };
+    assert.deepEqual(Array.from(h.fn(h.current,{entries:{}},pair).source,m=>m.id),[3,5,6,7,8,9]);
+    assert.deepEqual(Array.from(h.fn({...h.current,fileName:'alternate'},{entries:{}},pair).source,m=>m.id),[0,1,2,3,4,5,6,7,8,9]);
+    assert.deepEqual(Array.from(h.fn(h.current,{entries:{}},{...pair,memory:'Other'}).source,m=>m.id),[0,1,2,3,4,5,6,7,8,9]);
+    h.chat[2].is_system=true;
+    h.chat.push({name:'B',mes:'New turn'});
+    assert.deepEqual(Array.from(h.fn(h.current,{entries:{}},pair).source,m=>m.id),[3,5,6,7,8,9,10]);
+    h.chat[2].mes='Edited old source';
+    assert.throws(()=>h.fn(h.current,{entries:{}},pair),/Previously reviewed messages changed/);
+    delete h.metadata.slothLegacyCoverage['["N","M"]'];
+    assert.ok(h.fn(h.current,{entries:{}},pair).source.some(m=>m.id===0));
 });
 test('hidden messages remain outside source and are never marked collected automatically',()=>{
     const h=harness();h.chat[8].is_system=true;
@@ -74,7 +94,7 @@ test('the collection receipt is tied to persisted source and is reread after met
             stored = patch(stored);
         },
     };
-    const first = source.indexOf('async function readReviewedChat(');
+    const first = source.indexOf('async function readStoredSlothChat(');
     const last = source.indexOf('\nfunction assertSlothBookRoles(', first);
     const write = vm.runInNewContext(source.slice(first, last) + '\nupdateCollectedLedger', checks);
     const pair = { nexus: 'N', memory: 'M' };

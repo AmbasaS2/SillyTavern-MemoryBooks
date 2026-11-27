@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · 批准并保存",
   "STMemoryBooks_SlothAIModule": "用于收集记忆的 AI 配置",
   "STMemoryBooks_SlothAdvancedLegacy": "原版 Memory Books 工具和高级设置",
-  "STMemoryBooks_SlothEditNexusOperation": "审核或修改拟议的 Nexus 更改；原文证据检查仍会执行。"
+  "STMemoryBooks_SlothEditNexusOperation": "审核或修改拟议的 Nexus 更改；原文证据检查仍会执行。",
+  "STMemoryBooks_SlothLegacyCoverage": "核对已总结的消息",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "只输入所选 Memory 已涵盖的消息范围。请使用聊天消息编号，例如 0-18, 22-25。留空即可清除这些范围。",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "之前核对过的消息发生了变化。请在管理现有记忆中重新核对或清除范围。"
 }

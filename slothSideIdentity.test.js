@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeSlothSideRename, planSlothSideSettingsRename, stageSlothSideIdentityRename } from './slothSideIdentity.js';
+import { normalizeSlothSideRename, planSlothSideSettingsRename, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
 import { createMessageDeletionTracker } from './memoryRollback.js';
 import { automaticCollectionDue, createAutomaticTokenCounter, createAutomaticTokenUpperBound } from './slothAutomaticCollection.js';
 
@@ -49,6 +49,29 @@ test('conflicting destination settings or history fail closed',()=>{
     const change=normalizeSlothSideRename({type:'avatar',avatar:'A.png',newAvatar:'B.png'});
     assert.throws(()=>planSlothSideSettingsRename({slothSideSlots:{'A.png':['one'],'B.png':['two']}},change),/conflict/);
     assert.throws(()=>stageSlothSideIdentityRename({entries:{1:note('A.png','chat'),2:note('B.png','chat',2)}},change),/conflict/);
+});
+
+test('lorebook rename retargets matching story links without replacing side prompt UIDs or touching another AU',()=>{
+    const change=normalizeSlothSideRename({type:'lorebook',oldBook:'Old Nexus',newBook:'New Nexus'});
+    const diary=note('A.png','chat');
+    diary.STMB_sidePromptHistory.storyKey=key('A.png','Old Nexus','Memory');
+    const other=note('A.png','alternate',2);
+    other.STMB_sidePromptHistory.storyKey=key('A.png','Separate Nexus','Separate Memory');
+    const original={entries:{1:diary,2:other},extensions:{stmbNexusSetup:{version:1,pairedBook:'Old Nexus'}}};
+    const staged=stageSlothSideIdentityRename(original,change);
+    assert.equal(staged.entries[1].STMB_sidePromptHistory.storyKey,key('A.png','New Nexus','Memory'));
+    assert.equal(staged.entries[1].uid,diary.uid);
+    assert.equal(staged.entries[1].content,diary.content);
+    assert.deepEqual(staged.entries[2],other);
+    assert.equal(staged.extensions.stmbNexusSetup.pairedBook,'New Nexus');
+    const settings={nexusCharacterRoles:{'A.png':{nexus:'Old Nexus',memory:'Memory'}},
+        nexusChatScopedWorlds:{'A.png':['Old Nexus','Separate Nexus']}};
+    retargetSlothLorebookRoles(settings,change);
+    assert.equal(settings.nexusCharacterRoles['A.png'].nexus,'New Nexus');
+    assert.deepEqual(settings.nexusChatScopedWorlds['A.png'],['New Nexus','Separate Nexus']);
+    const target=key('A.png','chat','sloth-diary');
+    assert.deepEqual(planSlothSideSettingsRename({slothSideEntries:{[target]:{book:'Old Nexus',uid:1}}},change)
+        .slothSideEntries[target],{book:'New Nexus',uid:1});
 });
 
 test('deletion snapshot only reads the changed text for append/edit and drops inactive snapshots',()=>{

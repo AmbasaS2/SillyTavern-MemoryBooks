@@ -398,6 +398,7 @@ function slothNexusGuidance({nexus,plan,settings,initial,characterContext,partia
             ['Supply specific literal recall keywords for each new Nexus entry. Never overwrite existing entry activation settings.']:[]),
         'For an existing NPC Index use the latest consequential role-relevant change, not the latest mention. Keep continuing role, tie, personality cue, current anchor and attributed knowledge separate.',
         'An existing NPC may be updated if its lasting role or knowledge changed. Keep one-off people and near-term business within the Scene or continuity.',
+        'Before creating LT or NPC, match the subject with existing titles, aliases, former names, and body context. If the same relationship, topic, or person already has a UID, update that UID even if the new wording or name differs. A different surname spelling or honorific alone is not evidence of a new person.',
         ...(initial?[
             'This is a first collection from an empty Nexus. Propose only create edits; use distinct Core Memory and Current Continuity entries when evidence supports each.',
             'Do not create an NPC Index as a default. Do not seed entries with placeholders or infer events or personal states from the character card.',

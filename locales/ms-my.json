@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · Luluskan dan simpan",
   "STMemoryBooks_SlothAIModule": "Profil AI untuk pengumpulan memori",
   "STMemoryBooks_SlothAdvancedLegacy": "Alat Memory Books asal dan tetapan lanjutan",
-  "STMemoryBooks_SlothEditNexusOperation": "Semak atau sunting perubahan Nexus yang dicadangkan. Semakan sumber masih diwajibkan."
+  "STMemoryBooks_SlothEditNexusOperation": "Semak atau sunting perubahan Nexus yang dicadangkan. Semakan sumber masih diwajibkan.",
+  "STMemoryBooks_SlothLegacyCoverage": "Semak mesej yang sudah diringkaskan",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "Masukkan hanya julat mesej yang telah dirangkumi dalam buku Memory yang dipilih. Gunakan nombor mesej sembang, contohnya 0-18, 22-25. Biarkan kosong untuk mengosongkan julat ini.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Mesej yang telah disemak berubah. Semak atau kosongkan julatnya dalam Urus ingatan sedia ada."
 }

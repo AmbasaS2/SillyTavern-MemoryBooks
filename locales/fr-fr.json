@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · Approuver et enregistrer",
   "STMemoryBooks_SlothAIModule": "Profil IA pour collecter les souvenirs",
   "STMemoryBooks_SlothAdvancedLegacy": "Outils Memory Books d’origine et paramètres avancés",
-  "STMemoryBooks_SlothEditNexusOperation": "Vérifiez ou modifiez la proposition de modification de Nexus. La vérification des sources reste active."
+  "STMemoryBooks_SlothEditNexusOperation": "Vérifiez ou modifiez la proposition de modification de Nexus. La vérification des sources reste active.",
+  "STMemoryBooks_SlothLegacyCoverage": "Vérifier les messages déjà résumés",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "Saisis uniquement les plages de messages déjà couvertes par le livre Memory sélectionné. Utilise les numéros des messages, par exemple 0-18, 22-25. Laisse le champ vide pour effacer ces plages.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Les messages déjà vérifiés ont changé. Vérifie ou efface leurs plages dans Gérer les souvenirs existants."
 }

@@ -14,6 +14,10 @@ const own = (obj,key) => Object.hasOwn(obj || {},key);
 const fields = ['slothSideBooks','slothSideCharacterLinks','slothSideEntries','slothSideSlots'];
 
 export function normalizeSlothSideRename(change) {
+    if (change.type === 'lorebook') {
+        const oldBook = name(change.oldBook), newBook = name(change.newBook);
+        return oldBook && newBook && oldBook !== newBook ? {type:'lorebook',oldBook,newBook} : null;
+    }
     const avatar = name(change?.avatar);
     const newAvatar = name(change?.newAvatar);
     if (!avatar) return null;
@@ -27,6 +31,7 @@ export function normalizeSlothSideRename(change) {
 
 export function sideRenameMatches(change, ref) {
     if (!ref || ref.type !== 'character') return false;
+    if (change.type === 'lorebook') return true;
     if (change.type === 'avatar') return [change.avatar,change.newAvatar].includes(ref.avatarUrl);
     return change.avatar === ref.avatarUrl && [change.oldFile,change.newFile].includes(ref.fileName);
 }
@@ -48,6 +53,16 @@ function remapKey(key, field, change) {
 
 // Plan without mutation. A destination conflict is never silently overwritten.
 export function planSlothSideSettingsRename(params, change) {
+    if (change.type === 'lorebook') {
+        const destinations = params?.slothSideBooks;
+        const entries = params?.slothSideEntries;
+        return {
+            ...(destinations && {slothSideBooks:Object.fromEntries(Object.entries(destinations)
+                .map(([key,book])=>[key,book === change.oldBook ? change.newBook : book]))}),
+            ...(entries && {slothSideEntries:Object.fromEntries(Object.entries(entries)
+                .map(([key,entry])=>[key,entry?.book === change.oldBook ? {...entry,book:change.newBook} : entry]))}),
+        };
+    }
     const patch = {};
     for (const field of fields) {
         const store = params?.[field];
@@ -73,6 +88,18 @@ export function slothSideRenameBooks(settings, change) {
     const avatars = new Set([change.avatar,change.newAvatar].filter(Boolean));
     const books = new Set();
     const add = value => { if (name(value) && value !== ':little-things:') books.add(value); };
+    if (change.type === 'lorebook') {
+        for (const roles of [...Object.values(settings?.nexusCharacterRoles || {}),
+            ...Object.values(settings?.nexusChatRoleOverrides || {})]) {
+            add(roles?.nexus); add(roles?.memory);
+        }
+        for (const values of Object.values(settings?.nexusChatScopedWorlds || {}))
+            for (const book of Array.isArray(values) ? values : []) add(book);
+        for (const book of Object.values(params.slothSideBooks || {})) add(book);
+        for (const entry of Object.values(params.slothSideEntries || {})) add(entry?.book);
+        add(change.newBook);
+        return [...books];
+    }
     for (const [key,value] of Object.entries(params.slothSideBooks || {}))
         if (avatars.has(parse(key)?.[0])) add(value);
     for (const [key,value] of Object.entries(params.slothSideEntries || {}))
@@ -87,7 +114,33 @@ export function slothSideRenameBooks(settings, change) {
     return [...books];
 }
 
+export function retargetSlothLorebookRoles(settings, {oldBook,newBook}) {
+    const retarget = book => book === oldBook ? newBook : book;
+    for (const roles of [...Object.values(settings.nexusCharacterRoles || {}),
+        ...Object.values(settings.nexusChatRoleOverrides || {})]) {
+        const nexus = retarget(roles.nexus), memory = retarget(roles.memory);
+        if (nexus && memory && nexus === memory) throw new Error('Renamed lorebook would merge two story roles.');
+    }
+    for (const roles of [...Object.values(settings.nexusCharacterRoles || {}),
+        ...Object.values(settings.nexusChatRoleOverrides || {})]) {
+        roles.nexus = retarget(roles.nexus);
+        roles.memory = retarget(roles.memory);
+    }
+    for (const [avatar,books] of Object.entries(settings.nexusChatScopedWorlds || {})) {
+        if (Array.isArray(books) && books.includes(oldBook))
+            settings.nexusChatScopedWorlds[avatar] = [...new Set(books.map(retarget))];
+    }
+}
+
 function remapHistory(history, change) {
+    if (change.type === 'lorebook') {
+        const story = parse(history?.storyKey);
+        if (!Array.isArray(story) || story.length !== 3 || !story.slice(1).includes(change.oldBook)) return false;
+        const next = story.map((value,index)=>index > 0 && value === change.oldBook ? change.newBook : value);
+        if (next[1] === next[2]) throw new Error('Renamed lorebook would merge two Side Prompt story roles.');
+        history.storyKey = JSON.stringify(next);
+        return true;
+    }
     const tuple = parse(history?.chatKey);
     if (!Array.isArray(tuple) || tuple.length !== 3 || tuple[0] !== 'character' || tuple[1] !== change.avatar)
         return false;
@@ -134,6 +187,11 @@ export function stageSlothSideIdentityRename(original, change) {
     const staged = structuredClone(original);
     let changed = false;
     const marker = staged?.extensions?.stmbSlothSideBook;
+    const setup = staged?.extensions?.stmbNexusSetup;
+    if (change.type === 'lorebook' && setup?.version === 1 && setup.pairedBook === change.oldBook) {
+        setup.pairedBook = change.newBook;
+        changed = true;
+    }
     if (change.type === 'avatar' && marker?.version === 1 && marker.avatar === change.avatar) {
         marker.avatar = change.newAvatar;
         changed = true;

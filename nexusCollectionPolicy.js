@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Pure, loss-averse event validation and World Info staging.
 
-import { planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
+import { isCompletedSceneEntry, planNexusSceneRotation, sceneNumberFromTitle } from './nexusSceneRotation.js';
 import { appendContinuitySection, guardContinuityChange, legacyContinuitySectionStart,
     guardNewContinuityContent } from './nexusContinuitySections.js';
 import { isAllowedContinuityRetirement } from './nexusEditEvidence.js';
 import { classifyNexusLegacyTitle } from './nexusLegacyMigration.js';
+import { stableHashString } from './clipReviewPolicy.js';
 
 const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = v => typeof v === 'string' ? v.trim() : '';
@@ -251,6 +252,19 @@ export function fingerprintSlothChat(chat,ids,{allowHidden=false}={}) {
     })});
 }
 
+export function fingerprintSlothReviewedRanges(chat, ranges) {
+    return stableHashString(JSON.stringify(ranges.map(([start, end]) => {
+        requireThat(Number.isSafeInteger(start) && Number.isSafeInteger(end) &&
+            start >= 0 && start <= end && end < chat.length, 'Invalid reviewed chat range.');
+        return [start, end, chat.slice(start, end + 1).map(message => {
+            requireThat(message && typeof message.mes === 'string', 'A reviewed message is missing.');
+            // Hiding a message or appending a new turn does not change its source text.
+            return stableHashString(JSON.stringify([message.name, message.mes, message.is_user,
+                message.send_date, message.swipe_id ?? null]));
+        })];
+    })));
+}
+
 const SINGLETON_ROLES = new Map([
     ['core memory', 'core'], ['current continuity', 'continuity'], ['npc index', 'npc-index'],
 ]);
@@ -260,6 +274,19 @@ const normalizedTitle = title => str(title).normalize('NFKC').toLowerCase().repl
 const detailIdentity = title => normalizedTitle(title).replace(DETAIL_TITLE, '$2')
     .normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
     .replace(/^mme\s/u, 'madame ');
+function detailIdentities(title, kind, content = '') {
+    const subject = normalizedTitle(title).replace(DETAIL_TITLE, '$2');
+    const names = [subject];
+    if (kind === 'npc') {
+        // Explicitly labelled aliases are evidence of identity. A surname or
+        // a mention in prose can also refer to another person.
+        const qualified = subject.match(/^(.+?)\s*\(([^()]+)\)\s*$/u);
+        if (qualified) names.push(qualified[1]);
+        const aliases = String(content || '').matchAll(/^(?:[-*]\s*)?(?:\*\*)?(?:aliases?|aka|also known as):(?:\*\*)?[ \t]+([^\r\n]+)$/gimu);
+        for (const [, aliasLine] of aliases) names.push(...aliasLine.split(/[,;|]/u));
+    }
+    return new Set(names.map(detailIdentity).filter(Boolean));
+}
 export function getNexusRecallModes(moduleSettings={}) {
     const modes=moduleSettings.nexusRecallModes||{};
     const detail=moduleSettings.nexusDetailRecallMode==='keyword'?'keyword':'vector';
@@ -280,9 +307,9 @@ export function describeNexusCollectionEntry(entry) {
         /^\[Enduring relationship \/ shared priorities\][ \t]*\r?$/imu.test(content);
     const roles = [];
     if (singleton) roles.push(singleton);
-    else if ((entry?.constant === true || entry?.STMB_slothManagedLegacyRole === true) && (legacy || recognizedCore)) {
+    else if (legacy || (recognizedCore && (entry?.constant === true || entry?.STMB_slothManagedLegacyRole === true))) {
         if (legacy === 'core' || recognizedCore) roles.push('core');
-        if (legacy === 'continuity' || recognizedState) roles.push('continuity');
+        if (legacy === 'continuity' || legacy === 'status' || recognizedState) roles.push('continuity');
     }
     if (!roles.length && !legacy) {
         const kind = title.match(DETAIL_TITLE)?.[1].toLowerCase() || entry?.STMB_slothNexusKind;
@@ -324,13 +351,13 @@ export function stageNexusEdits(original, edits, createEntry, {detailRecallMode=
             if(kind==='continuity')requireThat(title==='Current Continuity','Continuity title mismatch.');
             if(title==='Core Memory')requireThat(kind==='core','Core Memory must use core kind.');
             if(title==='Current Continuity')requireThat(kind==='continuity','Continuity must use continuity kind.');
-            const identity = detailIdentity(title);
+            const identities = detailIdentities(title,kind,content);
             const target = Object.values(staged.entries).find(entry => {
                 if (!entry || (entry.disable && !isUninjectedManagedEntry(entry)) || entry.STMB_slothLegacyArchive) return false;
                 const {roles} = describeNexusCollectionEntry(entry);
                 if (kind === 'core' || kind === 'continuity' || kind === 'npc-index') return roles.includes(kind);
-                return identity && detailIdentity(entry.comment) === identity &&
-                    (roles.includes(kind) || !roles.length);
+                return (roles.includes(kind) || !roles.length) &&
+                    [...detailIdentities(entry.comment,kind,entry.content)].some(identity=>identities.has(identity));
             });
             requireThat(!target, `Duplicate Nexus role or detail. Use existing UID ${target?.uid ?? ''}.`);
             const newRoles = describeNexusCollectionEntry({comment:title}).roles;
@@ -464,7 +491,9 @@ export function stageMemoryScenes(original,scenes,createEntry,{chatId='',olderMo
         writes.push({uid:entry.uid,title:entry.comment,segments:item.segments});
     }
     const entries=Object.fromEntries(Object.entries(staged.entries).filter(([,entry])=>
-        (entry.stmemorybooks===true && Array.isArray(entry.STMB_sourceRanges) && !entry.disable) ||
+        (!entry.disable && !entry.outletName && Number(entry.position)!==7 &&
+            !entry.STMB_slothSideNote && !entry.STMB_sidePromptHistory &&
+            ((entry.stmemorybooks===true && Array.isArray(entry.STMB_sourceRanges)) || isCompletedSceneEntry(entry))) ||
         entry.STMB_slothSceneMergedInto || entry.STMB_slothSceneMerge ||
         entry.STMB_slothSceneSplitArchive || entry.STMB_slothSceneSplitFrom));
     const rotated=planNexusSceneRotation({entries},{olderMode});

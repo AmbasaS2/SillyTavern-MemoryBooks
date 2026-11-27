@@ -228,6 +228,7 @@ export const settingsTemplate = Handlebars.compile(`
             <summary data-i18n="STMemoryBooks_SlothManageBooks">Manage existing memories</summary>
             <div>
               <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="recall-apply" data-i18n="STMemoryBooks_SlothRecallApplyExisting">Change existing memory injection</button></div>
+              <div class="stmb-management-action"><button type="button" class="menu_button" data-stmb-sloth-action="legacy-coverage" data-i18n="STMemoryBooks_SlothLegacyCoverage">Review previously summarized messages</button></div>
               <div class="stmb-management-action">
               <div class="stmb-sloth-help-row"><button type="button" class="menu_button" data-stmb-sloth-action="merge" data-i18n="STMemoryBooks_SlothMergeButton">Review existing Scene merges</button> <button type="button" id="stmb-sloth-merge-help-toggle" class="stmb-sloth-info" aria-expanded="false" aria-controls="stmb-sloth-merge-help" aria-label="Review existing Scene merges" data-i18n="[aria-label]STMemoryBooks_SlothMergeButton"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button></div>
               <small id="stmb-sloth-merge-help" class="stmb-sloth-help" data-i18n="STMemoryBooks_SlothMergeHelp" hidden>Existing complete Scenes can be reviewed for causal overlaps. You choose a pair, check the combined text, and back up Memory before any change. Nothing merges automatically.</small>

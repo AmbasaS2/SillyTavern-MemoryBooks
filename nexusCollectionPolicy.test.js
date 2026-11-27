@@ -137,6 +137,24 @@ test('legacy mixed Nexus updates the same active core and continuity UID in plac
   assert.deepEqual(describeNexusCollectionEntry({...entry,position:7}).protected,true);
 });
 
+test('active legacy Status and Scene Continuity are editable in place with their original activation and metadata', () => {
+  const entries={
+    3:{uid:3,comment:'Status',content:'[Physical carryover]\nThe wrist hurts.',constant:false,vectorized:true,stlo:{keep:42}},
+    4:{uid:4,comment:'Scene Continuity',content:'Waiting beside the door.',constant:false,key:['door'],selective:true},
+    5:{uid:5,comment:'Status (archived)',content:'Preserve',disable:true,constant:true},
+  };
+  const original={entries,stlo:{priority:40}};
+  const {staged}=stageNexusEdits(original,[
+    {kind:'continuity',action:'replace_exact',uid:3,find:'The wrist hurts.',text:'The wrist improved.'},
+    {kind:'continuity',action:'append_section',uid:4,section:'Present Handoff',text:'The guest has arrived.'},
+  ],()=>assert.fail('must reuse the existing UID'));
+  assert.deepEqual(staged.entries[3],{...entries[3],content:'[Physical carryover]\nThe wrist improved.'});
+  assert.match(staged.entries[4].content,/^Waiting beside the door\.[\s\S]+The guest has arrived\.$/u);
+  assert.deepEqual({...staged.entries[4],content:entries[4].content},entries[4]);
+  assert.deepEqual(staged.entries[5],entries[5]);
+  assert.deepEqual(staged.stlo,original.stlo);
+});
+
 test('a new numbered detail cannot duplicate an existing person or topic', () => {
   const entries = {
     3:{uid:3,comment:'NPC 02 | Mme. Émilie Duval',content:'Known person.'},
@@ -265,6 +283,14 @@ test('Nexus new Core / Continuity are configured always-on; duplicate titles are
   assert.equal(book.entries[1],undefined);
   assert.throws(()=>stageNexusEdits(book,[{kind:'lt',action:'create',title:'Original',content:'duplicate'}],maker),/Duplicate/);
 });
+
+test('NPC creations cannot duplicate an explicit alias or add a parenthetical qualifier to an existing name',()=>{
+  const book={entries:{1:{uid:1,comment:'NPC 01 | Beatrice Vale',content:'Aliases: Bea; The Archivist'}}};
+  const create=title=>stageNexusEdits(book,[{kind:'npc',action:'create',title,content:'A distinct role'}],maker);
+  assert.throws(()=>create('NPC - The Archivist'),/Use existing UID 1/);
+  assert.throws(()=>create('NPC - Beatrice Vale (archivist)'),/Use existing UID 1/);
+  assert.equal(create('NPC - Felix Vale').changes.length,1);
+});
 test('Memory stage keeps three latest complete scenes active, original book unchanged',()=>{
   const book={entries:{0:{uid:0,comment:'001 - Old',content:story,key:[],constant:true,vectorized:false},
     1:{uid:1,comment:'002 - Next',content:story,key:[],constant:true,vectorized:false},
@@ -288,6 +314,23 @@ test('Memory stage keeps three latest complete scenes active, original book unch
   assert.deepEqual(out.staged.entries[99],before.entries[99]);
   assert.deepEqual(book,before);
   assert.throws(()=>stageMemoryScenes(book,[{title:'Incomplete',content:'No result',messageIds:[1],segments:[[1,1]]}],maker),/missing Timeline/);
+});
+
+test('new scenes rotate structurally complete manual Scenes without assigning provenance',()=>{
+  const book={entries:{
+    0:{uid:0,comment:'001 - Manual',content:story,key:['original'],constant:true,vectorized:false,legacy:{preserve:true}},
+    1:{uid:1,comment:'002 - Manual',content:story,key:['original'],constant:true},
+    2:{uid:2,comment:'003 - Manual',content:story,key:['original'],constant:true},
+    3:{uid:3,comment:'004 - Disabled',content:story,disable:true,constant:true},
+    4:{uid:4,comment:'005 - Outlet',content:story,position:7,outletName:'Archive',constant:true},
+    5:{uid:5,comment:'006 - Side',content:story,STMB_sidePromptHistory:{templateKey:'diary'},constant:true},
+  }};
+  const before=structuredClone(book);
+  const {staged}=stageMemoryScenes(book,[{title:'New',content:story,segments:[[4,4]],messageIds:[4]}],maker);
+  assert.deepEqual(staged.entries[0],{...before.entries[0],constant:false,vectorized:true});
+  for (const uid of [1,2,6]) assert.equal(staged.entries[uid].constant,true);
+  for (const uid of [3,4,5]) assert.deepEqual(staged.entries[uid],before.entries[uid]);
+  assert.deepEqual(book,before);
 });
 
 

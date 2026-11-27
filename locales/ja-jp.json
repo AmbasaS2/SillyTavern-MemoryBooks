@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · 承認して保存",
   "STMemoryBooks_SlothAIModule": "記憶収集用のAIプロファイル",
   "STMemoryBooks_SlothAdvancedLegacy": "従来のMemory Booksツールと詳細設定",
-  "STMemoryBooks_SlothEditNexusOperation": "提案されたNexusの変更を確認・編集できます。原文の根拠チェックは維持されます。"
+  "STMemoryBooks_SlothEditNexusOperation": "提案されたNexusの変更を確認・編集できます。原文の根拠チェックは維持されます。",
+  "STMemoryBooks_SlothLegacyCoverage": "要約済みのメッセージを確認",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "選択した Memory に保存済みのメッセージ範囲だけを入力してください。チャットのメッセージ番号を使用します（例 0-18, 22-25）。空欄で保存すると範囲を解除します。",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "確認済みのメッセージが変更されました。「既存の記憶を管理」で範囲を再確認するか解除してください。"
 }

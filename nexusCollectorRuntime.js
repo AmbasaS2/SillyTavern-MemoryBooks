@@ -17,7 +17,7 @@ import { translate } from '../../../i18n.js';
 import { getCurrentStmbChatRef, getStmbChatKey, patchStmbMetadataForChatRef, setSlothCollectionProgress, withStmbWriteLane } from './stmbJobs.js';
 import { getSceneMarkers } from './sceneManager.js';
 import { getActiveNexusRoleContext, getNexusRoleResolutionForChatRef } from './nexusCharacterRolesRuntime.js';
-import { parseReviewedSegments, fingerprintSlothChat, stageNexusEdits, stageMemoryScenes,
+import { parseReviewedSegments, fingerprintSlothChat, fingerprintSlothReviewedRanges, stageNexusEdits, stageMemoryScenes,
     getSlothHideRanges, normalizeSlothVisibleTail, slothSourceRanges, stageNexusRecallSettings, getNexusRecallModes } from './nexusCollectionPolicy.js';
 import { composeSingleSlothCollection, composeSlothScene,
     suggestSlothSceneMerges, composeSlothMergedScene, suggestSlothSceneSplit, compressSlothScene } from './nexusCollectionAI.js';
@@ -42,7 +42,7 @@ import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticToken
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
-    slothSideRenameBooks, stageSlothSideIdentityRename } from './slothSideIdentity.js';
+    slothSideRenameBooks, stageSlothSideIdentityRename, retargetSlothLorebookRoles } from './slothSideIdentity.js';
 
 const t=(source,key)=>translate(source,key);
 const html=value=>escapeHtml(String(value ?? ''));
@@ -218,6 +218,23 @@ function assertOrigin(ref, roles, sourceIds, sourceFingerprint, fingerprintOptio
     }
 }
 
+const legacyPairKey = roles => JSON.stringify([roles.nexus, roles.memory]);
+
+function getSlothLegacyCoverage(markers, chatKey, roles) {
+    const receipt = markers?.slothLegacyCoverage?.[legacyPairKey(roles)];
+    return receipt?.chatKey === chatKey ? receipt : null;
+}
+
+function assertSlothLegacyCoverage(receipt, messages = chat) {
+    if (!receipt) return;
+    try {
+        if (receipt.version === 1 && receipt.ranges.length &&
+            fingerprintSlothReviewedRanges(messages, receipt.ranges) === receipt.fingerprint) return;
+    } catch { /* The original range is no longer available. */ }
+    throw new Error(t('Previously reviewed messages changed. Review or clear their ranges in Manage existing memories.',
+        'STMemoryBooks_SlothLegacyCoverageChanged'));
+}
+
 function activeSource(ref, memoryBook, roleNames, afterId = -1) {
     const markers=getSceneMarkers()||{};
     const currentKey=getStmbChatKey(ref);
@@ -233,6 +250,9 @@ function activeSource(ref, memoryBook, roleNames, afterId = -1) {
         ranges.push([start,end]);
     };
     for(const pair of prior.savedRanges||[])addRange(pair);
+    const reviewed=getSlothLegacyCoverage(markers,currentKey,roleNames);
+    assertSlothLegacyCoverage(reviewed);
+    for(const pair of reviewed?.ranges||[])addRange(pair);
     // Existing entries for THIS exact chat are also authoritative receipts.
     const sourceChatIds=new Set([String(ref.fileName||''),String(ref.chatId||'')].filter(Boolean));
     for(const entry of Object.values(memoryBook?.entries||{})){
@@ -257,7 +277,7 @@ function activeSource(ref, memoryBook, roleNames, afterId = -1) {
         source.push({id,name:String(entry.name||''),mes:entry.mes,
             is_user:!!entry.is_user,send_date:entry.send_date||null});
     }
-    return {source,prior};
+    return {source,prior,reviewed};
 }
 
 function readableSegments(segments) {
@@ -304,6 +324,40 @@ const pendingSideRenames = settings => Array.isArray(settings?.moduleSettings?.s
     ? settings.moduleSettings.slothSidePendingRenames : [];
 let sideRenameTail = Promise.resolve();
 
+async function retargetActiveSlothReceipts(change) {
+    const ref=getCurrentStmbChatRef();
+    if (ref?.type !== 'character' || !ref.fileName) return;
+    const current=getStmbChatKey(ref);
+    const oldChatKey=change.type === 'chat' && ref.avatarUrl === change.avatar && ref.fileName === change.newFile
+        ? getStmbChatKey({...ref,fileName:change.oldFile}) : '';
+    if (!oldChatKey && change.type !== 'lorebook') return;
+    const retargetBooks=books=>books && change.type === 'lorebook' ? {
+        nexus:books.nexus === change.oldBook ? change.newBook : books.nexus,
+        memory:books.memory === change.oldBook ? change.newBook : books.memory,
+    } : books;
+    const replace=markers=>{
+        const next={...markers};
+        for (const key of ['slothCollection','slothAutomatic']) {
+            const receipt=markers[key];
+            if (receipt?.chatKey === (oldChatKey || current))
+                next[key]={...receipt,chatKey:current,books:retargetBooks(receipt.books)};
+        }
+        if (markers.slothLegacyCoverage) {
+            const entries=Object.entries(markers.slothLegacyCoverage).map(([key,receipt])=>{
+                if (receipt?.chatKey !== (oldChatKey || current)) return [key,receipt];
+                const [nexus,memory]=JSON.parse(key);
+                return [legacyPairKey(retargetBooks({nexus,memory})),{...receipt,chatKey:current}];
+            });
+            if (new Set(entries.map(([key])=>key)).size !== entries.length)
+                throw new Error('Renamed lorebook would combine distinct reviewed message ranges.');
+            next.slothLegacyCoverage=Object.fromEntries(entries);
+        }
+        return next;
+    };
+    const markers=getSceneMarkers();
+    if (stringify(markers) !== stringify(replace(markers))) await patchStmbMetadataForChatRef(ref,replace);
+}
+
 function assertSideRenameReady(ref) {
     if (pendingSideRenames(extension_settings.STMemoryBooks).some(change=>sideRenameMatches(change,ref)))
         throw new Error(t('Side Prompt rename recovery is pending. Reload SillyTavern to retry before saving.',
@@ -334,7 +388,8 @@ async function processSlothSideRenames() {
         if (!change) throw new Error('Invalid Side Prompt rename recovery record.');
         planSlothSideSettingsRename(params,change);
         const books = await listSlothSideBooks();
-        const owners = books.filter(book=>[change.avatar,change.newAvatar].filter(Boolean).includes(slothSideBookOwner(book)));
+        const owners = books.filter(book=>change.type === 'lorebook' ? Boolean(slothSideBookOwner(book)) :
+            [change.avatar,change.newAvatar].filter(Boolean).includes(slothSideBookOwner(book)));
         if (change.type === 'avatar' && owners.length > 1)
             throw new Error('Multiple dedicated Side Prompt lorebooks conflict after the character rename.');
         const names = new Set([...slothSideRenameBooks(settings,change),...(record.books || []),
@@ -364,6 +419,8 @@ async function processSlothSideRenames() {
         verifyOrigin();
         // Recheck rather than replacing any settings edited during the reads.
         const freshPatch = planSlothSideSettingsRename(params,change);
+        await retargetActiveSlothReceipts(change);
+        if (change.type === 'lorebook') retargetSlothLorebookRoles(settings,change);
         Object.assign(params,freshPatch);
         await persistSideRenameQueue(params,pendingSideRenames(settings).slice(1));
     }
@@ -398,6 +455,29 @@ export function retrySlothSideRenames() {
         await processSlothSideRenames();
     }).catch(reportSideRenameFailure);
     return sideRenameTail;
+}
+
+const possibleLorebookRenames = new Map();
+
+export function observeSlothLorebookSave(newBook, data, names) {
+    if (!Array.isArray(names) || names.includes(newBook)) return;
+    for (const [name, candidate] of possibleLorebookRenames) if (Date.now()>candidate.expires) possibleLorebookRenames.delete(name);
+    const settings=extension_settings.STMemoryBooks;
+    const recorded=slothSideRenameBooks(settings,{type:'lorebook',newBook});
+    const fingerprint=stringify(data);
+    const matches=recorded.filter(oldBook=>names.includes(oldBook) && worldInfoCache.has(oldBook) &&
+        stringify(worldInfoCache.get(oldBook)) === fingerprint);
+    if (matches.length === 1) possibleLorebookRenames.set(newBook,{oldBook:matches[0],fingerprint,expires:Date.now()+30000});
+}
+
+export async function finishSlothLorebookRename(newBook, names) {
+    const candidate=possibleLorebookRenames.get(newBook);
+    if (!candidate || !Array.isArray(names) || names.includes(candidate.oldBook) || !names.includes(newBook)) return false;
+    possibleLorebookRenames.delete(newBook);
+    if (Date.now()>candidate.expires || stringify(await loadServerWorld(newBook)) !== candidate.fingerprint) return false;
+    // ST's editor selects the new name after saving the exact copy and removing the old name.
+    await queueSlothSideRename({type:'lorebook',oldBook:candidate.oldBook,newBook});
+    return true;
 }
 
 async function resolveSlothSideBook(ref, books, {book: selected, create}, signal) {
@@ -716,20 +796,26 @@ async function withBothWriteLanes(names,task) {
     return await visit(0);
 }
 
-async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions, hiddenRanges=[]) {
+async function readStoredSlothChat(ref) {
     const response = await fetch('/api/chats/get', {
         method: 'POST', headers: getRequestHeaders(),
         body: stringify({ avatar_url: ref.avatarUrl, file_name: ref.fileName }),
     });
     if (!response.ok) throw new Error('The original chat could not be read from SillyTavern.');
     const stored = await response.json();
-    if (!Array.isArray(stored) || !stored[0]?.chat_metadata ||
-        fingerprintSlothChat(stored.slice(1), sourceIds, fingerprintOptions) !== fingerprint) {
+    if (!Array.isArray(stored) || !stored[0]?.chat_metadata) throw new Error('The saved chat could not be verified.');
+    return stored;
+}
+
+async function readReviewedChat(ref, sourceIds, fingerprint, fingerprintOptions, hiddenRanges=[]) {
+    const stored = await readStoredSlothChat(ref);
+    if (fingerprintSlothChat(stored.slice(1), sourceIds, fingerprintOptions) !== fingerprint) {
         throw new Error('The saved chat differs from the reviewed messages. Reload it before collecting again.');
     }
     for (const [start,end] of hiddenRanges) for (let id=start;id<=end;id++) {
         if (stored[id+1]?.is_system !== true) throw new Error('The approved Hide range did not persist.');
     }
+    fingerprintOptions?.verifyStored?.(stored);
     return stored[0].chat_metadata.STMemoryBooks?.slothCollection;
 }
 
@@ -767,6 +853,79 @@ function assertSlothBookRoles(ref, roles) {
             throw new Error('Nexus / Memory role assignment changed. No changes saved.');
         }
     }
+}
+
+export async function reviewSlothLegacyCoverage() {
+    if (collectorBusy) throw new Error('A Sloth operation is already in progress.');
+    collectorBusy = true;
+    try {
+        const settings = extension_settings.STMemoryBooks;
+        const ref = structuredClone(getCurrentStmbChatRef());
+        const roles = { nexus:getNexusRoleResolutionForChatRef('nexus', ref, settings).name,
+            memory:getNexusRoleResolutionForChatRef('memory', ref, settings).name };
+        const chatKey = getStmbChatKey(ref);
+        const pair = legacyPairKey(roles);
+        assertSlothBookRoles(ref, roles);
+        const previous = getSlothLegacyCoverage(getSceneMarkers(), chatKey, roles);
+        const title = t('Review previously summarized messages', 'STMemoryBooks_SlothLegacyCoverage');
+        const instructions = t('Enter only message ranges already covered by the selected Memory book. Use chat message numbers, for example 0-18, 22-25. Leave blank to clear these ranges.', 'STMemoryBooks_SlothLegacyCoverageInstructions');
+        let review;
+        const popup = markStmbPopup(new Popup('<div class="stmb-sloth-review"><h3>' + html(title) +
+            '</h3><label for="stmb-legacy-coverage-ranges">' + html(instructions) +
+            '</label><input id="stmb-legacy-coverage-ranges" class="text_pole" type="text">' +
+            '<div class="stmb-legacy-coverage-preview" role="status"></div></div>', POPUP_TYPE.CONFIRM, '', {
+            okButton:t('Save', 'STMemoryBooks_Save'), cancelButton:t('Cancel', 'STMemoryBooks_Cancel'),
+            onClosing:({ result }) => result !== POPUP_RESULT.AFFIRMATIVE || Boolean(review),
+        }));
+        const input = popup.dlg.querySelector('#stmb-legacy-coverage-ranges');
+        const preview = popup.dlg.querySelector('.stmb-legacy-coverage-preview');
+        input.value = readableSegments(Array.isArray(previous?.ranges) ? previous.ranges : []);
+        const updatePreview = () => {
+            review = null;
+            preview.replaceChildren();
+            try {
+                const entered = input.value.trim();
+                const ranges = entered ? parseReviewedSegments(entered, Array.from(chat.keys())) : [];
+                const fingerprint = fingerprintSlothReviewedRanges(chat, ranges);
+                for (const [start, end] of ranges) {
+                    for (const id of new Set([start, end])) {
+                        const line = document.createElement('div');
+                        line.textContent = '#' + id + ' · ' + chat[id].name + ' · ' + chat[id].mes.trim().slice(0, 140);
+                        preview.append(line);
+                    }
+                }
+                review = { version:1, chatKey, ranges, fingerprint };
+            } catch (error) { preview.textContent = error.message; }
+        };
+        input.addEventListener('input', updatePreview);
+        updatePreview();
+        if (await popup.show() !== POPUP_RESULT.AFFIRMATIVE || !review) return { saved:false };
+        const next = review.ranges.length ? review : null;
+        const verify = () => {
+            assertSlothBookRoles(ref, roles);
+            assertSlothLegacyCoverage(next);
+        };
+        const readStored = async () => {
+            const stored = await readStoredSlothChat(ref);
+            assertSlothLegacyCoverage(next, stored.slice(1));
+            return getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks, chatKey, roles);
+        };
+        verify();
+        if (stringify(await readStored()) !== stringify(previous)) throw new Error('The saved reviewed ranges changed. Reload the chat.');
+        if (stringify(previous) === stringify(next)) return { saved:false };
+        await patchStmbMetadataForChatRef(ref, markers => {
+            verify();
+            if (stringify(getSlothLegacyCoverage(markers, chatKey, roles)) !== stringify(previous))
+                throw new Error('The reviewed ranges changed while saving.');
+            const coverage = { ...markers.slothLegacyCoverage };
+            if (next) coverage[pair] = next;
+            else delete coverage[pair];
+            return { ...markers, slothLegacyCoverage:coverage };
+        });
+        if (stringify(await readStored()) !== stringify(next)) throw new Error('The reviewed ranges did not persist.');
+        invalidateSlothAutomaticProgress();
+        return { saved:true };
+    } finally { collectorBusy = false; }
 }
 
 export async function applySlothNexusRecallSettings(){
@@ -881,7 +1040,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         if(getStmbChatKey()!==getStmbChatKey(ref)) {
             throw new Error('The chat changed while its lorebooks were loading. Start collection from the original chat.');
         }
-        const {source,prior}=activeSource(ref,originalBooks.memory,roleNames);
+        const {source,prior,reviewed}=activeSource(ref,originalBooks.memory,roleNames);
         if(!source.length){
             if (automatic) return {saved:false,reason:'no-source'};
             toastr.info(t('No new visible messages need collection.','STMemoryBooks_SlothNoSource'),'STMemoryBooks');
@@ -894,6 +1053,7 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
         const characterContext=initialCharacterContext(character);
         const nexusOptions={detailRecallMode:settings.moduleSettings?.nexusDetailRecallMode==='keyword'?'keyword':'vector',recallModes:structuredClone(settings.moduleSettings?.nexusRecallModes)};
         const checkOrigin=()=>{
+            assertSlothLegacyCoverage(reviewed);
             if (automatic) {
                 const now = getSlothAutomaticSettings(extension_settings.STMemoryBooks);
                 if (!now.enabled || now.mode !== automatic.mode || now.threshold !== automatic.threshold)
@@ -994,7 +1154,11 @@ export async function runNexusCollector({profileIndex, stConnectionProfileId, au
                     role:other==='memory'?'nexus':'memory',pairedBook:roleNames[other]}};
             }
         }
-        await readReviewedChat(ref,sourceIds,fingerprint);
+        await readReviewedChat(ref,sourceIds,fingerprint,{verifyStored: stored => {
+            const storedCoverage=getSlothLegacyCoverage(stored[0].chat_metadata.STMemoryBooks,getStmbChatKey(ref),roleNames);
+            if (stringify(storedCoverage) !== stringify(reviewed)) throw new Error('The reviewed ranges changed during collection.');
+            assertSlothLegacyCoverage(reviewed,stored.slice(1));
+        }});
         signal?.throwIfAborted();
         onSaveStart?.();
         showProgress('Saving', 'STMemoryBooks_Jobs_Saving');

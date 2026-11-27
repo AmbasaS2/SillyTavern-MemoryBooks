@@ -1937,5 +1937,8 @@
   "STMemoryBooks_SlothStepSave": "3 · Подтвердить и сохранить",
   "STMemoryBooks_SlothAIModule": "Профиль ИИ для сбора воспоминаний",
   "STMemoryBooks_SlothAdvancedLegacy": "Исходные инструменты Memory Books и расширенные настройки",
-  "STMemoryBooks_SlothEditNexusOperation": "Проверьте или измените предложенную правку Nexus. Проверка исходных сообщений сохраняется."
+  "STMemoryBooks_SlothEditNexusOperation": "Проверьте или измените предложенную правку Nexus. Проверка исходных сообщений сохраняется.",
+  "STMemoryBooks_SlothLegacyCoverage": "Проверить уже обобщённые сообщения",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "Введите только диапазоны сообщений, уже учтённых в выбранной книге Memory. Используйте номера сообщений чата, например 0-18, 22-25. Оставьте поле пустым, чтобы очистить диапазоны.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "Ранее проверенные сообщения изменились. Проверьте или очистите диапазоны в разделе управления существующими воспоминаниями."
 }

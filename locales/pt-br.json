@@ -1934,5 +1934,8 @@
   "STMemoryBooks_SlothStepSave": "3 · Aprovar e salvar",
   "STMemoryBooks_SlothAIModule": "Perfil de IA para coletar memórias",
   "STMemoryBooks_SlothAdvancedLegacy": "Ferramentas originais do Memory Books e configurações avançadas",
-  "STMemoryBooks_SlothEditNexusOperation": "Revise ou edite a alteração proposta no Nexus. A verificação das fontes continua ativa."
+  "STMemoryBooks_SlothEditNexusOperation": "Revise ou edite a alteração proposta no Nexus. A verificação das fontes continua ativa.",
+  "STMemoryBooks_SlothLegacyCoverage": "Revisar mensagens já resumidas",
+  "STMemoryBooks_SlothLegacyCoverageInstructions": "Informe apenas os intervalos já cobertos pelo livro Memory selecionado. Use os números das mensagens, por exemplo 0-18, 22-25. Deixe em branco para apagar esses intervalos.",
+  "STMemoryBooks_SlothLegacyCoverageChanged": "As mensagens revisadas foram alteradas. Revise ou apague os intervalos em Gerenciar memórias existentes."
 }
