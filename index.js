@@ -12026,7 +12026,7 @@ async function refreshSlothRoleControls({forceRoles=false} = {}) {
   const oldMaintenance = content.querySelector('#stmb-manage-memories');
   const newMaintenance = fragment.content.querySelector('#stmb-manage-memories');
   if (!!oldMaintenance !== !!newMaintenance) {
-    replace(oldMaintenance,newMaintenance,content.querySelector('#stmb-sloth-panel'),content.querySelector('#stmb-sloth-advanced'));
+    replace(oldMaintenance,newMaintenance,content.querySelector('#stmb-sloth-panel'));
   }
   const oldFooter = popup.dlg.querySelector('#stmb-sloth-collection-footer');
   const newFooter = fragment.content.querySelector('#stmb-sloth-collection-footer');

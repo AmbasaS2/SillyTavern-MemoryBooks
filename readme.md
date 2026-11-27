@@ -31,7 +31,7 @@ If you prefer the original manual or consolidation workflow, select **Original M
 
 ## ⚡ Quick start
 
-**Current version: 9.4.0-ambasa.6.**
+**Current version: 9.4.0-ambasa.7.**
 
 This update adds Memory Workshop, improves Memory overview and partial recovery, and uses Anchor as the public name for the existing LT role. Existing LT titles, entry UIDs and injection settings remain compatible. Open Memory Workshop to choose a tool. AI memory review and cleanup requires approval before applying selected changes; moving Core text into an Anchor may reduce how often it is recalled. AI summaries can still omit or misinterpret details; review and correct them as needed.
 
@@ -174,7 +174,7 @@ Choose a built-in or custom prompt in the empty slot. Add more slots as needed.
 
 #### 🧩 Memory Workshop
 
-Only Lorebook setup starts expanded. Open Memory Workshop to view Memory overview, AI memory review and cleanup, the manual tools below, injection changes and registration of previously summarized ranges. Opening the drawer does not send an AI request.
+Only Lorebook setup starts expanded. Memory Workshop is below Advanced settings, with compact icon actions grouped by purpose: memory analysis, Scene maintenance and memory management. The overview's entry preview renders Markdown and uses the same saved Lorebook Manager translation lookup as WorldInfo Info. The original appears immediately; one current-book translation file is read only after selecting an entry, then reused while the overview is open. An exact current source hash is required for the saved translated body. No AI translation or data writes occur.
 
 - **Merge:** causally related completed scenes.
 - **Split:** a completed scene with verifiable original message ranges.
@@ -248,7 +248,7 @@ The detailed sections below explain optional settings. Compatibility is version-
 
 ## ⚡ 간단 사용 설명
 
-**현재 버전: 9.4.0-ambasa.6.**
+**현재 버전: 9.4.0-ambasa.7.**
 
 이번 업데이트에서는 기억 정비소를 추가하고 기억 현황 및 부분 복구를 개선했습니다. 기존 LT 역할의 표시 이름을 앵커(Anchor)로 변경했으며, 기존 LT 제목·UID·주입 설정은 호환됩니다. 기억 정비소를 펼쳐 필요한 기능을 선택합니다. AI 기억 분석 및 정리는 선택한 변경을 승인한 뒤에만 저장합니다. 코어에서 앵커로 옮긴 내용은 매번 불러오지 못할 수 있습니다. AI 요약의 누락과 해석 오류는 여전히 발생할 수 있으므로 필요할 때 확인하고 수정해 주세요.
 
@@ -391,7 +391,7 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 #### 🧩 기억 정비소
 
-로어북 준비만 기본으로 펼쳐집니다. 기억 정비소에서 기억 현황, AI 기억 분석 및 정리, 아래 직접 정비 도구, 주입 방식 변경, 기존 요약 범위 등록을 선택할 수 있습니다. 정비소를 여는 것만으로는 AI를 호출하지 않습니다.
+로어북 준비만 기본으로 펼쳐집니다. 고급 설정 아래 기억 정비소는 기억 분석·사건 정비·기억 관리로 나뉘며 작은 아이콘 메뉴를 사용합니다. 기억 현황의 항목 미리보기는 마크다운을 표시하고 월드인포인포와 동일한 로어북 매니저 저장 번역 조회 방식을 사용합니다. 원문을 먼저 표시하며 항목을 선택했을 때만 해당 책의 번역 파일을 한 번 읽어 팝업 안에서 재사용합니다. 원문 해시가 일치하는 번역 본문만 표시하고 원문 보기로 전환할 수 있습니다. AI 번역 호출이나 데이터 저장은 하지 않습니다.
 
 - **합치기:** 인과적으로 연결된 완료 사건을 정리.
 - **나누기:** 원래 메시지 범위와 순서를 확인할 수 있는 사건을 분리.
@@ -441,7 +441,7 @@ Nexus·Memory 두 권을 연결하고 자동 수집을 켜세요. 지정량의 �
 
 ---
 
-**Documentation basis / 안내 기준:** verified runtime [PR #19 / `204d0db`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged to main on 2026-11-27. Node 657/657 and Bun build; isolated SillyTavern 1.19.1 Chrome host verification of revised UI, role compatibility and storage safeguards. UI-only follow-up [PR #21](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/pull/21) passed 658 Node tests, a Bun build and isolated Chrome layout checks (390/1280px, Korean/English). Actual AI accuracy and installed-device behavior vary.
+**Documentation basis / 안내 기준:** verified runtime [PR #19 / `204d0db`](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/commit/204d0dbe762aaafef62dcd92d7a1b9965568c566), merged to main on 2026-11-27. Node 657/657 and Bun build; isolated SillyTavern 1.19.1 Chrome host verification of revised UI, role compatibility and storage safeguards. UI-only follow-up [PR #21](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/pull/21) passed 658 Node tests, a Bun build and isolated Chrome layout checks (390/1280px, Korean/English). Follow-up [PR #22](https://github.com/AmbasaS2/SillyTavern-MemoryBooks/pull/22) passed 662 Node tests, a Bun build and four isolated Chrome layout checks. Translation lookup compatibility was tested with synthetic records; live installed-device data and latency were not measured. Actual AI accuracy and installed-device behavior vary.
 
 ## Original Memory Books documentation / 원본 기능 안내
 
