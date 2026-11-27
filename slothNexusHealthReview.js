@@ -178,3 +178,23 @@ export function stageSlothHealthReviewChange(original,finding,{moduleSettings={}
     }
     return {staged,changes};
 }
+
+/** Validate each selected action against the preceding staged result. If any
+ * references become stale, reject the entire proposed batch before writing. */
+export function stageSlothHealthReviewBatch(original,findings,options={}){
+    requireSafe(Array.isArray(findings)&&findings.length>0&&findings.length<=24,'Choose one or more reviewed findings.');
+    let staged=original;
+    const aggregate=new Map(),seen=new Set();
+    for(const finding of findings){
+        const signature=JSON.stringify(finding.change);
+        requireSafe(!seen.has(signature),'Repeated selected change.');
+        seen.add(signature);
+        const next=stageSlothHealthReviewChange(staged,finding,options);
+        staged=next.staged;
+        for(const change of next.changes){
+            const previous=aggregate.get(change.uid);
+            aggregate.set(change.uid,previous?{...change,before:previous.before}:change);
+        }
+    }
+    return {staged,changes:[...aggregate.values()]};
+}

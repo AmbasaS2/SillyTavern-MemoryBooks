@@ -2085,5 +2085,8 @@
   "STMemoryBooks_SlothHealthReviewUnavailable": "현재 Nexus 또는 주입 설정에서 안전한 적용 대상이 아닙니다. 직접 검토해 주세요.",
   "STMemoryBooks_SlothHealthReviewAdvice": "검토용 제안입니다. 이 항목은 자동으로 변경할 수 없습니다.",
   "STMemoryBooks_SlothHealthReviewCancel": "건강검진 취소",
-  "STMemoryBooks_SlothHealthReviewCancelled": "건강검진을 취소했습니다."
+  "STMemoryBooks_SlothHealthReviewCancelled": "건강검진을 취소했습니다.",
+  "STMemoryBooks_SlothHealthReviewPlan": "선택한 변경",
+  "STMemoryBooks_SlothHealthReviewInclude": "이 변경을 승인 목록에 추가",
+  "STMemoryBooks_SlothHealthReviewPlanConflict": "선택한 변경끼리 충돌합니다. 충돌하는 선택을 해제한 뒤 적용해 주세요."
 }

@@ -46,7 +46,7 @@ import { automaticCollectionDue, getSlothAutomaticSettings, createAutomaticToken
     createAutomaticTokenUpperBound, getAutomaticCheckpointThrough } from './slothAutomaticCollection.js';
 import { splitSlothCollectionSource } from './nexusCollectionBudget.js';
 import { inspectSlothNexusHealth, SLOTH_HEALTH_ROLES } from './slothNexusHealth.js';
-import { buildSlothHealthCatalog, stageSlothHealthReviewChange } from './slothNexusHealthReview.js';
+import { buildSlothHealthCatalog, stageSlothHealthReviewBatch } from './slothNexusHealthReview.js';
 import { showSlothHealthReviewFindings, healthReviewLabel } from './slothNexusHealthReviewDialog.js';
 import { createSlothCollectionRun, addSlothRequestMetric, recordSlothCollectionRun } from './slothCollectionStats.js';
 import { normalizeSlothSideRename, sideRenameMatches, planSlothSideSettingsRename,
@@ -1492,7 +1492,7 @@ export async function runSlothNexusHealthReview({profileIndex,stConnectionProfil
             showPopup:popup=>showCollectionPopup(popup,signal)});
         if(!approved)return {saved:false};
         await verifyRecovery();
-        const actual=stageSlothHealthReviewChange(original,approved.finding,{moduleSettings,
+        const actual=stageSlothHealthReviewBatch(original,approved.findings,{moduleSettings,
             createEntry:book=>createWorldInfoEntry(roles.nexus,book)});
         // The preview allocates a provisional new UID. All visible text,
         // title, flags and keywords must otherwise match the final stage.

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildSlothHealthCatalog,buildSlothHealthReviewPrompt,validateSlothHealthReview,stageSlothHealthReviewChange} from './slothNexusHealthReview.js';
+import {buildSlothHealthCatalog,buildSlothHealthReviewPrompt,validateSlothHealthReview,stageSlothHealthReviewChange,stageSlothHealthReviewBatch} from './slothNexusHealthReview.js';
 
 const para='Mara attended the autumn lantern festival.';
 const rule='Mara retains the right to decide where to stay.';
@@ -78,4 +78,22 @@ test('protected, stale, ambiguous, constant or unquoted LT targets cannot be sta
     book.entries[1].content=rule+'\n\nChanged paragraph.';
     assert.throws(()=>stageSlothHealthReviewChange(book,finding),/citation/);
     assert.throws(()=>validateSlothHealthReview(buildSlothHealthCatalog(book),{findings:Array(25).fill(finding)}),/oversized/);
+});
+
+test('one approval can combine independent exact moves without losing other Core paragraphs',()=>{
+    const book=mk(),second='Mara bought a ceramic bowl at the market.';
+    book.entries[1].content+='\n\n'+second;
+    const first=move(),other={kind:'core_to_lt',reason:'Historical purchase.',refs:[{uid:1,quote:second}],
+        change:{type:'move',sourceUid:1,paragraph:second,newTitle:'LT - Market purchase',keywords:['ceramic bowl']}};
+    const result=stageSlothHealthReviewBatch(book,[first,other]);
+    assert.equal(result.staged.entries[1].content,rule);
+    assert.equal(result.staged.entries[2].content,lt+'\n\n'+para);
+    assert.equal(Object.values(result.staged.entries).find(e=>e.comment==='LT - Market purchase').content,second);
+    assert.equal(result.changes.filter(c=>c.uid===1).length,1);
+    assert.equal(result.changes.find(c=>c.uid===1).before,book.entries[1].content);
+    assert.throws(()=>stageSlothHealthReviewBatch(book,[first,first]),/Repeated selected/);
+    const conflicting={...other,refs:[{uid:1,quote:para}],change:{...other.change,paragraph:para}};
+    const before=JSON.stringify(book);
+    assert.throws(()=>stageSlothHealthReviewBatch(book,[first,conflicting]),/citation/);
+    assert.equal(JSON.stringify(book),before);
 });

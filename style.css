@@ -1685,3 +1685,6 @@ th > .stmb-sort-button { background: none; border: 0; padding: 0; text-align: in
 .popup.stmb-popup .stmb-health-review [data-health-review-body]{display:flex;flex-direction:column;gap:8px;min-width:0}
 .popup.stmb-popup .stmb-health-review pre{margin:5px 0;padding:7px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:26dvh;overflow:auto;border-inline-start:2px solid var(--stmb-health-border);font-size:.88em}
 .popup.stmb-popup .stmb-health-review-change h4{margin-bottom:6px;overflow-wrap:anywhere}
+
+.popup.stmb-popup .stmb-health-review-choice{padding:7px 2px;align-items:center;gap:6px;text-align:start}
+.popup.stmb-popup .stmb-health-review [data-health-review-plan] .stmb-health-review-change{margin-top:8px}
