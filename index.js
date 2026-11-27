@@ -19,6 +19,7 @@ import {
   this_chid,
   streamingProcessor,
   settings as st_settings,
+  menu_type,
 } from "../../../../script.js";
 import { Popup, POPUP_TYPE, POPUP_RESULT } from "../../../popup.js";
 import {
@@ -43,7 +44,9 @@ import {
   reloadEditor,
 } from "../../../world-info.js";
 import { lodash, Handlebars, DOMPurify } from "../../../../lib.js";
-import { escapeHtml } from "../../../utils.js";
+import { escapeHtml, getCharaFilename } from "../../../utils.js";
+import * as worldInfoHost from "../../../world-info.js";
+import { autoLinkCharacterBooks, getCharacterAuxBooks, assignedNexusBooks, planNexusAuxBooks, withSlothRoleSync, isSlothRoleSyncPending } from "./nexusAuxLinks.js";
 import {
   compileScene,
   createSceneRequest,
@@ -667,6 +670,7 @@ const defaultSettings = {
     slothCollectionPrompt: "",
     slothSummaryReview: false,
     slothLinkedBooksOnly: true,
+    slothAutoLinkCharacterBooks: true,
     slothComposerEnabled: true,
     slothComposerPosition: "left",
     ...SLOTH_AUTOMATIC_DEFAULTS,
@@ -11206,6 +11210,7 @@ function buildSlothTemplateData(settings) {
   }));
   const slothComposerSize = getSlothComposerSize(settings.moduleSettings.slothComposerSize);
   const slothAutomatic = getSlothAutomaticSettings(settings);
+  const slothAutoLinkCharacterBooks = autoLinkCharacterBooks(settings);
   const slothLinkedBooksOnly = settings.moduleSettings.slothLinkedBooksOnly !== false;
   const unlinkedBooks = slothLinkedBooksOnly ? [] : sloth.worldNames.filter(name => !sloth.linkedBooks.includes(name));
   const roleOptions = (role) => sloth.linkedBooks.map(name => ({
@@ -11248,9 +11253,11 @@ function buildSlothTemplateData(settings) {
     slothChatOverrideActive: !!slothChatOverride,
     slothChatOverrideInvalid: !!slothChatOverride?.invalid,
     slothLinkedBooksAvailable: sloth.linkedBooks.length > 0,
-    slothRoleChoicesAvailable: sloth.linkedBooks.length > 0 || unlinkedBooks.length > 0,
+    slothRoleChoicesAvailable: sloth.linkedBooks.length > 0 || unlinkedBooks.length > 0 || !!slothSelectedRoles.nexus || !!slothSelectedRoles.memory,
     slothHasWorldBooks: sloth.worldNames.length > 0,
     slothLinkedBooksOnly,
+    slothAutoLinkCharacterBooks,
+    slothCanReconnect: slothAutoLinkCharacterBooks && [slothSelectedRoles.nexus, slothSelectedRoles.memory].some(name => name && sloth.worldNames.includes(name) && !sloth.linkedBooks.includes(name)),
     slothUnlinkedBooks: unlinkedBooks,
     slothNexusRoleOptions: roleOptions('nexus'),
     slothMemoryRoleOptions: roleOptions('memory'),
@@ -11955,13 +11962,70 @@ function syncSlothAutomaticStatus() {
   }
 }
 
+// User-initiated role changes synchronize the real character auxiliary list.
+// Do not auto-attach detached books during chat loads or settings refreshes.
+async function changeSlothRoleLinks(settings, ref, edit, ensure = []) {
+  return withSlothRoleSync(async () => {
+    const sloth = getActiveNexusRoleContext(settings);
+    const avatar = ref?.avatarUrl;
+    const chatKey = getStmbChatKey(ref);
+    if (menu_type === 'create' || ref?.type !== 'character' || !avatar ||
+        sloth.character?.avatar !== avatar || chatKey !== getStmbChatKey() ||
+        currentPopupInstance?.stmbSlothChatKey !== chatKey ||
+        isMemoryProcessing() || isProcessingArc || hasActiveStmbJobs() ||
+        hasPendingProgress() || isSlothOperationBusy() || streamingProcessor) {
+      throw new Error(translate('Finish the current memory operation before changing modes.', 'STMemoryBooks_ModeBusy'));
+    }
+    const sync = autoLinkCharacterBooks(settings);
+    if (ensure.some(name => !world_names.includes(name) ||
+        isAssignedToAnotherNexusCharacter(settings, avatar, name) ||
+        (!sync && !sloth.linkedBooks.includes(name)))) {
+      throw new Error(translate('Choose an available lorebook for this character.', 'STMemoryBooks_SlothAutoLinkInvalid'));
+    }
+    const keys = ['nexusCharacterRoles','nexusChatRoleOverrides','nexusChatScopedWorlds'];
+    const draft = {...settings};
+    for (const key of keys) draft[key] = structuredClone(settings[key] || {});
+    const changed = edit(draft);
+    const fileName = getCharaFilename(null, {manualAvatarKey:avatar});
+    const before = getCharacterAuxBooks(world_info, fileName);
+    const after = sync ? planNexusAuxBooks({current:before,previous:assignedNexusBooks(settings,avatar),
+        next:assignedNexusBooks(draft,avatar),ensure}) : before;
+    const linkChanged = JSON.stringify(before) !== JSON.stringify(after);
+    if (!changed && !linkChanged) return false;
+    if (linkChanged && (!fileName || typeof worldInfoHost.charSetAuxWorlds !== 'function')) {
+      throw new Error(translate('This SillyTavern version does not support updating character auxiliary lorebooks.', 'STMemoryBooks_SlothAutoLinkUnsupported'));
+    }
+    for (const key of keys) settings[key] = draft[key];
+    if (linkChanged) worldInfoHost.charSetAuxWorlds(fileName, after);
+    await saveSettings();
+    // Verify the persisted native list, not just the optimistic client settings.
+    const response = await fetch('/api/settings/get', {method:'POST',headers:getRequestHeaders(),body:'{}',cache:'no-store'});
+    if (!response.ok) throw new Error(translate('Could not verify the saved character lorebook links. Reload and check the links.', 'STMemoryBooks_SlothAutoLinkVerify'));
+    const reply = await response.json();
+    const stored = JSON.parse(reply.settings);
+    const storedExtension = stored.extension_settings?.STMemoryBooks;
+    const persisted = stored.world_info_settings?.world_info;
+    if (!storedExtension || !persisted ||
+        JSON.stringify(getCharacterAuxBooks(persisted,fileName)) !== JSON.stringify(after) ||
+        keys.some(key => JSON.stringify(storedExtension[key] || {}) !== JSON.stringify(draft[key]))) {
+      throw new Error(translate('Could not verify the saved character lorebook links. Reload and check the links.', 'STMemoryBooks_SlothAutoLinkVerify'));
+    }
+    if (linkChanged && event_types.WORLDINFO_SETTINGS_UPDATED) {
+      await eventSource.emit(event_types.WORLDINFO_SETTINGS_UPDATED);
+    }
+    invalidateSlothAutomaticProgress();
+    void refreshMemoryTierMacroCache();
+    return true;
+  });
+}
+
 function slothRoleUiSignature(data) {
   // Do not include prompt/AI settings: their live DOM must survive role edits.
   const keys = ['isGroupChat','slothCharacterAvailable','slothCharacterName','slothRoleActive','slothModeActive',
     'slothFirstSetup','slothCanCollect','slothMissingCompanion','slothSharedBook',
     'slothChatOverrideAvailable','slothChatOverrideActive','slothChatOverrideInvalid',
     'slothLinkedBooksAvailable','slothRoleChoicesAvailable','slothHasWorldBooks','slothLinkedBooksOnly',
-    'slothUnlinkedBooks','slothNexusRoleOptions','slothMemoryRoleOptions','slothNexusMissing',
+    'slothAutoLinkCharacterBooks','slothCanReconnect','slothUnlinkedBooks','slothNexusRoleOptions','slothMemoryRoleOptions','slothNexusMissing',
     'slothMemoryMissing','slothNexusMissingName','slothMemoryMissingName'];
   return JSON.stringify(keys.map(key=>data[key]));
 }
@@ -12319,6 +12383,18 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
     const settings = initializeSettings();
+    if (e.target.closest?.('#stmb-sloth-reconnect-role-books')) {
+      const ref = getCurrentStmbChatRef();
+      const sloth = getActiveNexusRoleContext(settings);
+      const override = getNexusChatRoleOverride(settings.nexusChatRoleOverrides,ref,getStmbChatKey(ref));
+      const roles = override && !override.invalid ? override : sloth.assigned;
+      const ensure = [roles.nexus,roles.memory].filter(name => name && sloth.worldNames.includes(name) && !sloth.linkedBooks.includes(name));
+      try {
+        if (autoLinkCharacterBooks(settings) && ensure.length) await changeSlothRoleLinks(settings,ref,()=>false,ensure);
+      } catch (err) { toastr.warning(err?.message || String(err), 'STMemoryBooks'); }
+      await refreshSlothRoleControls({forceRoles:true});
+      return;
+    }
     const slothButton = e.target.closest?.('button[data-stmb-sloth-action]');
     if (slothButton) {
       await runSlothSettingsAction(slothButton, popupElement, settings);
@@ -12458,6 +12534,18 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
       return;
     }
 
+    if (e.target.matches('#stmb-sloth-auto-link-character-books')) {
+      if (isSlothOperationBusy() || isSlothRoleSyncPending() || hasActiveStmbJobs() || streamingProcessor) {
+        e.target.checked = autoLinkCharacterBooks(settings);
+        toastr.warning(translate('Finish the current memory operation before changing modes.', 'STMemoryBooks_ModeBusy'), 'STMemoryBooks');
+        return;
+      }
+      settings.moduleSettings.slothAutoLinkCharacterBooks = e.target.checked;
+      await saveSettings();
+      await refreshSlothRoleControls({forceRoles:true});
+      return;
+    }
+
     if (e.target.matches('#stmb-sloth-linked-books-only')) {
       settings.moduleSettings.slothLinkedBooksOnly = e.target.checked;
       await saveSettings();
@@ -12544,29 +12632,26 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
     }
 
     if (e.target.matches("#stmb-sloth-chat-override")) {
-      const sloth = getActiveNexusRoleContext(settings);
       const ref = getCurrentStmbChatRef();
       const chatKey = getStmbChatKey(ref);
-      if (!sloth.character || ref?.avatarUrl !== sloth.character.avatar || !String(ref.fileName || '').trim()) {
-        toastr.warning(translate('Choose an existing individual-character chat before overriding lorebooks.',
-          'STMemoryBooks_SlothChatOverrideUnavailable'), 'STMemoryBooks');
-      } else {
-        try {
-          const previous = {
-            nexus: getCurrentNexusRoleResolution('nexus', settings).name,
-            memory: getCurrentNexusRoleResolution('memory', settings).name,
-          };
-          const changed = e.target.checked
+      const sloth = getActiveNexusRoleContext(settings);
+      const enabled = e.target.checked;
+      try {
+        if (!sloth.character || ref?.avatarUrl !== sloth.character.avatar || !String(ref.fileName || '').trim()) {
+          throw new Error(translate('Choose an existing individual-character chat before overriding lorebooks.',
+            'STMemoryBooks_SlothChatOverrideUnavailable'));
+        }
+        const previous = {nexus:getCurrentNexusRoleResolution('nexus',settings).name,
+          memory:getCurrentNexusRoleResolution('memory',settings).name};
+        await changeSlothRoleLinks(settings,ref,settings=>{
+          const changed = enabled
             ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, sloth.assigned)
             : clearNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
-          if (changed) {
-            if (!e.target.checked) rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, previous);
-            await saveSettings();
-            void refreshMemoryTierMacroCache();
-          }
-        } catch (err) {
-          toastr.warning(err?.message || String(err), 'STMemoryBooks');
-        }
+          if (changed && !enabled) rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, previous);
+          return changed;
+        });
+      } catch (err) {
+        toastr.warning(err?.message || String(err), 'STMemoryBooks');
       }
       await refreshSlothRoleControls({forceRoles:true});
       return;
@@ -12574,38 +12659,24 @@ function setupSettingsEventListeners(popupInstance = currentPopupInstance) {
 
     if (e.target.matches("#stmb-sloth-role-nexus, #stmb-sloth-role-memory")) {
       const role = e.target.id === 'stmb-sloth-role-nexus' ? 'nexus' : 'memory';
+      const ref = getCurrentStmbChatRef();
+      const chatKey = getStmbChatKey(ref);
       const sloth = getActiveNexusRoleContext(settings);
       const name = String(e.target.value || '').trim();
-      if (!sloth.character || (name && !sloth.linkedBooks.includes(name))) {
-        toastr.warning(translate('Choose a lorebook linked to the current character.', 'STMemoryBooks_SlothInvalidChoice'), 'STMemoryBooks');
-        await refreshSlothRoleControls({forceRoles:true});
-        return;
-      }
-      if (isAssignedToAnotherNexusCharacter(settings, sloth.character.avatar, name)) {
-        toastr.warning(translate('This book is already assigned to another character. Choose a separate book for these memories.',
-          'STMemoryBooks_SlothSharedBook'), 'STMemoryBooks');
-        await refreshSlothRoleControls({forceRoles:true});
-        return;
-      }
       try {
-        const ref = getCurrentStmbChatRef();
-        const chatKey = getStmbChatKey(ref);
+        if (!sloth.character) throw new Error(translate('Choose a character to assign lorebook roles.', 'STMemoryBooks_SlothSelectCharacter'));
         const override = getNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey);
         const next = { ...(override?.invalid ? sloth.assigned : (override || sloth.assigned)), [role]: name };
-        const changed = override
-          ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, next)
-          : setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
-        if (changed) {
-          if (override) {
-            rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, override);
-          }
-          // Collection uses the assigned pair once the settings are saved.
-          await saveSettings();
-          void refreshMemoryTierMacroCache();
-        }
+        if (next.nexus && next.nexus === next.memory) throw new Error(translate('Nexus and Memory must use different lorebooks.', 'STMemoryBooks_SlothDifferentBooks'));
+        await changeSlothRoleLinks(settings,ref,settings=>{
+          const changed = override
+            ? setNexusChatRoleOverride(settings.nexusChatRoleOverrides, ref, chatKey, next)
+            : setCharacterNexusRole(settings.nexusCharacterRoles, sloth.character.avatar, role, name);
+          if (changed && override) rememberNexusChatWorlds(settings.nexusChatScopedWorlds, ref.avatarUrl, override);
+          return changed;
+        },name?[name]:[]);
       } catch (err) {
-        toastr.warning(translate('Nexus and Memory must use different lorebooks.',
-          'STMemoryBooks_SlothDifferentBooks'), 'STMemoryBooks');
+        toastr.warning(err?.message || String(err), 'STMemoryBooks');
       }
       await refreshSlothRoleControls({forceRoles:true});
       return;
@@ -14579,6 +14650,11 @@ function setupEventListeners() {
   eventSource.on(event_types.CHAT_CHANGED, handleChatChanged);
   eventSource.on(MEMORY_TIER_CACHE_REFRESH_EVENT, refreshMemoryTierMacroCache);
   eventSource.on(event_types.SETTINGS_UPDATED, invalidateTrackerCheckpoints);
+  eventSource.on(event_types.SETTINGS_UPDATED, () => {
+    if (isSlothRoleSyncPending() || !currentPopupInstance?.dlg.open ||
+        currentPopupInstance.content.querySelector('[data-stmb-workspace-tab][aria-selected="true"]')?.dataset.stmbWorkspaceTab !== 'sloth') return;
+    void refreshSlothRoleControls();
+  });
   // Capture the old name before the native rename dialog changes the editor.
   document.addEventListener('click',event=>{
     if(event.target?.closest?.('#world_popup_name_button'))
